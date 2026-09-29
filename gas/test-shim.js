@@ -34,10 +34,19 @@ assert(officeRef.includes("status:'PENDING'"), 'office reference draft seed neve
 assert(officeRef.includes('if(rows.length)sh.getRange'), 'office reference draft seed writes only missing offices');
 
 assert(dashboard.includes('function getResidencePermitDrilldown(filters)'), 'drill-down endpoint exists');
+assert(dashboard.includes('function getResidencePermitMap(filters)'), 'map endpoint exists');
+assert(dashboard.includes("requirePermission_('map.read')"), 'map endpoint is RBAC protected');
+assert(dashboard.includes('getOfficeReferenceStatus()'), 'map endpoint enforces office reference readiness');
+assert(dashboard.includes("status==='VERIFIED'"), 'map endpoint reads verified office references only');
+assert(dashboard.includes('OFFICE_REFERENCE_MISSING_FOR_DATASET'), 'map endpoint rejects missing office reference');
 assert(dashboard.includes("requirePermission_('dataset.read')"), 'drill-down is RBAC protected');
 const ui=read('index.html');
 assert(ui.includes('getResidencePermitDrilldown'), 'UI invokes drill-down endpoint');
 assert(ui.includes('read-only'), 'UI marks drill-down read-only');
+assert(ui.includes('leaflet@1.9.4'), 'Map v1 pins Leaflet version');
+assert(ui.includes('getResidencePermitMap'), 'UI invokes map endpoint');
+assert(ui.includes('tile.openstreetmap.org'), 'Map v1 uses OpenStreetMap tiles');
+assert(ui.includes('Peta Layanan Izin Tinggal'), 'Map v1 section exists');
 
 const config=read('Config.gs');
 assert(config.includes("const OFFICE_REFERENCE_CONTRACT = Object.freeze"), 'Office Reference v1 contract exists');
