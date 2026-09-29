@@ -10,6 +10,11 @@ on:
 permissions:
   contents: read
 
+# Canonical Apps Script deployment target. This is a public deployment identifier,
+# not a credential; credentials remain in GitHub Secrets.
+env:
+  APPS_SCRIPT_DEPLOYMENT_ID: "AKfycbzwhcpZWp8LhyidPFsvqwBQ6ZrgXjEB60NkyNmaQYsiewsvm9uZ_pwPdrG5xZINF2NK"
+
 concurrency:
   group: deploy-gas-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -18,8 +23,8 @@ jobs:
   validate:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: npm test
@@ -30,9 +35,9 @@ jobs:
     runs-on: ubuntu-24.04
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
@@ -64,4 +69,6 @@ jobs:
 
       - name: Deploy Apps Script version
         working-directory: gas
-        run: clasp deploy --versionNumber "$APPS_SCRIPT_VERSION" --description "GitHub $GITHUB_SHA"
+        env:
+          APPS_SCRIPT_DEPLOYMENT_ID: ${{ env.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: clasp deploy --deploymentId "$APPS_SCRIPT_DEPLOYMENT_ID" --versionNumber "$APPS_SCRIPT_VERSION" --description "GitHub $GITHUB_SHA"
