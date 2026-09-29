@@ -60,4 +60,4 @@ jobs:
 
       - name: Deploy Apps Script version
         working-directory: gas
-        run: clasp deploy "$APPS_SCRIPT_VERSION" -d "GitHub $GITHUB_SHA"
+        run: clasp deploy --versionNumber "$APPS_SCRIPT_VERSION" --description "GitHub $GITHUB_SHA"
