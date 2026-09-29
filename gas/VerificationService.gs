@@ -268,6 +268,8 @@ function runProductionSmokeTestV1(){
     startedAt,
     actor:user.email,
     datasetKey:'RESIDENCE_PERMIT_SERVICE_MONTHLY',
+    deploymentId:APP.DEPLOYMENT_ID,
+    releaseEvidenceVersion:APP.RELEASE_EVIDENCE_VERSION,
     expected:{rowCount:80,grandTotal:258094,monthlyPeriods:8,offices:10},
     latestSnapshotId:latestSnapshotId||null,
     checks:checks.map(c=>({name:c.name,ok:c.ok,error:c.error||null})),
