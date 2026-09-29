@@ -25,7 +25,9 @@ function getOfficeReferenceStatus(){
   const expected=[...new Set(values.slice(1).filter(r=>r.some(v=>String(v)!=='')).map(r=>String(r[hi.kantor_imigrasi]||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'id'));
   const ref=ss.getSheetByName('OFFICE_REFERENCE');
   if(!ref)return {ok:true,expectedOffices:expected,referenceRows:0,missingOffices:expected,invalidOffices:[],ready:false};
-  const rv=ref.getDataRange().getValues(),rh=rv[0]||[],ri=Object.fromEntries(rh.map((x,n)=>[x,n]));
+  const rv=ref.getDataRange().getValues(),rh=rv[0]||[],expectedHeader=['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status'];
+  if(expectedHeader.join('|')!==rh.slice(0,expectedHeader.length).join('|'))throw new Error('OFFICE_REFERENCE_SCHEMA_MISMATCH');
+  const ri=Object.fromEntries(rh.map((x,n)=>[x,n]));
   const byOffice={};
   rv.slice(1).filter(r=>r.some(v=>String(v)!=='')).forEach(r=>{
     const name=String(r[ri.kantor_imigrasi]||'').trim();
