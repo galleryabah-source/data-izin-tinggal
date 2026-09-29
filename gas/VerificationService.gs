@@ -100,5 +100,6 @@ function verifyResidencePermitMonthlyIntegrity(){
   };
   if(observedTotal!==258094)result.issues.push('Aggregate total berbeda dari fixture tervalidasi: expected 258094, observed '+observedTotal+'.');
   result.ok=result.issues.length===0;
+  Logger.log(JSON.stringify(result));
   return result;
 }
