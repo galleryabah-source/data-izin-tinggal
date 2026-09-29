@@ -1,9 +1,10 @@
 function doGet(){return HtmlService.createTemplateFromFile('index').evaluate().setTitle(APP.NAME).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
-function setupApp(spreadsheetId){
-  const id=String(spreadsheetId||'').trim();
+function setupApp(){
+  const props=PropertiesService.getScriptProperties();
+  const id=String(props.getProperty('SPREADSHEET_ID')||'').trim();
   const ss=id?SpreadsheetApp.openById(id):SpreadsheetApp.getActiveSpreadsheet();
-  if(!ss)throw new Error('Spreadsheet ID wajib diisi saat project Apps Script bersifat standalone.');
-  PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID',ss.getId());
+  if(!ss)throw new Error('SPREADSHEET_ID belum dikonfigurasi pada Script Properties.');
+  props.setProperty('SPREADSHEET_ID',ss.getId());
   initializeSchema_(ss); seedSecurity_(); seedDictionary_();
   return {ok:true,spreadsheetId:ss.getId()};
 }
