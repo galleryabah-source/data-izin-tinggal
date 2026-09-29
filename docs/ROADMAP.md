@@ -27,7 +27,7 @@
 
 ## Phase 5 — Intelligence UI
 - [x] Dashboard v1: KPI, monthly totals, office totals, service totals
-- [ ] dashboard filters
+- [x] dashboard filters — period + immigration office, server-side, UAT validated
 - [ ] drill-down
 - [ ] maps
 
@@ -46,4 +46,12 @@
 - [ ] automated smoke test
 
 ## Current gate
-The first real dataset is verified end-to-end. Dashboard v1 is intentionally limited to aggregate views over the verified monthly service contract. Do not add maps, complex filters, or drill-down until this vertical slice is validated against the real dataset in the Web App.
+The first real dataset is verified end-to-end. Dashboard v1 and Dashboard Filter v1 are validated against the real Web App:
+- baseline: 80 rows / 258,094 services
+- period filter January 2026: 10 rows / 33,367 services
+- office filter KANIM KELAS I NON TPI BOGOR: 8 rows / 51,366 services
+- reset filter: 80 rows / 258,094 services
+- period ordering: 2026-01 through 2026-08
+- service subtotals reconcile to the filtered grand total
+
+Do not add maps or complex drill-down yet. The next gate is governance: backup/export hardening, followed by an automated smoke-test strategy.
