@@ -3,6 +3,8 @@ name: Deploy Google Apps Script
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -19,6 +21,7 @@ jobs:
       - run: npm test
 
   deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: validate
     runs-on: ubuntu-latest
     environment: production
