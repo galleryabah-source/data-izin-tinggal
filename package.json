@@ -1,0 +1,7 @@
+{
+  "name": "data-izin-tinggal",
+  "private": true,
+  "scripts": {
+    "test": "node gas/test-shim.js"
+  }
+}
