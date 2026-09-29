@@ -10,7 +10,7 @@ body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#17202a}head
   <label>Kantor Imigrasi<select id="officeFilter" onchange="refreshDashboard()"><option value="">Semua Kantor</option></select></label>
   <div class="filter-actions"><button class="secondary" onclick="resetFilters()">Reset Filter</button></div>
 </div>
-<div id="dashboard">Memuat ringkasan...</div></section>
+<div class="filter-actions" style="margin-bottom:12px"><button onclick="exportCsv()">Export CSV</button></div><div id="dashboard">Memuat ringkasan...</div></section>
 <section class="card"><h2>Import Data</h2><p class="muted">Paste tabel dari spreadsheet. Sistem akan mendeteksi header dan schema.</p><textarea id="paste" placeholder="Paste tabel di sini..."></textarea><p><button class="primary" onclick="preview()">Preview</button> <button onclick="commit()">Import</button></p><div id="result"></div></section>
 <section class="card"><h2>Dataset Registry</h2><div id="registry">-</div></section>
 </main><script>
@@ -30,6 +30,14 @@ function populateFilters(r){
   p.value=selectedP;o.value=selectedO;
 }
 function resetFilters(){document.getElementById('periodFilter').value='';document.getElementById('officeFilter').value='';refreshDashboard();}
+async function exportCsv(){
+  try{
+    const r=await call('exportResidencePermitMonthly',getFilters());
+    const blob=new Blob([r.content],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=r.filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  }catch(e){document.getElementById('dashboard').innerHTML='<span class="error">'+esc(e.message)+'</span>';}
+}
 async function refreshDashboard(){
   try{
     const r=await call('getResidencePermitDashboard',getFilters());
