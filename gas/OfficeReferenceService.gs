@@ -72,3 +72,49 @@ function seedOfficeReferenceDraft(){
   appendAudit_('OFFICE_REFERENCE_DRAFT_SEED','', '',rows.length,'SUCCESS',JSON.stringify({inserted:rows.length,skipped:draftRows.length-rows.length,status:'PENDING'}));
   return {ok:true,inserted:rows.length,skipped:draftRows.length-rows.length,status:'PENDING'};
 }
+
+
+function prepareOfficeReferenceDraftMetadata(){
+  requirePermission_('admin.config');
+  ensureOfficeReferenceSheet();
+  const ss=getDb_();
+  const sh=ss.getSheetByName('OFFICE_REFERENCE');
+  const values=sh.getDataRange().getValues();
+  const h=values[0]||[],i=Object.fromEntries(h.map((x,n)=>[x,n]));
+  let updated=0;
+  values.slice(1).forEach((r,n)=>{
+    const name=String(r[i.kantor_imigrasi]||'').trim();
+    if(name==='KANIM KELAS II NON TPI GARUT' && !String(r[i.address]||'').trim()){
+      sh.getRange(n+2,i.address+1).setValue('Jalan Patriot No.10, Kecamatan Tarogong Kidul, Kabupaten Garut, Jawa Barat');
+      if(!String(r[i.source_url]||'').trim()) sh.getRange(n+2,i.source_url+1).setValue('https://www.garutkab.go.id/berita/kantor-imigrasi-kelas-ii-non-tpi-garut-resmi-dibuka-permudah-warga-urus-keimigrasian');
+      updated++;
+    }
+  });
+  if(updated) appendAudit_('OFFICE_REFERENCE_DRAFT_REPAIR','', '',updated,'SUCCESS',JSON.stringify({updated,status:'PENDING'}));
+  return {ok:true,updated,status:'PENDING'};
+}
+
+function previewOfficeReferenceGeocoding(){
+  requirePermission_('admin.config');
+  const ss=getDb_(),sh=ss.getSheetByName('OFFICE_REFERENCE');
+  if(!sh)throw new Error('OFFICE_REFERENCE_NOT_FOUND');
+  const values=sh.getDataRange().getValues(),h=values[0]||[],i=Object.fromEntries(h.map((x,n)=>[x,n]));
+  const candidates=[];
+  values.slice(1).forEach((r,n)=>{
+    const name=String(r[i.kantor_imigrasi]||'').trim();
+    const address=String(r[i.address]||'').trim();
+    const status=String(r[i.status]||'').trim().toUpperCase();
+    if(!name||!address||status==='VERIFIED')return;
+    const response=Maps.newGeocoder().setLanguage('id').setRegion('id').geocode(address);
+    const results=(response.results||[]).slice(0,3).map(x=>({
+      office:name,
+      row:n+2,
+      address,
+      formattedAddress:String(x.formatted_address||''),
+      latitude:x.geometry&&x.geometry.location?Number(x.geometry.location.lat):null,
+      longitude:x.geometry&&x.geometry.location?Number(x.geometry.location.lng):null
+    }));
+    candidates.push(...results);
+  });
+  return {ok:true,count:candidates.length,candidates};
+}
