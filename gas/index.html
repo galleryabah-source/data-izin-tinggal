@@ -1,5 +1,6 @@
 <!doctype html>
-<html><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>\n<style>
+<html><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<style>
 body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#17202a}header{background:#17365d;color:white;padding:18px 24px}main{max-width:1100px;margin:24px auto;padding:0 16px}.card{background:white;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px #0001}textarea{width:100%;min-height:180px;box-sizing:border-box}button{padding:10px 16px;border:0;border-radius:8px;cursor:pointer}.primary{background:#17365d;color:#fff}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.metric{font-size:30px;font-weight:700}.muted{color:#667085}.error{color:#b42318}.ok{color:#067647}table{border-collapse:collapse;width:100%}td,th{padding:8px;border-bottom:1px solid #eee;text-align:left}
 .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px}.filters label{font-weight:600;font-size:13px}.filters select{width:100%;padding:9px;border:1px solid #d0d5dd;border-radius:8px;background:#fff;margin-top:6px}.filter-actions{display:flex;gap:8px;align-items:end}.detail-wrap{overflow:auto;max-height:560px;border:1px solid #eee;border-radius:8px}.detail-wrap table{min-width:1500px}.detail-wrap th{position:sticky;top:0;background:#f8fafc;z-index:1}.detail-meta{margin:8px 0 12px;color:#667085;font-size:13px}.secondary{background:#eef2f6;color:#17202a}.map-wrap{height:520px;border:1px solid #eee;border-radius:8px;overflow:hidden}.map-status{margin:8px 0 12px;color:#667085;font-size:13px}</style><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script></head><body><header><strong>Data Izin Tinggal</strong><div id="user" class="muted"></div></header><main>
 <div id="status" class="card">Memuat...</div>
@@ -11,14 +12,23 @@ body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#17202a}head
   <div class="filter-actions"><button class="secondary" onclick="resetFilters()">Reset Filter</button></div>
 </div>
 <div class="filter-actions" style="margin-bottom:12px"><button onclick="exportCsv()">Export CSV</button></div><div id="dashboard">Memuat ringkasan...</div><hr><h3>Drill-down Data</h3><div id="drilldown" class="muted">Memuat detail...</div></section>
-<section class="card"><h2>Peta Layanan Izin Tinggal</h2><div id="mapStatus" class="map-status">Memuat peta...</div><div id="map" class="map-wrap"></div></section>\n<section class="card"><h2>Import Data</h2><p class="muted">Paste tabel dari spreadsheet. Sistem akan mendeteksi header dan schema.</p><textarea id="paste" placeholder="Paste tabel di sini..."></textarea><p><button class="primary" onclick="preview()">Preview</button> <button onclick="commit()">Import</button></p><div id="result"></div></section>
+<section class="card"><h2>Peta Layanan Izin Tinggal</h2><div id="mapStatus" class="map-status">Memuat peta...</div><div id="map" class="map-wrap"></div></section>
+<section class="card"><h2>Import Data</h2><p class="muted">Paste tabel dari spreadsheet. Sistem akan mendeteksi header dan schema.</p><textarea id="paste" placeholder="Paste tabel di sini..."></textarea><p><button class="primary" onclick="preview()">Preview</button> <button onclick="commit()">Import</button></p><div id="result"></div></section>
 <section class="card"><h2>Dataset Registry</h2><div id="registry">-</div></section>
 </main><script>
 function call(fn,...args){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(e))[fn](...args));}
 async function boot(){try{const b=await call('getBootstrap');if(!b.user.authenticated){document.getElementById('status').innerHTML='<b>Akses belum terdaftar.</b> Pastikan akun Google Anda ada di sheet USERS.';return;}document.getElementById('user').textContent=b.user.displayName+' · '+b.user.role;document.getElementById('status').innerHTML='<span class="ok">Authenticated</span>';refresh();}catch(e){document.getElementById('status').innerHTML='<span class="error">'+e.message+'</span>';}}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function label(k){return ({bvk:'BVK',voa:'VOA',itk:'ITK',itk_peralihan:'ITK Peralihan',itas:'ITAS',itap:'ITAP',itkt:'ITKT',alih_status_itk_ke_itas:'Alih Status ITK → ITAS',alih_status_itas_ke_itap:'Alih Status ITAS → ITAP',abg:'ABG',epo:'EPO',imk:'IMK',skim:'SKIM'})[k]||k;}
-let mapInstance=null;\nlet mapLayer=null;\nfunction initMap(){\n  if(mapInstance||typeof L==="undefined")return;\n  mapInstance=L.map("map").setView([-6.9,107.6],8);\n  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(mapInstance);\n  mapLayer=L.layerGroup().addTo(mapInstance);\n}\nfunction getFilters(){return {
+let mapInstance=null;
+let mapLayer=null;
+function initMap(){
+  if(mapInstance||typeof L==="undefined")return;
+  mapInstance=L.map("map").setView([-6.9,107.6],8);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(mapInstance);
+  mapLayer=L.layerGroup().addTo(mapInstance);
+}
+function getFilters(){return {
   periode:document.getElementById('periodFilter').value,
   kantor_imigrasi:document.getElementById('officeFilter').value
 };}
