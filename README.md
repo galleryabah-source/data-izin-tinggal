@@ -33,17 +33,17 @@ Contract nyata pertama adalah `RESIDENCE_PERMIT_SERVICE_MONTHLY`.
 Lihat `docs/DATA-CONTRACT-v1.md` untuk contract lengkap.
 
 ## Roadmap
-1. GAS foundation
-2. Login + RBAC
-3. Data dictionary + dataset registry
-4. Paste/import engine + Data Contract v1
-5. First real deployment + import + verification
-6. Dashboard + statistik
+1. GAS foundation + RBAC
+2. Data dictionary + dataset registry
+3. Paste/import engine + Data Contract v1
+4. First real deployment + 80-row import + end-to-end verification
+5. Dashboard v1 over verified data
+6. Dashboard filters + drill-down
 7. Pemetaan
-8. Admin + audit
-9. CI/CD hardening
+8. Governance: backup/export hardening
+9. CI/CD hardening + automated smoke test
 
-Dashboard/statistik/map **tidak dikembangkan lebih lanjut sebelum first real deployment, import 80 row, dan verifikasi contract selesai**.
+The first real deployment/import/verification gate is complete. Dashboard v1 is intentionally aggregate-only; maps, complex filters, and drill-down remain gated until the dashboard vertical slice is validated.
 
 ## Quick start — Apps Script
 
