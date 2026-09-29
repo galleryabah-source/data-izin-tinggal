@@ -157,6 +157,7 @@ function verifyOfficeReferenceCoordinatesV1(){
       if(!Number.isFinite(lat)||lat<-90||lat>90)errors.push(key+':LATITUDE_INVALID');
       if(!Number.isFinite(lng)||lng<-180||lng>180)errors.push(key+':LONGITUDE_INVALID');
       if(status!=='PENDING'&&status!=='VERIFIED')errors.push(key+':STATUS_INVALID:'+status);
+      if(status==='VERIFIED'&&(Number(row[i.latitude])!==lat||Number(row[i.longitude])!==lng))errors.push(key+':VERIFIED_COORDINATE_MISMATCH');
     });
     const expectedKeys=verifiedCoordinates.map(r=>r[0]);
     Object.keys(rowsByKey).filter(key=>expectedKeys.indexOf(key)<0).forEach(key=>errors.push(key+':UNEXPECTED_KEY'));
