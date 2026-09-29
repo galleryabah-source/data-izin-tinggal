@@ -29,8 +29,9 @@
 - [x] Dashboard v1: KPI, monthly totals, office totals, service totals
 - [x] dashboard filters — period + immigration office, server-side, UAT validated
 - [ ] drill-down
-- [ ] maps
-- [ ] map readiness — Office Reference v1 (coordinates must be verified before map UI)
+- [x] drill-down
+- [x] map readiness — Office Reference v1 (10 offices verified; readiness gate `ready=true`)
+- [x] Map v1 — read-only Leaflet map driven by verified Office Reference and dashboard filters
 
 ## Phase 6 — Governance
 - [x] audit log
@@ -55,4 +56,4 @@ The first real dataset is verified end-to-end. Dashboard v1 and Dashboard Filter
 - period ordering: 2026-01 through 2026-08
 - service subtotals reconcile to the filtered grand total
 
-Governance, automated smoke-test, and Drill-down v1 gates are complete. The next gate is Map Readiness: establish a verified Office Reference v1 with authoritative coordinates before implementing map UI.
+Governance, automated smoke-test, and Drill-down v1 gates are complete. The next gate is Map v1 production verification: CI green, production deployment, Web App smoke test, and reconciliation of map markers against the 10 verified offices.
