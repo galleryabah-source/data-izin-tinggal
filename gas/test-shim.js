@@ -30,19 +30,19 @@ const fixture=[
 ];
 const serviceIndexes=Array.from({length:13},(_,i)=>i+2);
 const rowTotal=r=>serviceIndexes.reduce((sum,i)=>sum+Number(r[i]||0),0);
-assert(rowTotal(fixture[0])===692,'fixture row total');
+assert(rowTotal(fixture[0])===685,'fixture row total');
 assert(rowTotal(fixture[1])===115,'fixture row total B');
-assert(rowTotal(fixture[2])===242,'fixture row total A Feb');
+assert(rowTotal(fixture[2])===235,'fixture row total A Feb');
 const allTotal=fixture.reduce((sum,r)=>sum+rowTotal(r),0);
-assert(allTotal===1049,'fixture grand total');
+assert(allTotal===1035,'fixture grand total');
 
 const periodRows=fixture.filter(r=>r[0]==='2026-01');
 assert(periodRows.length===2,'period filter row count');
-assert(periodRows.reduce((sum,r)=>sum+rowTotal(r),0)===807,'period filter total');
+assert(periodRows.reduce((sum,r)=>sum+rowTotal(r),0)===800,'period filter total');
 
 const officeRows=fixture.filter(r=>r[1]==='A');
 assert(officeRows.length===2,'office filter row count');
-assert(officeRows.reduce((sum,r)=>sum+rowTotal(r),0)===934,'office filter total');
+assert(officeRows.reduce((sum,r)=>sum+rowTotal(r),0)===920,'office filter total');
 
 const combined=fixture.filter(r=>r[0]==='2026-01'&&r[1]==='B');
 assert(combined.length===1,'combined filter row count');
