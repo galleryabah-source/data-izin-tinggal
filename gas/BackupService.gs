@@ -2,10 +2,17 @@ function backupConfig_(){
   const props=PropertiesService.getScriptProperties();
   return {folderId:String(props.getProperty('BACKUP_FOLDER_ID')||'').trim()};
 }
+function normalizeDriveFolderId_(value){
+  const raw=String(value||'').trim();
+  if(!raw)throw new Error('BACKUP_FOLDER_ID wajib diisi.');
+  const match=raw.match(/\/folders\/([A-Za-z0-9_-]+)/);
+  const id=match?match[1]:raw;
+  if(!/^[A-Za-z0-9_-]{10,}$/.test(id))throw new Error('BACKUP_FOLDER_ID tidak valid. Masukkan Folder ID atau URL folder Google Drive.');
+  return id;
+}
 function setBackupFolder(folderId){
   requirePermission_('admin.config');
-  const id=String(folderId||'').trim();
-  if(!id)throw new Error('BACKUP_FOLDER_ID wajib diisi.');
+  const id=normalizeDriveFolderId_(folderId);
   const folder=DriveApp.getFolderById(id);
   if(!folder)throw new Error('BACKUP_FOLDER_NOT_FOUND');
   PropertiesService.getScriptProperties().setProperty('BACKUP_FOLDER_ID',id);
