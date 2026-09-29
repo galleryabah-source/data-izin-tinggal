@@ -72,3 +72,34 @@ jobs:
         env:
           APPS_SCRIPT_DEPLOYMENT_ID: ${{ env.APPS_SCRIPT_DEPLOYMENT_ID }}
         run: clasp deploy --deploymentId "$APPS_SCRIPT_DEPLOYMENT_ID" --versionNumber "$APPS_SCRIPT_VERSION" --description "GitHub $GITHUB_SHA"
+
+      
+      - name: Write deployment evidence manifest
+        env:
+          APPS_SCRIPT_VERSION: ${{ env.APPS_SCRIPT_VERSION }}
+        run: |
+          mkdir -p artifacts
+          node <<'NODE'
+          const fs = require('fs');
+          const evidence = {
+            evidenceVersion: "1",
+            repository: process.env.GITHUB_REPOSITORY,
+            commitSha: process.env.GITHUB_SHA,
+            workflow: process.env.GITHUB_WORKFLOW,
+            runId: Number(process.env.GITHUB_RUN_ID),
+            runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+            ref: process.env.GITHUB_REF,
+            environment: "production",
+            appsScriptDeploymentId: process.env.APPS_SCRIPT_DEPLOYMENT_ID,
+            appsScriptVersion: Number(process.env.APPS_SCRIPT_VERSION)
+          };
+          fs.writeFileSync("artifacts/deployment-evidence.json", JSON.stringify(evidence, null, 2) + "\n");
+          NODE
+
+      - name: Upload deployment evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: deployment-evidence-${{ github.run_id }}
+          path: artifacts/deployment-evidence.json
+          if-no-files-found: error
+          retention-days: 90
