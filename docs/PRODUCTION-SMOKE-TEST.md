@@ -105,3 +105,7 @@ A future CI-triggered runtime smoke may be introduced only after its authenticat
 It must not expose Apps Script credentials in source, commit OAuth tokens or service-account secrets, weaken Apps Script RBAC, bypass `requirePermission_('audit.read')`, or confuse source-level CI results with runtime production evidence.
 
 Until that boundary is implemented and verified, the current manual production runtime smoke remains the authoritative v1 production evidence path.
+
+## CI trigger verification
+
+This section was added solely to re-emit a `pull_request` activity for CI trigger-path verification. It has no application or runtime behavior impact.
