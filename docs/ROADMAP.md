@@ -73,4 +73,4 @@ The current production baseline is verified against the real Web App and product
 
 The production baseline is now verified end-to-end. Map v1, Export Verification v1, Backup Snapshot Verification v1, and Automated Production Smoke Test v1 have all passed their production verification gates.
 
-No new feature is currently required to establish the baseline. The next work should be controlled operational hardening and maintenance of the canonical pipeline. Any new drill-down or map enhancement should be treated as a separate change after the production baseline remains green.
+No new feature is currently required to establish the baseline. The next work should be controlled operational hardening and maintenance of the canonical pipeline. The deployment identity evidence chain is now part of that gate: Git commit SHA -> GitHub Actions run -> Apps Script immutable version -> canonical deployment ID -> production smoke -> AUDIT_LOG -> backup snapshot. Any new drill-down or map enhancement should be treated as a separate change after the production baseline remains green.
