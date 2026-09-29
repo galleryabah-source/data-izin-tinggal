@@ -18,6 +18,10 @@ const backupCode=read('BackupService.gs');
 const pureBackup=new Function(backupCode+'\nreturn {normalizeDriveFolderId_};')();
 assert(pureBackup.normalizeDriveFolderId_('1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg')==='1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg','raw Drive folder ID');
 assert(pureBackup.normalizeDriveFolderId_('https://drive.google.com/drive/folders/1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg?usp=sharing')==='1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg','Drive folder URL normalization');
+assert(backupCode.includes('function verifyResidencePermitSnapshot(snapshotSpreadsheetId)'), 'snapshot verification endpoint exists');
+assert(backupCode.includes('SNAPSHOT_NOT_FOUND'), 'snapshot verification handles missing snapshot');
+assert(backupCode.includes('content_sha256'), 'snapshot verification checks manifest checksum');
+assert(backupCode.includes('inConfiguredFolder'), 'snapshot verification checks configured backup folder');
 
 const dashboard=read('DashboardService.gs');
 const officeRef=read('OfficeReferenceService.gs');
