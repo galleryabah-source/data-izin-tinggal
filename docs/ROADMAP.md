@@ -28,7 +28,6 @@
 ## Phase 5 — Intelligence UI
 - [x] Dashboard v1: KPI, monthly totals, office totals, service totals
 - [x] dashboard filters — period + immigration office, server-side, UAT validated
-- [ ] drill-down
 - [x] drill-down
 - [x] map readiness — Office Reference v1 (10 offices verified; readiness gate `ready=true`)
 - [x] Map v1 — read-only Leaflet map driven by verified Office Reference and dashboard filters
@@ -36,7 +35,10 @@
 ## Phase 6 — Governance
 - [x] audit log
 - [x] admin bootstrap
-- [x] backup/export hardening — governed CSV export + Drive snapshot v1
+- [x] governed CSV export
+- [x] Export Verification v1 — production verified: all dataset, January 2026, KANIM KELAS I NON TPI BOGOR
+- [x] Drive backup snapshot v1
+- [x] Backup Snapshot Verification v1 — production verified with manifest, checksum, schema, row-count, and cell-level equality
 
 ## Phase 7 — CI/CD
 - [x] clasp
@@ -45,15 +47,30 @@
 - [x] production deployment
 - [x] canonical Apps Script deployment ID
 - [x] CI action runtime hardening
-- [x] automated smoke test — syntax, contract, normalization, filter, export, backup-ID invariants
+- [x] automated source-level smoke checks
+- [x] Automated Production Smoke Test v1 — production verified
+
+## Production verification baseline
+
+The current production baseline is verified against the real Web App and production spreadsheet:
+
+- dataset: `RESIDENCE_PERMIT_SERVICE_MONTHLY`
+- source sheet: `DATA_RESIDENCE_PERMIT_SERVICE_MONTHLY`
+- 80 operational rows
+- 16 columns
+- 8 monthly periods
+- 10 immigration offices
+- grand total: 258,094 services
+- duplicate business keys: 0
+- blank business keys: 0
+- total mismatches: 0
+- latest import: 80 accepted / 0 rejected / 0 duplicates
+- export verification: 80 rows / 258,094 services
+- backup snapshot verification: source, snapshot, and manifest checksums match
+- automated production smoke test: PASS
 
 ## Current gate
-The first real dataset is verified end-to-end. Dashboard v1 and Dashboard Filter v1 are validated against the real Web App:
-- baseline: 80 rows / 258,094 services
-- period filter January 2026: 10 rows / 33,367 services
-- office filter KANIM KELAS I NON TPI BOGOR: 8 rows / 51,366 services
-- reset filter: 80 rows / 258,094 services
-- period ordering: 2026-01 through 2026-08
-- service subtotals reconcile to the filtered grand total
 
-Governance, automated smoke-test, and Drill-down v1 gates are complete. The next gate is Map v1 production verification: CI green, production deployment, Web App smoke test, and reconciliation of map markers against the 10 verified offices.
+The production baseline is now verified end-to-end. Map v1, Export Verification v1, Backup Snapshot Verification v1, and Automated Production Smoke Test v1 have all passed their production verification gates.
+
+No new feature is currently required to establish the baseline. The next work should be controlled operational hardening and maintenance of the canonical pipeline. Any new drill-down or map enhancement should be treated as a separate change after the production baseline remains green.
