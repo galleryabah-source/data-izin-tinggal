@@ -74,3 +74,34 @@ The current production baseline is verified against the real Web App and product
 The production baseline is now verified end-to-end. Map v1, Export Verification v1, Backup Snapshot Verification v1, and Automated Production Smoke Test v1 have all passed their production verification gates.
 
 No new feature is currently required to establish the baseline. The next work should be controlled operational hardening and maintenance of the canonical pipeline. The deployment identity evidence chain is now part of that gate: Git commit SHA -> GitHub Actions run -> Apps Script immutable version -> canonical deployment ID -> production smoke -> AUDIT_LOG -> backup snapshot. Any new drill-down or map enhancement should be treated as a separate change after the production baseline remains green.
+
+
+## Future platform expansion — planned, not yet implemented
+
+The application is planned to evolve into a unified multi-service immigration data platform while preserving isolated dataset contracts.
+
+### Phase 8 — Multi-service blueprint
+- [x] Document single-application / multi-dataset architecture
+- [x] Define service selector concept: All / Residence Permit / Passport
+- [x] Define dataset isolation and cross-service query boundaries
+- [x] Define phased roadmap for Passport Services
+- [ ] Implement Passport dataset contract
+- [ ] Implement Passport import/validation
+- [ ] Integrate Passport into dashboard
+- [ ] Integrate service-scoped export and backup
+- [ ] Extend production smoke verification
+
+### Phase 9 — Daily operational data
+- [ ] Define daily operational contract where required
+- [ ] Define period closing / correction workflow
+- [ ] Derive monthly and yearly aggregates from approved daily records
+- [ ] Preserve historical monthly baseline and migration traceability
+
+### Phase 10 — Advanced platform capabilities
+- [ ] Cross-service reporting where metrics are semantically compatible
+- [ ] Advanced drill-down and analytics
+- [ ] Service-aware geographic analytics
+- [ ] Document / knowledge integration
+- [ ] Controlled notifications and automation
+
+**Implementation rule:** future phases remain gated. No future service is enabled merely because it is documented. A new dataset family must pass contract, validation, deployment, integrity, export, backup, and runtime evidence gates without weakening the existing residence-permit baseline.

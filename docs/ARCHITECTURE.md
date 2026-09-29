@@ -30,3 +30,44 @@ The production smoke remains a controlled manual gate. CI source validation and 
 
 ## Delivery gate
 The production dashboard/statistics/map implementation is intentionally blocked until Data Contract v1 has passed first real deployment, import, and verification against the supplied workbook.
+
+## Multi-service expansion blueprint
+
+The application is intended to remain one application while supporting multiple governed service datasets.
+
+Initial planned families:
+- `RESIDENCE_PERMIT_SERVICE_MONTHLY` — current production baseline.
+- `PASSPORT_SERVICE_MONTHLY` — future family, design only at this stage.
+
+The UI may expose a service selector such as **All Services / Residence Permit / Passport**, but the underlying datasets remain isolated. A service selection changes presentation/query scope; it does not merge incompatible schemas.
+
+Each future dataset family must have its own:
+- contract/version;
+- grain;
+- business key;
+- normalization rules;
+- validation rules;
+- duplicate rules;
+- audit semantics;
+- export semantics;
+- backup and verification coverage.
+
+Do not create one universal table containing all service-specific columns.
+
+The detailed blueprint is maintained in `docs/MULTI-SERVICE-BLUEPRINT.md`.
+
+## Future daily-data model
+
+Where operationally needed, daily data should become the source grain and monthly/yearly views should be derived:
+
+```text
+Daily records -> daily view
+              -> monthly aggregate
+              -> yearly aggregate
+```
+
+This is a future evolution and does not replace the current verified monthly production contract until an explicit migration plan is approved.
+
+## Current delivery discipline
+
+The multi-service blueprint is a roadmap, not an instruction to implement everything immediately. Current work remains focused on preserving the canonical production pipeline and closing its runtime evidence gate before feature expansion.
