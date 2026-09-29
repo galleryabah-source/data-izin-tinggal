@@ -30,6 +30,7 @@
 - [x] dashboard filters — period + immigration office, server-side, UAT validated
 - [ ] drill-down
 - [ ] maps
+- [ ] map readiness — Office Reference v1 (coordinates must be verified before map UI)
 
 ## Phase 6 — Governance
 - [x] audit log
@@ -54,4 +55,4 @@ The first real dataset is verified end-to-end. Dashboard v1 and Dashboard Filter
 - period ordering: 2026-01 through 2026-08
 - service subtotals reconcile to the filtered grand total
 
-Governance and automated smoke-test gates are complete for v1. The next gate is product intelligence: evaluate a minimal drill-down before maps, using the verified dataset and existing RBAC/export/audit controls.
+Governance, automated smoke-test, and Drill-down v1 gates are complete. The next gate is Map Readiness: establish a verified Office Reference v1 with authoritative coordinates before implementing map UI.
