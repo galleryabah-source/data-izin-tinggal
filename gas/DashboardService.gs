@@ -92,7 +92,10 @@ function exportResidencePermitMonthly(filters){
     (!requestedPeriod||periodOf_(r)===requestedPeriod)&&(!requestedOffice||officeOf_(r)===requestedOffice)
   );
   const csv=[header.map(csvEscape_).join(',')];
-  rows.forEach(r=>csv.push(r.map(csvEscape_).join(',')));
+  rows.forEach(r=>csv.push(header.map((_,idx)=>{
+    const value=r[idx];
+    return value instanceof Date ? Utilities.formatDate(value,APP.TZ,'yyyy-MM') : value;
+  }).map(csvEscape_).join(',')));
   const suffix=requestedPeriod||requestedOffice?'_filtered':'_all';
   const filename=datasetKey.toLowerCase()+suffix+'_'+Utilities.formatDate(new Date(),APP.TZ,'yyyyMMdd_HHmmss')+'.csv';
   appendAudit_('DATASET_EXPORT',datasetKey,'',rows.length,'SUCCESS',JSON.stringify({format:'csv',periode:requestedPeriod,kantor_imigrasi:requestedOffice,filename}));
