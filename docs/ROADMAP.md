@@ -34,7 +34,7 @@
 ## Phase 6 — Governance
 - [x] audit log
 - [x] admin bootstrap
-- [ ] backup/export hardening
+- [x] backup/export hardening — governed CSV export + Drive snapshot v1
 
 ## Phase 7 — CI/CD
 - [x] clasp
@@ -43,7 +43,7 @@
 - [x] production deployment
 - [x] canonical Apps Script deployment ID
 - [x] CI action runtime hardening
-- [ ] automated smoke test
+- [x] automated smoke test — syntax, contract, normalization, filter, export, backup-ID invariants
 
 ## Current gate
 The first real dataset is verified end-to-end. Dashboard v1 and Dashboard Filter v1 are validated against the real Web App:
@@ -54,4 +54,4 @@ The first real dataset is verified end-to-end. Dashboard v1 and Dashboard Filter
 - period ordering: 2026-01 through 2026-08
 - service subtotals reconcile to the filtered grand total
 
-Do not add maps or complex drill-down yet. The next gate is governance: backup/export hardening, followed by an automated smoke-test strategy.
+Governance and automated smoke-test gates are complete for v1. The next gate is product intelligence: evaluate a minimal drill-down before maps, using the verified dataset and existing RBAC/export/audit controls.
