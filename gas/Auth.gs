@@ -11,3 +11,11 @@ function getCurrentUser_(){
 }
 function requirePermission_(permission){const u=getCurrentUser_();if(!u.authenticated)throw new Error('UNAUTHENTICATED');if(!u.permissions.includes(permission))throw new Error('FORBIDDEN: '+permission);return u;}
 function adminCreateUser(email,displayName,role){requirePermission_('admin.users');email=String(email||'').trim().toLowerCase();role=String(role||'').trim().toUpperCase();if(!email||!DEFAULT_ROLES[role])throw new Error('Email/role tidak valid.');const id=Utilities.getUuid();getDb_().getSheetByName(SHEETS.USERS).appendRow([id,email,String(displayName||email),role,'ACTIVE','','',nowIso_(),nowIso_()]);appendAudit_('USER_CREATE','', '',1,'SUCCESS',JSON.stringify({email,role}));return {ok:true,userId:id};}
+
+function bootstrapAdmin(email,displayName){
+  const ss=getDb_(),sh=ss.getSheetByName(SHEETS.USERS),normalized=String(email||'').trim().toLowerCase();
+  if(!normalized||normalized.indexOf('@')<1)throw new Error('Email admin tidak valid.');
+  if(sh.getLastRow()>1)throw new Error('Bootstrap admin hanya boleh dijalankan pada USERS yang masih kosong.');
+  const id=Utilities.getUuid();sh.appendRow([id,normalized,String(displayName||'Administrator'),'ADMIN','ACTIVE','','',nowIso_(),nowIso_()]);
+  return {ok:true,email:normalized,role:'ADMIN',userId:id};
+}
