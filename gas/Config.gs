@@ -1,4 +1,4 @@
-const APP = Object.freeze({NAME:'Data Izin Tinggal',VERSION:'0.2.0',TZ:'Asia/Jakarta',MAX_IMPORT_ROWS:5000,MAX_CELL_CHARS:50000,SHEET_PREFIX:'DATA_'});
+const APP = Object.freeze({NAME:'Data Izin Tinggal',VERSION:'0.2.0',TZ:'Asia/Jakarta',MAX_IMPORT_ROWS:5000,MAX_CELL_CHARS:50000,SHEET_PREFIX:'DATA_',DEPLOYMENT_ID:'AKfycbzwhcpZWp8LhyidPFsvqwBQ6ZrgXjEB60NkyNmaQYsiewsvm9uZ_pwPdrG5xZINF2NK',RELEASE_EVIDENCE_VERSION:'1'});
 const SHEETS = Object.freeze({CONFIG:'CONFIG',USERS:'USERS',ROLES:'ROLES',PERMISSIONS:'PERMISSIONS',DATA_DICTIONARY:'DATA_DICTIONARY',DATASET_REGISTRY:'DATASET_REGISTRY',IMPORT_LOG:'IMPORT_LOG',AUDIT_LOG:'AUDIT_LOG'});
 const DEFAULT_ROLES = {
   ADMIN:['dashboard.read','dataset.read','dataset.write','dataset.import','dataset.export','dataset.approve','dataset.delete','map.read','admin.users','admin.roles','admin.config','audit.read'],
