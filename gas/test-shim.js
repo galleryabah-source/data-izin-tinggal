@@ -20,6 +20,10 @@ assert(pureBackup.normalizeDriveFolderId_('1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg')==
 assert(pureBackup.normalizeDriveFolderId_('https://drive.google.com/drive/folders/1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg?usp=sharing')==='1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg','Drive folder URL normalization');
 
 const dashboard=read('DashboardService.gs');
+const officeRef=read('OfficeReferenceService.gs');
+assert(officeRef.includes('function getOfficeReferenceStatus()'), 'office reference readiness endpoint exists');
+assert(officeRef.includes("requirePermission_('map.read')"), 'map readiness is RBAC protected');
+assert(officeRef.includes("status!=='VERIFIED'"), 'map readiness requires verified reference rows');
 assert(dashboard.includes('function getResidencePermitDrilldown(filters)'), 'drill-down endpoint exists');
 assert(dashboard.includes("requirePermission_('dataset.read')"), 'drill-down is RBAC protected');
 const ui=read('index.html');
