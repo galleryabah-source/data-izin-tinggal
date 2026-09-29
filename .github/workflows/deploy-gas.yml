@@ -24,22 +24,37 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
       - run: npm install -g @google/clasp
-      - name: Configure clasp
+
+      - name: Configure clasp credentials
         working-directory: gas
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
           APPS_SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
         run: |
-          mkdir -p "$HOME/.config/clasp"
-          printf '%s' "$CLASPRC_JSON" > "$HOME/.config/clasp/.clasprc.json"
-          printf '%s' "{\"scriptId\":\"$APPS_SCRIPT_ID\",\"rootDir\":\"gas\"}" > .clasp.json
+          test -n "$CLASPRC_JSON"
+          test -n "$APPS_SCRIPT_ID"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          printf '%s' "{\"scriptId\":\"$APPS_SCRIPT_ID\"}" > .clasp.json
+
       - name: Push Apps Script source
         working-directory: gas
         run: clasp push --force
-      - name: Deploy Apps Script
+
+      - name: Create immutable Apps Script version
         working-directory: gas
-        run: clasp deploy -d "GitHub $GITHUB_SHA"
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          VERSION="$(clasp version "GitHub $GITHUB_SHA" | tail -n 1 | tr -cd '0-9')"
+          test -n "$VERSION"
+          echo "APPS_SCRIPT_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Deploy Apps Script version
+        working-directory: gas
+        run: clasp deploy "$APPS_SCRIPT_VERSION" -d "GitHub $GITHUB_SHA"
