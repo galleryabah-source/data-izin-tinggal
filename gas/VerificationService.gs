@@ -103,3 +103,90 @@ function verifyResidencePermitMonthlyIntegrity(){
   Logger.log(JSON.stringify(result));
   return result;
 }
+
+
+function verifyResidencePermitExportV1(filters){
+  const user=requirePermission_('audit.read');
+  requirePermission_('dataset.export');
+  const datasetKey='RESIDENCE_PERMIT_SERVICE_MONTHLY';
+  const ss=getDb_();
+  const registry=ss.getSheetByName(SHEETS.DATASET_REGISTRY);
+  const rv=registry.getDataRange().getValues(),rh=rv[0]||[],ri=Object.fromEntries(rh.map((x,n)=>[x,n]));
+  const reg=rv.slice(1).find(r=>String(r[ri.dataset_key]||'')===datasetKey&&String(r[ri.status]||'').toUpperCase()==='ACTIVE');
+  if(!reg)throw new Error('DATASET_NOT_REGISTERED');
+  const sheetName=String(reg[ri.sheet_name]||APP.SHEET_PREFIX+datasetKey);
+  const sh=ss.getSheetByName(sheetName);
+  if(!sh)throw new Error('DATASET_SHEET_NOT_FOUND: '+sheetName);
+  const values=sh.getDataRange().getValues();
+  if(values.length<2)throw new Error('DATASET_EMPTY');
+  const header=values[0];
+  const hi=Object.fromEntries(header.map((x,n)=>[x,n]));
+  const requestedPeriod=String((filters&&filters.periode)||'').trim();
+  const requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
+  const periodOf_=r=>{
+    const raw=r[hi.periode];
+    return raw instanceof Date ? Utilities.formatDate(raw,APP.TZ,'yyyy-MM') : String(raw||'').trim();
+  };
+  const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
+  const expectedRows=values.slice(1).filter(r=>r.some(v=>String(v)!=='')).filter(r=>
+    (!requestedPeriod||periodOf_(r)===requestedPeriod)&&
+    (!requestedOffice||officeOf_(r)===requestedOffice)
+  );
+  const exported=exportResidencePermitMonthly(filters);
+  const lines=String(exported.content||'').split('\n');
+  const parseCsvLine_=line=>{
+    const out=[],re=/("(?:[^"]|"")*"|[^,]*)(?:,|$)/g;
+    let m;
+    while((m=re.exec(line))!==null){
+      let value=m[1]||'';
+      if(value.charAt(0)==='"'&&value.charAt(value.length-1)==='"')value=value.slice(1,-1).replace(/""/g,'"');
+      out.push(value);
+      if(m.index+m[0].length>=line.length)break;
+    }
+    return out;
+  };
+  const exportedHeader=parseCsvLine_(lines[0]||'');
+  const exportedRows=lines.slice(1).filter(line=>line!=='').map(parseCsvLine_);
+  const issues=[];
+  if(JSON.stringify(exportedHeader)!==JSON.stringify(header))issues.push('CSV header berbeda dari dataset header.');
+  if(exportedRows.length!==expectedRows.length)issues.push('CSV row count '+exportedRows.length+' berbeda dari expected '+expectedRows.length+'.');
+  if(Number(exported.rowCount)!==expectedRows.length)issues.push('Export response rowCount berbeda dari expected.');
+  const businessKeys={};
+  let valueMismatches=0,totalExported=0,totalExpected=0;
+  expectedRows.forEach((row,rowIndex)=>{
+    const csvRow=exportedRows[rowIndex];
+    if(!csvRow){return;}
+    header.forEach((column,index)=>{
+      let expected=row[index];
+      if(expected instanceof Date)expected=Utilities.formatDate(expected,APP.TZ,'yyyy-MM');
+      const actual=csvRow[index];
+      const expectedText=String(expected===null||expected===undefined?'':expected);
+      if(actual!==expectedText)valueMismatches++;
+    });
+    const key=periodOf_(row)+'|'+officeOf_(row).toUpperCase();
+    businessKeys[key]=(businessKeys[key]||0)+1;
+    totalExpected+=Number(row[hi.total]||0);
+    totalExported+=Number(csvRow[hi.total]||0);
+  });
+  const duplicateExportKeys=Object.values(businessKeys).filter(n=>n>1).length;
+  if(valueMismatches!==0)issues.push('CSV value mismatches: '+valueMismatches+'.');
+  if(duplicateExportKeys!==0)issues.push('CSV duplicate business keys: '+duplicateExportKeys+'.');
+  if(totalExported!==totalExpected)issues.push('CSV aggregate total '+totalExported+' berbeda dari expected '+totalExpected+'.');
+  const result={
+    ok:issues.length===0,
+    verifiedAt:nowIso_(),
+    actor:user.email,
+    datasetKey,
+    filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice},
+    expectedRows:expectedRows.length,
+    exportedRows:exportedRows.length,
+    expectedTotal:totalExpected,
+    exportedTotal:totalExported,
+    valueMismatches,
+    duplicateExportKeys,
+    filename:exported.filename,
+    issues
+  };
+  Logger.log(JSON.stringify(result));
+  return result;
+}
