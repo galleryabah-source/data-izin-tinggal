@@ -34,7 +34,8 @@ async function refreshDashboard(){
   try{
     const r=await call('getResidencePermitDashboard',getFilters());
     populateFilters(r);
-    document.getElementById('total').textContent=r.rowCount;\n    document.getElementById('grandTotal').textContent=r.grandTotal.toLocaleString('id-ID');
+    document.getElementById('total').textContent=r.rowCount;
+    document.getElementById('grandTotal').textContent=r.grandTotal.toLocaleString('id-ID');
     const monthly='<h3>Tren Bulanan</h3><table><tr><th>Periode</th><th>Rows</th><th>Total Layanan</th></tr>'+r.monthly.map(x=>'<tr><td>'+esc(x.periode)+'</td><td>'+x.rows+'</td><td>'+x.total.toLocaleString('id-ID')+'</td></tr>').join('')+'</table>';
     const offices='<h3>Per Kantor Imigrasi</h3><table><tr><th>Kantor</th><th>Rows</th><th>Total Layanan</th></tr>'+r.offices.map(x=>'<tr><td>'+esc(x.kantor_imigrasi)+'</td><td>'+x.rows+'</td><td>'+x.total.toLocaleString('id-ID')+'</td></tr>').join('')+'</table>';
     const services='<h3>Per Jenis Layanan</h3><table><tr><th>Layanan</th><th>Total</th></tr>'+r.services.map(x=>'<tr><td>'+esc(label(x.key))+'</td><td>'+x.total.toLocaleString('id-ID')+'</td></tr>').join('')+'</table>';
