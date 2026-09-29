@@ -118,3 +118,71 @@ function previewOfficeReferenceGeocoding(){
   });
   return {ok:true,count:candidates.length,candidates};
 }
+
+
+function verifyOfficeReferenceCoordinatesV1(){
+  requirePermission_('admin.config');
+  const lock=LockService.getScriptLock();
+  if(!lock.tryLock(30000))throw new Error('OFFICE_REFERENCE_VERIFICATION_LOCK_TIMEOUT');
+  try{
+    const verifiedCoordinates=[
+      ['KANIM_KELAS_I_NON_TPI_BEKASI',-6.2201929,107.0306817],
+      ['KANIM_KELAS_I_NON_TPI_BOGOR',-6.5754346,106.8002155],
+      ['KANIM_KELAS_I_NON_TPI_DEPOK',-6.4283573,106.8270248],
+      ['KANIM_KELAS_I_NON_TPI_KARAWANG',-6.3010447,107.3028125],
+      ['KANIM_KELAS_I_NON_TPI_TASIKMALAYA',-7.3046503,108.1944095],
+      ['KANIM_KELAS_I_TPI_BANDUNG',-6.8990496,107.6316499],
+      ['KANIM_KELAS_I_TPI_CIREBON',-6.7247456,108.5209941],
+      ['KANIM_KELAS_II_NON_TPI_GARUT',-7.1995327,107.8867769],
+      ['KANIM_KELAS_II_NON_TPI_SUKABUMI',-6.9510196,106.9263034],
+      ['KANIM_KELAS_III_NON_TPI_CIANJUR',-6.8074116,107.158253]
+    ];
+    const ss=getDb_(),sh=ss.getSheetByName('OFFICE_REFERENCE');
+    if(!sh)throw new Error('OFFICE_REFERENCE_NOT_FOUND');
+    const values=sh.getDataRange().getValues(),h=values[0]||[],i=Object.fromEntries(h.map((x,n)=>[x,n]));
+    const required=['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status'];
+    if(required.some(key=>i[key]===undefined))throw new Error('OFFICE_REFERENCE_SCHEMA_MISMATCH');
+    const rowsByKey={};
+    values.slice(1).forEach((r,n)=>{
+      const key=String(r[i.office_key]||'').trim();
+      if(key)rowsByKey[key]={row:r,rowNumber:n+2};
+    });
+    const errors=[],now=nowIso_();
+    verifiedCoordinates.forEach(([key,lat,lng])=>{
+      const entry=rowsByKey[key];
+      if(!entry){errors.push(key+':MISSING');return;}
+      const row=entry.row,status=String(row[i.status]||'').trim().toUpperCase(),address=String(row[i.address]||'').trim(),sourceUrl=String(row[i.source_url]||'').trim();
+      if(!address)errors.push(key+':ADDRESS_MISSING');
+      if(!sourceUrl)errors.push(key+':SOURCE_URL_MISSING');
+      if(!Number.isFinite(lat)||lat<-90||lat>90)errors.push(key+':LATITUDE_INVALID');
+      if(!Number.isFinite(lng)||lng<-180||lng>180)errors.push(key+':LONGITUDE_INVALID');
+      if(status!=='PENDING'&&status!=='VERIFIED')errors.push(key+':STATUS_INVALID:'+status);
+    });
+    const expectedKeys=verifiedCoordinates.map(r=>r[0]);
+    Object.keys(rowsByKey).filter(key=>expectedKeys.indexOf(key)<0).forEach(key=>errors.push(key+':UNEXPECTED_KEY'));
+    if(errors.length)throw new Error('OFFICE_REFERENCE_VERIFICATION_REJECTED: '+errors.join('; '));
+
+    const changed=[];
+    verifiedCoordinates.forEach(([key,lat,lng])=>{
+      const entry=rowsByKey[key],row=entry.row,status=String(row[i.status]||'').trim().toUpperCase();
+      const same=status==='VERIFIED'&&Number(row[i.latitude])===lat&&Number(row[i.longitude])===lng;
+      if(!same){
+        row[i.latitude]=lat;
+        row[i.longitude]=lng;
+        row[i.verified_at]=now;
+        row[i.status]='VERIFIED';
+        changed.push(key);
+      }
+    });
+    if(changed.length)sh.getRange(2,1,values.length-1,h.length).setValues(values.slice(1));
+    appendAudit_('OFFICE_REFERENCE_CANONICAL_VERIFY','', '',changed.length,'SUCCESS',JSON.stringify({
+      version:'1',
+      changedOffices:changed,
+      verifiedAt:now,
+      coordinates:verifiedCoordinates.map(([key,lat,lng])=>({office_key:key,latitude:lat,longitude:lng}))
+    }));
+    return {ok:true,version:'1',changed:changed.length,changedOffices:changed,verifiedAt:now,status:'VERIFIED'};
+  }finally{
+    lock.releaseLock();
+  }
+}
