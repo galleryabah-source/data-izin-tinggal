@@ -8,6 +8,7 @@ const DEFAULT_ROLES = {
   AUDITOR:['dashboard.read','dataset.read','audit.read']
 };
 const DATASET_CONTRACTS = Object.freeze({
+  OFFICE_REFERENCE:Object.freeze({datasetKey:'OFFICE_REFERENCE',version:'1',columns:['office_key','kantor_imigrasi','latitude','longitude'],required:['office_key','kantor_imigrasi','latitude','longitude'],optional:[],ignored:[],businessKey:['office_key'],derived:[]}),
   RESIDENCE_PERMIT_SERVICE_MONTHLY:Object.freeze({
     datasetKey:'RESIDENCE_PERMIT_SERVICE_MONTHLY',version:'1',
     columns:['periode','kantor_imigrasi','bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim','total'],
