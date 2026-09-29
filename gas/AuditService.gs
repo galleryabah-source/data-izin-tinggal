@@ -1,0 +1,1 @@
+function appendAudit_(action,datasetKey,batchId,affectedRows,status,details){const u=getCurrentUser_();getDb_().getSheetByName(SHEETS.AUDIT_LOG).appendRow([Utilities.getUuid(),nowIso_(),u.email||'system',action,datasetKey||'',batchId||'',affectedRows||0,status||'SUCCESS',details||'']);}
