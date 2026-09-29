@@ -1,0 +1,1 @@
+const fs=require('fs'); const path=require('path'); for(const name of fs.readdirSync(__dirname).filter(x=>/\.(gs|js)$/.test(x))){new Function(fs.readFileSync(path.join(__dirname,name),'utf8'));} console.log('GAS source syntax: OK');
