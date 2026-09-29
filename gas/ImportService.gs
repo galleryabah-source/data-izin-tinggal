@@ -16,12 +16,12 @@ function parseDelimitedLine_(line,delimiter){
   out.push(buf.join('').trim());return out;
 }
 function normalizePeriod_(value){
-  const s=String(value||'').trim().toUpperCase().replace(/\\s+/g,' ');
-  if(/^\\d{4}-\\d{2}$/.test(s))return s;
-  const m=s.match(/^(JAN|JANUARI|FEB|FEBRUARI|MAR|MARET|APR|APRIL|MEI|MAY|JUN|JUNI|JUL|JULI|AGU|AGS|AGUST|AGUSTUS|SEP|SEPT|SEPTEMBER|OKT|OKTOBER|NOV|NOVEMBER|DES|DESEMBER)[ -](20\\d{2})$/);
+  const s=String(value||'').trim().toUpperCase().replace(/[[:space:]]+/g,' ');
+  if(/^[0-9]{4}-[0-9]{2}$/.test(s))return s;
+  const m=s.match(/^(JAN|JANUARI|FEB|FEBRUARI|MAR|MARET|APR|APRIL|MEI|MAY|JUN|JUNI|JUL|JULI|AGU|AGS|AGUST|AGUSTUS|SEP|SEPT|SEPTEMBER|OKT|OKTOBER|NOV|NOVEMBER|DES|DESEMBER)[ -](20[0-9]{2})$/);
   const names={JAN:'01',JANUARI:'01',FEB:'02',FEBRUARI:'02',MAR:'03',MARET:'03',APR:'04',APRIL:'04',MEI:'05',MAY:'05',JUN:'06',JUNI:'06',JUL:'07',JULI:'07',AGU:'08',AGS:'08',AGUST:'08',AGUSTUS:'08',SEP:'09',SEPT:'09',SEPTEMBER:'09',OKT:'10',OKTOBER:'10',NOV:'11',NOVEMBER:'11',DES:'12',DESEMBER:'12'};
   if(m)return m[2]+'-'+names[m[1]];
-  const n=s.match(/^(\\d{1,2})[\\/-](20\\d{2})$/);if(n&&Number(n[1])>=1&&Number(n[1])<=12)return n[2]+'-'+('0'+n[1]).slice(-2);
+  const n=s.match(/^([0-9]{1,2})[-/]((20)[0-9]{2})$/);if(n&&Number(n[1])>=1&&Number(n[1])<=12)return n[2]+'-'+('0'+n[1]).slice(-2);
   throw new Error('Periode harus berupa YYYY-MM atau nama bulan + tahun.');
 }
 function normalizeInteger_(value,key){
