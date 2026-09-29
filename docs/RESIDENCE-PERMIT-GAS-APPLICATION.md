@@ -79,7 +79,7 @@ PASTE -> PARSE -> HEADER DETECTION -> SCHEMA MATCH -> CREATE/UPDATE DATASET -> V
 
 Schema baru membuat sheet DATA_<SAFE_SCHEMA_KEY> dan entry di DATASET_REGISTRY. Schema lama diarahkan ke dataset terdaftar.
 
-Contoh canonical fields: no, no_paspor, nama, jenis_izin_tinggal, tanggal_terbit, tanggal_berakhir, kewarganegaraan, kantor, provinsi, kabupaten_kota, latitude, longitude, status, source.
+Canonical initial dataset: `RESIDENCE_PERMIT_SERVICE_MONTHLY` with `periode`, `kantor_imigrasi`, 13 service metrics, and derived `total`. Individual-record fields such as passport/name/nationality remain separate future contracts.
 
 ## 6. Data dictionary
 
@@ -142,10 +142,10 @@ validate -> test -> package -> deploy-staging -> smoke-test -> deploy-production
 Phase 1: GAS foundation + repository + CI.
 Phase 2: Auth/RBAC.
 Phase 3: Data dictionary + dynamic dataset registry.
-Phase 4: Paste/import engine.
-Phase 5: Dashboard/statistics.
-Phase 6: Map module.
-Phase 7: Admin/audit.
-Phase 8: staging/prod deployment and smoke tests.
+Phase 4: Data Contract v1 + paste/import validation.
+Phase 5: First real deployment + 80-row import + verification.
+Phase 6: Dashboard/statistics.
+Phase 7: Map module.
+Phase 8: Admin/audit and production hardening.
 
-Catatan penting: sebelum produksi, gunakan nama kolom dan contoh baris nyata dari spreadsheet pengguna sebagai canonical initial schema. Blueprint sengaja schema-driven agar format tabel baru yang disetujui dapat ditambahkan tanpa menulis ulang dashboard.
+Catatan penting: Data Contract v1 memakai schema nyata dari `Copy of Tabel Layanan Izin Tinggal.xlsx`. Blueprint tetap schema-driven agar dataset lain dapat ditambahkan melalui contract/version baru tanpa mengubah dataset monthly service yang sudah dikunci.
