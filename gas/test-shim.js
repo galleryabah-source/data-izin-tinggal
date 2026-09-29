@@ -19,6 +19,13 @@ const pureBackup=new Function(backupCode+'\nreturn {normalizeDriveFolderId_};')(
 assert(pureBackup.normalizeDriveFolderId_('1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg')==='1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg','raw Drive folder ID');
 assert(pureBackup.normalizeDriveFolderId_('https://drive.google.com/drive/folders/1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg?usp=sharing')==='1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg','Drive folder URL normalization');
 
+const dashboard=read('DashboardService.gs');
+assert(dashboard.includes('function getResidencePermitDrilldown(filters)'), 'drill-down endpoint exists');
+assert(dashboard.includes("requirePermission_('dataset.read')"), 'drill-down is RBAC protected');
+const ui=read('index.html');
+assert(ui.includes('getResidencePermitDrilldown'), 'UI invokes drill-down endpoint');
+assert(ui.includes('read-only'), 'UI marks drill-down read-only');
+
 const config=read('Config.gs');
 const contractColumns=['periode','kantor_imigrasi','bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim','total'];
 for(const key of ['RESIDENCE_PERMIT_SERVICE_MONTHLY',...contractColumns])assert(config.includes(key),'contract contains '+key);

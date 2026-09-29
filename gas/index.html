@@ -1,7 +1,7 @@
 <!doctype html>
 <html><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
 body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#17202a}header{background:#17365d;color:white;padding:18px 24px}main{max-width:1100px;margin:24px auto;padding:0 16px}.card{background:white;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px #0001}textarea{width:100%;min-height:180px;box-sizing:border-box}button{padding:10px 16px;border:0;border-radius:8px;cursor:pointer}.primary{background:#17365d;color:#fff}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.metric{font-size:30px;font-weight:700}.muted{color:#667085}.error{color:#b42318}.ok{color:#067647}table{border-collapse:collapse;width:100%}td,th{padding:8px;border-bottom:1px solid #eee;text-align:left}
-.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px}.filters label{font-weight:600;font-size:13px}.filters select{width:100%;padding:9px;border:1px solid #d0d5dd;border-radius:8px;background:#fff;margin-top:6px}.filter-actions{display:flex;gap:8px;align-items:end}.secondary{background:#eef2f6;color:#17202a}</style></head><body><header><strong>Data Izin Tinggal</strong><div id="user" class="muted"></div></header><main>
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px}.filters label{font-weight:600;font-size:13px}.filters select{width:100%;padding:9px;border:1px solid #d0d5dd;border-radius:8px;background:#fff;margin-top:6px}.filter-actions{display:flex;gap:8px;align-items:end}.detail-wrap{overflow:auto;max-height:560px;border:1px solid #eee;border-radius:8px}.detail-wrap table{min-width:1500px}.detail-wrap th{position:sticky;top:0;background:#f8fafc;z-index:1}.detail-meta{margin:8px 0 12px;color:#667085;font-size:13px}.secondary{background:#eef2f6;color:#17202a}</style></head><body><header><strong>Data Izin Tinggal</strong><div id="user" class="muted"></div></header><main>
 <div id="status" class="card">Memuat...</div>
 <section class="grid"><div class="card"><div class="muted">Total Records</div><div id="total" class="metric">-</div></div><div class="card"><div class="muted">Dataset</div><div id="datasets" class="metric">-</div></div><div class="card"><div class="muted">Total Layanan</div><div id="grandTotal" class="metric">-</div></div></section>
 <section class="card"><h2>Dashboard Layanan Izin Tinggal</h2>
@@ -10,7 +10,7 @@ body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#17202a}head
   <label>Kantor Imigrasi<select id="officeFilter" onchange="refreshDashboard()"><option value="">Semua Kantor</option></select></label>
   <div class="filter-actions"><button class="secondary" onclick="resetFilters()">Reset Filter</button></div>
 </div>
-<div class="filter-actions" style="margin-bottom:12px"><button onclick="exportCsv()">Export CSV</button></div><div id="dashboard">Memuat ringkasan...</div></section>
+<div class="filter-actions" style="margin-bottom:12px"><button onclick="exportCsv()">Export CSV</button></div><div id="dashboard">Memuat ringkasan...</div><hr><h3>Drill-down Data</h3><div id="drilldown" class="muted">Memuat detail...</div></section>
 <section class="card"><h2>Import Data</h2><p class="muted">Paste tabel dari spreadsheet. Sistem akan mendeteksi header dan schema.</p><textarea id="paste" placeholder="Paste tabel di sini..."></textarea><p><button class="primary" onclick="preview()">Preview</button> <button onclick="commit()">Import</button></p><div id="result"></div></section>
 <section class="card"><h2>Dataset Registry</h2><div id="registry">-</div></section>
 </main><script>
@@ -28,6 +28,16 @@ function populateFilters(r){
   p.innerHTML='<option value="">Semua Periode</option>'+r.filters.availablePeriods.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
   o.innerHTML='<option value="">Semua Kantor</option>'+r.filters.availableOffices.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
   p.value=selectedP;o.value=selectedO;
+}
+
+async function refreshDrilldown(){
+  try{
+    const r=await call('getResidencePermitDrilldown',getFilters());
+    if(!r.rowCount){document.getElementById('drilldown').innerHTML='<div class="detail-meta">0 baris sesuai filter.</div>';return;}
+    const head=r.columns.map(x=>'<th>'+esc(x)+'</th>').join('');
+    const body=r.rows.map(row=>'<tr>'+row.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('');
+    document.getElementById('drilldown').innerHTML='<div class="detail-meta">'+r.rowCount+' baris · read-only · mengikuti filter dashboard</div><div class="detail-wrap"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div>';
+  }catch(e){document.getElementById('drilldown').innerHTML='<span class="error">'+esc(e.message)+'</span>';}
 }
 function resetFilters(){document.getElementById('periodFilter').value='';document.getElementById('officeFilter').value='';refreshDashboard();}
 async function exportCsv(){
@@ -48,6 +58,7 @@ async function refreshDashboard(){
     const offices='<h3>Per Kantor Imigrasi</h3><table><tr><th>Kantor</th><th>Rows</th><th>Total Layanan</th></tr>'+r.offices.map(x=>'<tr><td>'+esc(x.kantor_imigrasi)+'</td><td>'+x.rows+'</td><td>'+x.total.toLocaleString('id-ID')+'</td></tr>').join('')+'</table>';
     const services='<h3>Per Jenis Layanan</h3><table><tr><th>Layanan</th><th>Total</th></tr>'+r.services.map(x=>'<tr><td>'+esc(label(x.key))+'</td><td>'+x.total.toLocaleString('id-ID')+'</td></tr>').join('')+'</table>';
     document.getElementById('dashboard').innerHTML=monthly+offices+services;
+    await refreshDrilldown();
   }catch(e){document.getElementById('dashboard').innerHTML='<span class="error">'+esc(e.message)+'</span>';}
 }
 async function refresh(){
