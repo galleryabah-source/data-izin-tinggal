@@ -1,0 +1,11 @@
+# Apps Script local/auth artifacts
+.clasp.json
+.claspignore
+.clasprc.json
+node_modules/
+coverage/
+.env
+.env.*
+!.env.example
+dist/
+build/
