@@ -9,7 +9,6 @@ function getDashboardSummary(){
 function getResidencePermitDashboard(){
   requirePermission_('dashboard.read');
   const datasetKey='RESIDENCE_PERMIT_SERVICE_MONTHLY';
-  const contract=DATASET_CONTRACTS[datasetKey];
   const ss=getDb_();
   const registry=ss.getSheetByName(SHEETS.DATASET_REGISTRY);
   const rv=registry.getDataRange().getValues();
@@ -30,7 +29,8 @@ function getResidencePermitDashboard(){
   serviceColumns.forEach(c=>services[c]=0);
   let grandTotal=0;
   rows.forEach(r=>{
-    const period=String(r[hi.periode]||'');
+    const rawPeriod=r[hi.periode];
+    const period=rawPeriod instanceof Date ? Utilities.formatDate(rawPeriod,APP.TZ,'yyyy-MM') : String(rawPeriod||'').trim();
     const office=String(r[hi.kantor_imigrasi]||'');
     const total=Number(r[hi.total]||0);
     grandTotal+=total;
