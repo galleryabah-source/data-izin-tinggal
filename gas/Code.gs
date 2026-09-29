@@ -32,7 +32,7 @@ function seedDictionary_(){
     ['nama','Nama','NAMA;NAMA LENGKAP','TEXT','TRUE','','trim','RESTRICTED','TRUE','FALSE','','1'],
     ['jenis_izin_tinggal','Jenis Izin Tinggal','JENIS IZIN TINGGAL;JENIS IZIN','TEXT','TRUE','','trim','INTERNAL','TRUE','TRUE','','1'],
     ['tanggal_terbit','Tanggal Terbit','TANGGAL TERBIT;TGL TERBIT','DATE','FALSE','','date','INTERNAL','FALSE','TRUE','','1'],
-    ['tanggal_berakhir','Tanggal Berakhir','TANGGAL BERAKHIR;TGL BERAKHIR','DATE','TRUE','','','date','INTERNAL','TRUE','TRUE','','1'],
+    ['tanggal_berakhir','Tanggal Berakhir','TANGGAL BERAKHIR;TGL BERAKHIR','DATE','TRUE','','date','INTERNAL','TRUE','TRUE','','1'],
     ['kewarganegaraan','Kewarganegaraan','KEWARGANEGARAAN;WARGANEGARA','TEXT','FALSE','','trim','INTERNAL','TRUE','TRUE','','1'],
     ['kantor','Kantor','KANTOR;KANTOR IMIGRASI','TEXT','FALSE','','trim','INTERNAL','TRUE','TRUE','region','1'],
     ['provinsi','Provinsi','PROVINSI','TEXT','FALSE','','trim','INTERNAL','TRUE','TRUE','region','1'],
