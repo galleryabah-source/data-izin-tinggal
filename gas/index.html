@@ -29,6 +29,16 @@ function populateFilters(r){
   o.innerHTML='<option value="">Semua Kantor</option>'+r.filters.availableOffices.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
   p.value=selectedP;o.value=selectedO;
 }
+
+async function refreshDrilldown(){
+  try{
+    const r=await call('getResidencePermitDrilldown',getFilters());
+    if(!r.rowCount){document.getElementById('drilldown').innerHTML='<div class="detail-meta">0 baris sesuai filter.</div>';return;}
+    const head=r.columns.map(x=>'<th>'+esc(x)+'</th>').join('');
+    const body=r.rows.map(row=>'<tr>'+row.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('');
+    document.getElementById('drilldown').innerHTML='<div class="detail-meta">'+r.rowCount+' baris · read-only · mengikuti filter dashboard</div><div class="detail-wrap"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div>';
+  }catch(e){document.getElementById('drilldown').innerHTML='<span class="error">'+esc(e.message)+'</span>';}
+}
 function resetFilters(){document.getElementById('periodFilter').value='';document.getElementById('officeFilter').value='';refreshDashboard();}
 async function exportCsv(){
   try{
@@ -48,6 +58,7 @@ async function refreshDashboard(){
     const offices='<h3>Per Kantor Imigrasi</h3><table><tr><th>Kantor</th><th>Rows</th><th>Total Layanan</th></tr>'+r.offices.map(x=>'<tr><td>'+esc(x.kantor_imigrasi)+'</td><td>'+x.rows+'</td><td>'+x.total.toLocaleString('id-ID')+'</td></tr>').join('')+'</table>';
     const services='<h3>Per Jenis Layanan</h3><table><tr><th>Layanan</th><th>Total</th></tr>'+r.services.map(x=>'<tr><td>'+esc(label(x.key))+'</td><td>'+x.total.toLocaleString('id-ID')+'</td></tr>').join('')+'</table>';
     document.getElementById('dashboard').innerHTML=monthly+offices+services;
+    await refreshDrilldown();
   }catch(e){document.getElementById('dashboard').innerHTML='<span class="error">'+esc(e.message)+'</span>';}
 }
 async function refresh(){
