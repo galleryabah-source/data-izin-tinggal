@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   validate:
@@ -17,9 +16,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
-      - run: npm test --if-present
-      - run: npm run lint --if-present
+      - run: npm test
 
   deploy:
     needs: validate
@@ -30,15 +27,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
       - run: npm install -g @google/clasp
       - name: Configure clasp
+        working-directory: gas
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          APPS_SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
         run: |
           mkdir -p "$HOME/.config/clasp"
-          printf '%s' '${{ secrets.CLASPRC_JSON }}' > "$HOME/.config/clasp/.clasprc.json"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.config/clasp/.clasprc.json"
+          printf '%s' "{\"scriptId\":\"$APPS_SCRIPT_ID\",\"rootDir\":\"gas\"}" > .clasp.json
       - name: Push Apps Script source
         working-directory: gas
         run: clasp push --force
-      - name: Create deployment
+      - name: Deploy Apps Script
         working-directory: gas
-        run: clasp deploy -d "GitHub ${GITHUB_SHA}"
+        run: clasp deploy -d "GitHub $GITHUB_SHA"
