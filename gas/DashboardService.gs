@@ -6,7 +6,7 @@ function getDashboardSummary(){
   return {totalRecords:total,datasets:datasets.map(d=>({datasetKey:d.datasetKey,rowCount:d.rowCount,columns:d.columns}))};
 }
 
-function getResidencePermitDashboard(){
+function getResidencePermitDashboard(filters){
   requirePermission_('dashboard.read');
   const datasetKey='RESIDENCE_PERMIT_SERVICE_MONTHLY';
   const ss=getDb_();
@@ -23,15 +23,27 @@ function getResidencePermitDashboard(){
   if(values.length<2)return {datasetKey,rowCount:0,grandTotal:0,monthly:[],offices:[],services:[]};
   const header=values[0];
   const hi=Object.fromEntries(header.map((x,n)=>[x,n]));
-  const rows=values.slice(1).filter(r=>r.some(v=>String(v)!==''));
+  const requestedPeriod=String((filters&&filters.periode)||'').trim();
+  const requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
+  const allRows=values.slice(1).filter(r=>r.some(v=>String(v)!==''));
+  const periodOf_=r=>{
+    const raw=r[hi.periode];
+    return raw instanceof Date ? Utilities.formatDate(raw,APP.TZ,'yyyy-MM') : String(raw||'').trim();
+  };
+  const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
+  const availablePeriods=[...new Set(allRows.map(periodOf_).filter(Boolean))].sort();
+  const availableOffices=[...new Set(allRows.map(officeOf_).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'id'));
+  const rows=allRows.filter(r=>
+    (!requestedPeriod || periodOf_(r)===requestedPeriod) &&
+    (!requestedOffice || officeOf_(r)===requestedOffice)
+  );
   const serviceColumns=['bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim'];
   const monthly={},offices={},services={};
   serviceColumns.forEach(c=>services[c]=0);
   let grandTotal=0;
   rows.forEach(r=>{
-    const rawPeriod=r[hi.periode];
-    const period=rawPeriod instanceof Date ? Utilities.formatDate(rawPeriod,APP.TZ,'yyyy-MM') : String(rawPeriod||'').trim();
-    const office=String(r[hi.kantor_imigrasi]||'');
+    const period=periodOf_(r);
+    const office=officeOf_(r);
     const total=Number(r[hi.total]||0);
     grandTotal+=total;
     if(!monthly[period])monthly[period]={periode:period,total:0,rows:0};
@@ -45,6 +57,7 @@ function getResidencePermitDashboard(){
   return {
     datasetKey,
     rowCount:rows.length,
+    filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,availablePeriods,availableOffices},
     grandTotal,
     monthly:Object.values(monthly).sort((a,b)=>a.periode.localeCompare(b.periode)),
     offices:Object.values(offices).sort((a,b)=>b.total-a.total),
