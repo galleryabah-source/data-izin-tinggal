@@ -91,6 +91,7 @@ async function refreshDashboard(){
     const services='<h3>Per Jenis Layanan</h3><table><tr><th>Layanan</th><th>Total</th></tr>'+r.services.map(x=>'<tr><td>'+esc(label(x.key))+'</td><td>'+x.total.toLocaleString('id-ID')+'</td></tr>').join('')+'</table>';
     document.getElementById('dashboard').innerHTML=monthly+offices+services;
     await refreshDrilldown();
+    await refreshMap();
   }catch(e){document.getElementById('dashboard').innerHTML='<span class="error">'+esc(e.message)+'</span>';}
 }
 async function refresh(){
