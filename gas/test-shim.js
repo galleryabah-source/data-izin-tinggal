@@ -24,6 +24,11 @@ const officeRef=read('OfficeReferenceService.gs');
 assert(officeRef.includes('function getOfficeReferenceStatus()'), 'office reference readiness endpoint exists');
 assert(officeRef.includes("requirePermission_('map.read')"), 'map readiness is RBAC protected');
 assert(officeRef.includes("status!=='VERIFIED'"), 'map readiness requires verified reference rows');
+assert(officeRef.includes('function seedOfficeReferenceDraft()'), 'office reference draft seeding endpoint exists');
+assert(officeRef.includes("requirePermission_('admin.config')"), 'office reference draft seeding is admin protected');
+assert(officeRef.includes("status:'PENDING'"), 'office reference draft seed never marks rows VERIFIED');
+assert(officeRef.includes('if(rows.length)sh.getRange'), 'office reference draft seed writes only missing offices');
+
 assert(dashboard.includes('function getResidencePermitDrilldown(filters)'), 'drill-down endpoint exists');
 assert(dashboard.includes("requirePermission_('dataset.read')"), 'drill-down is RBAC protected');
 const ui=read('index.html');
