@@ -190,3 +190,90 @@ function verifyResidencePermitExportV1(filters){
   Logger.log(JSON.stringify(result));
   return result;
 }
+
+
+function findLatestResidencePermitSnapshot_(){
+  const cfg=backupConfig_();
+  if(!cfg.folderId)return '';
+  const folder=DriveApp.getFolderById(cfg.folderId);
+  const files=folder.getFiles();
+  let latest=null;
+  while(files.hasNext()){
+    const file=files.next();
+    const name=file.getName();
+    if(name.indexOf('BACKUP_RESIDENCE_PERMIT_SERVICE_MONTHLY_')!==0)continue;
+    if(!latest||file.getLastUpdated().getTime()>latest.getLastUpdated().getTime())latest=file;
+  }
+  return latest?latest.getId():'';
+}
+
+function runProductionSmokeTestV1(){
+  const user=requirePermission_('audit.read');
+  const startedAt=nowIso_();
+  const checks=[];
+  const check_=(name,fn)=>{
+    try{
+      const result=fn();
+      const ok=Boolean(result&&result.ok!==false);
+      checks.push({name,ok,result});
+      return result;
+    }catch(e){
+      checks.push({name,ok:false,error:String(e&&e.message||e)});
+      return null;
+    }
+  };
+
+  const bootstrap=check_('identity',()=>getBootstrap());
+  if(!bootstrap||!bootstrap.user||!bootstrap.user.authenticated)checks[checks.length-1].ok=false;
+
+  const summary=check_('dashboard_summary',()=>getDashboardSummary());
+  const dashboard=check_('dashboard_baseline',()=>getResidencePermitDashboard({}));
+  if(dashboard){
+    if(Number(dashboard.rowCount)!==80)checks[checks.length-1].ok=false;
+    if(Number(dashboard.grandTotal)!==258094)checks[checks.length-1].ok=false;
+    if(!Array.isArray(dashboard.monthly)||dashboard.monthly.length!==8)checks[checks.length-1].ok=false;
+    if(!Array.isArray(dashboard.offices)||dashboard.offices.length!==10)checks[checks.length-1].ok=false;
+  }
+
+  const drilldown=check_('drilldown_baseline',()=>getResidencePermitDrilldown({}));
+  if(drilldown&&Number(drilldown.rowCount)!==80)checks[checks.length-1].ok=false;
+
+  const officeStatus=check_('office_reference_readiness',()=>getOfficeReferenceStatus());
+  if(officeStatus&&!officeStatus.ready)checks[checks.length-1].ok=false;
+
+  const map=check_('map_baseline',()=>getResidencePermitMap({}));
+  if(map){
+    if(Number(map.rowCount)!==80)checks[checks.length-1].ok=false;
+    if(!Array.isArray(map.markers)||map.markers.length!==10)checks[checks.length-1].ok=false;
+  }
+
+  const integrity=check_('dataset_integrity',()=>verifyResidencePermitMonthlyIntegrity());
+  if(integrity&&!integrity.ok)checks[checks.length-1].ok=false;
+
+  const exportCheck=check_('export_verification',()=>verifyResidencePermitExportV1({}));
+  if(exportCheck&&!exportCheck.ok)checks[checks.length-1].ok=false;
+
+  const latestSnapshotId=findLatestResidencePermitSnapshot_();
+  const snapshot=check_('backup_snapshot',()=>{
+    if(!latestSnapshotId)throw new Error('NO_BACKUP_SNAPSHOT_FOUND');
+    return verifyResidencePermitSnapshot(latestSnapshotId);
+  });
+  if(snapshot&&!snapshot.ok)checks[checks.length-1].ok=false;
+
+  const failed=checks.filter(c=>!c.ok);
+  const result={
+    ok:failed.length===0,
+    smokeVersion:'1',
+    verifiedAt:nowIso_(),
+    startedAt,
+    actor:user.email,
+    datasetKey:'RESIDENCE_PERMIT_SERVICE_MONTHLY',
+    expected:{rowCount:80,grandTotal:258094,monthlyPeriods:8,offices:10},
+    latestSnapshotId:latestSnapshotId||null,
+    checks:checks.map(c=>({name:c.name,ok:c.ok,error:c.error||null})),
+    failedChecks:failed.map(c=>c.name)
+  };
+  appendAudit_('PRODUCTION_SMOKE_TEST','RESIDENCE_PERMIT_SERVICE_MONTHLY','',80,result.ok?'PASS':'FAILED',JSON.stringify(result));
+  Logger.log(JSON.stringify(result));
+  return result;
+}

@@ -96,3 +96,12 @@ console.log('Dashboard filter invariants: OK');
 console.log('CSV export invariants: OK');
 console.log('Backup folder normalization: OK');
 console.log('Automated smoke test: PASS');
+
+const verificationCode=read('VerificationService.gs');
+assert(verificationCode.includes('function runProductionSmokeTestV1()'), 'production smoke test endpoint exists');
+assert(verificationCode.includes("PRODUCTION_SMOKE_TEST"), 'production smoke test audit event exists');
+assert(verificationCode.includes("dashboard_baseline"), 'smoke test checks dashboard baseline');
+assert(verificationCode.includes("drilldown_baseline"), 'smoke test checks drilldown baseline');
+assert(verificationCode.includes("map_baseline"), 'smoke test checks map baseline');
+assert(verificationCode.includes("export_verification"), 'smoke test checks export verification');
+assert(verificationCode.includes("backup_snapshot"), 'smoke test checks backup snapshot');
