@@ -98,3 +98,30 @@ function exportResidencePermitMonthly(filters){
   appendAudit_('DATASET_EXPORT',datasetKey,'',rows.length,'SUCCESS',JSON.stringify({format:'csv',periode:requestedPeriod,kantor_imigrasi:requestedOffice,filename}));
   return {ok:true,filename,rowCount:rows.length,content:csv.join('\n')};
 }
+
+function getResidencePermitDrilldown(filters){
+  requirePermission_('dataset.read');
+  const datasetKey='RESIDENCE_PERMIT_SERVICE_MONTHLY';
+  const ss=getDb_(),registry=ss.getSheetByName(SHEETS.DATASET_REGISTRY);
+  const rv=registry.getDataRange().getValues(),rh=rv[0]||[],ri=Object.fromEntries(rh.map((x,n)=>[x,n]));
+  const reg=rv.slice(1).find(r=>String(r[ri.dataset_key]||'')===datasetKey&&String(r[ri.status]||'').toUpperCase()==='ACTIVE');
+  if(!reg)throw new Error('DATASET_NOT_REGISTERED');
+  const sheetName=String(reg[ri.sheet_name]||APP.SHEET_PREFIX+datasetKey),sh=ss.getSheetByName(sheetName);
+  if(!sh)throw new Error('DATASET_SHEET_NOT_FOUND: '+sheetName);
+  const values=sh.getDataRange().getValues();
+  if(values.length<2)return {datasetKey,columns:[],rows:[],rowCount:0};
+  const header=values[0],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
+  const requestedPeriod=String((filters&&filters.periode)||'').trim();
+  const requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
+  const periodOf_=r=>{const raw=r[hi.periode];return raw instanceof Date?Utilities.formatDate(raw,APP.TZ,'yyyy-MM'):String(raw||'').trim();};
+  const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
+  const rows=values.slice(1).filter(r=>r.some(v=>String(v)!=='')).filter(r=>
+    (!requestedPeriod||periodOf_(r)===requestedPeriod)&&(!requestedOffice||officeOf_(r)===requestedOffice)
+  );
+  const output=rows.map(r=>header.map((_,idx)=>{
+    const v=r[idx];
+    return v instanceof Date?Utilities.formatDate(v,APP.TZ,'yyyy-MM-dd'):v;
+  }));
+  appendAudit_('DATASET_DRILLDOWN',datasetKey,'',output.length,'SUCCESS',JSON.stringify({periode:requestedPeriod,kantor_imigrasi:requestedOffice}));
+  return {datasetKey,columns:header,rowCount:output.length,rows:output,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice}};
+}
