@@ -57,3 +57,8 @@ seedOfficeReferenceDraft() is an admin-only convenience function for establishin
 - records inserted/skipped counts in the audit log.
 
 The resulting rows remain PENDING until address, coordinates, source, and verification status are independently confirmed. A seeded draft therefore cannot open the map readiness gate by itself.
+
+
+## Coordinate candidate preview
+
+`prepareOfficeReferenceDraftMetadata()` fills only missing draft metadata that has been independently sourced; it does not write coordinates or change `PENDING` status. `previewOfficeReferenceGeocoding()` uses the Apps Script Maps geocoder to return up to three address matches per non-VERIFIED reference row. It is a candidate-generation step only: results are not written to the reference table and must not be treated as verified coordinates.
