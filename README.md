@@ -42,3 +42,25 @@ Detail arsitektur akan menjadi dokumen utama repository.
 ### Security note
 
 The first implementation uses Google account identity via `Session.getActiveUser()`; it deliberately does not store plaintext passwords. Authorization is enforced server-side through USERS -> ROLES -> PERMISSIONS.
+
+
+## First real deployment gate
+
+Before building complex dashboard/statistics/map features, the project must pass this sequence:
+
+1. Prepare the real Google Spreadsheet containing residence-permit data.
+2. Create/open the Apps Script project that will own this application and record its Script ID.
+3. Enable the Apps Script API for the Google account used by `clasp`.
+4. Configure GitHub Actions production secrets:
+   - `APPS_SCRIPT_ID`
+   - `CLASPRC_JSON` (the contents of `~/.clasprc.json` from the authorized `clasp` account)
+5. Deploy from `main`.
+6. Run `setupApp()` once against the real database spreadsheet.
+7. Run `bootstrapAdmin()` once while `USERS` is empty.
+8. Paste/import a representative sample of the real residence-permit table.
+9. Record the detected headers, canonical fields, data types, nullability, duplicates, and geographic fields as the initial data contract.
+10. Only after that contract is stable, implement the production dashboard, statistics, filters, and map layers.
+
+The repository is the source of truth; avoid manual source edits in the Apps Script editor after CI/CD is active.
+
+The deployment workflow follows Google's documented clasp CI/CD pattern: credentials are written to `~/.clasprc.json`, project configuration is written to `.clasp.json`, source is pushed, an immutable Apps Script version is created, and that version is deployed. See Google's clasp CI/CD guidance. 
