@@ -39,7 +39,7 @@ function seedDictionary_(){
     ['provinsi','Provinsi','PROVINSI','TEXT','FALSE','','trim','INTERNAL','TRUE','TRUE','region','1'],
     ['kabupaten_kota','Kabupaten/Kota','KABUPATEN/KOTA;KOTA','TEXT','FALSE','','trim','INTERNAL','TRUE','TRUE','region','1'],
     ['latitude','Latitude','LATITUDE;LAT','NUMBER','FALSE','','number','INTERNAL','FALSE','TRUE','latitude','1'],
-    ['longitude','Longitude','LONGITUDE;LON;LNG','NUMBER','FALSE','','number','INTERNAL','TRUE','TRUE','longitude','1'],
+    ['longitude','Longitude','LONGITUDE;LON;LNG','NUMBER','FALSE','','number','INTERNAL','FALSE','TRUE','longitude','1'],
     ['status','Status','STATUS','TEXT','FALSE','','trim','INTERNAL','TRUE','TRUE','','1'],
     ['source','Sumber','SOURCE;SUMBER','TEXT','FALSE','','trim','INTERNAL','FALSE','FALSE','','1'],
     ['periode','Periode','PERIODE;PERIOD;BULAN','PERIOD','TRUE','','period','INTERNAL','TRUE','TRUE','','1'],
