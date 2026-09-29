@@ -58,6 +58,9 @@ A smoke test is `PASS` only when all checks report `ok: true`:
 
 The result must also have:
 
+- `deploymentId` matching the canonical production Apps Script deployment ID;
+- `releaseEvidenceVersion: "1"`;
+
 - `ok: true`
 - `smokeVersion: "1"`
 - `failedChecks: []`
@@ -68,6 +71,8 @@ The result must also have:
 ## Audit evidence
 
 Every production smoke execution appends one `PRODUCTION_SMOKE_TEST` event to `AUDIT_LOG`.
+
+The smoke result records the canonical Apps Script deployment ID. The corresponding production deployment must also have a GitHub Actions `deployment-evidence` artifact containing the Git commit SHA, workflow run ID, Apps Script version, deployment ID, ref, and evidence-contract version. The runtime smoke record and CI artifact are the two halves of the release evidence chain.
 
 The audit details contain the smoke result, including PASS/FAILED status, dataset key, expected baseline, check results, failed check names, latest snapshot identifier, actor, and timestamps.
 
@@ -96,7 +101,8 @@ When a production smoke execution is required, verify:
 2. the actor is authorized;
 3. all required checks passed;
 4. the result contains no failed checks;
-5. the corresponding `PRODUCTION_SMOKE_TEST` audit event exists.
+5. the corresponding `PRODUCTION_SMOKE_TEST` audit event exists;
+6. the GitHub Actions deployment-evidence artifact for the deployed release matches the same deployment ID and Apps Script version.
 
 ## Future automation boundary
 
@@ -105,6 +111,14 @@ A future CI-triggered runtime smoke may be introduced only after its authenticat
 It must not expose Apps Script credentials in source, commit OAuth tokens or service-account secrets, weaken Apps Script RBAC, bypass `requirePermission_('audit.read')`, or confuse source-level CI results with runtime production evidence.
 
 Until that boundary is implemented and verified, the current manual production runtime smoke remains the authoritative v1 production evidence path.
+
+## Deployment identity chain
+
+The canonical release evidence chain is:
+
+`Git commit SHA → GitHub Actions run → Apps Script immutable version → canonical deployment ID → production smoke → AUDIT_LOG → backup snapshot`.
+
+GitHub Actions does not receive production runtime credentials for smoke execution. The deployment-evidence artifact is non-secret metadata only. It does not replace runtime smoke; it binds the manual runtime result to the exact CI/deployment release.
 
 ## CI trigger verification
 
