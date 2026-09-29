@@ -28,3 +28,17 @@ Aplikasi pengelolaan, monitoring, statistik, pemetaan, import otomatis, RBAC, da
 8. CI/CD GitHub -> Apps Script
 
 Detail arsitektur akan menjadi dokumen utama repository.
+
+## Quick start — Apps Script
+
+1. Create a Google Spreadsheet as the database.
+2. Create a bound Apps Script project or Apps Script project connected to the repository source.
+3. Push the `gas/` directory with clasp.
+4. In Apps Script, run `setupApp()` once.
+5. Run `bootstrapAdmin("email@domain", "Administrator")` once while the USERS sheet is empty.
+6. Deploy as Web App and use the Google account registered in USERS.
+7. Paste tabular data into Import Center; preview before commit.
+
+### Security note
+
+The first implementation uses Google account identity via `Session.getActiveUser()`; it deliberately does not store plaintext passwords. Authorization is enforced server-side through USERS -> ROLES -> PERMISSIONS.
