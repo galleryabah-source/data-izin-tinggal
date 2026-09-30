@@ -110,6 +110,18 @@ assert(passportGovernance.includes('function verifyPassportServiceSnapshot(snaps
 assert(passportGovernance.includes('content_sha256'),'Passport backup verifies checksum');
 
 
+const dashboardCode=read('DashboardService.gs');
+assert(dashboardCode.includes('function getPassportDashboard(filters)'), 'Passport dashboard endpoint exists');
+assert(dashboardCode.includes("getServiceDashboard_('PASSPORT_SERVICE_MONTHLY"), 'Passport dashboard uses service-scoped dataset');
+assert(dashboardCode.includes('function getPassportDrilldown(filters)'), 'Passport drilldown endpoint exists');
+assert(dashboardCode.includes('function getPassportMap(filters)'), 'Passport map endpoint exists');
+assert(dashboardCode.includes('PASSPORT_SERVICE_MONTHLY'), 'Passport dashboard dataset is explicit');
+const uiCode=read('index.html');
+assert(uiCode.includes('id="serviceFilter"'), 'dashboard service selector exists');
+assert(uiCode.includes('getPassportDashboard'), 'UI routes dashboard to Passport endpoint');
+assert(uiCode.includes('getPassportDrilldown'), 'UI routes drilldown to Passport endpoint');
+assert(uiCode.includes('getPassportMap'), 'UI routes map to Passport endpoint');
+
 const configCode=read('Config.gs');
 const configFn=new Function(configCode+'\nreturn {DATASET_CONTRACTS,APP};')();
 const passportContract=configFn.DATASET_CONTRACTS.PASSPORT_SERVICE_MONTHLY;

@@ -5,14 +5,15 @@ body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#17202a}head
 .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px}.filters label{font-weight:600;font-size:13px}.filters select{width:100%;padding:9px;border:1px solid #d0d5dd;border-radius:8px;background:#fff;margin-top:6px}.filter-actions{display:flex;gap:8px;align-items:end}.detail-wrap{overflow:auto;max-height:560px;border:1px solid #eee;border-radius:8px}.detail-wrap table{min-width:1500px}.detail-wrap th{position:sticky;top:0;background:#f8fafc;z-index:1}.detail-meta{margin:8px 0 12px;color:#667085;font-size:13px}.secondary{background:#eef2f6;color:#17202a}.map-wrap{height:520px;border:1px solid #eee;border-radius:8px;overflow:hidden}.map-status{margin:8px 0 12px;color:#667085;font-size:13px}</style><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script></head><body><header><strong>Data Izin Tinggal</strong><div id="user" class="muted"></div></header><main>
 <div id="status" class="card">Memuat...</div>
 <section class="grid"><div class="card"><div class="muted">Total Records</div><div id="total" class="metric">-</div></div><div class="card"><div class="muted">Dataset</div><div id="datasets" class="metric">-</div></div><div class="card"><div class="muted">Total Layanan</div><div id="grandTotal" class="metric">-</div></div></section>
-<section class="card"><h2>Dashboard Layanan Izin Tinggal</h2>
+<section class="card"><h2 id="dashboardTitle">Dashboard Layanan Izin Tinggal</h2>
 <div class="filters">
+  <label>Layanan<select id="serviceFilter" onchange="refreshDashboard()"><option value="RESIDENCE_PERMIT_SERVICE_MONTHLY">Izin Tinggal</option><option value="PASSPORT_SERVICE_MONTHLY">Paspor</option></select></label>
   <label>Periode<select id="periodFilter" onchange="refreshDashboard()"><option value="">Semua Periode</option></select></label>
   <label>Kantor Imigrasi<select id="officeFilter" onchange="refreshDashboard()"><option value="">Semua Kantor</option></select></label>
   <div class="filter-actions"><button class="secondary" onclick="resetFilters()">Reset Filter</button></div>
 </div>
 <div class="filter-actions" style="margin-bottom:12px"><button onclick="exportCsv()">Export CSV</button></div><div id="dashboard">Memuat ringkasan...</div><hr><h3>Drill-down Data</h3><div id="drilldown" class="muted">Memuat detail...</div></section>
-<section class="card"><h2>Peta Layanan Izin Tinggal</h2><div id="mapStatus" class="map-status">Memuat peta...</div><div id="map" class="map-wrap"></div></section>
+<section class="card"><h2 id="mapTitle">Peta Layanan Izin Tinggal</h2><div id="mapStatus" class="map-status">Memuat peta...</div><div id="map" class="map-wrap"></div></section>
 <section class="card"><h2>Import Data</h2><p class="muted">Paste tabel dari spreadsheet. Sistem akan mendeteksi header dan schema.</p><textarea id="paste" placeholder="Paste tabel di sini..."></textarea><p><button class="primary" onclick="preview()">Preview</button> <button onclick="commit()">Import</button></p><div id="result"></div></section>
 <section class="card"><h2>Dataset Registry</h2><div id="registry">-</div></section><section class="card"><h2>Passport Governance</h2><p class="muted">Verifikasi data Passport yang sudah committed dan jalankan evidence export/backup. Authorization tetap diperiksa server-side.</p><p><button class="primary" onclick="verifyPassport()">Verify Passport Integrity</button> <button onclick="exportPassport()">Export Passport CSV</button> <button onclick="createPassportSnapshot()">Create Passport Snapshot</button></p><div id="passportGovernanceResult" class="muted">-</div></section>
 </main><script>
@@ -43,7 +44,9 @@ function populateFilters(r){
 async function refreshMap(){
   try{
     initMap();
-    const r=await call('getResidencePermitMap',getFilters());
+    const service=document.getElementById('serviceFilter').value;
+    const fn=service==='PASSPORT_SERVICE_MONTHLY'?'getPassportMap':'getResidencePermitMap';
+    const r=await call(fn,getFilters());
     if(!mapInstance){document.getElementById('mapStatus').textContent='Peta tidak dapat dimuat.';return;}
     mapLayer.clearLayers();
     const markers=r.markers||[];
@@ -64,7 +67,7 @@ async function refreshMap(){
 
 async function refreshDrilldown(){
   try{
-    const r=await call('getResidencePermitDrilldown',getFilters());
+    const service=document.getElementById('serviceFilter').value;const fn=service==='PASSPORT_SERVICE_MONTHLY'?'getPassportDrilldown':'getResidencePermitDrilldown';const r=await call(fn,getFilters());
     if(!r.rowCount){document.getElementById('drilldown').innerHTML='<div class="detail-meta">0 baris sesuai filter.</div>';return;}
     const head=r.columns.map(x=>'<th>'+esc(x)+'</th>').join('');
     const body=r.rows.map(row=>'<tr>'+row.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('');
@@ -74,7 +77,7 @@ async function refreshDrilldown(){
 function resetFilters(){document.getElementById('periodFilter').value='';document.getElementById('officeFilter').value='';refreshDashboard();}
 async function exportCsv(){
   try{
-    const r=await call('exportResidencePermitMonthly',getFilters());
+    const service=document.getElementById('serviceFilter').value;const fn=service==='PASSPORT_SERVICE_MONTHLY'?'exportPassportServiceMonthly':'exportResidencePermitMonthly';const r=await call(fn,getFilters());
     const blob=new Blob([r.content],{type:'text/csv;charset=utf-8'});
     const url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download=r.filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
@@ -82,8 +85,12 @@ async function exportCsv(){
 }
 async function refreshDashboard(){
   try{
-    const r=await call('getResidencePermitDashboard',getFilters());
+    const service=document.getElementById('serviceFilter').value;
+    const fn=service==='PASSPORT_SERVICE_MONTHLY'?'getPassportDashboard':'getResidencePermitDashboard';
+    const r=await call(fn,getFilters());
     populateFilters(r);
+    document.getElementById('dashboardTitle').textContent=service==='PASSPORT_SERVICE_MONTHLY'?'Dashboard Layanan Paspor':'Dashboard Layanan Izin Tinggal';
+    document.getElementById('mapTitle').textContent=service==='PASSPORT_SERVICE_MONTHLY'?'Peta Layanan Paspor':'Peta Layanan Izin Tinggal';
     document.getElementById('total').textContent=r.rowCount;
     document.getElementById('grandTotal').textContent=r.grandTotal.toLocaleString('id-ID');
     const monthly='<h3>Tren Bulanan</h3><table><tr><th>Periode</th><th>Rows</th><th>Total Layanan</th></tr>'+r.monthly.map(x=>'<tr><td>'+esc(x.periode)+'</td><td>'+x.rows+'</td><td>'+x.total.toLocaleString('id-ID')+'</td></tr>').join('')+'</table>';
