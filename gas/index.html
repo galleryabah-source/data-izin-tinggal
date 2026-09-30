@@ -54,8 +54,10 @@ button,select,input,textarea{font:inherit}button{cursor:pointer}.app{min-height:
 
   <div class="analysis">
     <section class="card map-card" id="mapSection">
-      <div class="map-head card-head"><div><h2 class="card-title" id="mapTitle">Peta Layanan Izin Tinggal</h2><div class="card-sub">Agregat per kantor · koordinat dari Office Reference terverifikasi</div></div><span class="ok" style="font-size:11px">READ ONLY</span></div>
-      <div id="map" class="map-wrap"></div><div id="mapStatus" class="map-status">Memuat peta...</div>
+      <div class="map-head card-head"><div><h2 class="card-title" id="mapTitle">GIS Workspace</h2><div class="card-sub">Agregat per kantor · Office Reference terverifikasi · read-only</div></div><span class="ok" style="font-size:11px">READ ONLY</span></div>
+      <div class="gis-toolbar"><input id="gisOfficeSearch" type="search" placeholder="Cari kantor pada peta..." onkeydown="if(event.key==='Enter')focusGisOffice()"><button class="btn small" onclick="focusGisOffice()">Cari di peta</button><button class="btn small" onclick="fitGisMarkers()">Fit semua kantor</button></div>
+      <div class="gis-workspace"><div id="map" class="map-wrap"></div><aside id="gisOfficeDetail" class="gis-detail"><div class="muted">Klik marker untuk melihat detail kantor.</div></aside></div>
+      <div id="mapStatus" class="map-status">Memuat peta...</div>
     </section>
     <div>
       <section class="card" id="analytics"><div class="card-head"><div><h2 class="card-title">Tren Bulanan</h2><div class="card-sub">Periode dan total layanan</div></div></div><div id="trend" class="chart">-</div></section>
