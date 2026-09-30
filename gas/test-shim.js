@@ -141,7 +141,7 @@ assert(duplicate.duplicates===1,'Passport duplicate count is one');
 
 const fixturePath=path.join(__dirname,'..','fixtures','PASSPORT_SERVICE_MONTHLY_v1.tsv');
 const fixtureText=fs.readFileSync(fixturePath,'utf8').trim();
-const fixtureLines=fixtureText.split(/\\r?\\n/).map(line=>line.split('\\t'));
+const fixtureLines=fixtureText.split(/\r?\n/).map(line=>line.split('\t'));
 const fixtureHeader=fixtureLines.shift();
 const fixtureSchema={...passportSchema,sourceColumns:fixtureHeader,columns:passportContract.columns};
 const realFixtureCheck=passportImport.validateRows_(fixtureSchema,fixtureLines);
