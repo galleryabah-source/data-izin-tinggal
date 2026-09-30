@@ -252,7 +252,7 @@ const crossServiceCompiled=new Function(
   crossService+'\nreturn {getCrossServiceReport,getCrossServiceSeries_};'
 )(
   ()=>{},
-  ()=>({sheet:{getDataRange:()=>({getValues:()=>[['periode','kantor_imigrasi','total'],['2026-01','OFFICE A',100]])}}}),
+  ()=>({sheet:{getDataRange:()=>({getValues:()=>[['periode','kantor_imigrasi','total'],['2026-01','OFFICE A',100]]})})}),
   {formatDate:()=>''},
   {TZ:'Asia/Jakarta'}
 );
