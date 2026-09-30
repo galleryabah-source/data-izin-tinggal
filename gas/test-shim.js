@@ -234,3 +234,27 @@ assert(typeof registryVerifier.getCanonicalDatasetIdentity_==='function','canoni
 const verificationCode2=read('VerificationService.gs');
 assert(verificationCode2.includes("check_('dataset_registry_identity',()=>verifyDatasetRegistryIntegrityV1())"),'production smoke checks canonical dataset identity');
 console.log('Canonical dataset identity and registry consistency checks: OK');
+
+const crossService=read('CrossServiceReportingService.gs');
+assert(crossService.includes('function getCrossServiceReport(filters)'), 'Phase 10.1 cross-service reporting endpoint exists');
+assert(crossService.includes("requirePermission_('dashboard.read')"), 'cross-service reporting is RBAC protected');
+assert(crossService.includes("metric:'service_volume'"), 'cross-service semantic metric is service_volume');
+assert(crossService.includes("sourceMetric:'total'"), 'cross-service provenance retains canonical source total');
+assert(crossService.includes('getActiveDatasetContract_(source.datasetKey)'), 'cross-service adapter resolves canonical dataset contracts');
+assert(crossService.includes('readOnly:true'), 'cross-service reporting is explicitly read-only');
+assert(crossService.includes('combinedServiceVolume'), 'cross-service adapter exposes combined volume without replacing service components');
+assert(crossService.includes('RESIDENCE_PERMIT_SERVICE_MONTHLY') && crossService.includes('PASSPORT_SERVICE_MONTHLY'), 'cross-service adapter is limited to canonical monthly datasets');
+assert(!crossService.includes('appendRow('), 'cross-service adapter has no write path');
+assert(!crossService.includes('setValues('), 'cross-service adapter has no source mutation path');
+assert(!crossService.includes('deleteRow('), 'cross-service adapter has no delete path');
+const crossServiceCompiled=new Function(
+  'requirePermission_','getActiveDatasetContract_','Utilities','APP',
+  crossService+'\nreturn {getCrossServiceReport,getCrossServiceSeries_};'
+)(
+  ()=>{},
+  ()=>({sheet:{getDataRange:()=>({getValues:()=>[['periode','kantor_imigrasi','total'],['2026-01','OFFICE A',100]])}}}),
+  {formatDate:()=>''},
+  {TZ:'Asia/Jakarta'}
+);
+assert(typeof crossServiceCompiled.getCrossServiceReport==='function','cross-service adapter compiles');
+console.log('Phase 10.1 semantic adapter contract checks: OK');
