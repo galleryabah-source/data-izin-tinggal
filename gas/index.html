@@ -1,119 +1,113 @@
 <!doctype html>
-<html><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<html>
+<head>
+<base target="_top">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <style>
-body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#17202a}header{background:#17365d;color:white;padding:18px 24px}main{max-width:1100px;margin:24px auto;padding:0 16px}.card{background:white;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px #0001}textarea{width:100%;min-height:180px;box-sizing:border-box}button{padding:10px 16px;border:0;border-radius:8px;cursor:pointer}.primary{background:#17365d;color:#fff}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.metric{font-size:30px;font-weight:700}.muted{color:#667085}.error{color:#b42318}.ok{color:#067647}table{border-collapse:collapse;width:100%}td,th{padding:8px;border-bottom:1px solid #eee;text-align:left}
-.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px}.filters label{font-weight:600;font-size:13px}.filters select{width:100%;padding:9px;border:1px solid #d0d5dd;border-radius:8px;background:#fff;margin-top:6px}.filter-actions{display:flex;gap:8px;align-items:end}.detail-wrap{overflow:auto;max-height:560px;border:1px solid #eee;border-radius:8px}.detail-wrap table{min-width:1500px}.detail-wrap th{position:sticky;top:0;background:#f8fafc;z-index:1}.detail-meta{margin:8px 0 12px;color:#667085;font-size:13px}.secondary{background:#eef2f6;color:#17202a}.map-wrap{height:520px;border:1px solid #eee;border-radius:8px;overflow:hidden}.map-status{margin:8px 0 12px;color:#667085;font-size:13px}</style><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script></head><body><header><strong>Data Izin Tinggal</strong><div id="user" class="muted"></div></header><main>
-<div id="status" class="card">Memuat...</div>
-<section class="grid"><div class="card"><div class="muted">Total Records</div><div id="total" class="metric">-</div></div><div class="card"><div class="muted">Dataset</div><div id="datasets" class="metric">-</div></div><div class="card"><div class="muted">Total Layanan</div><div id="grandTotal" class="metric">-</div></div></section>
-<section class="card"><h2 id="dashboardTitle">Dashboard Layanan Izin Tinggal</h2>
-<div class="filters">
-  <label>Layanan<select id="serviceFilter" onchange="refreshDashboard()"><option value="RESIDENCE_PERMIT_SERVICE_MONTHLY">Izin Tinggal</option><option value="PASSPORT_SERVICE_MONTHLY">Paspor</option></select></label>
-  <label>Periode<select id="periodFilter" onchange="refreshDashboard()"><option value="">Semua Periode</option></select></label>
-  <label>Kantor Imigrasi<select id="officeFilter" onchange="refreshDashboard()"><option value="">Semua Kantor</option></select></label>
-  <div class="filter-actions"><button class="secondary" onclick="resetFilters()">Reset Filter</button></div>
+:root{--navy:#071b35;--navy2:#0d294d;--blue:#1769e0;--bg:#f4f7fb;--surface:#fff;--line:#e5eaf1;--text:#142033;--muted:#667085;--green:#087443;--amber:#a15c00;--red:#b42318;--radius:12px}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--text);background:var(--bg)}
+button,select,input,textarea{font:inherit}button{cursor:pointer}.app{min-height:100vh}.topbar{height:64px;background:var(--navy);color:#fff;display:flex;align-items:center;gap:22px;padding:0 24px;position:sticky;top:0;z-index:1000}.brand{display:flex;align-items:center;gap:12px;min-width:245px}.brand-mark{width:36px;height:36px;border:1px solid #6c8caf;border-radius:9px;display:grid;place-items:center;font-weight:800}.brand-title{font-weight:800;letter-spacing:.2px}.brand-sub{font-size:11px;color:#b9c7d8;margin-top:2px}.top-service{display:flex;gap:6px;background:#102f55;padding:4px;border-radius:9px}.top-service button{border:0;background:transparent;color:#c7d4e4;padding:8px 13px;border-radius:7px}.top-service button.active{background:#fff;color:var(--navy);font-weight:700}.top-search{flex:1;max-width:420px;margin-left:auto}.top-search input{width:100%;background:#fff;border:0;border-radius:8px;padding:9px 12px;color:var(--text)}.userbox{display:flex;align-items:center;gap:9px;font-size:13px}.avatar{width:32px;height:32px;border-radius:50%;background:#d8e5f5;color:var(--navy);display:grid;place-items:center;font-weight:800}.layout{display:grid;grid-template-columns:225px minmax(0,1fr);min-height:calc(100vh - 64px)}.sidebar{background:#fff;border-right:1px solid var(--line);padding:18px 12px}.nav-label{text-transform:uppercase;font-size:10px;color:#98a2b3;font-weight:800;padding:10px 10px 7px;letter-spacing:.08em}.nav-item{display:block;width:100%;text-align:left;text-decoration:none;color:#475467;padding:10px;border-radius:8px;margin:2px 0;border:0;background:transparent}.nav-item:hover,.nav-item.active{background:#edf4ff;color:#1257bf;font-weight:700}.content{padding:22px 26px 48px;max-width:1800px;width:100%;margin:0 auto}.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.eyebrow{font-size:11px;color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.08em}.page-title{font-size:27px;font-weight:800;margin:3px 0}.page-desc{color:var(--muted);font-size:13px}.quality{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--green);background:#ecfdf3;border:1px solid #abefc6;padding:7px 10px;border-radius:8px}.dot{width:7px;height:7px;border-radius:50%;background:#12b76a}.filterbar{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px;display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:16px}.filter{min-width:170px}.filter label{display:block;font-size:11px;font-weight:800;color:#667085;margin-bottom:5px}.filter select{width:100%;padding:9px 10px;border:1px solid #d0d5dd;border-radius:8px;background:#fff}.filter-actions{display:flex;gap:8px;margin-left:auto}.btn{border:1px solid #d0d5dd;background:#fff;padding:9px 13px;border-radius:8px;color:#344054}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}.btn.small{padding:7px 10px;font-size:12px}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.kpi{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px}.kpi-label{font-size:12px;color:var(--muted);font-weight:700}.kpi-value{font-size:29px;font-weight:800;margin-top:5px}.kpi-meta{font-size:11px;color:#98a2b3;margin-top:5px}.analysis{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,.75fr);gap:14px}.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}.card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.card-title{font-size:15px;font-weight:800;margin:0}.card-sub{font-size:11px;color:var(--muted);margin-top:3px}.map-card{padding:0;overflow:hidden}.map-head{padding:15px 16px 10px}.map-wrap{height:590px}.map-status{font-size:11px;color:var(--muted);padding:8px 16px;border-top:1px solid var(--line)}.chart{min-height:220px}.bars{display:flex;align-items:end;gap:8px;height:185px;padding:8px 2px 0;border-bottom:1px solid var(--line)}.bar-col{flex:1;min-width:24px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px}.bar{width:100%;max-width:38px;background:#2d74da;border-radius:5px 5px 0 0;min-height:2px}.bar-label{font-size:9px;color:#667085}.bar-value{font-size:9px;color:#344054}.rank-list{display:flex;flex-direction:column;gap:8px}.rank-row{display:grid;grid-template-columns:24px 1fr auto;gap:8px;align-items:center;font-size:12px}.rank-num{color:#98a2b3;font-weight:800}.rank-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rank-total{font-weight:800}.rank-track{grid-column:2/4;height:5px;background:#edf2f7;border-radius:99px;overflow:hidden}.rank-fill{height:100%;background:#1769e0;border-radius:99px}.service-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.service-chip{border:1px solid var(--line);border-radius:9px;padding:10px}.service-name{font-size:11px;color:var(--muted)}.service-value{font-size:17px;font-weight:800;margin-top:3px}.detail-wrap{overflow:auto;max-height:520px;border:1px solid var(--line);border-radius:9px}.detail-wrap table{border-collapse:collapse;width:100%;min-width:1000px}.detail-wrap th{position:sticky;top:0;background:#f8fafc;z-index:1;font-size:11px}.detail-wrap td,.detail-wrap th{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}.detail-meta{font-size:11px;color:var(--muted);margin:8px 0}.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.admin-card textarea{width:100%;min-height:150px;border:1px solid #d0d5dd;border-radius:8px;padding:10px}.muted{color:var(--muted)}.error{color:var(--red)}.ok{color:var(--green)}pre{white-space:pre-wrap;word-break:break-word;font-size:11px}.registry table{border-collapse:collapse;width:100%}.registry td,.registry th{padding:9px;border-bottom:1px solid var(--line);text-align:left;font-size:12px}.hidden{display:none!important}@media(max-width:1100px){.layout{grid-template-columns:1fr}.sidebar{display:none}.kpis{grid-template-columns:repeat(2,1fr)}.analysis{grid-template-columns:1fr}.top-search{display:none}}@media(max-width:650px){.content{padding:15px}.kpis{grid-template-columns:1fr 1fr}.top-service{display:none}.brand{min-width:0}.brand-sub{display:none}.map-wrap{height:430px}.service-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+  <div class="brand"><div class="brand-mark">I</div><div><div class="brand-title">Imigrasi24Jam</div><div class="brand-sub">Data Izin Tinggal · Intelligence Workspace</div></div></div>
+  <div class="top-service"><button id="svcResidence" class="active" onclick="setService('RESIDENCE_PERMIT_SERVICE_MONTHLY')">Izin Tinggal</button><button id="svcPassport" onclick="setService('PASSPORT_SERVICE_MONTHLY')">Paspor</button></div>
+  <div class="top-search"><input id="globalSearch" placeholder="Cari kantor imigrasi..." oninput="applySearch()"></div>
+  <div class="userbox"><div id="user">-</div><div class="avatar">A</div></div>
+</header>
+<div class="layout">
+<aside class="sidebar">
+  <div class="nav-label">Analisis</div>
+  <a class="nav-item active" href="#dashboard">Dashboard</a>
+  <a class="nav-item" href="#mapSection">Peta Sebaran</a>
+  <a class="nav-item" href="#drilldownSection">Data Explorer</a>
+  <a class="nav-item" href="#analytics">Laporan & Statistik</a>
+  <div class="nav-label">Operasional</div>
+  <a class="nav-item" href="#adminSection">Import Data</a>
+  <a class="nav-item" href="#registrySection">Administrasi</a>
+  <a class="nav-item" href="#governanceSection">Monitoring</a>
+  <div class="nav-label">Status</div>
+  <div class="card" style="padding:11px;margin:6px 0;background:#f8fafc"><div style="font-size:11px;font-weight:800">Canonical Data</div><div style="font-size:10px;color:#667085;margin-top:4px">RBAC · Audit · Registry</div></div>
+</aside>
+<main class="content">
+  <div class="page-head" id="dashboard">
+    <div><div class="eyebrow">GIS First · Production</div><h1 class="page-title" id="dashboardTitle">Dashboard Layanan Izin Tinggal</h1><div class="page-desc">Peta sebagai pusat analisis; KPI, tren, ranking, dan drill-down mengorbit data geografis.</div></div>
+    <div class="quality"><span class="dot"></span><span>Data pipeline verified</span></div>
+  </div>
+
+  <section class="filterbar">
+    <div class="filter"><label>PERIODE</label><select id="periodFilter" onchange="refreshDashboard()"><option value="">Semua Periode</option></select></div>
+    <div class="filter"><label>KANTOR IMIGRASI</label><select id="officeFilter" onchange="refreshDashboard()"><option value="">Semua Kantor</option></select></div>
+    <div class="filter-actions"><button class="btn" onclick="resetFilters()">Reset</button><button class="btn primary" onclick="refreshDashboard()">Terapkan Filter</button><button class="btn" onclick="exportCsv()">Export CSV</button></div>
+  </section>
+
+  <section class="kpis">
+    <div class="kpi"><div class="kpi-label">TOTAL LAYANAN</div><div id="grandTotal" class="kpi-value">-</div><div class="kpi-meta">Agregat dataset aktif</div></div>
+    <div class="kpi"><div class="kpi-label">TOTAL RECORD</div><div id="total" class="kpi-value">-</div><div class="kpi-meta">Baris canonical</div></div>
+    <div class="kpi"><div class="kpi-label">PERIODE</div><div id="periodCount" class="kpi-value">-</div><div class="kpi-meta">Periode tersedia</div></div>
+    <div class="kpi"><div class="kpi-label">KANTOR</div><div id="officeCount" class="kpi-value">-</div><div class="kpi-meta">Kantor terpetakan</div></div>
+  </section>
+
+  <div class="analysis">
+    <section class="card map-card" id="mapSection">
+      <div class="map-head card-head"><div><h2 class="card-title" id="mapTitle">Peta Layanan Izin Tinggal</h2><div class="card-sub">Agregat per kantor · koordinat dari Office Reference terverifikasi</div></div><span class="ok" style="font-size:11px">READ ONLY</span></div>
+      <div id="map" class="map-wrap"></div><div id="mapStatus" class="map-status">Memuat peta...</div>
+    </section>
+    <div>
+      <section class="card" id="analytics"><div class="card-head"><div><h2 class="card-title">Tren Bulanan</h2><div class="card-sub">Periode dan total layanan</div></div></div><div id="trend" class="chart">-</div></section>
+      <section class="card"><div class="card-head"><div><h2 class="card-title">Ranking Kantor</h2><div class="card-sub">Berdasarkan total layanan</div></div></div><div id="ranking" class="rank-list">-</div></section>
+    </div>
+  </div>
+
+  <section class="card"><div class="card-head"><div><h2 class="card-title">Distribusi Layanan</h2><div class="card-sub">Canonical service metrics · mengikuti dataset aktif</div></div></div><div id="services" class="service-grid">-</div></section>
+
+  <section class="card" id="drilldownSection"><div class="card-head"><div><h2 class="card-title">Data Explorer</h2><div class="card-sub">Drill-down read-only dari dataset canonical</div></div><span id="drillMeta" class="muted"></span></div><div id="drilldown">Memuat detail...</div></section>
+
+  <section class="card" id="adminSection"><div class="card-head"><div><h2 class="card-title">Import Data</h2><div class="card-sub">Administrative operation · schema detection dan validation tetap server-side</div></div></div><textarea id="paste" placeholder="Paste tabel dari spreadsheet..."></textarea><p><button class="btn primary" onclick="preview()">Preview</button> <button class="btn" onclick="commit()">Import</button></p><div id="result"></div></section>
+
+  <section class="card registry" id="registrySection"><div class="card-head"><div><h2 class="card-title">Dataset Registry</h2><div class="card-sub">Canonical routing dan dataset isolation</div></div></div><div id="registry">-</div></section>
+
+  <section class="card" id="governanceSection"><div class="card-head"><div><h2 class="card-title">Governance & Monitoring</h2><div class="card-sub">Evidence operations · authorization tetap diperiksa server-side</div></div></div>
+    <div id="passportGov" class="admin-grid">
+      <div class="card admin-card" style="margin:0"><h3 style="margin-top:0;font-size:14px">Passport Governance</h3><p class="muted" style="font-size:11px">Integrity, export, snapshot, dan regression smoke.</p><button class="btn small primary" onclick="verifyPassport()">Verify Integrity</button> <button class="btn small" onclick="exportPassport()">Export</button> <button class="btn small" onclick="createPassportSnapshot()">Snapshot</button> <button class="btn small" onclick="runDashboardRegressionSmoke()">Regression Smoke</button><div id="passportGovernanceResult" class="muted" style="margin-top:10px">-</div></div>
+      <div class="card" style="margin:0"><h3 style="margin-top:0;font-size:14px">Production Baseline</h3><div style="font-size:12px;line-height:1.8"><b>Residence Permit</b> · 80 rows · 258.094<br><b>Passport</b> · 80 rows · 327.088<br><span class="ok">Canonical pipeline verified</span></div></div>
+    </div>
+  </section>
+</main>
 </div>
-<div class="filter-actions" style="margin-bottom:12px"><button onclick="exportCsv()">Export CSV</button></div><div id="dashboard">Memuat ringkasan...</div><hr><h3>Drill-down Data</h3><div id="drilldown" class="muted">Memuat detail...</div></section>
-<section class="card"><h2 id="mapTitle">Peta Layanan Izin Tinggal</h2><div id="mapStatus" class="map-status">Memuat peta...</div><div id="map" class="map-wrap"></div></section>
-<section class="card"><h2>Import Data</h2><p class="muted">Paste tabel dari spreadsheet. Sistem akan mendeteksi header dan schema.</p><textarea id="paste" placeholder="Paste tabel di sini..."></textarea><p><button class="primary" onclick="preview()">Preview</button> <button onclick="commit()">Import</button></p><div id="result"></div></section>
-<section class="card"><h2>Dataset Registry</h2><div id="registry">-</div></section><section class="card"><h2>Passport Governance</h2><p class="muted">Verifikasi data Passport yang sudah committed dan jalankan evidence export/backup. Authorization tetap diperiksa server-side.</p><p><button class="primary" onclick="verifyPassport()">Verify Passport Integrity</button> <button onclick="exportPassport()">Export Passport CSV</button> <button onclick="createPassportSnapshot()">Create Passport Snapshot</button> <button onclick="runDashboardRegressionSmoke()">Dashboard Regression Smoke</button></p><div id="passportGovernanceResult" class="muted">-</div></section>
-</main><script>
+</div>
+<script>
 function call(fn,...args){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(e))[fn](...args));}
-async function boot(){try{const b=await call('getBootstrap');if(!b.user.authenticated){document.getElementById('status').innerHTML='<b>Akses belum terdaftar.</b> Pastikan akun Google Anda ada di sheet USERS.';return;}document.getElementById('user').textContent=b.user.displayName+' · '+b.user.role;document.getElementById('status').innerHTML='<span class="ok">Authenticated</span>';refresh();}catch(e){document.getElementById('status').innerHTML='<span class="error">'+e.message+'</span>';}}
+let serviceKey='RESIDENCE_PERMIT_SERVICE_MONTHLY',mapInstance=null,mapLayer=null,lastDashboard=null;
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function label(k){return ({bvk:'BVK',voa:'VOA',itk:'ITK',itk_peralihan:'ITK Peralihan',itas:'ITAS',itap:'ITAP',itkt:'ITKT',alih_status_itk_ke_itas:'Alih Status ITK → ITAS',alih_status_itas_ke_itap:'Alih Status ITAS → ITAP',abg:'ABG',epo:'EPO',imk:'IMK',skim:'SKIM'})[k]||k;}
-let mapInstance=null;
-let mapLayer=null;
-function initMap(){
-  if(mapInstance||typeof L==="undefined")return;
-  mapInstance=L.map("map").setView([-6.9,107.6],8);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(mapInstance);
-  mapLayer=L.layerGroup().addTo(mapInstance);
-}
-function getFilters(){return {
-  periode:document.getElementById('periodFilter').value,
-  kantor_imigrasi:document.getElementById('officeFilter').value
-};}
-function populateFilters(r){
-  const p=document.getElementById('periodFilter'),o=document.getElementById('officeFilter');
-  const selectedP=r.filters.periode,selectedO=r.filters.kantor_imigrasi;
-  p.innerHTML='<option value="">Semua Periode</option>'+r.filters.availablePeriods.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
-  o.innerHTML='<option value="">Semua Kantor</option>'+r.filters.availableOffices.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
-  p.value=selectedP;o.value=selectedO;
-}
-
-async function refreshMap(){
-  try{
-    initMap();
-    const service=document.getElementById('serviceFilter').value;
-    const fn=service==='PASSPORT_SERVICE_MONTHLY'?'getPassportMap':'getResidencePermitMap';
-    const r=await call(fn,getFilters());
-    if(!mapInstance){document.getElementById('mapStatus').textContent='Peta tidak dapat dimuat.';return;}
-    mapLayer.clearLayers();
-    const markers=r.markers||[];
-    document.getElementById('mapStatus').textContent=markers.length+' kantor · '+r.rowCount+' baris · read-only · mengikuti filter dashboard';
-    if(!markers.length){mapInstance.setView([-6.9,107.6],8);return;}
-    const bounds=[];
-    markers.forEach(m=>{
-      const marker=L.marker([m.latitude,m.longitude]).addTo(mapLayer);
-      const source=m.source_url?'<div><a href="'+esc(m.source_url)+'" target="_blank" rel="noopener noreferrer">Sumber referensi</a></div>':'';
-      marker.bindPopup('<b>'+esc(m.kantor_imigrasi)+'</b><br>'+esc(m.address)+'<br>Total layanan: <b>'+Number(m.total).toLocaleString('id-ID')+'</b><br>Rows: '+m.rows+source);
-      bounds.push([m.latitude,m.longitude]);
-    });
-    mapInstance.fitBounds(bounds,{padding:[30,30],maxZoom:11});
-  }catch(e){
-    document.getElementById('mapStatus').innerHTML='<span class="error">'+esc(e.message)+'</span>';
-  }
-}
-
-async function refreshDrilldown(){
-  try{
-    const service=document.getElementById('serviceFilter').value;const fn=service==='PASSPORT_SERVICE_MONTHLY'?'getPassportDrilldown':'getResidencePermitDrilldown';const r=await call(fn,getFilters());
-    if(!r.rowCount){document.getElementById('drilldown').innerHTML='<div class="detail-meta">0 baris sesuai filter.</div>';return;}
-    const head=r.columns.map(x=>'<th>'+esc(x)+'</th>').join('');
-    const body=r.rows.map(row=>'<tr>'+row.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('');
-    document.getElementById('drilldown').innerHTML='<div class="detail-meta">'+r.rowCount+' baris · read-only · mengikuti filter dashboard</div><div class="detail-wrap"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div>';
-  }catch(e){document.getElementById('drilldown').innerHTML='<span class="error">'+esc(e.message)+'</span>';}
-}
+function label(k){return ({bvk:'BVK',voa:'VOA',itk:'ITK',itk_peralihan:'ITK Peralihan',itas:'ITAS',itap:'ITAP',itkt:'ITKT',alih_status_itk_ke_itas:'Alih Status ITK → ITAS',alih_status_itas_ke_itap:'Alih Status ITAS → ITAP',abg:'ABG',epo:'EPO',imk:'IMK',skim:'SKIM',biasa_24:'Biasa 24',biasa_48:'Biasa 48',elektronik_48:'Elektronik 48',e_polikarbonat:'E-Polikarbonat'})[k]||k);}
+function setService(key){serviceKey=key;document.getElementById('svcResidence').classList.toggle('active',key==='RESIDENCE_PERMIT_SERVICE_MONTHLY');document.getElementById('svcPassport').classList.toggle('active',key==='PASSPORT_SERVICE_MONTHLY');refreshDashboard();}
+function getFilters(){return{periode:document.getElementById('periodFilter').value,kantor_imigrasi:document.getElementById('officeFilter').value};}
+function populateFilters(r){const p=document.getElementById('periodFilter'),o=document.getElementById('officeFilter');const sp=r.filters.periode,so=r.filters.kantor_imigrasi;p.innerHTML='<option value="">Semua Periode</option>'+r.filters.availablePeriods.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');o.innerHTML='<option value="">Semua Kantor</option>'+r.filters.availableOffices.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');p.value=sp;o.value=so;document.getElementById('periodCount').textContent=r.filters.availablePeriods.length;document.getElementById('officeCount').textContent=r.filters.availableOffices.length;}
+function initMap(){if(mapInstance||typeof L==='undefined')return;mapInstance=L.map('map').setView([-6.9,107.6],8);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(mapInstance);mapLayer=L.layerGroup().addTo(mapInstance);}
+async function refreshMap(){try{initMap();const fn=serviceKey==='PASSPORT_SERVICE_MONTHLY'?'getPassportMap':'getResidencePermitMap';const r=await call(fn,getFilters());mapLayer.clearLayers();const markers=r.markers||[];document.getElementById('mapStatus').textContent=markers.length+' kantor · '+r.rowCount+' baris · read-only · mengikuti filter dashboard';if(!markers.length){mapInstance.setView([-6.9,107.6],8);return;}const bounds=[];markers.forEach(m=>{const marker=L.marker([m.latitude,m.longitude]).addTo(mapLayer);const source=m.source_url?'<div><a href="'+esc(m.source_url)+'" target="_blank" rel="noopener noreferrer">Sumber referensi</a></div>':'';marker.bindPopup('<b>'+esc(m.kantor_imigrasi)+'</b><br>'+esc(m.address)+'<br>Total layanan: <b>'+Number(m.total).toLocaleString('id-ID')+'</b><br>Rows: '+m.rows+source);bounds.push([m.latitude,m.longitude]);});mapInstance.fitBounds(bounds,{padding:[30,30],maxZoom:11});}catch(e){document.getElementById('mapStatus').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
+function renderTrend(rows){if(!rows.length){return '<div class="muted">Tidak ada data.</div>';}const max=Math.max(...rows.map(x=>Number(x.total)||0),1);return '<div class="bars">'+rows.map(x=>'<div class="bar-col" title="'+esc(x.periode)+' · '+Number(x.total).toLocaleString('id-ID')+'"><div class="bar-value">'+Number(x.total).toLocaleString('id-ID')+'</div><div class="bar" style="height:'+Math.max(2,Math.round((Number(x.total)/max)*135))+'px"></div><div class="bar-label">'+esc(x.periode)+'</div></div>').join('')+'</div>';}
+function renderRanking(rows){if(!rows.length)return '<div class="muted">Tidak ada data.</div>';const max=Math.max(...rows.map(x=>Number(x.total)||0),1);return rows.slice(0,10).map((x,i)=>'<div class="rank-row"><div class="rank-num">'+String(i+1).padStart(2,'0')+'</div><div class="rank-name">'+esc(x.kantor_imigrasi)+'</div><div class="rank-total">'+Number(x.total).toLocaleString('id-ID')+'</div><div class="rank-track"><div class="rank-fill" style="width:'+Math.max(2,Math.round(Number(x.total)/max*100))+'%"></div></div></div>').join('');}
+function renderServices(rows){if(!rows.length)return '<div class="muted">Tidak ada data.</div>';return rows.map(x=>'<div class="service-chip"><div class="service-name">'+esc(label(x.key))+'</div><div class="service-value">'+Number(x.total).toLocaleString('id-ID')+'</div></div>').join('');}
+async function refreshDrilldown(){try{const fn=serviceKey==='PASSPORT_SERVICE_MONTHLY'?'getPassportDrilldown':'getResidencePermitDrilldown';const r=await call(fn,getFilters());document.getElementById('drillMeta').textContent=r.rowCount+' rows';if(!r.rowCount){document.getElementById('drilldown').innerHTML='<div class="detail-meta">0 baris sesuai filter.</div>';return;}const head=r.columns.map(x=>'<th>'+esc(x)+'</th>').join('');const body=r.rows.map(row=>'<tr>'+row.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('');document.getElementById('drilldown').innerHTML='<div class="detail-wrap"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div>';}catch(e){document.getElementById('drilldown').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
+async function refreshDashboard(){try{const fn=serviceKey==='PASSPORT_SERVICE_MONTHLY'?'getPassportDashboard':'getResidencePermitDashboard';const r=await call(fn,getFilters());lastDashboard=r;populateFilters(r);const passport=serviceKey==='PASSPORT_SERVICE_MONTHLY';document.getElementById('dashboardTitle').textContent=passport?'Dashboard Layanan Paspor':'Dashboard Layanan Izin Tinggal';document.getElementById('mapTitle').textContent=passport?'Peta Layanan Paspor':'Peta Layanan Izin Tinggal';document.getElementById('total').textContent=Number(r.rowCount).toLocaleString('id-ID');document.getElementById('grandTotal').textContent=Number(r.grandTotal).toLocaleString('id-ID');document.getElementById('trend').innerHTML=renderTrend(r.monthly);document.getElementById('ranking').innerHTML=renderRanking(r.offices);document.getElementById('services').innerHTML=renderServices(r.services);await refreshDrilldown();await refreshMap();}catch(e){document.getElementById('trend').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
 function resetFilters(){document.getElementById('periodFilter').value='';document.getElementById('officeFilter').value='';refreshDashboard();}
-async function exportCsv(){
-  try{
-    const service=document.getElementById('serviceFilter').value;const fn=service==='PASSPORT_SERVICE_MONTHLY'?'exportPassportServiceMonthly':'exportResidencePermitMonthly';const r=await call(fn,getFilters());
-    const blob=new Blob([r.content],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob),a=document.createElement('a');
-    a.href=url;a.download=r.filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
-  }catch(e){document.getElementById('dashboard').innerHTML='<span class="error">'+esc(e.message)+'</span>';}
-}
-async function refreshDashboard(){
-  try{
-    const service=document.getElementById('serviceFilter').value;
-    const fn=service==='PASSPORT_SERVICE_MONTHLY'?'getPassportDashboard':'getResidencePermitDashboard';
-    const r=await call(fn,getFilters());
-    populateFilters(r);
-    document.getElementById('dashboardTitle').textContent=service==='PASSPORT_SERVICE_MONTHLY'?'Dashboard Layanan Paspor':'Dashboard Layanan Izin Tinggal';
-    document.getElementById('mapTitle').textContent=service==='PASSPORT_SERVICE_MONTHLY'?'Peta Layanan Paspor':'Peta Layanan Izin Tinggal';
-    document.getElementById('total').textContent=r.rowCount;
-    document.getElementById('grandTotal').textContent=r.grandTotal.toLocaleString('id-ID');
-    const monthly='<h3>Tren Bulanan</h3><table><tr><th>Periode</th><th>Rows</th><th>Total Layanan</th></tr>'+r.monthly.map(x=>'<tr><td>'+esc(x.periode)+'</td><td>'+x.rows+'</td><td>'+x.total.toLocaleString('id-ID')+'</td></tr>').join('')+'</table>';
-    const offices='<h3>Per Kantor Imigrasi</h3><table><tr><th>Kantor</th><th>Rows</th><th>Total Layanan</th></tr>'+r.offices.map(x=>'<tr><td>'+esc(x.kantor_imigrasi)+'</td><td>'+x.rows+'</td><td>'+x.total.toLocaleString('id-ID')+'</td></tr>').join('')+'</table>';
-    const services='<h3>Per Jenis Layanan</h3><table><tr><th>Layanan</th><th>Total</th></tr>'+r.services.map(x=>'<tr><td>'+esc(label(x.key))+'</td><td>'+x.total.toLocaleString('id-ID')+'</td></tr>').join('')+'</table>';
-    document.getElementById('dashboard').innerHTML=monthly+offices+services;
-    await refreshDrilldown();
-    await refreshMap();
-  }catch(e){document.getElementById('dashboard').innerHTML='<span class="error">'+esc(e.message)+'</span>';}
-}
-async function refresh(){
-  const d=await call('getDashboardSummary');
-  document.getElementById('total').textContent=d.totalRecords;
-  document.getElementById('datasets').textContent=d.datasets.length;
-  document.getElementById('registry').innerHTML='<table><tr><th>Dataset</th><th>Rows</th><th>Columns</th></tr>'+d.datasets.map(x=>'<tr><td>'+esc(x.datasetKey)+'</td><td>'+x.rowCount+'</td><td>'+x.columns.join(', ')+'</td></tr>').join('')+'</table>';
-  await refreshDashboard();
-}
+function applySearch(){const q=document.getElementById('globalSearch').value.toLowerCase().trim();if(!lastDashboard)return;const hit=(lastDashboard.offices||[]).find(x=>String(x.kantor_imigrasi).toLowerCase().includes(q));if(q&&hit){document.getElementById('officeFilter').value=hit.kantor_imigrasi;refreshDashboard();}else if(!q){document.getElementById('officeFilter').value='';refreshDashboard();}}
+async function exportCsv(){try{const fn=serviceKey==='PASSPORT_SERVICE_MONTHLY'?'exportPassportServiceMonthly':'exportResidencePermitMonthly';const r=await call(fn,getFilters());const blob=new Blob([r.content],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=r.filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}catch(e){alert(e.message);}}
+async function refresh(){try{const d=await call('getDashboardSummary');document.getElementById('registry').innerHTML='<table><tr><th>Dataset</th><th>Rows</th><th>Columns</th></tr>'+d.datasets.map(x=>'<tr><td>'+esc(x.datasetKey)+'</td><td>'+x.rowCount+'</td><td>'+x.columns.join(', ')+'</td></tr>').join('')+'</table>';await refreshDashboard();}catch(e){document.getElementById('mapStatus').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
 async function runDashboardRegressionSmoke(){try{const r=await call('runDashboardRegressionSmokeV1');document.getElementById('passportGovernanceResult').innerHTML='<pre>'+esc(JSON.stringify(r,null,2))+'</pre>';}catch(e){document.getElementById('passportGovernanceResult').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
 async function verifyPassport(){try{const r=await call('verifyPassportServiceMonthly');document.getElementById('passportGovernanceResult').innerHTML='<pre>'+esc(JSON.stringify(r,null,2))+'</pre>';}catch(e){document.getElementById('passportGovernanceResult').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
-async function exportPassport(){try{const r=await call('exportPassportServiceMonthly',{});const blob=new Blob([r.content],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=r.filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);document.getElementById('passportGovernanceResult').innerHTML='<span class="ok">Passport export berhasil: '+esc(r.filename)+' · '+r.rowCount+' rows</span>';}catch(e){document.getElementById('passportGovernanceResult').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
-async function createPassportSnapshot(){try{const r=await call('createPassportServiceSnapshot');document.getElementById('passportGovernanceResult').innerHTML='<span class="ok">Snapshot berhasil: '+esc(r.snapshotId)+' · '+r.rowCount+' rows · checksum '+esc(r.checksum)+'</span><br><button onclick="verifyPassportSnapshot(\''+esc(r.backupSpreadsheetId)+'\')">Verify Snapshot</button>';}catch(e){document.getElementById('passportGovernanceResult').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
+async function exportPassport(){try{const r=await call('exportPassportServiceMonthly',{});const blob=new Blob([r.content],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=r.filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);document.getElementById('passportGovernanceResult').innerHTML='<span class="ok">Passport export berhasil: '+esc(r.filename)+' · '+r.rowCount+' rows</span>';}catch(e){document.getElementById('passportGovernanceResult').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
+async function createPassportSnapshot(){try{const r=await call('createPassportServiceSnapshot');document.getElementById('passportGovernanceResult').innerHTML='<span class="ok">Snapshot berhasil: '+esc(r.snapshotId)+' · '+r.rowCount+' rows · checksum '+esc(r.checksum)+'</span><br><button class="btn small" onclick="verifyPassportSnapshot(\''+esc(r.backupSpreadsheetId)+'\')">Verify Snapshot</button>';}catch(e){document.getElementById('passportGovernanceResult').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
 async function verifyPassportSnapshot(id){try{const r=await call('verifyPassportServiceSnapshot',id);document.getElementById('passportGovernanceResult').innerHTML='<pre>'+esc(JSON.stringify(r,null,2))+'</pre>';}catch(e){document.getElementById('passportGovernanceResult').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
-async function preview(){try{const r=await call('previewImport',document.getElementById('paste').value);document.getElementById('result').innerHTML='<b>Preview:</b> '+r.validRows+' valid, '+r.rejectedRows+' rejected.<br>Dataset: '+r.dataset.datasetKey;}catch(e){document.getElementById('result').innerHTML='<span class="error">'+e.message+'</span>';}}
-async function commit(){try{const r=await call('commitImport',document.getElementById('paste').value);document.getElementById('result').innerHTML='<span class="ok">Import berhasil. Batch '+r.batchId+' · '+r.inserted+' rows.</span>';await refresh();}catch(e){document.getElementById('result').innerHTML='<span class="error">'+e.message+'</span>';}}
+async function preview(){try{const r=await call('previewImport',document.getElementById('paste').value);document.getElementById('result').innerHTML='<b>Preview:</b> '+r.validRows+' valid, '+r.rejectedRows+' rejected.<br>Dataset: '+esc(r.dataset.datasetKey);}catch(e){document.getElementById('result').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
+async function commit(){try{const r=await call('commitImport',document.getElementById('paste').value);document.getElementById('result').innerHTML='<span class="ok">Import berhasil. Batch '+esc(r.batchId)+' · '+r.inserted+' rows.</span>';await refresh();}catch(e){document.getElementById('result').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
+async function boot(){try{const b=await call('getBootstrap');if(!b.user.authenticated){document.getElementById('user').innerHTML='<span class="error">Akses belum terdaftar</span>';return;}document.getElementById('user').textContent=b.user.displayName+' · '+b.user.role;refresh();}catch(e){document.getElementById('user').innerHTML='<span class="error">'+esc(e.message)+'</span>';}}
 boot();
-</script></body></html>
+</script>
+</body>
+</html>
