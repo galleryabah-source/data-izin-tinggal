@@ -243,6 +243,17 @@ function runDashboardRegressionSmokeV1(){
     if(Number(passportDashboard.rowCount)!==80||Number(passportDashboard.grandTotal)!==327088||passportDashboard.monthly.length!==8||passportDashboard.offices.length!==10)checks[checks.length-1].ok=false;
   }
 
+  const crossService=check_('cross_service_reporting',()=>getCrossServiceReport({}));
+  if(crossService){
+    const residence=crossService.services.find(s=>s.service==='RESIDENCE_PERMIT');
+    const passport=crossService.services.find(s=>s.service==='PASSPORT');
+    if(!residence||Number(residence.rowCount)!==80||Number(residence.serviceVolume)!==258094||residence.monthly.length!==8||residence.offices.length!==10)checks[checks.length-1].ok=false;
+    if(!passport||Number(passport.rowCount)!==80||Number(passport.serviceVolume)!==327088||passport.monthly.length!==8||passport.offices.length!==10)checks[checks.length-1].ok=false;
+    if(Number(crossService.combinedServiceVolume)!==585182)checks[checks.length-1].ok=false;
+    const provenance=crossService.provenance||[];
+    if(provenance.some(p=>p.sourceMetric!=='total'||p.metric!=='service_volume'))checks[checks.length-1].ok=false;
+  }
+
   const residenceDrilldown=check_('residence_drilldown',()=>getResidencePermitDrilldown({}));
   if(residenceDrilldown&&Number(residenceDrilldown.rowCount)!==80)checks[checks.length-1].ok=false;
 
