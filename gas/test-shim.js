@@ -260,3 +260,5 @@ const crossServiceCompiled=new Function(
 );
 assert(typeof crossServiceCompiled.getCrossServiceReport==='function','cross-service adapter compiles');
 console.log('Phase 10.1 semantic adapter contract checks: OK');
+
+// CI synchronization marker for Phase 10.1 regression gate.
