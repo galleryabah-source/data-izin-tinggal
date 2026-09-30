@@ -133,6 +133,10 @@ assert(uiCode.includes('function renderGisOfficeDetail(m)'), 'GIS workspace has 
 assert(uiCode.includes('getResidencePermitMap') && uiCode.includes('getPassportMap'), 'GIS workspace routes through canonical map endpoints');
 assert(uiCode.includes('data-target="analytics"') && uiCode.includes('data-target="adminSection"') && uiCode.includes('data-target="registrySection"') && uiCode.includes('data-target="governanceSection"'), 'GIS First operational menus have functional targets');
 assert(uiCode.includes('function navigateTo(event,targetId)'), 'sidebar navigation handler exists');
+assert(uiCode.includes('id="crossReport"') && uiCode.includes('id="crossReportStatus"'), 'Laporan workspace has cross-service report surface');
+assert(uiCode.includes('function refreshCrossServiceReport()'), 'Laporan workspace calls semantic adapter');
+assert(uiCode.includes('getCrossServiceReport'), 'Laporan workspace routes to cross-service endpoint');
+assert(uiCode.includes('combinedServiceVolume'), 'Laporan workspace displays combined service volume');
 assert(uiCode.includes('function initSidebarNavigation()'), 'sidebar navigation initialization exists');
 assert(uiCode.includes("history.replaceState(null,'','#'+targetId)"), 'sidebar navigation updates URL state');
 assert(uiCode.includes('IntersectionObserver'), 'sidebar active state follows visible section');
