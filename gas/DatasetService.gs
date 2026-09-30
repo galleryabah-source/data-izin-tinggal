@@ -4,7 +4,7 @@ function getDatasetBySignature_(signature){
     .filter(x=>x.status==='ACTIVE'&&String(x.row[snapshot.index.schema_signature]||'').trim()===String(signature||'').trim());
   if(matches.length>1)throw new Error('DATASET_IDENTITY_CONFLICT: duplicate active schema signature '+signature);
   if(!matches.length)return null;
-  const identity=getCanonicalDatasetIdentity_(matches[0].row,snapshot.index);
+  const identity=getCanonicalDatasetIdentity_(matches[0].row,snapshot.index,false);
   const sameKey=snapshot.rows.map((row,n)=>({row,rowNumber:n+2,status:String(row[snapshot.index.status]||'').trim().toUpperCase()}))
     .filter(x=>x.status==='ACTIVE'&&String(x.row[snapshot.index.dataset_key]||'').trim()===identity.datasetKey);
   if(sameKey.length!==1)throw new Error('DATASET_IDENTITY_CONFLICT: active dataset_key '+identity.datasetKey+' has '+sameKey.length+' records.');
