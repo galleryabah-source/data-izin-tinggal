@@ -224,6 +224,9 @@ function runDashboardRegressionSmokeV1(){
     }
   };
 
+  const registryIntegrity=check_('dataset_registry_identity',()=>verifyDatasetRegistryIntegrityV1());
+  if(registryIntegrity&&!registryIntegrity.ok)checks[checks.length-1].ok=false;
+
   const summary=check_('dashboard_summary',()=>getDashboardSummary());
   if(summary){
     const keys=(summary.datasets||[]).map(d=>d.datasetKey);
