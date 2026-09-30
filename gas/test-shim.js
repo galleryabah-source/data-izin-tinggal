@@ -179,6 +179,16 @@ assert(residenceContract.columns.indexOf('total')===15,'Residence Permit total p
 
 
 const verificationCode=read('VerificationService.gs');
+assert(verificationCode.includes('function runDashboardRegressionSmokeV1()'), 'dashboard regression smoke endpoint exists');
+assert(verificationCode.includes('residence_dashboard'), 'regression smoke checks Residence Permit dashboard');
+assert(verificationCode.includes('passport_dashboard'), 'regression smoke checks Passport dashboard');
+assert(verificationCode.includes('residence_drilldown'), 'regression smoke checks Residence Permit drilldown');
+assert(verificationCode.includes('passport_drilldown'), 'regression smoke checks Passport drilldown');
+assert(verificationCode.includes('residence_map'), 'regression smoke checks Residence Permit map');
+assert(verificationCode.includes('passport_map'), 'regression smoke checks Passport map');
+assert(verificationCode.includes('DASHBOARD_REGRESSION_SMOKE'), 'regression smoke writes audit evidence');
+assert(dashboard.includes("getServiceDrilldown_('PASSPORT_SERVICE_MONTHLY',filters,'month')"), 'Passport drilldown uses monthly display mode');
+assert(ui.includes('runDashboardRegressionSmokeV1'), 'UI exposes dashboard regression smoke');
 assert(verificationCode.includes('function runProductionSmokeTestV1()'), 'production smoke test endpoint exists');
 assert(verificationCode.includes("PRODUCTION_SMOKE_TEST"), 'production smoke test audit event exists');
 assert(verificationCode.includes("dashboard_baseline"), 'smoke test checks dashboard baseline');
