@@ -9,7 +9,7 @@ function getDatasetRegistrySnapshot_(){
   return {sheet,values,header,index,rows:values.slice(1)};
 }
 
-function getCanonicalDatasetIdentity_(row,index){
+function getCanonicalDatasetIdentity_(row,index,validateRowCount){
   const datasetKey=String(row[index.dataset_key]||'').trim();
   const sheetName=String(row[index.sheet_name]||'').trim();
   const signature=String(row[index.schema_signature]||'').trim();
@@ -33,7 +33,7 @@ function getCanonicalDatasetIdentity_(row,index){
   if(JSON.stringify(actualHeader)!==JSON.stringify(columns))throw new Error('DATASET_IDENTITY_HEADER_DRIFT: '+datasetKey);
   const physicalRowCount=Math.max(sheet.getLastRow()-1,0);
   const registryRowCount=Number(row[index.row_count]||0);
-  if(registryRowCount!==physicalRowCount)throw new Error('DATASET_IDENTITY_ROW_COUNT_DRIFT: '+datasetKey);
+  if(validateRowCount!==false&&registryRowCount!==physicalRowCount)throw new Error('DATASET_IDENTITY_ROW_COUNT_DRIFT: '+datasetKey);
   return {datasetKey,sheetName,signature,columns,rowCount:registryRowCount,status,contractKey:contract?datasetKey:null};
 }
 
