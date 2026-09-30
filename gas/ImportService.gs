@@ -85,9 +85,12 @@ function previewImport(pastedText){
 }
 function commitImport(pastedText){
   const user=requirePermission_('dataset.import'),matrix=parseDelimited_(pastedText);if(matrix.length<2)throw new Error('Header dan minimal satu baris data diperlukan.');
-  const schema=detectSchema_(matrix[0]),check=validateRows_(schema,matrix.slice(1));if(!check.valid.length)throw new Error('Tidak ada baris valid untuk diimpor.');
-  const dataset=ensureDataset_(schema,user.email),sh=getDb_().getSheetByName(dataset.sheetName),batchId=Utilities.getUuid(),lock=LockService.getScriptLock();lock.waitLock(30000);
+  const schema=detectSchema_(matrix[0]),lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
+    // Validation and dataset creation must occur under the same script lock as the write.
+    // This prevents two concurrent commits from both passing the business-key check.
+    const check=validateRows_(schema,matrix.slice(1));if(!check.valid.length)throw new Error('Tidak ada baris valid untuk diimpor.');
+    const dataset=ensureDataset_(schema,user.email),sh=getDb_().getSheetByName(dataset.sheetName),batchId=Utilities.getUuid();
     const start=sh.getLastRow()+1;sh.getRange(start,1,check.valid.length,schema.columns.length).setValues(check.valid);
     dataset.rowCount=sh.getLastRow()-1;updateDatasetRowCount_(dataset);
     getDb_().getSheetByName(SHEETS.IMPORT_LOG).appendRow([batchId,nowIso_(),user.email,dataset.datasetKey,schema.contractVersion||'1',matrix.length-1,check.valid.length,check.errors.length,check.duplicates,'SUCCESS',check.errors.slice(0,10).map(x=>x.error).join('; ')]);

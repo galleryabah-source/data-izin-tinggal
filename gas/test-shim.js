@@ -204,3 +204,14 @@ assert(verificationCode.includes("drilldown_baseline"), 'smoke test checks drill
 assert(verificationCode.includes("map_baseline"), 'smoke test checks map baseline');
 assert(verificationCode.includes("export_verification"), 'smoke test checks export verification');
 assert(verificationCode.includes("backup_snapshot"), 'smoke test checks backup snapshot');
+
+assert(importCode.includes("const schema=detectSchema_(matrix[0]),lock=LockService.getScriptLock();lock.waitLock(30000);"),'import acquires script lock before validation');
+assert(importCode.indexOf('lock.waitLock(30000)')<importCode.indexOf('const check=validateRows_(schema,matrix.slice(1))'),'import validation occurs under script lock');
+assert(importCode.indexOf('const check=validateRows_(schema,matrix.slice(1))')<importCode.indexOf('ensureDataset_(schema,user.email)'),'dataset creation occurs after locked validation');
+assert(importCode.includes('finally{lock.releaseLock();}'),'import always releases script lock');
+const parserImport=new Function(importCode+'\nreturn {parseDelimited_,parseDelimitedLine_};')();
+const parsed=parserImport.parseDelimited_('periode,kantor_imigrasi,bvk\n2026-01,"Kantor, Bandung",123');
+assert(parsed[1][1]==='Kantor, Bandung','CSV quoted delimiter parsing');
+const parsedTab=parserImport.parseDelimited_('periode\tkantor_imigrasi\tbvk\n2026-01\t"Kantor ""A"""\t123');
+assert(parsedTab[1][1]==='Kantor "A"','TSV escaped quote parsing');
+console.log('Import atomicity and parser edge-case checks: OK');
