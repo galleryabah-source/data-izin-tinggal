@@ -9,12 +9,17 @@ const DEFAULT_ROLES = {
 };
 const OFFICE_REFERENCE_CONTRACT = Object.freeze({datasetKey:'OFFICE_REFERENCE',version:'1',columns:['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status'],required:['office_key','kantor_imigrasi','address','latitude','longitude','source_url','status'],optional:['verified_at'],businessKey:['office_key']});
 const DATASET_CONTRACTS = Object.freeze({
-  
   RESIDENCE_PERMIT_SERVICE_MONTHLY:Object.freeze({
     datasetKey:'RESIDENCE_PERMIT_SERVICE_MONTHLY',version:'1',
     columns:['periode','kantor_imigrasi','bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim','total'],
     required:['periode','kantor_imigrasi','bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim'],
-    optional:['total'],ignored:['no'],businessKey:['periode','kantor_imigrasi'],derived:['total']
+    optional:['total'],ignored:['no'],businessKey:['periode','kantor_imigrasi'],measures:['bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim'],derived:['total']
+  }),
+  PASSPORT_SERVICE_MONTHLY:Object.freeze({
+    datasetKey:'PASSPORT_SERVICE_MONTHLY',version:'1',
+    columns:['periode','kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat','total'],
+    required:['periode','kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat'],
+    optional:['total'],ignored:['no'],businessKey:['periode','kantor_imigrasi'],measures:['biasa_24','biasa_48','elektronik_48','e_polikarbonat'],derived:['total']
   })
 });
 function getDb_(){const id=PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');if(!id)throw new Error('SPREADSHEET_ID belum dikonfigurasi. Jalankan setupApp().');return SpreadsheetApp.openById(id);}

@@ -55,16 +55,20 @@ function validateRows_(schema,rows){
       let out;
       if(contract){
         out=contract.columns.map(key=>{
-          if(key==='total')return null;
+          if(contract.derived.includes(key))return null;
           const raw=r[positions[key]];
           if(key==='periode')return normalizePeriod_(raw);
           if(key==='kantor_imigrasi')return String(raw||'').trim();
           return normalizeInteger_(raw,key);
         });
-        if(!out[1])throw new Error('kantor_imigrasi wajib diisi.');
-        const total=out.slice(2).reduce((a,v)=>a+Number(v||0),0),provided=positions.total===undefined||String(r[positions.total]||'').trim()===''?null:normalizeInteger_(r[positions.total],'total');
-        if(provided!==null&&provided!==total)throw new Error('total tidak cocok; expected '+total+', received '+provided+'.');
-        out[15]=total;
+        if(!out[contract.columns.indexOf('kantor_imigrasi')])throw new Error('kantor_imigrasi wajib diisi.');
+        const derivedTotalKey=contract.derived.find(k=>k==='total'),measureKeys=contract.measures||contract.columns.filter(k=>!contract.businessKey.includes(k)&&!contract.derived.includes(k));
+        const total=measureKeys.reduce((sum,key)=>sum+Number(out[contract.columns.indexOf(key)]||0),0);
+        if(derivedTotalKey){
+          const totalPosition=positions[derivedTotalKey],provided=totalPosition===undefined||String(r[totalPosition]||'').trim()===''?null:normalizeInteger_(r[totalPosition],derivedTotalKey);
+          if(provided!==null&&provided!==total)throw new Error('total tidak cocok; expected '+total+', received '+provided+'.');
+          out[contract.columns.indexOf(derivedTotalKey)]=total;
+        }
         const key=out[0]+'|'+out[1].trim().toUpperCase();
         if(seen[key]||existing[key]){duplicateRows.push(rowNumber);errors.push({row:rowNumber,error:'Duplikat business key: '+key});return;}
         seen[key]=true;
