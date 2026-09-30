@@ -190,6 +190,9 @@ assert(verificationCode.includes('DASHBOARD_REGRESSION_SMOKE'), 'regression smok
 assert(dashboard.includes("getServiceDrilldown_('PASSPORT_SERVICE_MONTHLY',filters,'month')"), 'Passport drilldown uses monthly display mode');
 assert(ui.includes('runDashboardRegressionSmokeV1'), 'UI exposes dashboard regression smoke');
 assert(ui.includes('GIS First · Production'), 'GIS First production shell exists');
+assert(ui.includes('await refreshDashboard();refreshRegistry();'), 'Import commit refreshes dashboard without legacy refresh function');
+assert(!/await refresh\(\)/.test(ui), 'UI does not call removed legacy refresh function');
+assert(ui.includes("const msg='Dashboard gagal dimuat:"), 'Boot failure message identifies dashboard runtime failures');
 assert(ui.includes('Peta sebagai pusat analisis'), 'GIS First analytical intent is present');
 assert(ui.includes('id="mapSection"'), 'GIS map is a primary dashboard surface');
 assert(ui.includes('id="svcResidence"') && ui.includes('id="svcPassport"'), 'service selector exists in top shell');
