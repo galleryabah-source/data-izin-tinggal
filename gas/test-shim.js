@@ -139,6 +139,17 @@ const duplicate=passportImport.validateRows_(passportSchema,[['2026-01','OFFICE 
 assert(duplicate.valid.length===1,'Passport duplicate business key rejects second row');
 assert(duplicate.duplicates===1,'Passport duplicate count is one');
 
+const fixturePath=path.join(__dirname,'..','fixtures','PASSPORT_SERVICE_MONTHLY_v1.tsv');
+const fixtureText=fs.readFileSync(fixturePath,'utf8').trim();
+const fixtureLines=fixtureText.split(/\\r?\\n/).map(line=>line.split('\\t'));
+const fixtureHeader=fixtureLines.shift();
+const fixtureSchema={...passportSchema,sourceColumns:fixtureHeader,columns:passportContract.columns};
+const realFixtureCheck=passportImport.validateRows_(fixtureSchema,fixtureLines);
+assert(realFixtureCheck.valid.length===80,'real Passport fixture has 80 valid rows');
+assert(realFixtureCheck.errors.length===0,'real Passport fixture has no validation errors');
+assert(realFixtureCheck.duplicates===0,'real Passport fixture has no duplicate keys');
+assert(realFixtureCheck.valid.reduce((sum,row)=>sum+Number(row[6]||0),0)===327088,'real Passport fixture grand total');
+
 const residenceContract=configFn.DATASET_CONTRACTS.RESIDENCE_PERMIT_SERVICE_MONTHLY;
 assert(residenceContract.measures.length===13,'Residence Permit measures preserved');
 assert(residenceContract.columns.indexOf('total')===15,'Residence Permit total position preserved');
