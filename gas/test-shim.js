@@ -225,7 +225,7 @@ assert(datasetIdentity.includes('DUPLICATE_ACTIVE_')&&datasetIdentity.includes("
 assert(datasetIdentity.includes('DATASET_IDENTITY_SIGNATURE_DRIFT'),'schema signature drift is rejected');
 assert(datasetIdentity.includes('DATASET_IDENTITY_HEADER_DRIFT'),'physical sheet header drift is rejected');
 assert(datasetIdentity.includes('DATASET_IDENTITY_ROW_COUNT_DRIFT'),'registry row-count drift is rejected');
-assert(datasetIdentity.includes('DATASET_IDENTITY_ORPHAN_SHEET'),'orphan physical dataset sheet is rejected');
+assert(datasetService.includes('DATASET_IDENTITY_ORPHAN_SHEET'),'orphan physical dataset sheet is rejected');
 assert(datasetService.includes('DATASET_IDENTITY_CONFLICT: duplicate active schema signature'),'lookup rejects duplicate active schema signatures');
 assert(datasetService.includes('active dataset_key already exists with a different identity'),'creation rejects a second active identity for one dataset key');
 assert(datasetService.includes('DATASET_IDENTITY_CONFLICT: cannot update row_count'),'row-count update is identity-scoped');
