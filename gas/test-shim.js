@@ -240,6 +240,7 @@ const registryVerifier=new Function(datasetIdentity+'\nreturn {getCanonicalDatas
 assert(typeof registryVerifier.getCanonicalDatasetIdentity_==='function','canonical dataset identity verifier compiles');
 const verificationCode2=read('VerificationService.gs');
 assert(verificationCode2.includes("check_('dataset_registry_identity',()=>verifyDatasetRegistryIntegrityV1())"),'production smoke checks canonical dataset identity');
+assert(verificationCode2.includes("check_('cross_service_reporting',()=>getCrossServiceReport({}))"),'production smoke checks cross-service reporting');
 console.log('Canonical dataset identity and registry consistency checks: OK');
 
 const crossService=read('CrossServiceReportingService.gs');
