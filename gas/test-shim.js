@@ -188,7 +188,11 @@ assert(verificationCode.includes('residence_map'), 'regression smoke checks Resi
 assert(verificationCode.includes('passport_map'), 'regression smoke checks Passport map');
 assert(verificationCode.includes('DASHBOARD_REGRESSION_SMOKE'), 'regression smoke writes audit evidence');
 assert(dashboard.includes("getServiceDrilldown_('PASSPORT_SERVICE_MONTHLY',filters,'month')"), 'Passport drilldown uses monthly display mode');
-assert(ui.includes('runDashboardRegressionSmokeV1'), 'UI exposes dashboard regression smoke');
+assert(ui.includes('runDashboardRegressionSmokeV1'), 'UI exposes dashboard regression smoke');\nassert(ui.includes('GIS First · Production'), 'GIS First production shell exists');
+assert(ui.includes('Peta sebagai pusat analisis'), 'GIS First analytical intent is present');
+assert(ui.includes('id="mapSection"'), 'GIS map is a primary dashboard surface');
+assert(ui.includes('id="svcResidence"') && ui.includes('id="svcPassport"'), 'service selector exists in top shell');
+
 assert(verificationCode.includes('function runProductionSmokeTestV1()'), 'production smoke test endpoint exists');
 assert(verificationCode.includes("PRODUCTION_SMOKE_TEST"), 'production smoke test audit event exists');
 assert(verificationCode.includes("dashboard_baseline"), 'smoke test checks dashboard baseline');
