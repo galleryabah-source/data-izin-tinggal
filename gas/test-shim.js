@@ -240,7 +240,8 @@ assert(crossService.includes('function getCrossServiceReport(filters)'), 'Phase 
 assert(crossService.includes("requirePermission_('dashboard.read')"), 'cross-service reporting is RBAC protected');
 assert(crossService.includes("metric:'service_volume'"), 'cross-service semantic metric is service_volume');
 assert(crossService.includes("sourceMetric:'total'"), 'cross-service provenance retains canonical source total');
-assert(crossService.includes('getActiveDatasetContract_(source.datasetKey)'), 'cross-service adapter resolves canonical dataset contracts');\nconst verificationCode3=read('VerificationService.gs');
+assert(crossService.includes('getActiveDatasetContract_(source.datasetKey)'), 'cross-service adapter resolves canonical dataset contracts');
+const verificationCode3=read('VerificationService.gs');
 assert(verificationCode3.includes("check_('cross_service_reporting',()=>getCrossServiceReport({}))"),'production smoke checks cross-service reporting');
 
 assert(crossService.includes('readOnly:true'), 'cross-service reporting is explicitly read-only');
