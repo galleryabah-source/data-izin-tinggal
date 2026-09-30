@@ -134,6 +134,11 @@ assert(uiCode.includes('getResidencePermitMap') && uiCode.includes('getPassportM
 assert(uiCode.includes('data-target="analytics"') && uiCode.includes('data-target="adminSection"') && uiCode.includes('data-target="registrySection"') && uiCode.includes('data-target="governanceSection"'), 'GIS First operational menus have functional targets');
 assert(uiCode.includes('function navigateTo(event,targetId)'), 'sidebar navigation handler exists');
 assert(uiCode.includes('id="crossReport"') && uiCode.includes('id="crossReportStatus"'), 'Laporan workspace has cross-service report surface');
+assert(uiCode.includes('id="importStatus"') && uiCode.includes('id="importPreview"'), 'Import workspace has workflow status and preview surface');
+assert(uiCode.includes('function renderImportPreview(r)'), 'Import workspace has preview renderer');
+assert(uiCode.includes('function clearImport()'), 'Import workspace has clear workflow');
+assert(uiCode.includes("callWithTimeout('previewImport'"), 'Import preview uses governed server endpoint');
+assert(uiCode.includes("callWithTimeout('commitImport'"), 'Import commit uses governed server endpoint');
 assert(uiCode.includes('function refreshCrossServiceReport()'), 'Laporan workspace calls semantic adapter');
 assert(uiCode.includes('getCrossServiceReport'), 'Laporan workspace routes to cross-service endpoint');
 assert(uiCode.includes('combinedServiceVolume'), 'Laporan workspace displays combined service volume');
