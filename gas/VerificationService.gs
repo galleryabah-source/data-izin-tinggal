@@ -301,6 +301,9 @@ function runProductionSmokeTestV1(){
   const bootstrap=check_('identity',()=>getBootstrap());
   if(!bootstrap||!bootstrap.user||!bootstrap.user.authenticated)checks[checks.length-1].ok=false;
 
+  const registryIntegrity=check_('dataset_registry_identity',()=>verifyDatasetRegistryIntegrityV1());
+  if(registryIntegrity&&!registryIntegrity.ok)checks[checks.length-1].ok=false;
+
   const summary=check_('dashboard_summary',()=>getDashboardSummary());
   const dashboard=check_('dashboard_baseline',()=>getResidencePermitDashboard({}));
   if(dashboard){
