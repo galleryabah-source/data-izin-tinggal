@@ -4,7 +4,7 @@ function getDatasetBySignature_(signature){
     .filter(x=>x.status==='ACTIVE'&&String(x.row[snapshot.index.schema_signature]||'').trim()===String(signature||'').trim());
   if(matches.length>1)throw new Error('DATASET_IDENTITY_CONFLICT: duplicate active schema signature '+signature);
   if(!matches.length)return null;
-  const identity=getCanonicalDatasetIdentity_(matches[0].row,snapshot.index,false);
+  const identity=getCanonicalDatasetIdentity_(matches[0].row,snapshot.index);
   const sameKey=snapshot.rows.map((row,n)=>({row,rowNumber:n+2,status:String(row[snapshot.index.status]||'').trim().toUpperCase()}))
     .filter(x=>x.status==='ACTIVE'&&String(x.row[snapshot.index.dataset_key]||'').trim()===identity.datasetKey);
   if(sameKey.length!==1)throw new Error('DATASET_IDENTITY_CONFLICT: active dataset_key '+identity.datasetKey+' has '+sameKey.length+' records.');
@@ -35,9 +35,9 @@ function updateDatasetRowCount_(dataset){
   const matches=snapshot.rows.map((row,n)=>({row,rowNumber:n+2,status:String(row[snapshot.index.status]||'').trim().toUpperCase()}))
     .filter(x=>x.status==='ACTIVE'&&String(x.row[snapshot.index.dataset_key]||'').trim()===dataset.datasetKey&&String(x.row[snapshot.index.schema_signature]||'').trim()===dataset.signature);
   if(matches.length!==1)throw new Error('DATASET_IDENTITY_CONFLICT: cannot update row_count for '+dataset.datasetKey+' / '+dataset.signature);
-  const identity=getCanonicalDatasetIdentity_(matches[0].row,snapshot.index);
+  const identity=getCanonicalDatasetIdentity_(matches[0].row,snapshot.index,false);
   const sh=snapshot.sheet;
-  sh.getRange(matches[0].rowNumber,snapshot.index.row_count+1).setValue(identity.rowCount);
+  sh.getRange(matches[0].rowNumber,snapshot.index.row_count+1).setValue(Number(dataset.rowCount||0));
   sh.getRange(matches[0].rowNumber,snapshot.index.updated_at+1).setValue(nowIso_());
 }
 function listDatasets(){
