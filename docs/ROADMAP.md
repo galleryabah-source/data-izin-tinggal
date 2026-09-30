@@ -116,6 +116,8 @@ The application is planned to evolve into a unified multi-service immigration da
 ### Phase 9 — Daily operational data
 - [x] Draft Phase 9 daily operational contract/lifecycle design (design gate only)
 - [x] Define proposed period closing / correction workflow (design gate only)
+- [x] Prepare Gate 9.1 operational source audit worksheet
+- [ ] Pass Gate 9.1 using a real daily operational source/workflow
 - [ ] Approve exact daily source-specific contract
 - [ ] Implement daily lifecycle and revision/correction workflow
 - [ ] Derive monthly and yearly aggregates from approved daily records
