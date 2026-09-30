@@ -12,6 +12,7 @@ permissions:
 
 # Canonical Apps Script deployment target. This is a public deployment identifier,
 # not a credential; credentials remain in GitHub Secrets.
+# Deployment trigger: keep production deployment evidence tied to main pushes.
 env:
   APPS_SCRIPT_DEPLOYMENT_ID: "AKfycbzwhcpZWp8LhyidPFsvqwBQ6ZrgXjEB60NkyNmaQYsiewsvm9uZ_pwPdrG5xZINF2NK"
 
@@ -73,7 +74,6 @@ jobs:
           APPS_SCRIPT_DEPLOYMENT_ID: ${{ env.APPS_SCRIPT_DEPLOYMENT_ID }}
         run: clasp deploy --deploymentId "$APPS_SCRIPT_DEPLOYMENT_ID" --versionNumber "$APPS_SCRIPT_VERSION" --description "GitHub $GITHUB_SHA"
 
-      
       - name: Write deployment evidence manifest
         env:
           APPS_SCRIPT_VERSION: ${{ env.APPS_SCRIPT_VERSION }}
