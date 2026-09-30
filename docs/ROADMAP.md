@@ -94,7 +94,7 @@ The Passport dataset is now verified against the real production Web App and pro
 
 The production baseline is now verified end-to-end for both the existing Residence Permit dataset and the Passport dataset. Map v1, Export Verification v1, Backup Snapshot Verification v1, Automated Production Smoke Test v1, Passport governance/runtime regression gates, and the GIS First production UI baseline have passed their verification gates.
 
-The current source model is monthly. The next work therefore remains controlled hardening and maintenance of the canonical monthly pipeline, followed by Phase 10 capabilities that operate on authoritative monthly data. Daily operational data is explicitly deferred until an authoritative daily source becomes available.
+The current source model is monthly. The canonical monthly engine hardening gate is now closed by live production Regression Smoke: `dataset_registry_identity`, dashboard, drilldown, Office Reference, and map checks all returned `ok: true` with no failed checks on 2026-09-30. The next work may therefore enter Phase 10 in a controlled, capability-gated manner using authoritative monthly data. Daily operational data remains explicitly deferred until an authoritative daily source becomes available.
 
 The deployment identity evidence chain remains part of the gate: Git commit SHA -> GitHub Actions run -> Apps Script immutable version -> canonical deployment ID -> production smoke -> AUDIT_LOG -> backup snapshot.
 
