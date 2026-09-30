@@ -114,9 +114,12 @@ The application is planned to evolve into a unified multi-service immigration da
 - [x] Extend production smoke verification
 
 ### Phase 9 — Daily operational data
-- [ ] Define daily operational contract where required
-- [ ] Define period closing / correction workflow
+- [x] Draft Phase 9 daily operational contract/lifecycle design (design gate only)
+- [x] Define proposed period closing / correction workflow (design gate only)
+- [ ] Approve exact daily source-specific contract
+- [ ] Implement daily lifecycle and revision/correction workflow
 - [ ] Derive monthly and yearly aggregates from approved daily records
+- [ ] Reconcile daily-derived periods against historical monthly baselines
 - [ ] Preserve historical monthly baseline and migration traceability
 
 ### Phase 10 — Advanced platform capabilities
