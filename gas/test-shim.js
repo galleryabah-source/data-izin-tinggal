@@ -130,7 +130,7 @@ assert(uiCode.includes('data-target="dashboard"') && uiCode.includes('data-targe
 assert(uiCode.includes('id="gisOfficeSearch"') && uiCode.includes('id="gisOfficeDetail"'), 'GIS workspace has office search and detail panel');
 assert(uiCode.includes('function focusGisOffice()') && uiCode.includes('function fitGisMarkers()'), 'GIS workspace has map navigation controls');
 assert(uiCode.includes('function renderGisOfficeDetail(m)'), 'GIS workspace has office detail renderer');
-assert(uiCode.includes('OFFICE_REFERENCE'), 'GIS workspace remains anchored to Office Reference');
+assert(uiCode.includes('getResidencePermitMap') && uiCode.includes('getPassportMap'), 'GIS workspace routes through canonical map endpoints');
 assert(uiCode.includes('data-target="analytics"') && uiCode.includes('data-target="adminSection"') && uiCode.includes('data-target="registrySection"') && uiCode.includes('data-target="governanceSection"'), 'GIS First operational menus have functional targets');
 assert(uiCode.includes('function navigateTo(event,targetId)'), 'sidebar navigation handler exists');
 assert(uiCode.includes('function initSidebarNavigation()'), 'sidebar navigation initialization exists');
