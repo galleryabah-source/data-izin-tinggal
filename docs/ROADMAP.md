@@ -69,7 +69,6 @@ The current production baseline is verified against the real Web App and product
 - backup snapshot verification: source, snapshot, and manifest checksums match
 - automated production smoke test: PASS
 
-
 ### Passport production verification baseline
 
 The Passport dataset is now verified against the real production Web App and production spreadsheet:
@@ -93,14 +92,13 @@ The Passport dataset is now verified against the real production Web App and pro
 
 ## Current gate
 
-The production baseline is now verified end-to-end for both the existing Residence Permit dataset and the Passport dataset. Map v1, Export Verification v1, Backup Snapshot Verification v1, Automated Production Smoke Test v1, and the Passport governance/runtime regression gates have passed their production verification gates.
+The production baseline is now verified end-to-end for both the existing Residence Permit dataset and the Passport dataset. Map v1, Export Verification v1, Backup Snapshot Verification v1, Automated Production Smoke Test v1, Passport governance/runtime regression gates, and the GIS First production UI baseline have passed their verification gates.
 
-No new feature is currently required to establish the baseline. The next work should be controlled operational hardening and maintenance of the canonical pipeline. The deployment identity evidence chain is now part of that gate: Git commit SHA -> GitHub Actions run -> Apps Script immutable version -> canonical deployment ID -> production smoke -> AUDIT_LOG -> backup snapshot. Any new drill-down or map enhancement should be treated as a separate change after the production baseline remains green.
+The current source model is monthly. The next work therefore remains controlled hardening and maintenance of the canonical monthly pipeline, followed by Phase 10 capabilities that operate on authoritative monthly data. Daily operational data is explicitly deferred until an authoritative daily source becomes available.
 
+The deployment identity evidence chain remains part of the gate: Git commit SHA -> GitHub Actions run -> Apps Script immutable version -> canonical deployment ID -> production smoke -> AUDIT_LOG -> backup snapshot.
 
 ## Future platform expansion — planned, not yet implemented
-
-The application is planned to evolve into a unified multi-service immigration data platform while preserving isolated dataset contracts.
 
 ### Phase 8 — Multi-service blueprint
 - [x] Document single-application / multi-dataset architecture
@@ -113,11 +111,25 @@ The application is planned to evolve into a unified multi-service immigration da
 - [x] Integrate service-scoped export and backup
 - [x] Extend production smoke verification
 
-### Phase 9 — Daily operational data
+### Phase 9 — Daily operational data — DEFERRED
+**Status:** Deferred — authoritative daily source not available.
+
+**Reason:** The current authoritative operational sources are monthly. The existing monthly contracts do not contain sufficient temporal information to reconstruct authoritative daily records.
+
+**Non-goals while deferred:**
+- no synthetic daily records;
+- no daily table derived from monthly totals;
+- no daily contract implementation;
+- no daily lifecycle/correction workflow;
+- no daily-to-monthly aggregation;
+- no migration of the historical monthly baseline into a fabricated daily model.
+
+**Activation condition:** Resume Phase 9 only when an authoritative daily operational source and its business semantics are available and pass a source audit.
+
 - [x] Draft Phase 9 daily operational contract/lifecycle design (design gate only)
 - [x] Define proposed period closing / correction workflow (design gate only)
 - [x] Prepare Gate 9.1 operational source audit worksheet
-- [ ] Pass Gate 9.1 using a real daily operational source/workflow (evidence collected for Bandung, Sukabumi, and Depok, 2026-09-23; workflow/closure still pending)
+- [ ] Obtain authoritative daily source/workflow and pass Gate 9.1
 - [ ] Approve exact daily source-specific contract
 - [ ] Implement daily lifecycle and revision/correction workflow
 - [ ] Derive monthly and yearly aggregates from approved daily records
@@ -131,4 +143,4 @@ The application is planned to evolve into a unified multi-service immigration da
 - [ ] Document / knowledge integration
 - [ ] Controlled notifications and automation
 
-**Implementation rule:** future phases remain gated. No future service is enabled merely because it is documented. A new dataset family must pass contract, validation, deployment, integrity, export, backup, and runtime evidence gates without weakening the existing residence-permit baseline.
+**Implementation rule:** future phases remain gated. No future service is enabled merely because it is documented. A new dataset family must pass contract, validation, deployment, integrity, export, backup, and runtime evidence gates without weakening the existing production baseline.
