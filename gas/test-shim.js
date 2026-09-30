@@ -111,6 +111,11 @@ assert(passportGovernance.includes('content_sha256'),'Passport backup verifies c
 
 
 const dashboardCode=read('DashboardService.gs');
+assert(dashboardCode.includes('const search=String(f.search||\'\').trim().toLowerCase()'), 'Data Explorer backend supports server-side search');
+assert(dashboardCode.includes('const totalRows=rows.length,totalPages=Math.max(1,Math.ceil(totalRows/pageSize))'), 'Data Explorer backend supports pagination');
+assert(dashboardCode.includes('rows.sort((a,b)=>'), 'Data Explorer backend supports server-side sorting');
+assert(dashboardCode.includes('pageRows=rows.slice(offset,offset+pageSize)'), 'Data Explorer backend slices requested page');
+
 assert(dashboardCode.includes('function getPassportDashboard(filters)'), 'Passport dashboard endpoint exists');
 assert(dashboardCode.includes("getServiceDashboard_('PASSPORT_SERVICE_MONTHLY"), 'Passport dashboard uses service-scoped dataset');
 assert(dashboardCode.includes('function getPassportDrilldown(filters)'), 'Passport drilldown endpoint exists');
@@ -128,6 +133,12 @@ assert(uiCode.includes('function initSidebarNavigation()'), 'sidebar navigation 
 assert(uiCode.includes("history.replaceState(null,'','#'+targetId)"), 'sidebar navigation updates URL state');
 assert(uiCode.includes('IntersectionObserver'), 'sidebar active state follows visible section');
 assert(uiCode.includes('id="serviceDistributionSection"'), 'service distribution has a navigable section target');
+assert(uiCode.includes('id="drillSearch"') && uiCode.includes('id="drillPageSize"'), 'Data Explorer has search and page-size controls');
+assert(uiCode.includes('function sortExplorer(column)'), 'Data Explorer sorting handler exists');
+assert(uiCode.includes('function changeExplorerPage(delta)'), 'Data Explorer pagination handler exists');
+assert(uiCode.includes('function showExplorerDetail(index)'), 'Data Explorer detail handler exists');
+assert(uiCode.includes('getExplorerFilters()'), 'Data Explorer sends server-side explorer filters');
+
 
 const configCode=read('Config.gs');
 const configFn=new Function(configCode+'\nreturn {DATASET_CONTRACTS,APP};')();
