@@ -121,6 +121,13 @@ assert(uiCode.includes('id="svcResidence"') && uiCode.includes('id="svcPassport"
 assert(uiCode.includes('getPassportDashboard'), 'UI routes dashboard to Passport endpoint');
 assert(uiCode.includes('getPassportDrilldown'), 'UI routes drilldown to Passport endpoint');
 assert(uiCode.includes('getPassportMap'), 'UI routes map to Passport endpoint');
+assert(uiCode.includes('data-target="dashboard"') && uiCode.includes('data-target="mapSection"') && uiCode.includes('data-target="drilldownSection"'), 'GIS First analysis menus have functional targets');
+assert(uiCode.includes('data-target="analytics"') && uiCode.includes('data-target="adminSection"') && uiCode.includes('data-target="registrySection"') && uiCode.includes('data-target="governanceSection"'), 'GIS First operational menus have functional targets');
+assert(uiCode.includes('function navigateTo(event,targetId)'), 'sidebar navigation handler exists');
+assert(uiCode.includes('function initSidebarNavigation()'), 'sidebar navigation initialization exists');
+assert(uiCode.includes("history.replaceState(null,'','#'+targetId)"), 'sidebar navigation updates URL state');
+assert(uiCode.includes('IntersectionObserver'), 'sidebar active state follows visible section');
+assert(uiCode.includes('id="serviceDistributionSection"'), 'service distribution has a navigable section target');
 
 const configCode=read('Config.gs');
 const configFn=new Function(configCode+'\nreturn {DATASET_CONTRACTS,APP};')();
