@@ -111,30 +111,27 @@ The deployment identity evidence chain remains part of the gate: Git commit SHA 
 - [x] Integrate service-scoped export and backup
 - [x] Extend production smoke verification
 
-### Phase 9 — Daily operational data — DEFERRED
-**Status:** Deferred — authoritative daily source not available.
+### Phase 10 — Authoritative monthly analytics and application workspaces
 
-**Reason:** The current authoritative operational sources are monthly. The existing monthly contracts do not contain sufficient temporal information to reconstruct authoritative daily records.
+**Status:** Phase 10.1 runtime gate **CLOSED / PASS** as of 2026-09-30.
 
-**Non-goals while deferred:**
-- no synthetic daily records;
-- no daily table derived from monthly totals;
-- no daily contract implementation;
-- no daily lifecycle/correction workflow;
-- no daily-to-monthly aggregation;
-- no migration of the historical monthly baseline into a fabricated daily model.
+- [x] Define cross-service reporting contract v1
+- [x] Implement read-only `service_volume` semantic adapter
+- [x] Add production regression gate for cross-service reporting
+- [x] Deploy canonical Phase 10.1 runtime
+- [x] Execute live production Regression Smoke
+- [x] Verify `cross_service_reporting.ok === true`
+- [x] Verify Residence baseline: 80 rows / 258,094 / 8 periods / 10 offices
+- [x] Verify Passport baseline: 80 rows / 327,088 / 8 periods / 10 offices
+- [ ] Build functional GIS First Data Explorer workspace
+- [ ] Build dedicated GIS workspace
+- [ ] Build cross-service reporting workspace
+- [ ] Build production-grade Import workspace
+- [ ] Build Administration workspace
+- [ ] Build Monitoring workspace
 
-**Activation condition:** Resume Phase 9 only when an authoritative daily operational source and its business semantics are available and pass a source audit.
+**Phase 10.1 boundary:** read-only semantic reporting only. No new persistent dataset, source-contract change, importer change, registry identity change, historical-data change, or daily reconstruction.
 
-- [x] Draft Phase 9 daily operational contract/lifecycle design (design gate only)
-- [x] Define proposed period closing / correction workflow (design gate only)
-- [x] Prepare Gate 9.1 operational source audit worksheet
-- [ ] Obtain authoritative daily source/workflow and pass Gate 9.1
-- [ ] Approve exact daily source-specific contract
-- [ ] Implement daily lifecycle and revision/correction workflow
-- [ ] Derive monthly and yearly aggregates from approved daily records
-- [ ] Reconcile daily-derived periods against historical monthly baselines
-- [ ] Preserve historical monthly baseline and migration traceability
 
 ### Phase 10 — Advanced platform capabilities
 - [ ] Cross-service reporting where metrics are semantically compatible
