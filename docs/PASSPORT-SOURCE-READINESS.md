@@ -1,113 +1,69 @@
 # Passport Service — Source Readiness
 
-**Status:** discovery / design preparation only  
+**Status:** source analysis complete; Contract v1 proposed  
 **Dataset target:** `PASSPORT_SERVICE_MONTHLY`  
 **Production status:** not implemented
 
 ## Purpose
 
-Prepare the Passport service contract without guessing its schema. The existing Residence Permit contract remains unchanged and is the canonical production baseline.
+Prepare the Passport service contract from the actual source workbook supplied for this application. The existing Residence Permit contract remains unchanged and is the canonical production baseline.
 
-## Evidence from official immigration sources
+## Real source analyzed
 
-Official immigration publications show that passport reporting can contain dimensions that are not present in the Residence Permit dataset.
+Source workbook: `Tabel Layanan Paspor.xlsx`
 
-Examples include:
+Observed structure:
 
-- passport type;
-- ordinary versus electronic passport;
-- new issuance;
-- replacement because of expiry;
-- replacement because of damage;
-- replacement because of loss;
-- other replacement reasons;
-- immigration office;
-- reporting period.
+- 8 monthly sheets: JAN, FEB, MAR, APRIL, MEI, JUNI, JULI, AGUST;
+- 10 operational immigration offices per month;
+- 80 operational rows in total;
+- source columns: `No`, `Kantor Imigrasi`, `Biasa 24`, `Biasa 48`, `Elektronik 48`, `E-Polikarbonat`, `Jumlah`;
+- `No` is presentation-only;
+- `JUMLAH` subtotal rows are excluded;
+- no additional source columns are required for v1.
 
-A 2026 official immigration report for Jakarta Pusat presents passport issuance grouped by passport type and issuance/replacement reason. A 2026 official Batam report separately reports new versus replacement electronic passports.
+## Source-to-canonical result
 
-These observations are **source evidence only**, not a finalized contract.
+Normalized fixture: `PASSPORT_SERVICE_MONTHLY_v1.xlsx`
 
-## Contract decision rule
+Canonical grain: `periode × kantor_imigrasi`
 
-Do not copy the Residence Permit columns into Passport.
+Canonical measures:
 
-The Passport contract must be derived from an actual source fixture supplied or approved for this application.
+- `biasa_24`
+- `biasa_48`
+- `elektronik_48`
+- `e_polikarbonat`
+- derived `total`
 
-Required evidence before Contract v1:
+The source's passport categories are therefore represented as measures in v1 rather than as a separate `jenis_paspor` dimension.
 
-1. actual Passport workbook/table;
-2. source sheet structure;
-3. reporting period/grain;
-4. office dimension;
-5. passport-type dimension;
-6. service/reason dimension;
-7. subtotal/total semantics;
-8. duplicate/business-key semantics;
-9. any source columns that are unstable or presentation-only.
+## Validation result
 
-## Candidate analytical grain
+The real source normalized successfully:
 
-The initial candidate is:
+- 80 rows;
+- 8 periods;
+- 10 offices per period;
+- 0 duplicate business keys;
+- 0 negative values;
+- 0 total mismatches;
+- overall total 327,088.
 
-`periode × kantor_imigrasi × jenis_paspor × jenis_layanan`
+## Contract
 
-This is deliberately provisional.
+The formal v1 contract is recorded in `docs/PASSPORT-DATA-CONTRACT-v1.md`.
 
-The final grain may be different if the real source demonstrates a better normalized structure.
+A normalized text fixture is recorded as `fixtures/PASSPORT_SERVICE_MONTHLY_v1.tsv`.
 
-## Candidate dimensions observed in public official sources
-
-Potential dimensions to evaluate against the real source:
-
-- `periode`
-- `kantor_imigrasi`
-- `jenis_paspor`
-- `jenis_permohonan`
-- `alasan_penggantian`
-- `total`
-
-No field is approved for Contract v1 solely from this document.
-
-## Validation requirements
-
-The eventual Passport contract must define:
-
-- required and optional columns;
-- normalized data types;
-- non-negative count rules;
-- derived total rules;
-- subtotal exclusion rules;
-- business key;
-- duplicate handling;
-- existing-dataset duplicate handling;
-- correction/revision semantics;
-- export semantics;
-- audit requirements;
-- backup/snapshot requirements;
-- production smoke baseline.
-
-## Fixture requirement
-
-The next implementation artifact should be a real normalized Passport fixture, for example:
-
-`PASSPORT_SERVICE_MONTHLY_v1.xlsx`
-
-It must be generated from an approved real source, not invented sample data.
+The XLSX fixture remains the user-facing source-normalization artifact.
 
 ## Non-goals
 
-This document does not:
-
-- modify the Residence Permit dataset;
-- add Passport production code;
-- register a Passport dataset;
-- alter the dashboard;
-- alter production permissions;
-- authorize a Passport deployment.
+This source-readiness stage does not modify Residence Permit production behavior, register Passport in production, alter production permissions, alter the dashboard, or authorize Passport deployment.
 
 ## Next gate
 
-`Real Passport source -> source analysis -> normalized fixture -> Contract v1 -> validator/importer -> test -> production deployment`
+`Real source ✓ → normalized fixture ✓ → Contract v1 ✓ → validator/importer → automated tests → production gates`
 
-Until the real source is available, implementation should stop at source-readiness/design preparation.
+The next implementation step is the Passport validator/importer, implemented against this contract and fixture without changing the existing Residence Permit pipeline.
