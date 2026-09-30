@@ -99,6 +99,51 @@ console.log('CSV export invariants: OK');
 console.log('Backup folder normalization: OK');
 console.log('Automated smoke test: PASS');
 
+const configCode=read('Config.gs');
+const configFn=new Function(configCode+'\nreturn {DATASET_CONTRACTS,APP};')();
+const passportContract=configFn.DATASET_CONTRACTS.PASSPORT_SERVICE_MONTHLY;
+assert(passportContract.columns.length===7,'Passport contract column count');
+assert(JSON.stringify(passportContract.businessKey)===JSON.stringify(['periode','kantor_imigrasi']),'Passport business key');
+assert(JSON.stringify(passportContract.measures)===JSON.stringify(['biasa_24','biasa_48','elektronik_48','e_polikarbonat']),'Passport measures');
+assert(passportContract.derived.includes('total'),'Passport derived total');
+
+const passportImport=new Function(
+  'APP','DATASET_CONTRACTS','getDatasetBySignature_','getDb_',
+  importCode+'\nreturn {validateRows_};'
+)(
+  configFn.APP,
+  configFn.DATASET_CONTRACTS,
+  ()=>null,
+  ()=>({getSheetByName:()=>({getDataRange:()=>({getValues:()=>[[]]})})})
+);
+const passportSchema={
+  contractKey:'PASSPORT_SERVICE_MONTHLY',
+  sourceColumns:['periode','kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat','total'],
+  columns:passportContract.columns,
+  signature:'test-passport'
+};
+const passportRows=[
+  ['2026-01','OFFICE A','1','2','300','4','307'],
+  ['2026-02','OFFICE B','0','5','10','0','15']
+];
+const passportCheck=passportImport.validateRows_(passportSchema,passportRows);
+assert(passportCheck.valid.length===2,'Passport fixture validation accepts valid rows');
+assert(passportCheck.errors.length===0,'Passport fixture validation has no errors');
+assert(passportCheck.valid[0][6]===307,'Passport total derived dynamically');
+
+const mismatch=passportImport.validateRows_(passportSchema,[['2026-01','OFFICE C','1','2','3','4','999']]);
+assert(mismatch.valid.length===0,'Passport total mismatch rejected');
+assert(mismatch.errors.length===1,'Passport mismatch produces one error');
+
+const duplicate=passportImport.validateRows_(passportSchema,[['2026-01','OFFICE D','1','2','3','4','10'],['2026-01','OFFICE D','2','3','4','5','14']]);
+assert(duplicate.valid.length===1,'Passport duplicate business key rejects second row');
+assert(duplicate.duplicates===1,'Passport duplicate count is one');
+
+const residenceContract=configFn.DATASET_CONTRACTS.RESIDENCE_PERMIT_SERVICE_MONTHLY;
+assert(residenceContract.measures.length===13,'Residence Permit measures preserved');
+assert(residenceContract.columns.indexOf('total')===15,'Residence Permit total position preserved');
+
+
 const verificationCode=read('VerificationService.gs');
 assert(verificationCode.includes('function runProductionSmokeTestV1()'), 'production smoke test endpoint exists');
 assert(verificationCode.includes("PRODUCTION_SMOKE_TEST"), 'production smoke test audit event exists');
