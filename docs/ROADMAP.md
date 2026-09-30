@@ -69,9 +69,31 @@ The current production baseline is verified against the real Web App and product
 - backup snapshot verification: source, snapshot, and manifest checksums match
 - automated production smoke test: PASS
 
+
+### Passport production verification baseline
+
+The Passport dataset is now verified against the real production Web App and production spreadsheet:
+
+- dataset: `PASSPORT_SERVICE_MONTHLY`
+- source sheet: `DATA_PASSPORT_SERVICE_MONTHLY`
+- 80 operational rows
+- 7 columns
+- 8 monthly periods
+- 10 immigration offices
+- grand total: 327,088 services
+- duplicate business keys: 0
+- blank business keys: 0
+- total mismatches: 0
+- latest import: 80 accepted / 0 rejected / 0 duplicates / SUCCESS
+- matching `IMPORT_COMMIT` audit evidence: 1
+- CSV export: 80 rows
+- backup snapshot: checksum, manifest, schema, row-count, and source/snapshot checksum match
+- dashboard runtime: 80 rows / 327,088 services / 8 periods / 10 offices
+- dashboard regression smoke: Residence Permit + Passport PASS
+
 ## Current gate
 
-The production baseline is now verified end-to-end. Map v1, Export Verification v1, Backup Snapshot Verification v1, and Automated Production Smoke Test v1 have all passed their production verification gates.
+The production baseline is now verified end-to-end for both the existing Residence Permit dataset and the Passport dataset. Map v1, Export Verification v1, Backup Snapshot Verification v1, Automated Production Smoke Test v1, and the Passport governance/runtime regression gates have passed their production verification gates.
 
 No new feature is currently required to establish the baseline. The next work should be controlled operational hardening and maintenance of the canonical pipeline. The deployment identity evidence chain is now part of that gate: Git commit SHA -> GitHub Actions run -> Apps Script immutable version -> canonical deployment ID -> production smoke -> AUDIT_LOG -> backup snapshot. Any new drill-down or map enhancement should be treated as a separate change after the production baseline remains green.
 
@@ -85,11 +107,11 @@ The application is planned to evolve into a unified multi-service immigration da
 - [x] Define service selector concept: All / Residence Permit / Passport
 - [x] Define dataset isolation and cross-service query boundaries
 - [x] Define phased roadmap for Passport Services
-- [ ] Implement Passport dataset contract
-- [ ] Implement Passport import/validation
-- [ ] Integrate Passport into dashboard
-- [ ] Integrate service-scoped export and backup
-- [ ] Extend production smoke verification
+- [x] Implement Passport dataset contract
+- [x] Implement Passport import/validation
+- [x] Integrate Passport into dashboard
+- [x] Integrate service-scoped export and backup
+- [x] Extend production smoke verification
 
 ### Phase 9 — Daily operational data
 - [ ] Define daily operational contract where required
