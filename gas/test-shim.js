@@ -117,7 +117,7 @@ assert(dashboardCode.includes('function getPassportDrilldown(filters)'), 'Passpo
 assert(dashboardCode.includes('function getPassportMap(filters)'), 'Passport map endpoint exists');
 assert(dashboardCode.includes('PASSPORT_SERVICE_MONTHLY'), 'Passport dashboard dataset is explicit');
 const uiCode=read('index.html');
-assert(uiCode.includes('id="serviceFilter"'), 'dashboard service selector exists');
+assert(uiCode.includes('id="svcResidence"') && uiCode.includes('id="svcPassport"'), 'dashboard service selector exists');
 assert(uiCode.includes('getPassportDashboard'), 'UI routes dashboard to Passport endpoint');
 assert(uiCode.includes('getPassportDrilldown'), 'UI routes drilldown to Passport endpoint');
 assert(uiCode.includes('getPassportMap'), 'UI routes map to Passport endpoint');
