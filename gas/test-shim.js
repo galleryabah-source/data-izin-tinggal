@@ -135,6 +135,10 @@ assert(uiCode.includes('data-target="analytics"') && uiCode.includes('data-targe
 assert(uiCode.includes('function navigateTo(event,targetId)'), 'sidebar navigation handler exists');
 assert(uiCode.includes('id="crossReport"') && uiCode.includes('id="crossReportStatus"'), 'Laporan workspace has cross-service report surface');
 assert(uiCode.includes('id="importStatus"') && uiCode.includes('id="importPreview"'), 'Import workspace has workflow status and preview surface');
+assert(uiCode.includes('id="monitoringHealth"') && uiCode.includes('id="monitoringStatus"'), 'Monitoring workspace has runtime health surface');
+assert(uiCode.includes('function runDashboardRegressionSmoke()'), 'Monitoring workspace invokes regression smoke');
+assert(uiCode.includes("callWithTimeout('listDatasets'"), 'Administration workspace uses canonical dataset registry endpoint');
+assert(uiCode.includes('Schema Signature'), 'Administration workspace exposes registry identity metadata');
 assert(uiCode.includes('function renderImportPreview(r)'), 'Import workspace has preview renderer');
 assert(uiCode.includes('function clearImport()'), 'Import workspace has clear workflow');
 assert(uiCode.includes("callWithTimeout('previewImport'"), 'Import preview uses governed server endpoint');
