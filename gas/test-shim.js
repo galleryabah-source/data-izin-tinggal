@@ -99,6 +99,17 @@ console.log('CSV export invariants: OK');
 console.log('Backup folder normalization: OK');
 console.log('Automated smoke test: PASS');
 
+const passportGovernance=read('PassportGovernanceService.gs');
+assert(passportGovernance.includes('function verifyPassportServiceMonthly()'),'Passport integrity verification endpoint exists');
+assert(passportGovernance.includes('327088'),'Passport integrity expected aggregate is pinned');
+assert(passportGovernance.includes('PASSPORT_INTEGRITY_VERIFY'),'Passport integrity writes audit evidence');
+assert(passportGovernance.includes('function exportPassportServiceMonthly(filters)'),'Passport export endpoint exists');
+assert(passportGovernance.includes("requirePermission_('dataset.export')"),'Passport export is RBAC protected');
+assert(passportGovernance.includes('function createPassportServiceSnapshot()'),'Passport backup snapshot endpoint exists');
+assert(passportGovernance.includes('function verifyPassportServiceSnapshot(snapshotSpreadsheetId)'),'Passport backup verification endpoint exists');
+assert(passportGovernance.includes('content_sha256'),'Passport backup verifies checksum');
+
+
 const configCode=read('Config.gs');
 const configFn=new Function(configCode+'\nreturn {DATASET_CONTRACTS,APP};')();
 const passportContract=configFn.DATASET_CONTRACTS.PASSPORT_SERVICE_MONTHLY;
