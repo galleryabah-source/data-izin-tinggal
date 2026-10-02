@@ -141,7 +141,7 @@ button,select,input,textarea{font:inherit}button{cursor:pointer}.app{min-height:
 </div>
 </div>
 <script>
-const TV_MODE=new URLSearchParams(window.location.search).get('view')==='tv';
+const TV_MODE=/[?&]view=tv(?:&|$)/.test(String(window.location.search||''));
 const TV_SERVICES=['RESIDENCE_PERMIT_SERVICE_MONTHLY','PASSPORT_SERVICE_MONTHLY'];
 let tvServiceIndex=0,tvRefreshTimer=null,tvRotationTimer=null,tvMapInstance=null,tvMapLayer=null;
 function tvServiceLabel(key){return key==='PASSPORT_SERVICE_MONTHLY'?'PASPOR':'IZIN TINGGAL';}
@@ -157,7 +157,7 @@ async function tvRefresh(){const serviceKey=TV_SERVICES[tvServiceIndex];const fn
 function tvStartClock(){const tick=()=>{const el=document.getElementById('tvClock');if(el)el.textContent=tvNow();};tick();setInterval(tick,1000);}
 function openTv(event){if(event)event.preventDefault();window.location.href=window.location.pathname+'?view=tv';}
 function exitTv(){window.location.href=window.location.pathname;}
-function tvStart(){document.querySelector('.app').classList.add('hidden');document.getElementById('tvView').classList.remove('hidden');document.body.classList.add('tv-kiosk');tvStartClock();tvRefresh();tvRefreshTimer=setInterval(tvRefresh,60000);tvRotationTimer=setInterval(()=>{tvServiceIndex=(tvServiceIndex+1)%TV_SERVICES.length;tvRefresh();},30000);}
+function tvStart(){const app=document.querySelector('.app'),tv=document.getElementById('tvView');if(!tv)return;if(app)app.classList.add('hidden');tv.classList.remove('hidden');document.body.classList.add('tv-kiosk');try{tvStartClock();tvRefresh();tvRefreshTimer=setInterval(tvRefresh,60000);tvRotationTimer=setInterval(()=>{tvServiceIndex=(tvServiceIndex+1)%TV_SERVICES.length;tvRefresh();},30000);}catch(e){tvSetStatus(false,'LIVE SYSTEM · ATTENTION','LAST READ · bootstrap failed');const ticker=document.getElementById('tvTicker');if(ticker)ticker.innerHTML='<span class="tv-error">INTAL TV BOOT ERROR · '+esc(e.message||String(e))+'</span>';}}
 function call(fn,...args){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(e))[fn](...args));}
 function callWithTimeout(fn,timeoutMs,...args){return Promise.race([call(fn,...args),new Promise((_,reject)=>setTimeout(()=>reject(new Error('TIMEOUT: '+fn+' > '+Math.round(timeoutMs/1000)+' detik')),timeoutMs))]);}
 function setLoading(active,message){document.querySelectorAll('.filterbar button,.filterbar select,.top-service button').forEach(el=>el.disabled=active);document.getElementById('mapStatus').textContent=message||'Memuat data...';}function navigateTo(event,targetId){
@@ -229,6 +229,16 @@ async function commit(){if(!importReady){document.getElementById('result').inner
 function clearImport(){document.getElementById('paste').value='';document.getElementById('importPreview').innerHTML='';document.getElementById('result').innerHTML='';document.getElementById('commitBtn').disabled=true;document.getElementById('importStatus').textContent='Belum ada sumber';importReady=false;}
 async function boot(){showBootStatus('Menghubungkan ke server...',false);try{const b=await callWithTimeout('getBootstrap',15000);if(!b||!b.user){throw new Error('BOOTSTRAP_EMPTY_RESPONSE');}if(!b.user.authenticated){document.getElementById('user').innerHTML='<span class="error">Akses belum terdaftar</span>';showBootStatus('Akses belum terdaftar',true);return;}document.getElementById('user').textContent=b.user.displayName+' · '+b.user.role;showBootStatus('Server terhubung · '+b.user.role,false);await refreshDashboard();refreshRegistry();}catch(e){const msg='Dashboard gagal dimuat: '+(e&&e.message?e.message:String(e));document.getElementById('user').innerHTML='<span class="error">ERROR</span>';showBootStatus(msg,true);document.getElementById('mapStatus').innerHTML='<span class="error">'+esc(msg)+'</span>';}}
 if(TV_MODE){tvStart();}else{initSidebarNavigation();boot();}
+</script>
+
+<script>
+(function(){
+  var tv=/[?&]view=tv(?:&|$)/.test(String(window.location.search||''));
+  if(!tv)return;
+  var shell=document.getElementById('tvView'),app=document.querySelector('.app');
+  if(shell){shell.classList.remove('hidden');document.body.classList.add('tv-kiosk');}
+  if(app)app.classList.add('hidden');
+})();
 </script>
 </body>
 </html>
