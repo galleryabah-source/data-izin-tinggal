@@ -100,24 +100,6 @@ function getServiceDashboard_(datasetKey,serviceColumns,filters){
   return {datasetKey,rowCount:rows.length,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,availablePeriods,availableOffices},grandTotal,monthly:Object.values(monthly).sort((a,b)=>a.periode.localeCompare(b.periode)),offices:Object.values(offices).sort((a,b)=>b.total-a.total),services:serviceColumns.map(c=>({key:c,total:services[c]}))};
 }
 
-function getPassportDrilldown(filters){
-  return getServiceDrilldown_('PASSPORT_SERVICE_MONTHLY',filters,'month');
-}
-
-function getServiceDrilldown_(datasetKey,filters,periodMode){
-  requirePermission_('dataset.read');
-  const d=getActiveDatasetContract_(datasetKey),values=d.sheet.getDataRange().getValues();
-  if(values.length<2)return {datasetKey,columns:[],rows:[],rowCount:0};
-  const header=values[0],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
-  const requestedPeriod=String((filters&&filters.periode)||'').trim(),requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
-  const periodOf_=r=>{const raw=r[hi.periode];return raw instanceof Date?Utilities.formatDate(raw,APP.TZ,periodMode==='month'?'yyyy-MM':'yyyy-MM-dd'):String(raw||'').trim();};
-  const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
-  const rows=values.slice(1).filter(r=>r.some(v=>String(v)!=='')).filter(r=>(!requestedPeriod||periodOf_(r)===requestedPeriod)&&(!requestedOffice||officeOf_(r)===requestedOffice));
-  const output=rows.map(r=>header.map((_,idx)=>{const v=r[idx];return v instanceof Date?Utilities.formatDate(v,APP.TZ,periodMode==='month'&&header[idx]==='periode'?'yyyy-MM':'yyyy-MM-dd'):v;}));
-  appendAudit_('DATASET_DRILLDOWN',datasetKey,'',output.length,'SUCCESS',JSON.stringify({periode:requestedPeriod,kantor_imigrasi:requestedOffice}));
-  return {datasetKey,columns:header,rowCount:output.length,rows:output,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice}};
-}
-
 function getPassportMap(filters){
   return getServiceMap_('PASSPORT_SERVICE_MONTHLY',filters);
 }
