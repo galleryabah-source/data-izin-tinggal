@@ -188,9 +188,9 @@ assert(tvCharts.includes('function renderDistribution'), 'INTAL TV renders visua
 assert(tvCharts.includes('class="donut"'), 'INTAL TV has donut visualization');
 assert(tvCharts.includes('TOP 10 KANTOR'), 'INTAL TV ranking shows Top 10 offices');
 assert(tvCharts.includes("slice(0,10)"), 'INTAL TV renders up to 10 ranked offices');
-assert(tvCharts.includes('grid-template-columns:minmax(125px,1fr) minmax(95px,.9fr)'), 'INTAL TV distribution uses bounded compact grid layout');
+assert(tvCharts.includes('grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)'), 'INTAL TV distribution uses bounded responsive grid layout');
 assert(tvCharts.includes('summary-icon'), 'INTAL TV summary cards include visual icons');
-assert(tvCharts.includes('width:min(154px,100%)'), 'INTAL TV distribution donut is compact');
+assert(tvCharts.includes('width:clamp(150px,31cqw,330px)'), 'INTAL TV distribution donut scales responsively');
 assert(!tvCharts.includes('transform:perspective(520px)'), 'INTAL TV distribution is 2D');
 assert(tvCharts.includes('--donut-bg'), 'INTAL TV donut segments are driven by responsive CSS variables');
 assert(tvCharts.includes('.donut:before{content:none}'), 'INTAL TV donut has no 3D extrusion layer');
@@ -236,3 +236,9 @@ assert(!tvCharts.includes('tickerIndex'), 'INTAL TV running text no longer rotat
 assert(tvCharts.includes('font-size:clamp(8.5px,.68vw,10px)'), 'INTAL TV service labels scale for readability');
 assert(tvCharts.includes('height:10px;background:#102e4b'), 'INTAL TV service bars remain compact but readable');
 assert(tvCharts.includes('align-content:start'), 'INTAL TV service distribution remains bounded within panel');
+
+// Distribution responsive centered visual regression
+assert(tvCharts.includes('container-type:size'), 'INTAL TV distribution uses panel container sizing');
+assert(tvCharts.includes('width:clamp(150px,31cqw,330px)'), 'INTAL TV donut scales responsively to panel width');
+assert(tvCharts.includes('translateY(clamp(5px,2cqh,24px))'), 'INTAL TV distribution group is lowered within panel');
+assert(tvCharts.includes('font-size:clamp(9px,1.45cqw,16px)'), 'INTAL TV distribution legend scales responsively');
