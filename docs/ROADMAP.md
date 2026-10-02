@@ -90,6 +90,10 @@ The Passport dataset is now verified against the real production Web App and pro
 - dashboard runtime: 80 rows / 327,088 services / 8 periods / 10 offices
 - dashboard regression smoke: Residence Permit + Passport PASS
 
+## Phase 10.2 certification gate
+
+Source implementation, CI validation, and canonical deployment are complete. Phase 10.2 remains uncertified until live workspace UAT, authorization negative testing, deployed regression evidence, and documentation reconciliation are captured.
+
 ## Current gate
 
 The production baseline is now verified end-to-end for both the existing Residence Permit dataset and the Passport dataset. Map v1, Export Verification v1, Backup Snapshot Verification v1, Automated Production Smoke Test v1, Passport governance/runtime regression gates, and the GIS First production UI baseline have passed their verification gates.
@@ -123,12 +127,16 @@ The deployment identity evidence chain remains part of the gate: Git commit SHA 
 - [x] Verify `cross_service_reporting.ok === true`
 - [x] Verify Residence baseline: 80 rows / 258,094 / 8 periods / 10 offices
 - [x] Verify Passport baseline: 80 rows / 327,088 / 8 periods / 10 offices
-- [ ] Build functional GIS First Data Explorer workspace
-- [ ] Build dedicated GIS workspace
-- [ ] Build cross-service reporting workspace
-- [ ] Build production-grade Import workspace
-- [ ] Build Administration workspace
-- [ ] Build Monitoring workspace
+- [x] Build functional GIS First Data Explorer workspace
+- [x] Build dedicated GIS workspace
+- [x] Build cross-service reporting workspace
+- [x] Build production-grade Import workspace
+- [x] Build Administration workspace
+- [x] Build Monitoring workspace
+- [ ] Production UAT: verify all seven workspaces
+- [ ] Security negative test: unauthorized/anonymous access is denied
+- [ ] Runtime evidence: regression smoke PASS against deployed Phase 10.2 release
+- [ ] Reconcile production documentation/evidence
 
 **Phase 10.1 boundary:** read-only semantic reporting only. No new persistent dataset, source-contract change, importer change, registry identity change, historical-data change, or daily reconstruction.
 
