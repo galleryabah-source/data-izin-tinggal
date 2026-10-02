@@ -121,7 +121,7 @@ const csv=[header.map(csvEscape).join(',')].concat(combined.map(r=>r.map(csvEsca
 assert(csv.split('\n').length===2,'CSV header + one data row');
 assert(csv.split('\n')[0].split(',').length===16,'CSV column count');
 
-const tvUi=read('index.html');
+const uiCode=read('index.html');
 const tvUi=read('tv.html');
 assert(tvUi.includes('class="tv"'), 'INTAL TV presentation root exists');
 assert(tvUi.includes('const SERVICES='), 'INTAL TV supports Residence and Passport service views');
@@ -167,11 +167,10 @@ assert(!workspaceUi.includes("window.location.pathname+'?view=tv'"), 'Workspace 
 assert(workspaceUi.includes('href="#" onclick="openTv(event)"'), 'INTAL TV menu uses explicit navigation handler');
 
 const tvCharts=read('tv.html');
-assert(tvCharts.includes('function renderTrendChart'), 'INTAL TV renders trend as SVG chart');
-assert(tvCharts.includes('chart-line') && tvCharts.includes('chart-dot'), 'INTAL TV trend chart has line and data points');
-assert(tvCharts.includes('function renderServiceChart'), 'INTAL TV renders service distribution as chart');
-assert(tvCharts.includes('service-fill') && tvCharts.includes('#55a8ff'), 'INTAL TV service chart uses colored bars');
-
+assert(tvCharts.includes('function renderTrend'), 'INTAL TV renders visual trend chart');
+assert(tvCharts.includes('function renderDistribution'), 'INTAL TV renders visual service distribution');
+assert(tvCharts.includes('class="donut"'), 'INTAL TV has donut visualization');
+assert(tvCharts.includes('class="rank-fill"'), 'INTAL TV has visual ranking bars');
 const perfTv=read('tv.html');
 assert(perfTv.includes('async function preload('), 'INTAL TV preloads service data');
 assert(perfTv.includes('const CACHE={}'), 'INTAL TV has client-side service cache');
