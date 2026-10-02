@@ -32,18 +32,11 @@ Contract nyata pertama adalah `RESIDENCE_PERMIT_SERVICE_MONTHLY`.
 
 Lihat `docs/DATA-CONTRACT-v1.md` untuk contract lengkap.
 
-## Roadmap
-1. GAS foundation + RBAC
-2. Data dictionary + dataset registry
-3. Paste/import engine + Data Contract v1
-4. First real deployment + 80-row import + end-to-end verification
-5. Dashboard v1 over verified data
-6. Dashboard filters + drill-down
-7. Pemetaan
-8. Governance: backup/export hardening
-9. CI/CD hardening + automated smoke test
+## Current application scope
+The production application is now a governed monthly-data platform with Residence Permit and Passport dataset isolation and a GIS First workspace shell. Phase 10.2 source implementation, CI validation, and canonical deployment are complete; live production certification remains a separate gate.
 
-The first real deployment/import/verification gate is complete. Dashboard v1 is intentionally aggregate-only; maps, complex filters, and drill-down remain gated until the dashboard vertical slice is validated.
+## Future-feature gate
+Before substantial new features are added, close the Phase 10.2 production gates: seven-workspace UAT, unauthorized/anonymous negative test, deployed regression evidence, and documentation reconciliation. After certification, every new feature follows: requirement → contract/architecture impact → minimal implementation → CI → canonical deployment → live UAT → evidence.
 
 ## Quick start — Apps Script
 
@@ -77,4 +70,4 @@ Before building complex dashboard/statistics/map features, the project must pass
 10. Verify dataset row count, duplicate count, rejected rows, and derived totals.
 11. Only after that contract is stable, implement the production dashboard, statistics, filters, and map layers.
 
-The repository is the source of truth; avoid manual source edits in the Apps Script editor after CI/CD is active.
+The repository is the source of truth; avoid manual source edits in the Apps Script editor after CI/CD is active. Do not add a new persistent dataset or alter an existing contract implicitly through a UI feature.
