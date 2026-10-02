@@ -81,4 +81,6 @@ This is a future evolution and does not replace the current verified monthly pro
 
 ## Current delivery discipline
 
-Phase 10.2 workspace source implementation is complete. Future feature expansion is gated on Phase 10.2 production certification. Every new feature follows: requirement → contract/architecture impact → minimal implementation → CI → canonical deployment → live UAT → evidence.
+**Phase 10.2 production certification is CLOSED / PASS as of 2026-10-02.** The certified production baseline is canonical Apps Script immutable version `71`, deployed from main commit `d186faee120aea48f97a063725e105d7d48bd61b`. Production smoke, dashboard regression, seven-workspace UAT, monitoring verification, and unauthorized/anonymous negative authorization testing are complete.
+
+The Phase 10.2 baseline is locked as the production reference. New feature expansion is now permitted through the controlled delivery gate: requirement → contract/architecture impact → minimal implementation → CI → canonical deployment → live UAT → evidence. New work must not silently alter canonical dataset contracts, registry identity, historical baseline, or monthly grain.
