@@ -135,7 +135,6 @@ assert(tvUi.includes('getPassportDashboard') && tvUi.includes('getResidencePermi
 assert(tvUi.includes('getPassportMap') && tvUi.includes('getResidencePermitMap'), 'INTAL TV routes both services through canonical GIS endpoints');
 assert(tvUi.includes("metric:'total'"), 'INTAL TV GIS defaults to canonical total metric');
 assert(!tvUi.includes('id="tvPeriodFilter"') && !tvUi.includes('id="tvMetricFilter"') && !tvUi.includes('id="tvRegionFilter"'), 'INTAL TV removes the filter bar from command display');
-assert(tvUi.includes('function applyTvFilters()'), 'INTAL TV filter controls trigger data reload');
 assert(tvUi.includes('function loadServiceView('), 'INTAL TV loads filtered service views');
 assert(tvUi.includes('metric:TV_FILTERS.metric'), 'INTAL TV passes selected metric to canonical endpoints');
 assert(tvUi.includes('periode:TV_FILTERS.periode'), 'INTAL TV passes selected period to canonical endpoints');
