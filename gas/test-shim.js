@@ -195,7 +195,7 @@ assert(!tvCharts.includes('transform:perspective(520px)'), 'INTAL TV distributio
 assert(tvCharts.includes('--donut-bg'), 'INTAL TV donut segments are driven by responsive CSS variables');
 assert(tvCharts.includes('.donut:before{content:none}'), 'INTAL TV donut has no 3D extrusion layer');
 assert(tvCharts.includes('width:38px;height:38px'), 'INTAL TV summary icons fit the bounded summary panel');
-assert(tvCharts.includes('grid-template-columns:minmax(62px,.82fr) minmax(70px,1fr) 48px'), 'INTAL TV service rows fit the compact service panel');
+assert(tvCharts.includes('grid-template-columns:minmax(70px,.84fr) minmax(90px,1fr) 52px'), 'INTAL TV service rows fit the readable compact service panel');
 assert(tvCharts.includes('all.slice(0,8)'), 'INTAL TV service list caps visible rows to prevent clipping');
 assert(tvCharts.includes('service-more'), 'INTAL TV service list exposes hidden-row count');
 assert(tvCharts.includes('class="rank-fill"'), 'INTAL TV has visual ranking bars');
@@ -231,3 +231,8 @@ assert(tvCharts.includes('animation:tickerLoop 45s linear infinite'), 'INTAL TV 
 assert(tvCharts.includes('ticker-item::after'), 'INTAL TV running text has blue separator bullets');
 assert(tvCharts.includes('getActiveRunningTexts'), 'INTAL TV running text reads active database content');
 assert(!tvCharts.includes('tickerIndex'), 'INTAL TV running text no longer rotates by timed index');
+
+// Service distribution readability regression
+assert(tvCharts.includes('font-size:clamp(8.5px,.68vw,10px)'), 'INTAL TV service labels scale for readability');
+assert(tvCharts.includes('height:10px;background:#102e4b'), 'INTAL TV service bars remain compact but readable');
+assert(tvCharts.includes('align-content:start'), 'INTAL TV service distribution remains bounded within panel');
