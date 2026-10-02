@@ -392,3 +392,16 @@ assert(perfTv.includes('renderMapLayer(key)'), 'INTAL TV swaps cached GIS layers
 assert(perfTv.includes('setInterval(()=>{si=(si+1)%services.length;activateService'), 'INTAL TV rotation activates cached service state');
 assert(perfTv.includes('setInterval(backgroundRefresh,60000)'), 'INTAL TV refreshes data in background');
 assert(perfTv.includes('Promise.all([dashboardPromise,mapPromise])'), 'INTAL TV loads dashboard and GIS data in parallel');
+
+assert(read('Config.gs').includes("RUNNING_TEXTS:'RUNNING_TEXTS'"), 'RUNNING_TEXTS sheet is part of application schema');
+const runCode=read('Code.gs');
+assert(runCode.includes('function saveRunningText'), 'Admin can save running text content');
+assert(runCode.includes("requirePermission_('admin.config')"), 'Running text writes require admin.config');
+assert(runCode.includes('function getActiveRunningTexts'), 'TV can read active running text content');
+const tvNew=read('tv.html');
+assert(tvNew.includes('getActiveRunningTexts'), 'INTAL TV loads managed running text content');
+assert(!tvNew.includes('>RUNNING TEXT</'), 'INTAL TV does not display technical RUNNING TEXT label');
+assert(tvNew.includes('function renderDistribution'), 'INTAL TV has visual service distribution');
+assert(tvNew.includes('function renderTrend'), 'INTAL TV has visual trend chart');
+assert(tvNew.includes('function buildLayer'), 'INTAL TV has visual GIS marker layer');
+assert(tvNew.includes('Promise.all([call(serviceFn(key),{}),call(mapFn(key),{metric:\'total\'})])'), 'INTAL TV keeps dashboard and GIS preload parallel');
