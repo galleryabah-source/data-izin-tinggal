@@ -58,6 +58,10 @@ assert(officeRef.includes('if(rows.length)sh.getRange'), 'office reference draft
 assert(dashboard.includes('function getResidencePermitDrilldown(filters)'), 'drill-down endpoint exists');
 assert(dashboard.includes('function getResidencePermitMap(filters)'), 'map endpoint exists');
 assert(dashboard.includes("requirePermission_('map.read')"), 'map endpoint is RBAC protected');
+assert(dashboard.includes("const requestedMetric=String((filters&&filters.metric)||'total').trim()||'total';"), 'GIS metric defaults to total');
+assert(dashboard.includes('MAP_METRIC_NOT_SUPPORTED'), 'GIS metric rejects unsupported values');
+assert(dashboard.includes("const supportedMetrics=['total'].concat(d.contract.measures||[]);"), 'GIS metric derives from active dataset measures');
+assert(dashboard.includes('metricValue'), 'GIS map exposes selected metric value separately from canonical total');
 assert(dashboard.includes('getOfficeReferenceStatus()'), 'map endpoint enforces office reference readiness');
 assert(dashboard.includes("status==='VERIFIED'"), 'map endpoint reads verified office references only');
 assert(dashboard.includes('OFFICE_REFERENCE_MISSING_FOR_DATASET'), 'map endpoint rejects missing office reference');
@@ -69,6 +73,10 @@ assert(ui.includes('leaflet@1.9.4'), 'Map v1 pins Leaflet version');
 assert(ui.includes('getResidencePermitMap'), 'UI invokes map endpoint');
 assert(ui.includes('tile.openstreetmap.org'), 'Map v1 uses OpenStreetMap tiles');
 assert(ui.includes('Peta Layanan Izin Tinggal'), 'Map v1 section exists');
+assert(ui.includes('id="gisMetricFilter"'), 'GIS metric selector exists');
+assert(ui.includes('function getMapFilters()'), 'GIS map sends metric filter separately');
+assert(ui.includes('function populateMapMetrics(r)'), 'GIS metric selector follows active dataset measures');
+assert(ui.includes('metricValue'), 'GIS UI renders selected metric value');
 
 const config=read('Config.gs');
 assert(config.includes("const OFFICE_REFERENCE_CONTRACT = Object.freeze"), 'Office Reference v1 contract exists');

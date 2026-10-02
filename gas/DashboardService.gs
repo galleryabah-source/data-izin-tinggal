@@ -146,6 +146,11 @@ function exportResidencePermitMonthly(filters){
   const header=values[0],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
   const requestedPeriod=String((filters&&filters.periode)||'').trim();
   const requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
+  const requestedMetric=String((filters&&filters.metric)||'total').trim()||'total';
+  const supportedMetrics=['total'].concat(d.contract.measures||[]);
+  if(supportedMetrics.indexOf(requestedMetric)===-1)throw new Error('MAP_METRIC_NOT_SUPPORTED: '+requestedMetric);
+  const metricIndex=requestedMetric==='total'?hi.total:hi[requestedMetric];
+  if(metricIndex===undefined)throw new Error('MAP_METRIC_COLUMN_NOT_FOUND: '+requestedMetric);
   const periodOf_=r=>{const raw=r[hi.periode];return raw instanceof Date?Utilities.formatDate(raw,APP.TZ,'yyyy-MM'):String(raw||'').trim();};
   const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
   const rows=values.slice(1).filter(r=>r.some(v=>String(v)!=='')).filter(r=>
@@ -247,13 +252,15 @@ function getResidencePermitMap(filters){
     if(!reference)throw new Error('OFFICE_REFERENCE_MISSING_FOR_DATASET: '+office);
     const lat=Number(reference[ri2.latitude]),lng=Number(reference[ri2.longitude]);
     if(!Number.isFinite(lat)||!Number.isFinite(lng))throw new Error('OFFICE_REFERENCE_COORDINATE_INVALID: '+office);
-    if(!markers[office])markers[office]={office_key:String(reference[ri2.office_key]||''),kantor_imigrasi:office,address:String(reference[ri2.address]||''),latitude:lat,longitude:lng,source_url:String(reference[ri2.source_url]||''),total:0,rows:0};
+    if(!markers[office])markers[office]={office_key:String(reference[ri2.office_key]||''),kantor_imigrasi:office,address:String(reference[ri2.address]||''),latitude:lat,longitude:lng,source_url:String(reference[ri2.source_url]||''),total:0,metricValue:0,rows:0};
     markers[office].total+=Number(r[hi.total]||0);
+    markers[office].metricValue+=Number(r[metricIndex]||0);
     markers[office].rows++;
   });
   return {
     datasetKey,rowCount:rows.length,
-    filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice},
-    markers:Object.values(markers).sort((a,b)=>b.total-a.total)
+    metric:requestedMetric,
+    filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric},
+    markers:Object.values(markers).sort((a,b)=>b.metricValue-a.metricValue)
   };
 }
