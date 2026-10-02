@@ -59,6 +59,9 @@ assert(dashboard.includes('function getResidencePermitDrilldown(filters)'), 'dri
 assert(dashboard.includes('function getResidencePermitMap(filters)'), 'map endpoint exists');
 assert(dashboard.includes("requirePermission_('map.read')"), 'map endpoint is RBAC protected');
 assert(dashboard.includes("const requestedMetric=String((filters&&filters.metric)||'total').trim()||'total';"), 'GIS metric defaults to total');
+assert(dashboard.includes("const supportedMetrics=['total'].concat(serviceColumns);"), 'Dashboard metric filter derives from canonical service measures');
+assert(dashboard.includes('DASHBOARD_METRIC_NOT_SUPPORTED'), 'Dashboard metric filter rejects unsupported values');
+assert(dashboard.includes('metricIndex=requestedMetric===\'total\'?hi.total:hi[requestedMetric]'), 'Dashboard metric filter resolves canonical metric column');
 assert(dashboard.includes('MAP_METRIC_NOT_SUPPORTED'), 'GIS metric rejects unsupported values');
 assert(dashboard.includes("const supportedMetrics=['total'].concat(d.contract.measures||[]);"), 'GIS metric derives from active dataset measures');
 assert(dashboard.includes('metricValue'), 'GIS map exposes selected metric value separately from canonical total');
@@ -131,6 +134,11 @@ assert(!tvUi.includes('RUNNING TEXT'), 'INTAL TV does not display technical runn
 assert(tvUi.includes('getPassportDashboard') && tvUi.includes('getResidencePermitDashboard'), 'INTAL TV routes both services through canonical dashboard endpoints');
 assert(tvUi.includes('getPassportMap') && tvUi.includes('getResidencePermitMap'), 'INTAL TV routes both services through canonical GIS endpoints');
 assert(tvUi.includes("metric:'total'"), 'INTAL TV GIS defaults to canonical total metric');
+assert(tvUi.includes('id="tvPeriodFilter"') && tvUi.includes('id="tvMetricFilter"') && tvUi.includes('id="tvRegionFilter"'), 'INTAL TV exposes functional filter controls');
+assert(tvUi.includes('function applyTvFilters()'), 'INTAL TV filter controls trigger data reload');
+assert(tvUi.includes('function loadServiceView('), 'INTAL TV loads filtered service views');
+assert(tvUi.includes('metric:TV_FILTERS.metric'), 'INTAL TV passes selected metric to canonical endpoints');
+assert(tvUi.includes('periode:TV_FILTERS.periode'), 'INTAL TV passes selected period to canonical endpoints');
 assert(uiCode.includes('onclick="openTv(event)"') && uiCode.includes('>INTAL TV</a>'), 'workspace sidebar exposes INTAL TV navigation');
 assert(uiCode.includes('function openTv(event)'), 'INTAL TV navigation handler exists');
 assert(uiCode.includes('function exitTv()'), 'INTAL TV provides workspace return handler');
