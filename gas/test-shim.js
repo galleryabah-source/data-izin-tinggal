@@ -359,7 +359,7 @@ assert(uiCode.includes("GIS_LIBRARY_LOADING") || uiCode.includes("GIS LOADING"),
 const codeGs=read('Code.gs');
 assert(codeGs.includes("view==='tv'?'tv':'index'"), 'doGet routes TV to dedicated tv.html entry');
 assert(read('tv.html').includes('INTAL · COMMAND DISPLAY'), 'Dedicated TV document exists');
-assert(!read('tv.html').includes('leaflet.js'), 'Dedicated TV entry does not block on Leaflet CDN');
+assert(!/<script[^>]+src=["'][^"']*leaflet\.js/i.test(read('tv.html')), 'Dedicated TV entry does not block on Leaflet CDN');
 
 const tv=read('tv.html');
 assert(tv.includes('function loadLeaflet()') && tv.includes('document.createElement(\'script\')'), 'INTAL TV loads GIS library lazily after shell render');
