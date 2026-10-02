@@ -232,6 +232,9 @@ assert(residenceContract.columns.indexOf('total')===15,'Residence Permit total p
 
 
 const verificationCode=read('VerificationService.gs');
+assert(verificationCode.includes("Number(residenceDrilldown.totalRows)!==80"),'Residence drilldown smoke validates totalRows rather than paginated rowCount');
+assert(verificationCode.includes("Number(passportDrilldown.totalRows)!==80"),'Passport drilldown smoke validates totalRows rather than paginated rowCount');
+assert(verificationCode.includes("Number(drilldown.totalRows)!==80"),'Production smoke validates drilldown totalRows rather than paginated rowCount');
 assert(verificationCode.includes('function runDashboardRegressionSmokeV1()'), 'dashboard regression smoke endpoint exists');
 assert(verificationCode.includes('residence_dashboard'), 'regression smoke checks Residence Permit dashboard');
 assert(verificationCode.includes('passport_dashboard'), 'regression smoke checks Passport dashboard');
