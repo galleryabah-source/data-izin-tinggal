@@ -123,7 +123,7 @@ assert(csv.split('\n')[0].split(',').length===16,'CSV column count');
 
 const tvUi=read('index.html');
 assert(tvUi.includes('id="tvView"'), 'INTAL TV presentation root exists');
-assert(tvUi.includes("new URLSearchParams(window.location.search).get('view')==='tv'"), 'INTAL TV mode is query-parameter gated');
+assert(tvUi.includes("/\[?&\]view=tv(?:&|$)/.test(String(window.location.search||''))"), 'INTAL TV mode is query-parameter gated');
 assert(tvUi.includes("const TV_SERVICES=['RESIDENCE_PERMIT_SERVICE_MONTHLY','PASSPORT_SERVICE_MONTHLY'];"), 'INTAL TV supports Residence and Passport rotation');
 assert(tvUi.includes('LIVE SYSTEM · ONLINE'), 'INTAL TV separates live system status');
 assert(tvUi.includes('LAST READ'), 'INTAL TV exposes client read timestamp status');
