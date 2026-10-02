@@ -195,7 +195,7 @@ assert(!tvCharts.includes('transform:perspective(520px)'), 'INTAL TV distributio
 assert(tvCharts.includes('--donut-bg'), 'INTAL TV donut segments are driven by responsive CSS variables');
 assert(tvCharts.includes('.donut:before{content:none}'), 'INTAL TV donut has no 3D extrusion layer');
 assert(tvCharts.includes('width:38px;height:38px'), 'INTAL TV summary icons fit the bounded summary panel');
-assert(tvCharts.includes('grid-template-columns:minmax(62px,.82fr) minmax(70px,1fr) 48px'), 'INTAL TV service rows fit the compact service panel');
+assert(tvCharts.includes('grid-template-columns:minmax(70px,.84fr) minmax(90px,1fr) 52px'), 'INTAL TV service rows fit the readable compact service panel');
 assert(tvCharts.includes('all.slice(0,8)'), 'INTAL TV service list caps visible rows to prevent clipping');
 assert(tvCharts.includes('service-more'), 'INTAL TV service list exposes hidden-row count');
 assert(tvCharts.includes('class="rank-fill"'), 'INTAL TV has visual ranking bars');
