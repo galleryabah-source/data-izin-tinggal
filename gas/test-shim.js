@@ -343,3 +343,8 @@ const crossServiceCompiled=new Function(
 );
 assert(typeof crossServiceCompiled.getCrossServiceReport==='function','cross-service adapter compiles');
 console.log('Phase 10.1 semantic adapter contract checks: OK');
+
+assert(uiCode.includes('href="?view=tv"') && uiCode.includes('INTAL TV'), 'workspace sidebar exposes INTAL TV navigation');
+assert(uiCode.includes('function openTv(event)'), 'INTAL TV navigation handler exists');
+assert(uiCode.includes('function exitTv()'), 'INTAL TV provides workspace return handler');
+assert(uiCode.includes('class="tv-workspace-btn"'), 'INTAL TV provides visible workspace return control');
