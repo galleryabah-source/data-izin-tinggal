@@ -147,7 +147,8 @@ assert(uiCode.includes('leaflet.js" crossorigin="" defer'), 'Leaflet script is n
 assert(uiCode.includes("GIS_LIBRARY_LOADING") || uiCode.includes("GIS LOADING"), 'TV handles deferred GIS library loading');
 
 const codeGs=read('Code.gs');
-assert(codeGs.includes("RUNNING_TEXTS:'RUNNING_TEXTS'"), 'Running text sheet is registered in canonical sheet configuration');
+const configRunningText=read('Config.gs');
+assert(configRunningText.includes("RUNNING_TEXTS:'RUNNING_TEXTS'"), 'Running text sheet is registered in canonical sheet configuration');
 assert(codeGs.includes('function ensureRunningTextSheet_()') && codeGs.includes('function saveRunningText(payload)'), 'Running text server endpoints exist');
 assert(codeGs.includes("requirePermission_('admin.config')"), 'Running text write endpoints are RBAC protected');
 assert(codeGs.includes("function getActiveRunningTexts()") && codeGs.includes("requirePermission_('dashboard.read')"), 'TV active running text read path is RBAC protected');
