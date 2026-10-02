@@ -12,14 +12,14 @@ const SHEETS={USERS:'USERS',PERMISSIONS:'PERMISSIONS'};
 const makeSheet=(values)=>({getDataRange:()=>({getValues:()=>values})});
 const makeDb=(users,permissions)=>({getSheetByName:(name)=>name==='USERS'?makeSheet(users):makeSheet(permissions)});
 const unauthSession={getActiveUser:()=>({getEmail:()=>''})};
-const authUnauth=new Function('Session','getDb_','SHEETS',authCode+'\\nreturn {requirePermission_};')(unauthSession,()=>makeDb([['user_id','email','display_name','role','status']],[]),SHEETS);
+const authUnauth=new Function('Session','getDb_','SHEETS',authCode+'\nreturn {requirePermission_};')(unauthSession,()=>makeDb([['user_id','email','display_name','role','status']],[]),SHEETS);
 let unauthRejected=false;
 try{authUnauth.requirePermission_('dashboard.read');}catch(e){unauthRejected=String(e&&e.message||e)==='UNAUTHENTICATED';}
 assert(unauthRejected,'RBAC rejects unauthenticated identity');
 const authSession={getActiveUser:()=>({getEmail:()=> 'viewer@example.com'})};
 const users=[['user_id','email','display_name','role','status'],['u1','viewer@example.com','Viewer','VIEWER','ACTIVE']];
 const permissions=[['role','permission'],['VIEWER','dashboard.read'],['VIEWER','dataset.read']];
-const authViewer=new Function('Session','getDb_','SHEETS',authCode+'\\nreturn {requirePermission_};')(authSession,()=>makeDb(users,permissions),SHEETS);
+const authViewer=new Function('Session','getDb_','SHEETS',authCode+'\nreturn {requirePermission_};')(authSession,()=>makeDb(users,permissions),SHEETS);
 let forbiddenRejected=false;
 try{authViewer.requirePermission_('admin.config');}catch(e){forbiddenRejected=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
 assert(forbiddenRejected,'RBAC rejects unauthorized permission');
