@@ -15,7 +15,8 @@ function initializeSchema_(ss){
     DATA_DICTIONARY:['canonical_key','display_name','aliases','data_type','required','enum_values','transform','pii_classification','searchable','aggregatable','map_role','version'],
     DATASET_REGISTRY:['dataset_key','sheet_name','schema_signature','columns_json','row_count','status','created_at','updated_at','created_by'],
     IMPORT_LOG:['batch_id','timestamp','actor','dataset_key','schema_version','row_count','accepted','rejected','duplicates','status','error_summary'],
-    AUDIT_LOG:['event_id','timestamp','actor','action','dataset_key','batch_id','affected_rows','status','details']
+    AUDIT_LOG:['event_id','timestamp','actor','action','dataset_key','batch_id','affected_rows','status','details'],
+    RUNNING_TEXTS:['content_id','content','status','priority','start_at','end_at','created_by','created_at','updated_at']
   };
   Object.keys(schemas).forEach(n=>{let sh=ss.getSheetByName(n)||ss.insertSheet(n);if(sh.getLastRow()===0)sh.getRange(1,1,1,schemas[n].length).setValues([schemas[n]]);sh.setFrozenRows(1);});
 }
@@ -65,3 +66,73 @@ function seedDictionary_(){
   rows.forEach(row=>{const key=row[0],target=byKey[key];if(target)sh.getRange(target,1,1,row.length).setValues([row]);else sh.appendRow(row);});
 }
 function getBootstrap(){const u=getCurrentUser_();return {app:{name:APP.NAME,version:APP.VERSION,timezone:APP.TZ},user:u,permissions:u.permissions};}
+
+
+function ensureRunningTextSheet_(){
+  const ss=getDb_();
+  let sh=ss.getSheetByName(SHEETS.RUNNING_TEXTS);
+  const headers=['content_id','content','status','priority','start_at','end_at','created_by','created_at','updated_at'];
+  if(!sh)sh=ss.insertSheet(SHEETS.RUNNING_TEXTS);
+  if(sh.getLastRow()===0)sh.getRange(1,1,1,headers.length).setValues([headers]);
+  sh.setFrozenRows(1);
+  return sh;
+}
+function normalizeRunningTextRow_(r,h){
+  const i=Object.fromEntries(h.map((x,n)=>[String(x),n]));
+  return {
+    content_id:String(r[i.content_id]||''),
+    content:String(r[i.content]||''),
+    status:String(r[i.status]||'INACTIVE').toUpperCase(),
+    priority:Number(r[i.priority]||100),
+    start_at:String(r[i.start_at]||''),
+    end_at:String(r[i.end_at]||''),
+    created_by:String(r[i.created_by]||''),
+    created_at:String(r[i.created_at]||''),
+    updated_at:String(r[i.updated_at]||'')
+  };
+}
+function listRunningTextsAdmin(){
+  requirePermission_('admin.config');
+  const sh=ensureRunningTextSheet_(),v=sh.getDataRange().getValues(),h=v[0].map(String);
+  return v.slice(1).filter(r=>String(r[h.indexOf('content_id')]||'').trim()).map(r=>normalizeRunningTextRow_(r,h))
+    .sort((a,b)=>Number(a.priority)-Number(b.priority)||String(a.created_at).localeCompare(String(b.created_at)));
+}
+function saveRunningText(payload){
+  requirePermission_('admin.config');
+  payload=payload||{};
+  const content=String(payload.content||'').trim();
+  if(!content)throw new Error('Konten running text wajib diisi.');
+  if(content.length>1000)throw new Error('Konten running text maksimal 1000 karakter.');
+  const status=['ACTIVE','INACTIVE'].includes(String(payload.status||'ACTIVE').toUpperCase())?String(payload.status||'ACTIVE').toUpperCase():'ACTIVE';
+  const priority=Math.max(1,Number(payload.priority||100));
+  const sh=ensureRunningTextSheet_(),v=sh.getDataRange().getValues(),h=v[0].map(String),id=String(payload.content_id||'').trim(),idx=h.indexOf('content_id');
+  const now=nowIso_(),u=getCurrentUser_(),rowIndex=v.slice(1).findIndex(r=>String(r[idx]||'')===id);
+  const values=[id||Utilities.getUuid(),content,status,priority,String(payload.start_at||''),String(payload.end_at||''),u.email,now,now];
+  if(rowIndex>=0){
+    const existing=v[rowIndex+1];
+    values[6]=String(existing[h.indexOf('created_by')]||u.email);values[7]=String(existing[h.indexOf('created_at')]||now);
+    sh.getRange(rowIndex+2,1,1,values.length).setValues([values]);
+  }else sh.appendRow(values);
+  appendAudit_('RUNNING_TEXT_SAVE','', '',1,'SUCCESS',JSON.stringify({contentId:values[0],status,priority}));
+  return {ok:true,contentId:values[0]};
+}
+function deleteRunningText(contentId){
+  requirePermission_('admin.config');
+  const id=String(contentId||'').trim();if(!id)throw new Error('content_id wajib diisi.');
+  const sh=ensureRunningTextSheet_(),v=sh.getDataRange().getValues(),idx=v[0].map(String).indexOf('content_id');
+  const row=v.slice(1).findIndex(r=>String(r[idx]||'')===id);
+  if(row<0)throw new Error('Konten tidak ditemukan.');
+  sh.deleteRow(row+2);
+  appendAudit_('RUNNING_TEXT_DELETE','', '',1,'SUCCESS',JSON.stringify({contentId:id}));
+  return {ok:true};
+}
+function getActiveRunningTexts(){
+  requirePermission_('dashboard.read');
+  const sh=ensureRunningTextSheet_(),v=sh.getDataRange().getValues(),h=v[0].map(String),now=new Date(),iso=nowIso_();
+  return v.slice(1).map(r=>normalizeRunningTextRow_(r,h)).filter(x=>{
+    if(!x.content||x.status!=='ACTIVE')return false;
+    if(x.start_at&&String(x.start_at)>iso)return false;
+    if(x.end_at&&String(x.end_at)<iso)return false;
+    return true;
+  }).sort((a,b)=>Number(a.priority)-Number(b.priority)).map(x=>x.content);
+}
