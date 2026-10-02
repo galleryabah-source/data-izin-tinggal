@@ -190,7 +190,7 @@ assert(tvCharts.includes('TOP 10 KANTOR'), 'INTAL TV ranking shows Top 10 office
 assert(tvCharts.includes("slice(0,10)"), 'INTAL TV renders up to 10 ranked offices');
 assert(tvCharts.includes('grid-template-columns:minmax(150px,1.08fr) minmax(120px,.92fr)'), 'INTAL TV distribution uses bounded responsive grid layout');
 assert(tvCharts.includes('summary-icon'), 'INTAL TV summary cards include visual icons');
-assert(tvCharts.includes('width:clamp(150px,31cqw,330px)'), 'INTAL TV distribution donut scales responsively');
+assert(tvCharts.includes('width:clamp(150px,15vw,300px)'), 'INTAL TV distribution donut scales responsively');
 assert(!tvCharts.includes('transform:perspective(520px)'), 'INTAL TV distribution is 2D');
 assert(tvCharts.includes('--donut-bg'), 'INTAL TV donut segments are driven by responsive CSS variables');
 assert(tvCharts.includes('.donut:before{content:none}'), 'INTAL TV donut has no 3D extrusion layer');
