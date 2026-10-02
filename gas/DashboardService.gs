@@ -25,6 +25,7 @@ function getResidencePermitDashboard(filters){
   const hi=Object.fromEntries(header.map((x,n)=>[x,n]));
   const requestedPeriod=String((filters&&filters.periode)||'').trim();
   const requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
+  const requestedMetric=String((filters&&filters.metric)||'total').trim()||'total';
   const allRows=values.slice(1).filter(r=>r.some(v=>String(v)!==''));
   const periodOf_=r=>{
     const raw=r[hi.periode];
@@ -38,26 +39,31 @@ function getResidencePermitDashboard(filters){
     (!requestedOffice || officeOf_(r)===requestedOffice)
   );
   const serviceColumns=['bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim'];
+  const supportedMetrics=['total'].concat(serviceColumns);
+  if(supportedMetrics.indexOf(requestedMetric)===-1)throw new Error('DASHBOARD_METRIC_NOT_SUPPORTED: '+requestedMetric);
+  const metricIndex=requestedMetric==='total'?hi.total:hi[requestedMetric];
+  if(metricIndex===undefined)throw new Error('DASHBOARD_METRIC_COLUMN_NOT_FOUND: '+requestedMetric);
   const monthly={},offices={},services={};
   serviceColumns.forEach(c=>services[c]=0);
   let grandTotal=0;
   rows.forEach(r=>{
     const period=periodOf_(r);
     const office=officeOf_(r);
-    const total=Number(r[hi.total]||0);
-    grandTotal+=total;
+    const total=Number(r[hi.total]||0),metricValue=Number(r[metricIndex]||0);
+    grandTotal+=metricValue;
     if(!monthly[period])monthly[period]={periode:period,total:0,rows:0};
-    monthly[period].total+=total;
+    monthly[period].total+=metricValue;
     monthly[period].rows++;
     if(!offices[office])offices[office]={kantor_imigrasi:office,total:0,rows:0};
-    offices[office].total+=total;
+    offices[office].total+=metricValue;
     offices[office].rows++;
     serviceColumns.forEach(c=>services[c]+=Number(r[hi[c]]||0));
   });
   return {
     datasetKey,
     rowCount:rows.length,
-    filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,availablePeriods,availableOffices},
+    filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric,availablePeriods,availableOffices},
+    metric:requestedMetric,
     grandTotal,
     monthly:Object.values(monthly).sort((a,b)=>a.periode.localeCompare(b.periode)),
     offices:Object.values(offices).sort((a,b)=>b.total-a.total),
