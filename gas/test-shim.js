@@ -134,7 +134,7 @@ assert(!tvUi.includes('RUNNING TEXT'), 'INTAL TV does not display technical runn
 assert(tvUi.includes('getPassportDashboard') && tvUi.includes('getResidencePermitDashboard'), 'INTAL TV routes both services through canonical dashboard endpoints');
 assert(tvUi.includes('getPassportMap') && tvUi.includes('getResidencePermitMap'), 'INTAL TV routes both services through canonical GIS endpoints');
 assert(tvUi.includes("metric:'total'"), 'INTAL TV GIS defaults to canonical total metric');
-assert(tvUi.includes('id="tvPeriodFilter"') && tvUi.includes('id="tvMetricFilter"') && tvUi.includes('id="tvRegionFilter"'), 'INTAL TV exposes functional filter controls');
+assert(!tvUi.includes('id="tvPeriodFilter"') && !tvUi.includes('id="tvMetricFilter"') && !tvUi.includes('id="tvRegionFilter"'), 'INTAL TV removes the filter bar from command display');
 assert(tvUi.includes('function applyTvFilters()'), 'INTAL TV filter controls trigger data reload');
 assert(tvUi.includes('function loadServiceView('), 'INTAL TV loads filtered service views');
 assert(tvUi.includes('metric:TV_FILTERS.metric'), 'INTAL TV passes selected metric to canonical endpoints');
@@ -188,7 +188,7 @@ assert(tvCharts.includes('function renderDistribution'), 'INTAL TV renders visua
 assert(tvCharts.includes('class="donut"'), 'INTAL TV has donut visualization');
 assert(tvCharts.includes('TOP 10 KANTOR'), 'INTAL TV ranking shows Top 10 offices');
 assert(tvCharts.includes("slice(0,10)"), 'INTAL TV renders up to 10 ranked offices');
-assert(tvCharts.includes('width:158px;height:158px'), 'INTAL TV distribution donut is enlarged for its container');
+assert(tvCharts.includes('width:clamp(150px,38%,190px)'), 'INTAL TV distribution donut scales to its container');
 assert(tvCharts.includes('summary-icon'), 'INTAL TV summary cards include visual icons');
 assert(tvCharts.includes('class="rank-fill"'), 'INTAL TV has visual ranking bars');
 const perfTv=read('tv.html');
