@@ -121,6 +121,21 @@ const csv=[header.map(csvEscape).join(',')].concat(combined.map(r=>r.map(csvEsca
 assert(csv.split('\n').length===2,'CSV header + one data row');
 assert(csv.split('\n')[0].split(',').length===16,'CSV column count');
 
+const tvUi=read('index.html');
+assert(tvUi.includes('id="tvView"'), 'INTAL TV presentation root exists');
+assert(tvUi.includes("new URLSearchParams(window.location.search).get('view')==='tv'"), 'INTAL TV mode is query-parameter gated');
+assert(tvUi.includes("const TV_SERVICES=['RESIDENCE_PERMIT_SERVICE_MONTHLY','PASSPORT_SERVICE_MONTHLY'];"), 'INTAL TV supports Residence and Passport rotation');
+assert(tvUi.includes('LIVE SYSTEM · ONLINE'), 'INTAL TV separates live system status');
+assert(tvUi.includes('LAST VERIFIED DATA'), 'INTAL TV exposes last verified data status');
+assert(tvUi.includes('RUNNING TEXT'), 'INTAL TV includes running text channel');
+assert(tvUi.includes('setInterval(tvRefresh,60000)'), 'INTAL TV auto-refreshes presentation data');
+assert(tvUi.includes('tvRotationTimer=setInterval'), 'INTAL TV rotates service presentation');
+assert(tvUi.includes("getPassportDashboard"), 'INTAL TV routes Passport through canonical dashboard endpoint');
+assert(tvUi.includes("getResidencePermitDashboard"), 'INTAL TV routes Residence through canonical dashboard endpoint');
+assert(tvUi.includes("getPassportMap"), 'INTAL TV routes Passport GIS through canonical map endpoint');
+assert(tvUi.includes("getResidencePermitMap"), 'INTAL TV routes Residence GIS through canonical map endpoint');
+assert(tvUi.includes("metric:'total'"), 'INTAL TV GIS defaults to canonical total metric');
+
 console.log('GAS source syntax: OK');
 console.log('Data Contract v1 checks: OK');
 console.log('Import normalization checks: OK');
