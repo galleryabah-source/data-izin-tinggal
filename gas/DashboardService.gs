@@ -106,24 +106,33 @@ function getPassportMap(filters){
 
 function getServiceMap_(datasetKey,filters){
   requirePermission_('map.read');
-  const readiness=getOfficeReferenceStatus();if(!readiness.ready)throw new Error('OFFICE_REFERENCE_NOT_READY');
+  const readiness=getOfficeReferenceStatus();
+  if(!readiness.ready)throw new Error('OFFICE_REFERENCE_NOT_READY');
   const d=getActiveDatasetContract_(datasetKey),values=d.sheet.getDataRange().getValues();
-  if(values.length<2)return {datasetKey,rowCount:0,markers:[],filters:{periode:'',kantor_imigrasi:''}};
+  if(values.length<2)return {datasetKey,rowCount:0,markers:[],metric:'total',filters:{periode:'',kantor_imigrasi:'',metric:'total'}};
   const header=values[0],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
-  const requestedPeriod=String((filters&&filters.periode)||'').trim(),requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
+  const requestedPeriod=String((filters&&filters.periode)||'').trim();
+  const requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
+  const requestedMetric=String((filters&&filters.metric)||'total').trim()||'total';
+  const supportedMetrics=['total'].concat(d.contract.measures||[]);
+  if(supportedMetrics.indexOf(requestedMetric)===-1)throw new Error('MAP_METRIC_NOT_SUPPORTED: '+requestedMetric);
+  const metricIndex=requestedMetric==='total'?hi.total:hi[requestedMetric];
+  if(metricIndex===undefined)throw new Error('MAP_METRIC_COLUMN_NOT_FOUND: '+requestedMetric);
   const periodOf_=r=>{const raw=r[hi.periode];return raw instanceof Date?Utilities.formatDate(raw,APP.TZ,'yyyy-MM'):String(raw||'').trim();};
   const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
   const rows=values.slice(1).filter(r=>r.some(v=>String(v)!=='')).filter(r=>(!requestedPeriod||periodOf_(r)===requestedPeriod)&&(!requestedOffice||officeOf_(r)===requestedOffice));
-  const ref= getDb_().getSheetByName('OFFICE_REFERENCE'),rv=ref.getDataRange().getValues(),rh=rv[0]||[],ri=Object.fromEntries(rh.map((x,n)=>[x,n])),byOffice={};
+  const ref=getDb_().getSheetByName('OFFICE_REFERENCE'),rv=ref.getDataRange().getValues(),rh=rv[0]||[],ri=Object.fromEntries(rh.map((x,n)=>[x,n])),byOffice={};
   rv.slice(1).filter(r=>r.some(v=>String(v)!=='')).forEach(r=>{const name=String(r[ri.kantor_imigrasi]||'').trim(),status=String(r[ri.status]||'').trim().toUpperCase();if(name&&status==='VERIFIED')byOffice[name]=r;});
   const markers={};
   rows.forEach(r=>{
     const office=officeOf_(r),reference=byOffice[office];if(!reference)throw new Error('OFFICE_REFERENCE_MISSING_FOR_DATASET: '+office);
     const lat=Number(reference[ri.latitude]),lng=Number(reference[ri.longitude]);if(!Number.isFinite(lat)||!Number.isFinite(lng))throw new Error('OFFICE_REFERENCE_COORDINATE_INVALID: '+office);
-    if(!markers[office])markers[office]={office_key:String(reference[ri.office_key]||''),kantor_imigrasi:office,address:String(reference[ri.address]||''),latitude:lat,longitude:lng,source_url:String(reference[ri.source_url]||''),total:0,rows:0};
-    markers[office].total+=Number(r[hi.total]||0);markers[office].rows++;
+    if(!markers[office])markers[office]={office_key:String(reference[ri.office_key]||''),kantor_imigrasi:office,address:String(reference[ri.address]||''),latitude:lat,longitude:lng,source_url:String(reference[ri.source_url]||''),total:0,metricValue:0,rows:0};
+    markers[office].total+=Number(r[hi.total]||0);
+    markers[office].metricValue+=Number(r[metricIndex]||0);
+    markers[office].rows++;
   });
-  return {datasetKey,rowCount:rows.length,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice},markers:Object.values(markers).sort((a,b)=>b.total-a.total)};
+  return {datasetKey,rowCount:rows.length,metric:requestedMetric,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric},markers:Object.values(markers).sort((a,b)=>b.metricValue-a.metricValue)};
 }
 
 function csvEscape_(value){
@@ -146,11 +155,6 @@ function exportResidencePermitMonthly(filters){
   const header=values[0],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
   const requestedPeriod=String((filters&&filters.periode)||'').trim();
   const requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
-  const requestedMetric=String((filters&&filters.metric)||'total').trim()||'total';
-  const supportedMetrics=['total'].concat(d.contract.measures||[]);
-  if(supportedMetrics.indexOf(requestedMetric)===-1)throw new Error('MAP_METRIC_NOT_SUPPORTED: '+requestedMetric);
-  const metricIndex=requestedMetric==='total'?hi.total:hi[requestedMetric];
-  if(metricIndex===undefined)throw new Error('MAP_METRIC_COLUMN_NOT_FOUND: '+requestedMetric);
   const periodOf_=r=>{const raw=r[hi.periode];return raw instanceof Date?Utilities.formatDate(raw,APP.TZ,'yyyy-MM'):String(raw||'').trim();};
   const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
   const rows=values.slice(1).filter(r=>r.some(v=>String(v)!=='')).filter(r=>
@@ -220,47 +224,5 @@ function getServiceDrilldown_(datasetKey,filters,periodMode){
 }
 
 function getResidencePermitMap(filters){
-  requirePermission_('map.read');
-  const readiness=getOfficeReferenceStatus();
-  if(!readiness.ready)throw new Error('OFFICE_REFERENCE_NOT_READY');
-  const datasetKey='RESIDENCE_PERMIT_SERVICE_MONTHLY';
-  const ss=getDb_(),registry=ss.getSheetByName(SHEETS.DATASET_REGISTRY);
-  const rv=registry.getDataRange().getValues(),rh=rv[0]||[],ri=Object.fromEntries(rh.map((x,n)=>[x,n]));
-  const reg=rv.slice(1).find(r=>String(r[ri.dataset_key]||'')===datasetKey&&String(r[ri.status]||'').toUpperCase()==='ACTIVE');
-  if(!reg)throw new Error('DATASET_NOT_REGISTERED');
-  const source=ss.getSheetByName(String(reg[ri.sheet_name]||APP.SHEET_PREFIX+datasetKey));
-  if(!source)throw new Error('DATASET_SHEET_NOT_FOUND');
-  const values=source.getDataRange().getValues();
-  if(values.length<2)return {datasetKey,rowCount:0,markers:[],filters:{periode:'',kantor_imigrasi:''}};
-  const header=values[0],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
-  const requestedPeriod=String((filters&&filters.periode)||'').trim();
-  const requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
-  const periodOf_=r=>{const raw=r[hi.periode];return raw instanceof Date?Utilities.formatDate(raw,APP.TZ,'yyyy-MM'):String(raw||'').trim();};
-  const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
-  const rows=values.slice(1).filter(r=>r.some(v=>String(v)!=='')).filter(r=>
-    (!requestedPeriod||periodOf_(r)===requestedPeriod)&&(!requestedOffice||officeOf_(r)===requestedOffice)
-  );
-  const ref=ss.getSheetByName('OFFICE_REFERENCE'),rv2=ref.getDataRange().getValues(),rh2=rv2[0]||[],ri2=Object.fromEntries(rh2.map((x,n)=>[x,n]));
-  const byOffice={};
-  rv2.slice(1).filter(r=>r.some(v=>String(v)!=='')).forEach(r=>{
-    const name=String(r[ri2.kantor_imigrasi]||'').trim(),status=String(r[ri2.status]||'').trim().toUpperCase();
-    if(name&&status==='VERIFIED')byOffice[name]=r;
-  });
-  const markers={};
-  rows.forEach(r=>{
-    const office=officeOf_(r),reference=byOffice[office];
-    if(!reference)throw new Error('OFFICE_REFERENCE_MISSING_FOR_DATASET: '+office);
-    const lat=Number(reference[ri2.latitude]),lng=Number(reference[ri2.longitude]);
-    if(!Number.isFinite(lat)||!Number.isFinite(lng))throw new Error('OFFICE_REFERENCE_COORDINATE_INVALID: '+office);
-    if(!markers[office])markers[office]={office_key:String(reference[ri2.office_key]||''),kantor_imigrasi:office,address:String(reference[ri2.address]||''),latitude:lat,longitude:lng,source_url:String(reference[ri2.source_url]||''),total:0,metricValue:0,rows:0};
-    markers[office].total+=Number(r[hi.total]||0);
-    markers[office].metricValue+=Number(r[metricIndex]||0);
-    markers[office].rows++;
-  });
-  return {
-    datasetKey,rowCount:rows.length,
-    metric:requestedMetric,
-    filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric},
-    markers:Object.values(markers).sort((a,b)=>b.metricValue-a.metricValue)
-  };
+  return getServiceMap_('RESIDENCE_PERMIT_SERVICE_MONTHLY',filters);
 }
