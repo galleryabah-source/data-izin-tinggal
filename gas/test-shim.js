@@ -231,3 +231,8 @@ assert(tvCharts.includes('animation:tickerLoop 45s linear infinite'), 'INTAL TV 
 assert(tvCharts.includes('ticker-item::after'), 'INTAL TV running text has blue separator bullets');
 assert(tvCharts.includes('getActiveRunningTexts'), 'INTAL TV running text reads active database content');
 assert(!tvCharts.includes('tickerIndex'), 'INTAL TV running text no longer rotates by timed index');
+
+// Service distribution readability regression
+assert(tvCharts.includes('font-size:clamp(8.5px,.68vw,10px)'), 'INTAL TV service labels scale for readability');
+assert(tvCharts.includes('height:10px;background:#102e4b'), 'INTAL TV service bars remain compact but readable');
+assert(tvCharts.includes('align-content:start'), 'INTAL TV service distribution remains bounded within panel');
