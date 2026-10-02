@@ -218,3 +218,8 @@ assert(tvCharts.includes('font-size:clamp(20px,1.65vw,27px)'), 'INTAL TV summary
 assert(tvCharts.includes('font-size:clamp(12px,1vw,17px)'), 'INTAL TV running text typography scales responsively');
 assert(tvCharts.includes('background:#d62f3f'), 'INTAL TV running text LIVE badge remains red');
 assert(tvCharts.includes('height:100%;min-height:0;box-sizing:border-box;overflow:hidden'), 'INTAL TV summary grid prevents bottom clipping');
+
+// Summary grid overflow regression
+assert(tvCharts.includes('grid-template-rows:repeat(2,minmax(0,1fr))'), 'INTAL TV summary uses bounded two-row grid');
+assert(tvCharts.includes('min-height:0;overflow:hidden;box-sizing:border-box'), 'INTAL TV summary container is shrink-safe');
+assert(tvCharts.includes('height:auto;min-width:0;box-sizing:border-box;overflow:hidden'), 'INTAL TV summary cards do not force 100% height overflow');
