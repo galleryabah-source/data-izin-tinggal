@@ -223,3 +223,11 @@ assert(tvCharts.includes('height:100%;min-height:0;box-sizing:border-box;overflo
 assert(tvCharts.includes('grid-template-rows:repeat(2,minmax(0,1fr))'), 'INTAL TV summary uses bounded two-row grid');
 assert(tvCharts.includes('min-height:0;overflow:hidden;box-sizing:border-box'), 'INTAL TV summary container is shrink-safe');
 assert(tvCharts.includes('height:auto;min-width:0;box-sizing:border-box;overflow:hidden'), 'INTAL TV summary cards do not force 100% height overflow');
+
+// INTAL TV summary overflow and continuous running-text regression invariants
+assert(tvCharts.includes('grid-template-rows:auto minmax(0,1fr)'), 'INTAL TV summary reserves header before content grid');
+assert(tvCharts.includes('height:auto;min-height:0;box-sizing:border-box;overflow:hidden'), 'INTAL TV summary grid no longer uses full panel height');
+assert(tvCharts.includes('animation:tickerLoop 45s linear infinite'), 'INTAL TV running text uses continuous linear animation');
+assert(tvCharts.includes('ticker-item::after'), 'INTAL TV running text has blue separator bullets');
+assert(tvCharts.includes('getActiveRunningTexts'), 'INTAL TV running text reads active database content');
+assert(!tvCharts.includes('tickerIndex'), 'INTAL TV running text no longer rotates by timed index');
