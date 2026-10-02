@@ -82,10 +82,15 @@ function getServiceDashboard_(datasetKey,serviceColumns,filters){
   requirePermission_('dashboard.read');
   const d=getActiveDatasetContract_(datasetKey);
   const values=d.sheet.getDataRange().getValues();
-  if(values.length<2)return {datasetKey,rowCount:0,grandTotal:0,monthly:[],offices:[],services:[],filters:{periode:'',kantor_imigrasi:'',availablePeriods:[],availableOffices:[]}};
+  if(values.length<2)return {datasetKey,rowCount:0,metric:'total',grandTotal:0,monthly:[],offices:[],services:[],filters:{periode:'',kantor_imigrasi:'',metric:'total',availablePeriods:[],availableOffices:[]}};
   const header=values[0],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
   const requestedPeriod=String((filters&&filters.periode)||'').trim();
   const requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
+  const requestedMetric=String((filters&&filters.metric)||'total').trim()||'total';
+  const supportedMetrics=['total'].concat(serviceColumns);
+  if(supportedMetrics.indexOf(requestedMetric)===-1)throw new Error('DASHBOARD_METRIC_NOT_SUPPORTED: '+requestedMetric);
+  const metricIndex=requestedMetric==='total'?hi.total:hi[requestedMetric];
+  if(metricIndex===undefined)throw new Error('DASHBOARD_METRIC_COLUMN_NOT_FOUND: '+requestedMetric);
   const allRows=values.slice(1).filter(r=>r.some(v=>String(v)!==''));
   const periodOf_=r=>{const raw=r[hi.periode];return raw instanceof Date?Utilities.formatDate(raw,APP.TZ,'yyyy-MM'):String(raw||'').trim();};
   const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
@@ -95,15 +100,15 @@ function getServiceDashboard_(datasetKey,serviceColumns,filters){
   const monthly={},offices={},services={};serviceColumns.forEach(c=>services[c]=0);
   let grandTotal=0;
   rows.forEach(r=>{
-    const period=periodOf_(r),office=officeOf_(r),total=Number(r[hi.total]||0);
-    grandTotal+=total;
+    const period=periodOf_(r),office=officeOf_(r),metricValue=Number(r[metricIndex]||0);
+    grandTotal+=metricValue;
     if(!monthly[period])monthly[period]={periode:period,total:0,rows:0};
-    monthly[period].total+=total;monthly[period].rows++;
+    monthly[period].total+=metricValue;monthly[period].rows++;
     if(!offices[office])offices[office]={kantor_imigrasi:office,total:0,rows:0};
-    offices[office].total+=total;offices[office].rows++;
+    offices[office].total+=metricValue;offices[office].rows++;
     serviceColumns.forEach(c=>services[c]+=Number(r[hi[c]]||0));
   });
-  return {datasetKey,rowCount:rows.length,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,availablePeriods,availableOffices},grandTotal,monthly:Object.values(monthly).sort((a,b)=>a.periode.localeCompare(b.periode)),offices:Object.values(offices).sort((a,b)=>b.total-a.total),services:serviceColumns.map(c=>({key:c,total:services[c]}))};
+  return {datasetKey,rowCount:rows.length,metric:requestedMetric,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric,availablePeriods,availableOffices},grandTotal,monthly:Object.values(monthly).sort((a,b)=>a.periode.localeCompare(b.periode)),offices:Object.values(offices).sort((a,b)=>b.total-a.total),services:serviceColumns.map(c=>({key:c,total:services[c]}))};
 }
 
 function getPassportMap(filters){
