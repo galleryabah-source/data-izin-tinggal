@@ -255,11 +255,11 @@ function runDashboardRegressionSmokeV1(){
   }
 
   const residenceDrilldown=check_('residence_drilldown',()=>getResidencePermitDrilldown({}));
-  if(residenceDrilldown&&Number(residenceDrilldown.rowCount)!==80)checks[checks.length-1].ok=false;
+  if(residenceDrilldown&&Number(residenceDrilldown.totalRows)!==80)checks[checks.length-1].ok=false;
 
   const passportDrilldown=check_('passport_drilldown',()=>getPassportDrilldown({}));
   if(passportDrilldown){
-    if(Number(passportDrilldown.rowCount)!==80)checks[checks.length-1].ok=false;
+    if(Number(passportDrilldown.totalRows)!==80)checks[checks.length-1].ok=false;
     const periods=passportDrilldown.rows.map(r=>String(r[0]||''));
     if(periods.some(p=>/^\\d{4}-\\d{2}-\\d{2}$/.test(p)))checks[checks.length-1].ok=false;
   }
@@ -325,7 +325,7 @@ function runProductionSmokeTestV1(){
   }
 
   const drilldown=check_('drilldown_baseline',()=>getResidencePermitDrilldown({}));
-  if(drilldown&&Number(drilldown.rowCount)!==80)checks[checks.length-1].ok=false;
+  if(drilldown&&Number(drilldown.totalRows)!==80)checks[checks.length-1].ok=false;
 
   const officeStatus=check_('office_reference_readiness',()=>getOfficeReferenceStatus());
   if(officeStatus&&!officeStatus.ready)checks[checks.length-1].ok=false;
