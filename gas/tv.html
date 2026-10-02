@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="id">
 <head>
+<base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>INTAL TV · Command Display</title>
@@ -14,7 +15,7 @@
 <header>
 <div><div class="brand">INTAL · COMMAND DISPLAY</div><div class="sub">GIS First · Canonical Monthly Intelligence</div><div id="service" class="service">IZIN TINGGAL</div></div>
 <div><span id="live" class="pill ok">LIVE SYSTEM · CONNECTING</span> <span id="read" class="pill">LAST READ · —</span></div>
-<div><button class="btn" onclick="location.href=location.pathname">WORKSPACE</button><div id="clock" class="clock">--:--:--</div></div>
+<div><button class="btn" onclick="goWorkspace()">WORKSPACE</button><div id="clock" class="clock">--:--:--</div></div>
 </header>
 <section class="kpis">
 <div class="kpi"><div class="label">TOTAL LAYANAN</div><div id="total" class="value">—</div><div class="meta">Canonical monthly dataset</div></div>
@@ -33,6 +34,8 @@
 <div class="ticker"><b>RUNNING TEXT</b> · <span id="ticker">INTAL · canonical monthly intelligence · bukan real-time</span></div>
 </div>
 <script>
+const WORKSPACE_URL='<?= ScriptApp.getService().getUrl() ?>';
+function goWorkspace(){window.top.location.href=WORKSPACE_URL;}
 const services=['RESIDENCE_PERMIT_SERVICE_MONTHLY','PASSPORT_SERVICE_MONTHLY'];let si=0;
 const $=id=>document.getElementById(id);const fmt=n=>Number(n||0).toLocaleString('id-ID');const now=()=>new Date().toLocaleTimeString('id-ID',{hour12:false});
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c));}

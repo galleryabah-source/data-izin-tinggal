@@ -366,3 +366,9 @@ assert(tv.includes('function loadLeaflet()') && tv.includes('document.createElem
 assert(tv.includes("getPassportMap") && tv.includes("getResidencePermitMap"), 'INTAL TV routes GIS to canonical map endpoints');
 assert(tv.includes("metric:'total'"), 'INTAL TV preserves total-service map metric default');
 assert(tv.includes('getElementById') || tv.includes("$('map')"), 'INTAL TV renders GIS into dedicated map container');
+
+const tvNav=read('tv.html');
+assert(tvNav.includes("ScriptApp.getService().getUrl()"), 'TV workspace navigation uses canonical Apps Script Web App URL');
+assert(tvNav.includes('function goWorkspace()'), 'TV workspace return handler exists');
+assert(tvNav.includes('window.top.location.href=WORKSPACE_URL'), 'TV workspace return targets top-level Web App');
+assert(!tvNav.includes('location.href=location.pathname'), 'TV workspace navigation does not rely on sandbox pathname');
