@@ -236,3 +236,9 @@ assert(!tvCharts.includes('tickerIndex'), 'INTAL TV running text no longer rotat
 assert(tvCharts.includes('font-size:clamp(8.5px,.68vw,10px)'), 'INTAL TV service labels scale for readability');
 assert(tvCharts.includes('height:10px;background:#102e4b'), 'INTAL TV service bars remain compact but readable');
 assert(tvCharts.includes('align-content:start'), 'INTAL TV service distribution remains bounded within panel');
+
+// Distribution responsive centered visual regression
+assert(tvCharts.includes('container-type:size'), 'INTAL TV distribution uses panel container sizing');
+assert(tvCharts.includes('width:clamp(150px,31cqw,330px)'), 'INTAL TV donut scales responsively to panel width');
+assert(tvCharts.includes('translateY(clamp(5px,2cqh,24px))'), 'INTAL TV distribution group is lowered within panel');
+assert(tvCharts.includes('font-size:clamp(9px,1.45cqw,16px)'), 'INTAL TV distribution legend scales responsively');
