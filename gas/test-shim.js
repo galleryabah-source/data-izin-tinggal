@@ -355,3 +355,8 @@ assert(uiCode.includes('BOOT ERROR'), 'TV bootstrap failure is surfaced instead 
 
 assert(uiCode.includes('leaflet.js" crossorigin="" defer'), 'Leaflet script is non-blocking');
 assert(uiCode.includes("GIS_LIBRARY_LOADING") || uiCode.includes("GIS LOADING"), 'TV handles deferred GIS library loading');
+
+const codeGs=read('Code.gs');
+assert(codeGs.includes("view==='tv'?'tv':'index'"), 'doGet routes TV to dedicated tv.html entry');
+assert(read('tv.html').includes('INTAL · COMMAND DISPLAY'), 'Dedicated TV document exists');
+assert(!read('tv.html').includes('leaflet.js'), 'Dedicated TV entry does not block on Leaflet CDN');
