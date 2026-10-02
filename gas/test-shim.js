@@ -7,6 +7,24 @@ for(const name of files){new Function(fs.readFileSync(path.join(__dirname,name),
 const assert=(condition,message)=>{if(!condition)throw new Error('TEST FAILED: '+message);};
 const read=(name)=>fs.readFileSync(path.join(__dirname,name),'utf8');
 
+const authCode=read('Auth.gs');
+const SHEETS={USERS:'USERS',PERMISSIONS:'PERMISSIONS'};
+const makeSheet=(values)=>({getDataRange:()=>({getValues:()=>values})});
+const makeDb=(users,permissions)=>({getSheetByName:(name)=>name==='USERS'?makeSheet(users):makeSheet(permissions)});
+const unauthSession={getActiveUser:()=>({getEmail:()=>''})};
+const authUnauth=new Function('Session','getDb_','SHEETS',authCode+'\\nreturn {requirePermission_};')(unauthSession,()=>makeDb([['user_id','email','display_name','role','status']],[]),SHEETS);
+let unauthRejected=false;
+try{authUnauth.requirePermission_('dashboard.read');}catch(e){unauthRejected=String(e&&e.message||e)==='UNAUTHENTICATED';}
+assert(unauthRejected,'RBAC rejects unauthenticated identity');
+const authSession={getActiveUser:()=>({getEmail:()=> 'viewer@example.com'})};
+const users=[['user_id','email','display_name','role','status'],['u1','viewer@example.com','Viewer','VIEWER','ACTIVE']];
+const permissions=[['role','permission'],['VIEWER','dashboard.read'],['VIEWER','dataset.read']];
+const authViewer=new Function('Session','getDb_','SHEETS',authCode+'\\nreturn {requirePermission_};')(authSession,()=>makeDb(users,permissions),SHEETS);
+let forbiddenRejected=false;
+try{authViewer.requirePermission_('admin.config');}catch(e){forbiddenRejected=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+assert(forbiddenRejected,'RBAC rejects unauthorized permission');
+assert(authViewer.requirePermission_('dataset.read').role==='VIEWER','RBAC permits assigned permission');
+
 const importCode=read('ImportService.gs');
 const pureImport=new Function(importCode+'\nreturn {normalizePeriod_,normalizeInteger_};')();
 assert(pureImport.normalizePeriod_('2026-01')==='2026-01','YYYY-MM period');
