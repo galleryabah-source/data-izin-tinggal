@@ -384,3 +384,11 @@ assert(tvCharts.includes('function renderTrendChart'), 'INTAL TV renders trend a
 assert(tvCharts.includes('chart-line') && tvCharts.includes('chart-dot'), 'INTAL TV trend chart has line and data points');
 assert(tvCharts.includes('function renderServiceChart'), 'INTAL TV renders service distribution as chart');
 assert(tvCharts.includes('service-fill') && tvCharts.includes('#55a8ff'), 'INTAL TV service chart uses colored bars');
+
+const perfTv=read('tv.html');
+assert(perfTv.includes('Promise.allSettled([preloadService'), 'INTAL TV preloads Residence and Passport together');
+assert(perfTv.includes('const tvCache={}'), 'INTAL TV has client-side service cache');
+assert(perfTv.includes('renderMapLayer(key)'), 'INTAL TV swaps cached GIS layers instead of rebuilding the map');
+assert(perfTv.includes('setInterval(()=>{si=(si+1)%services.length;activateService'), 'INTAL TV rotation activates cached service state');
+assert(perfTv.includes('setInterval(backgroundRefresh,60000)'), 'INTAL TV refreshes data in background');
+assert(perfTv.includes('Promise.all([dashboardPromise,mapPromise])'), 'INTAL TV loads dashboard and GIS data in parallel');
