@@ -212,3 +212,9 @@ assert(tvNew.includes('function renderDistribution'), 'INTAL TV has visual servi
 assert(tvNew.includes('function renderTrend'), 'INTAL TV has visual trend chart');
 assert(tvNew.includes('function buildLayer'), 'INTAL TV has visual GIS marker layer');
 assert(tvNew.includes('Promise.all([call(serviceFn(key),{}),call(mapFn(key),{metric:\'total\'})])'), 'INTAL TV keeps dashboard and GIS preload parallel');
+
+// INTAL TV readable/compact visual regression invariants
+assert(tvCharts.includes('font-size:clamp(20px,1.65vw,27px)'), 'INTAL TV summary KPI typography scales responsively');
+assert(tvCharts.includes('font-size:clamp(12px,1vw,17px)'), 'INTAL TV running text typography scales responsively');
+assert(tvCharts.includes('background:#d62f3f'), 'INTAL TV running text LIVE badge remains red');
+assert(tvCharts.includes('height:100%;min-height:0;box-sizing:border-box;overflow:hidden'), 'INTAL TV summary grid prevents bottom clipping');
