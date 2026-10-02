@@ -378,3 +378,9 @@ assert(workspaceUi.includes("ScriptApp.getService().getUrl()"), 'Workspace TV na
 assert(workspaceUi.includes("window.top.location.href=WEB_APP_URL+'?view=tv'"), 'Workspace TV navigation targets top-level TV URL');
 assert(!workspaceUi.includes("window.location.pathname+'?view=tv'"), 'Workspace TV navigation does not rely on sandbox pathname');
 assert(workspaceUi.includes('href="#" onclick="openTv(event)"'), 'INTAL TV menu uses explicit navigation handler');
+
+const tvCharts=read('tv.html');
+assert(tvCharts.includes('function renderTrendChart'), 'INTAL TV renders trend as SVG chart');
+assert(tvCharts.includes('chart-line') && tvCharts.includes('chart-dot'), 'INTAL TV trend chart has line and data points');
+assert(tvCharts.includes('function renderServiceChart'), 'INTAL TV renders service distribution as chart');
+assert(tvCharts.includes('service-fill') && tvCharts.includes('#55a8ff'), 'INTAL TV service chart uses colored bars');
