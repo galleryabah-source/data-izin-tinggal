@@ -188,11 +188,12 @@ assert(tvCharts.includes('function renderDistribution'), 'INTAL TV renders visua
 assert(tvCharts.includes('class="donut"'), 'INTAL TV has donut visualization');
 assert(tvCharts.includes('TOP 10 KANTOR'), 'INTAL TV ranking shows Top 10 offices');
 assert(tvCharts.includes("slice(0,10)"), 'INTAL TV renders up to 10 ranked offices');
-assert(tvCharts.includes('grid-template-columns:minmax(150px,1fr) minmax(100px,.9fr)'), 'INTAL TV distribution uses bounded grid layout');
+assert(tvCharts.includes('grid-template-columns:minmax(125px,1fr) minmax(95px,.9fr)'), 'INTAL TV distribution uses bounded compact grid layout');
 assert(tvCharts.includes('summary-icon'), 'INTAL TV summary cards include visual icons');
-assert(tvCharts.includes('transform:perspective(520px) rotateX(15deg) rotateZ(-2deg)'), 'INTAL TV distribution uses a 3D donut treatment');
+assert(tvCharts.includes('width:min(154px,100%)'), 'INTAL TV distribution donut is compact');
+assert(!tvCharts.includes('transform:perspective(520px)'), 'INTAL TV distribution is 2D');
 assert(tvCharts.includes('--donut-bg'), 'INTAL TV donut segments are driven by responsive CSS variables');
-assert(tvCharts.includes('filter:brightness(.42) saturate(.9)'), 'INTAL TV donut includes visible 3D extrusion depth');
+assert(tvCharts.includes('.donut:before{content:none}'), 'INTAL TV donut has no 3D extrusion layer');
 assert(tvCharts.includes('width:38px;height:38px'), 'INTAL TV summary icons fit the bounded summary panel');
 assert(tvCharts.includes('grid-template-columns:minmax(72px,.9fr) minmax(80px,1fr) 54px'), 'INTAL TV service rows fit the bounded service panel');
 assert(tvCharts.includes('all.slice(0,8)'), 'INTAL TV service list caps visible rows to prevent clipping');
