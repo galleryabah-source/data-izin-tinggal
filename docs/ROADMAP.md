@@ -145,10 +145,10 @@ The deployment identity evidence chain remains part of the gate: Git commit SHA 
 - [x] Build production-grade Import workspace
 - [x] Build Administration workspace
 - [x] Build Monitoring workspace
-- [ ] Production UAT: verify all seven workspaces
-- [ ] Security negative test: unauthorized/anonymous access is denied
-- [ ] Runtime evidence: regression smoke PASS against deployed Phase 10.2 release
-- [ ] Reconcile production documentation/evidence
+- [x] Production UAT: verify all seven workspaces
+- [x] Security negative test: unauthorized/anonymous access is denied
+- [x] Runtime evidence: regression smoke PASS against deployed Phase 10.2 release
+- [x] Reconcile production documentation/evidence
 
 **Phase 10.1 boundary:** read-only semantic reporting only. No new persistent dataset, source-contract change, importer change, registry identity change, historical-data change, or daily reconstruction.
 
