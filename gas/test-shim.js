@@ -348,3 +348,7 @@ assert(uiCode.includes('href="?view=tv"') && uiCode.includes('INTAL TV'), 'works
 assert(uiCode.includes('function openTv(event)'), 'INTAL TV navigation handler exists');
 assert(uiCode.includes('function exitTv()'), 'INTAL TV provides workspace return handler');
 assert(uiCode.includes('class="tv-workspace-btn"'), 'INTAL TV provides visible workspace return control');
+
+assert(uiCode.includes("test(String(window.location.search||''))"), 'TV mode detection does not depend on URLSearchParams');
+assert(uiCode.includes("tv.classList.remove('hidden')"), 'TV shell is revealed before runtime data loading');
+assert(uiCode.includes('BOOT ERROR'), 'TV bootstrap failure is surfaced instead of blank screen');
