@@ -153,11 +153,29 @@ The deployment identity evidence chain remains part of the gate: Git commit SHA 
 **Phase 10.1 boundary:** read-only semantic reporting only. No new persistent dataset, source-contract change, importer change, registry identity change, historical-data change, or daily reconstruction.
 
 
+## Phase 10.3 certification gate
+
+**Status: CLOSED / PASS — 2026-10-02.**
+
+Phase 10.3 service-aware geographic analytics is certified against the canonical production deployment.
+
+Evidence chain:
+- GIS runtime repair merged at main commit `fe4665b5cedb0263b00d6b5fa9085db676dc1e72`.
+- GitHub Actions production deployment Run #215: PASS.
+- Canonical Apps Script immutable version: `74`.
+- Residence GIS service-aware metric runtime UAT: PASS.
+- Passport GIS service-aware metric runtime UAT: PASS, with production evidence showing **Elektronik 48 = 25,255** and the same office's **Total layanan = 29,506**, while the Passport baseline remains **80 rows / 327,088 services / 8 periods**.
+- Static forensic scan: PASS; metric resolution is isolated to the shared map seam, Residence export remains free of map-only metric state, and Office Reference remains VERIFIED/read-only.
+- No dataset, importer, registry identity, historical baseline, or canonical data lifecycle changes were introduced by Phase 10.3.
+
+Phase 10.3 is now closed. The next controlled capability is the presentation-only **INTAL TV Design No. 6**, which must continue to consume the canonical analytics engine without creating a second data path.
+
 ### Phase 10 — Advanced platform capabilities
 - [ ] Cross-service reporting where metrics are semantically compatible
 - [ ] Advanced drill-down and analytics
-- [ ] Service-aware geographic analytics
+- [x] Service-aware geographic analytics — Phase 10.3 CLOSED / PASS
 - [ ] Document / knowledge integration
 - [ ] Controlled notifications and automation
+- [ ] INTAL TV Design No. 6 — presentation-only command display
 
 **Implementation rule:** future phases remain gated. No future service is enabled merely because it is documented. A new dataset family must pass contract, validation, deployment, integrity, export, backup, and runtime evidence gates without weakening the existing production baseline.
