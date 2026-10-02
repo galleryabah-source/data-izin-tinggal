@@ -33,10 +33,20 @@ Contract nyata pertama adalah `RESIDENCE_PERMIT_SERVICE_MONTHLY`.
 Lihat `docs/DATA-CONTRACT-v1.md` untuk contract lengkap.
 
 ## Current application scope
-The production application is now a governed monthly-data platform with Residence Permit and Passport dataset isolation and a GIS First workspace shell. Phase 10.2 source implementation, CI validation, and canonical deployment are complete; live production certification remains a separate gate.
+The production application is now a governed monthly-data platform with Residence Permit and Passport dataset isolation and a GIS First workspace shell. **Phase 10.2 production certification is CLOSED / PASS as of 2026-10-02.** Source implementation, CI validation, canonical deployment, production regression, seven-workspace UAT, monitoring verification, and authorization negative testing have been evidenced against canonical Apps Script deployment version `71`.
+
+## Certified production baseline
+- Main release commit: `d186faee120aea48f97a063725e105d7d48bd61b`.
+- Canonical Apps Script deployment ID: `AKfycbzwhcpZWp8LhyidPFsvqwBQ6ZrgXjEB60NkyNmaQYsiewsvm9uZ_pwPdrG5xZINF2NK`.
+- Canonical Apps Script immutable version: `71`.
+- Residence baseline: 80 rows / 258,094 services / 8 periods / 10 offices.
+- Passport baseline: 80 rows / 327,088 services / 8 periods / 10 offices.
+- Combined service volume: 585,182.
+- Production smoke and dashboard regression: PASS with `failedChecks: []`.
+- Authorization negative test: unregistered authenticated user is denied protected application data; anonymous access is denied at the authentication boundary.
 
 ## Future-feature gate
-Before substantial new features are added, close the Phase 10.2 production gates: seven-workspace UAT, unauthorized/anonymous negative test, deployed regression evidence, and documentation reconciliation. After certification, every new feature follows: requirement → contract/architecture impact → minimal implementation → CI → canonical deployment → live UAT → evidence.
+Phase 10.2 certification is closed. New features may now enter the controlled delivery gate: requirement → contract/architecture impact → minimal implementation → CI → canonical deployment → live UAT → evidence. The canonical monthly production baseline must remain unchanged unless an explicit contract/migration gate is approved.
 
 ## Quick start — Apps Script
 
