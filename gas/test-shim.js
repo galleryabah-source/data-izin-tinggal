@@ -188,9 +188,9 @@ assert(tvCharts.includes('function renderDistribution'), 'INTAL TV renders visua
 assert(tvCharts.includes('class="donut"'), 'INTAL TV has donut visualization');
 assert(tvCharts.includes('TOP 10 KANTOR'), 'INTAL TV ranking shows Top 10 offices');
 assert(tvCharts.includes("slice(0,10)"), 'INTAL TV renders up to 10 ranked offices');
-assert(tvCharts.includes('grid-template-columns:minmax(125px,1fr) minmax(95px,.9fr)'), 'INTAL TV distribution uses bounded compact grid layout');
+assert(tvCharts.includes('grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)'), 'INTAL TV distribution uses bounded responsive grid layout');
 assert(tvCharts.includes('summary-icon'), 'INTAL TV summary cards include visual icons');
-assert(tvCharts.includes('width:min(154px,100%)'), 'INTAL TV distribution donut is compact');
+assert(tvCharts.includes('width:clamp(150px,31cqw,330px)'), 'INTAL TV distribution donut scales responsively');
 assert(!tvCharts.includes('transform:perspective(520px)'), 'INTAL TV distribution is 2D');
 assert(tvCharts.includes('--donut-bg'), 'INTAL TV donut segments are driven by responsive CSS variables');
 assert(tvCharts.includes('.donut:before{content:none}'), 'INTAL TV donut has no 3D extrusion layer');
