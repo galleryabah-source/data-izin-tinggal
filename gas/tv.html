@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INTAL TV · Command Display</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;min-height:100%;font-family:Arial,system-ui,sans-serif;background:#030b16;color:#f8fafc}body{min-height:100vh}.tv{min-height:100vh;padding:24px 30px;background:radial-gradient(circle at 80% 0%,#17345b 0,#071b35 48%,#030b16 100%)}header{display:grid;grid-template-columns:1fr auto auto;gap:18px;align-items:center;margin-bottom:18px}.brand{font-size:24px;font-weight:900}.sub{font-size:12px;color:#a9bdd5;margin-top:4px}.service{font-size:12px;color:#9fc5ff;text-transform:uppercase;font-weight:800;margin-top:6px}.pill{border:1px solid #31527a;background:#0b2340;border-radius:999px;padding:8px 11px;font-size:11px}.clock{font-weight:900;font-size:17px}.btn{border:1px solid #31527a;background:#0b2340;color:#c6d8ef;border-radius:8px;padding:8px 11px;font-size:10px;font-weight:800;cursor:pointer}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}.kpi,.card{background:rgba(7,27,53,.94);border:1px solid #244568;border-radius:12px}.kpi{padding:16px}.label{font-size:10px;color:#93abc5;font-weight:800}.value{font-size:32px;font-weight:900;margin-top:5px}.meta{font-size:10px;color:#7891ac;margin-top:4px}.main{display:grid;grid-template-columns:1.55fr .65fr;gap:12px}.card{overflow:hidden}.head{padding:12px 14px;border-bottom:1px solid #244568;font-size:13px;font-weight:800}.map{height:390px;display:grid;place-items:center;color:#7891ac;font-size:12px}.ranking{padding:14px;height:390px}.row{margin-bottom:13px}.rowtop{display:flex;justify-content:space-between;font-size:11px}.barbg{height:4px;background:#183653;border-radius:9px;margin-top:5px}.bar{height:100%;background:#4b9cff;border-radius:9px}.bottom{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin-top:12px}.chart,.services{height:205px;padding:14px}.ticker{margin-top:12px;border-top:1px solid #244568;padding-top:10px;font-size:11px;color:#c6d8ef;white-space:nowrap;overflow:hidden}.ticker span{display:inline-block;min-width:100%;animation:run 24s linear infinite}@keyframes run{from{transform:translateX(100%)}to{transform:translateX(-100%)}}.ok{color:#8ff0bb}.error{color:#ffb4ab}@media(max-width:1000px){.main,.bottom{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.tv{padding:14px}.kpis{grid-template-columns:1fr 1fr}header{grid-template-columns:1fr auto}.status{grid-column:1/3}}
+</style>
+</head>
+<body>
+<div class="tv">
+<header>
+<div><div class="brand">INTAL · COMMAND DISPLAY</div><div class="sub">GIS First · Canonical Monthly Intelligence</div><div id="service" class="service">IZIN TINGGAL</div></div>
+<div><span id="live" class="pill ok">LIVE SYSTEM · CONNECTING</span> <span id="read" class="pill">LAST READ · —</span></div>
+<div><button class="btn" onclick="location.href=location.pathname">WORKSPACE</button><div id="clock" class="clock">--:--:--</div></div>
+</header>
+<section class="kpis">
+<div class="kpi"><div class="label">TOTAL LAYANAN</div><div id="total" class="value">—</div><div class="meta">Canonical monthly dataset</div></div>
+<div class="kpi"><div class="label">RECORD CANONICAL</div><div id="rows" class="value">—</div><div class="meta">Baris aktif</div></div>
+<div class="kpi"><div class="label">PERIODE</div><div id="periods" class="value">—</div><div class="meta">Periode tersedia</div></div>
+<div class="kpi"><div class="label">KANTOR</div><div id="offices" class="value">—</div><div class="meta">Office Reference</div></div>
+</section>
+<section class="main">
+<article class="card"><div class="head">PETA SEBARAN LAYANAN · READ ONLY</div><div id="map" class="map">GIS siap dimuat setelah Command Display tampil.</div></article>
+<article class="card"><div class="head">RANKING KANTOR · TOP 8</div><div id="ranking" class="ranking">Menghubungkan...</div></article>
+</section>
+<section class="bottom">
+<article class="card"><div class="head">TREN PERIODE</div><div id="trend" class="chart">Menghubungkan...</div></article>
+<article class="card"><div class="head">DISTRIBUSI LAYANAN</div><div id="services" class="services">Menghubungkan...</div></article>
+</section>
+<div class="ticker"><b>RUNNING TEXT</b> · <span id="ticker">INTAL · canonical monthly intelligence · bukan real-time</span></div>
+</div>
+<script>
+const services=['RESIDENCE_PERMIT_SERVICE_MONTHLY','PASSPORT_SERVICE_MONTHLY'];let si=0;
+const $=id=>document.getElementById(id);const fmt=n=>Number(n||0).toLocaleString('id-ID');const now=()=>new Date().toLocaleTimeString('id-ID',{hour12:false});
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c));}
+function call(fn,...args){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args));}
+function render(r,key){$('service').textContent=key==='PASSPORT_SERVICE_MONTHLY'?'PASPOR':'IZIN TINGGAL';$('total').textContent=fmt(r.grandTotal);$('rows').textContent=fmt(r.rowCount);$('periods').textContent=fmt((r.filters?.availablePeriods||[]).length);$('offices').textContent=fmt((r.filters?.availableOffices||[]).length);
+const offices=(r.offices||[]).slice(0,8),max=Math.max(...offices.map(x=>Number(x.total)||0),1);$('ranking').innerHTML=offices.map((x,i)=>'<div class="row"><div class="rowtop"><span>'+(i+1)+'. '+esc(x.kantor_imigrasi)+'</span><b>'+fmt(x.total)+'</b></div><div class="barbg"><div class="bar" style="width:'+Math.max(2,Math.round(Number(x.total)/max*100))+'%"></div></div></div>').join('')||'Tidak ada data.';
+$('trend').textContent=(r.monthly||[]).map(x=>x.periode+': '+fmt(x.total)).join(' · ')||'Tidak ada data.';
+$('services').innerHTML=(r.services||[]).slice(0,8).map(x=>'<div style="padding:6px 0;border-bottom:1px solid #244568"><span>'+esc(x.key)+'</span> <b>'+fmt(x.total)+'</b></div>').join('')||'Tidak ada data.';
+$('read').textContent='LAST READ · '+now();$('live').textContent='LIVE SYSTEM · ONLINE';$('ticker').textContent='INTAL · '+$('service').textContent+' · '+fmt(r.grandTotal)+' layanan · '+fmt(r.rowCount)+' record canonical · data bulanan · bukan real-time';}
+async function refresh(){const key=services[si],fn=key==='PASSPORT_SERVICE_MONTHLY'?'getPassportDashboard':'getResidencePermitDashboard';try{render(await call(fn,{}),key);}catch(e){$('live').textContent='LIVE SYSTEM · ATTENTION';$('live').className='pill error';$('ticker').textContent='INTAL TV DATA ERROR · '+(e.message||String(e));}}
+function tick(){ $('clock').textContent=now();} tick();setInterval(tick,1000);refresh();setInterval(()=>{si=(si+1)%services.length;refresh();},30000);setInterval(refresh,60000);
+</script>
+</body></html>
