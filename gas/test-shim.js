@@ -135,6 +135,9 @@ assert(uiCode.includes('onclick="openTv(event)"') && uiCode.includes('>INTAL TV<
 assert(uiCode.includes('function openTv(event)'), 'INTAL TV navigation handler exists');
 assert(uiCode.includes('function exitTv()'), 'INTAL TV provides workspace return handler');
 assert(uiCode.includes('class="tv-workspace-btn"'), 'INTAL TV provides visible workspace return control');
+assert(uiCode.includes('Konten TV') && uiCode.includes('id="tvContentSection"'), 'Admin workspace exposes Konten TV management section');
+assert(uiCode.includes('admin-only') && uiCode.includes("admin.config"), 'Konten TV UI is restricted to admin.config');
+assert(uiCode.includes('loadRunningTextFile') && uiCode.includes('saveRunningTextForm') && uiCode.includes('removeRunningText'), 'Konten TV provides upload, save, and delete controls');
 
 assert(uiCode.includes("test(String(window.location.search||''))"), 'TV mode detection does not depend on URLSearchParams');
 assert(uiCode.includes("tv.classList.remove('hidden')"), 'TV shell is revealed before runtime data loading');
@@ -144,6 +147,11 @@ assert(uiCode.includes('leaflet.js" crossorigin="" defer'), 'Leaflet script is n
 assert(uiCode.includes("GIS_LIBRARY_LOADING") || uiCode.includes("GIS LOADING"), 'TV handles deferred GIS library loading');
 
 const codeGs=read('Code.gs');
+const configRunningText=read('Config.gs');
+assert(configRunningText.includes("RUNNING_TEXTS:'RUNNING_TEXTS'"), 'Running text sheet is registered in canonical sheet configuration');
+assert(codeGs.includes('function ensureRunningTextSheet_()') && codeGs.includes('function saveRunningText(payload)'), 'Running text server endpoints exist');
+assert(codeGs.includes("requirePermission_('admin.config')"), 'Running text write endpoints are RBAC protected');
+assert(codeGs.includes("function getActiveRunningTexts()") && codeGs.includes("requirePermission_('dashboard.read')"), 'TV active running text read path is RBAC protected');
 assert(codeGs.includes("view==='tv'?'tv':'index'"), 'doGet routes TV to dedicated tv.html entry');
 assert(read('tv.html').includes('INTAL') && read('tv.html').includes('COMMAND DISPLAY'), 'Dedicated TV document exists');
 assert(!/<script[^>]+src=["'][^"']*leaflet\.js/i.test(read('tv.html')), 'Dedicated TV entry does not block on Leaflet CDN');
