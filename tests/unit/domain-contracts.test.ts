@@ -112,3 +112,32 @@ describe("contract boundary strictness",()=>{
     expect(PassportRowSchema.safeParse(row).success).toBe(false);
   });
 });
+
+
+describe("P1 contract certification",()=>{
+  it("certifies every registered dataset has a coherent v1 contract",async()=>{
+    const {DATASET_CONTRACTS}=await import("@dasmon/domain");
+
+    for(const contract of Object.values(DATASET_CONTRACTS)){
+      expect(contract.version).toBe(1);
+      expect(contract.businessKey).toEqual(["periode","kantor_imigrasi"]);
+      expect(contract.derivedTotal).toBe("total");
+      expect(contract.columns[0]).toBe("periode");
+      expect(contract.columns[1]).toBe("kantor_imigrasi");
+      expect(contract.columns.at(-1)).toBe("total");
+      expect(contract.required).toEqual(contract.columns.slice(0,-1));
+      expect(contract.optional).toEqual(["total"]);
+      expect(new Set(contract.columns).size).toBe(contract.columns.length);
+      expect(new Set(contract.measures).size).toBe(contract.measures.length);
+      expect(contract.measures).not.toContain("periode");
+      expect(contract.measures).not.toContain("kantor_imigrasi");
+      expect(contract.measures).not.toContain("total");
+    }
+  });
+
+  it("certifies all registry keys are unique",async()=>{
+    const {DATASET_KEYS}=await import("@dasmon/domain");
+    expect(new Set(DATASET_KEYS).size).toBe(DATASET_KEYS.length);
+    expect(DATASET_KEYS).toHaveLength(2);
+  });
+});
