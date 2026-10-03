@@ -106,6 +106,17 @@ Certified baseline:
 
 The Phase 10.2 baseline is now locked as the production reference. Future feature work must preserve this baseline and follow the controlled delivery gate.
 
+## Temporal growth hardening
+
+- [x] Explicit temporal grain on canonical contracts: month/year.
+- [x] Historical/future monthly normalization through the same YYYY-MM contract.
+- [x] Authoritative annual source contracts isolated from monthly registry identities.
+- [x] Temporal-grain-aware schema signatures for non-monthly contracts while preserving the existing monthly signature.
+- [x] Read-only annual roll-up from canonical monthly data; no write-back or double counting.
+- [x] Integrity smoke automatically covers any active annual contract.
+- [ ] Production import of authoritative annual historical data — only after source evidence and UAT.
+- [ ] Annual dashboard/workspace presentation — consume the temporal service without creating a second data path.
+
 ## Current gate
 
 The production baseline is now verified end-to-end for both the existing Residence Permit dataset and the Passport dataset. Map v1, Export Verification v1, Backup Snapshot Verification v1, Automated Production Smoke Test v1, Passport governance/runtime regression gates, and the GIS First production UI baseline have passed their verification gates.
