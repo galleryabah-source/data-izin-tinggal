@@ -240,6 +240,10 @@ assert(tvCharts.includes('.office-btn{width:100%'), 'INTAL TV office controls fi
 
 // INTAL TV summary overflow and continuous running-text regression invariants
 assert(tvCharts.includes('grid-template-rows:auto minmax(0,1fr)'), 'INTAL TV office panel reserves header before scroll content');
+assert(tvCharts.includes('.summary{grid-column:3;grid-row:2;display:grid;grid-template-rows:auto minmax(0,1fr)'), 'INTAL TV office panel is a bounded grid so the office list can scroll');
+assert(tvCharts.includes('grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px'), 'INTAL TV office detail service values align horizontally with their labels');
+assert(tvCharts.includes('font-size:12px;font-weight:900;line-height:1.15'), 'INTAL TV office detail service labels are enlarged');
+assert(tvCharts.includes('font-size:22px;font-weight:1000;line-height:1'), 'INTAL TV office detail service values are enlarged');
 assert(tvCharts.includes('class="office-btn"'), 'INTAL TV office entries use dedicated interactive controls');
 assert(tvCharts.includes('animation:tickerLoop 45s linear infinite'), 'INTAL TV running text uses continuous linear animation');
 assert(tvCharts.includes('ticker-item::after'), 'INTAL TV running text has blue separator bullets');
