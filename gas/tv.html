@@ -143,7 +143,8 @@ async function selectTrendPeriod(period){
   updateTrendSelection(next,trendRowsFor(currentService,[]).length);
   setLive(next?'LIVE SYSTEM · FILTERING':'LIVE SYSTEM · SWITCHING');
   try{
-    await activateService(currentService);
+    const activated=await activateService(currentService);
+    if(!activated)throw new Error('TV_RUNTIME_SERVICE_ACTIVATION_FAILED');
   }catch(e){
     TV_FILTERS.periode=previous;
     updateTrendSelection(previous,trendRowsFor(currentService,[]).length);
@@ -207,7 +208,7 @@ function showLayer(key){if(!map||!layers[key])return;Object.keys(layers).forEach
 function filterKey(key){return key+'|'+TV_FILTERS.periode+'|'+TV_FILTERS.kantor_imigrasi+'|'+TV_FILTERS.metric;}
 async function preload(key){if(CACHE[key]?.dashboard&&CACHE[key]?.mapData)return CACHE[key];const snapshot=await stageServiceSnapshot(key);const L=await ensureMap();commitServiceSnapshot(key,snapshot,L);renderKpis();return CACHE[key];}
 async function loadServiceView(key,force=false){const cacheKey=filterKey(key);if(!force&&VIEW_CACHE[cacheKey])return VIEW_CACHE[cacheKey];const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};const [dashboard,mapData]=await Promise.all([call(serviceFn(key),filters),call(mapFn(key),filters)]);const L=await ensureMap();buildLayer(key,mapData,L);const result={dashboard,mapData,loadedAt:Date.now()};VIEW_CACHE[cacheKey]=result;return result;}
-async function activateService(key){currentService=key;updateSwitch();$('mapBadge').textContent=(key===SERVICES[1]?'PASPOR':'IZIN TINGGAL')+' · '+metricLabel(TV_FILTERS.metric).toUpperCase();setLive('LIVE SYSTEM · SWITCHING');try{let result;if(!TV_FILTERS.periode&&!TV_FILTERS.kantor_imigrasi&&TV_FILTERS.metric==='total'){if(!CACHE[key]?.dashboard)await preload(key);result=CACHE[key];}else{result=await loadServiceView(key);}const d=result.dashboard;renderRanking(d.offices);renderTrend(trendRowsFor(key,d.monthly),TV_FILTERS.periode);renderDistribution(d.services,d.grandTotal);renderServiceBars(d.services);renderOfficeButtons(d);if(result.mapData)showLayer(key);$('rankMeta').textContent=fmt(d.grandTotal)+' layanan';$('read').textContent='LAST READ · '+now()+' WIB';setLive('LIVE SYSTEM · ONLINE');}catch(e){setLive('LIVE SYSTEM · ATTENTION',true);$('ranking').innerHTML='<span class="attention">'+esc(e.message||String(e))+'</span>';}}
+async function activateService(key){currentService=key;updateSwitch();$('mapBadge').textContent=(key===SERVICES[1]?'PASPOR':'IZIN TINGGAL')+' · '+metricLabel(TV_FILTERS.metric).toUpperCase();setLive('LIVE SYSTEM · SWITCHING');try{let result;if(!TV_FILTERS.periode&&!TV_FILTERS.kantor_imigrasi&&TV_FILTERS.metric==='total'){await preload(key);result=BASE_CACHE[key];}else{result=await loadServiceView(key);}const d=result.dashboard;renderRanking(d.offices);renderTrend(trendRowsFor(key,d.monthly),TV_FILTERS.periode);renderDistribution(d.services,d.grandTotal);renderServiceBars(d.services);renderOfficeButtons(d);if(result.mapData)showLayer(key);$('rankMeta').textContent=fmt(d.grandTotal)+' layanan';$('read').textContent='LAST READ · '+now()+' WIB';setLive('LIVE SYSTEM · ONLINE');return true;}catch(e){setLive('LIVE SYSTEM · ATTENTION',true);$('ranking').innerHTML='<span class="attention">'+esc(e.message||String(e))+'</span>';return false;}}
 
 async function fetchVerifiedSnapshot(key){
   const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};
@@ -327,7 +328,8 @@ async function boot(){
     if(TV_STATE.status!=='ONLINE')throw new Error('TV_RUNTIME_BOOT_PARTIAL_FAILURE');
     const active=CACHE[currentService];
     if(!active||!validDashboard(active.dashboard))throw new Error('TV_RUNTIME_BOOT_INVALID_SNAPSHOT');
-    await activateService(currentService);
+    const activated=await activateService(currentService);
+    if(!activated)throw new Error('TV_RUNTIME_SERVICE_ACTIVATION_FAILED');
     TV_STATE.lastGoodAt=Date.now();TV_STATE.consecutiveFailures=0;
     $('footerMeta').textContent='10 Kantor · 8 Periode · read-only';
     setRuntimeState('ONLINE','Canonical snapshot verified · 10 Kantor · 8 Periode · read-only');
