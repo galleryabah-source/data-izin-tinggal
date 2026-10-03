@@ -230,6 +230,13 @@ assert(tvCharts.includes('height:auto;min-height:0;box-sizing:border-box;overflo
 assert(tvCharts.includes('animation:tickerLoop 45s linear infinite'), 'INTAL TV running text uses continuous linear animation');
 assert(tvCharts.includes('ticker-item::after'), 'INTAL TV running text has blue separator bullets');
 assert(tvCharts.includes('getActiveRunningTexts'), 'INTAL TV running text reads active database content');
+const codeSource=read('Code.gs');
+assert(codeSource.includes('function getRunningTextSheet_(){return getDb_().getSheetByName(SHEETS.RUNNING_TEXTS)||null;}'), 'Running text read path has non-mutating sheet lookup');
+const activeFn=codeSource.slice(codeSource.indexOf('function getActiveRunningTexts()'),codeSource.indexOf('function listRunningTextsAdmin()'));
+assert(activeFn.includes('getRunningTextSheet_()')&&!activeFn.includes('ensureRunningTextSheet_()'), 'Running text read endpoint cannot create storage');
+assert(codeSource.includes("if(startAt&&!Number.isFinite(startMs))throw new Error('Waktu mulai tidak valid.')"), 'Running text validates start date');
+assert(codeSource.includes("if(endAt&&!Number.isFinite(endMs))throw new Error('Waktu selesai tidak valid.')"), 'Running text validates end date');
+
 assert(!tvCharts.includes('tickerIndex'), 'INTAL TV running text no longer rotates by timed index');
 
 // Service distribution readability regression
