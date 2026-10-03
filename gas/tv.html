@@ -157,11 +157,11 @@ async function activateService(key){currentService=key;updateSwitch();$('mapBadg
 
 async function fetchVerifiedSnapshot(key){
   const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};
-  const results=await withTimeout(Promise.allSettled([call(serviceFn(key),filters),call(mapFn(key),filters)]),TV_RUNTIME.requestTimeoutMs);
-  const dashboardResult=results[0],mapResult=results[1];
-  if(dashboardResult.status!=='fulfilled'||!validDashboard(dashboardResult.value))throw new Error(dashboardResult.status==='rejected'?'TV_RUNTIME_DASHBOARD_FAILED':'TV_RUNTIME_INVALID_DASHBOARD');
-  const mapData=mapResult.status==='fulfilled'&&validMapData(mapResult.value)?mapResult.value:null;
-  return {dashboard:dashboardResult.value,mapData,loadedAt:Date.now(),mapAvailable:!!mapData};
+  const dashboardPromise=withTimeout(call(serviceFn(key),filters),TV_RUNTIME.requestTimeoutMs);
+  const mapPromise=withTimeout(call(mapFn(key),filters),TV_RUNTIME.requestTimeoutMs);
+  const dashboard=await dashboardPromise;
+  if(!validDashboard(dashboard))throw new Error('TV_RUNTIME_INVALID_DASHBOARD');
+  return {dashboard,mapData:null,mapPromise,loadedAt:Date.now(),mapAvailable:false};
 }
 async function stageServiceSnapshot(key){return fetchVerifiedSnapshot(key);}
 function commitServiceSnapshot(key,snapshot,L){
@@ -170,8 +170,14 @@ function commitServiceSnapshot(key,snapshot,L){
   if(L&&snapshot.mapData)buildLayer(key,snapshot.mapData,L);
 }
 async function ensureSnapshotMap(key,snapshot){
-  if(!snapshot?.mapData)return false;
-  try{const L=await ensureMap();buildLayer(key,snapshot.mapData,L);return true;}catch(e){return false;}
+  if(!snapshot)return false;
+  try{
+    let mapData=snapshot.mapData;
+    if(!mapData&&snapshot.mapPromise)mapData=await snapshot.mapPromise;
+    if(!validMapData(mapData))return false;
+    snapshot.mapData=mapData;snapshot.mapAvailable=true;
+    const L=await ensureMap();buildLayer(key,mapData,L);return true;
+  }catch(e){return false;}
 }
 async function preload(key){
   if(CACHE[key]?.dashboard)return CACHE[key];
