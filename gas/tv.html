@@ -71,10 +71,83 @@ async function ensureMap(){const L=await loadLeaflet();if(map)return L;map=L.map
 function buildLayer(key,data,L){if(layers[key])layers[key].clearLayers();else layers[key]=L.layerGroup();const b=[];(data.markers||[]).forEach((m,i)=>{const color=markerColor(i),icon=L.divIcon({className:'',html:'<div class="marker-wrap" style="color:'+color+'"><div class="marker-core"></div><div class="marker-label"><b>'+esc(m.kantor_imigrasi)+'</b><span>'+fmt(m.total)+'</span></div></div>',iconSize:[34,34],iconAnchor:[17,17]});L.marker([Number(m.latitude),Number(m.longitude)],{icon}).bindPopup('<b>'+esc(m.kantor_imigrasi)+'</b><br>Total layanan: <b>'+fmt(m.total)+'</b><br>Rows: '+fmt(m.rows)).addTo(layers[key]);b.push([Number(m.latitude),Number(m.longitude)]);});bounds[key]=b;}
 function showLayer(key){if(!map||!layers[key])return;Object.keys(layers).forEach(k=>{if(map.hasLayer(layers[k]))map.removeLayer(layers[k]);});layers[key].addTo(map);const b=bounds[key]||[];if(b.length)map.fitBounds(b,{padding:[40,40],maxZoom:9,animate:false});map.invalidateSize();}
 function filterKey(key){return key+'|'+TV_FILTERS.periode+'|'+TV_FILTERS.kantor_imigrasi+'|'+TV_FILTERS.metric;}
-async function preload(key){if(CACHE[key]?.loading)return CACHE[key].loading;if(CACHE[key]?.dashboard&&CACHE[key]?.mapData)return CACHE[key];const task=(async()=>{const [dashboard,mapData]=await Promise.all([call(serviceFn(key),{}),call(mapFn(key),{metric:'total'})]);CACHE[key]={dashboard,mapData,loadedAt:Date.now()};const L=await ensureMap();buildLayer(key,mapData,L);renderKpis();return CACHE[key];})().catch(e=>{CACHE[key]={error:e};throw e;});CACHE[key]={loading:task};return task;}
+async function preload(key){if(CACHE[key]?.dashboard&&CACHE[key]?.mapData)return CACHE[key];const snapshot=await stageServiceSnapshot(key);const L=await ensureMap();commitServiceSnapshot(key,snapshot,L);renderKpis();return CACHE[key];}
 async function loadServiceView(key,force=false){const cacheKey=filterKey(key);if(!force&&VIEW_CACHE[cacheKey])return VIEW_CACHE[cacheKey];const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};const [dashboard,mapData]=await Promise.all([call(serviceFn(key),filters),call(mapFn(key),filters)]);const L=await ensureMap();buildLayer(key,mapData,L);const result={dashboard,mapData,loadedAt:Date.now()};VIEW_CACHE[cacheKey]=result;return result;}
 async function activateService(key){currentService=key;updateSwitch();$('mapBadge').textContent=(key===SERVICES[1]?'PASPOR':'IZIN TINGGAL')+' · '+metricLabel(TV_FILTERS.metric).toUpperCase();setLive('LIVE SYSTEM · SWITCHING');try{let result;if(!TV_FILTERS.periode&&!TV_FILTERS.kantor_imigrasi&&TV_FILTERS.metric==='total'){if(!CACHE[key]?.dashboard)await preload(key);result={dashboard:CACHE[key].dashboard,mapData:CACHE[key].mapData};}else{result=await loadServiceView(key);}const d=result.dashboard;renderRanking(d.offices);renderTrend(d.monthly);renderDistribution(d.services,d.grandTotal);renderServiceBars(d.services);renderSummary(d);showLayer(key);$('rankMeta').textContent=fmt(d.grandTotal)+' layanan';$('read').textContent='LAST READ · '+now()+' WIB';setLive('LIVE SYSTEM · ONLINE');}catch(e){setLive('LIVE SYSTEM · ATTENTION',true);$('ranking').innerHTML='<span class="attention">'+esc(e.message||String(e))+'</span>';}}
 
+const TV_RUNTIME=Object.freeze({refreshMs:60000,rotationMs:30000,staleAfterMs:180000,requestTimeoutMs:20000,maxFailuresBeforeAttention:2});
+const TV_STATE={status:'BOOTING',lastGoodAt:0,lastAttemptAt:0,consecutiveFailures:0,refreshing:false,rotationBusy:false};
+function setRuntimeState(status,detail){
+  TV_STATE.status=status;
+  const age=TV_STATE.lastGoodAt?Math.max(0,Date.now()-TV_STATE.lastGoodAt):null;
+  const stale=age!==null&&age>TV_RUNTIME.staleAfterMs;
+  const label=status==='ONLINE'&&!stale?'LIVE SYSTEM · ONLINE':status==='REFRESHING'?'LIVE SYSTEM · REFRESHING':status==='STALE'||stale?'LIVE SYSTEM · STALE':status==='OFFLINE'?'LIVE SYSTEM · OFFLINE':status==='DEGRADED'?'LIVE SYSTEM · DEGRADED':status==='BOOTING'?'LIVE SYSTEM · PREPARING':'LIVE SYSTEM · ATTENTION';
+  setLive(label,status!=='ONLINE'||stale);
+  $('footerMeta').textContent=detail||('Runtime · '+(stale?'stale':'healthy'));
+}
+function validDashboard(d){
+  return !!d&&Number.isFinite(Number(d.grandTotal))&&Array.isArray(d.offices)&&Array.isArray(d.monthly)&&Array.isArray(d.services)&&Number.isFinite(Number(d.rowCount));
+}
+function validMapData(d){
+  return !!d&&Array.isArray(d.markers)&&d.markers.every(m=>Number.isFinite(Number(m.latitude))&&Number.isFinite(Number(m.longitude)));
+}
+function withTimeout(p,ms){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error('TV_RUNTIME_TIMEOUT')),ms))]);}
+async function fetchVerifiedSnapshot(key){
+  const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};
+  const [dashboard,mapData]=await withTimeout(Promise.all([call(serviceFn(key),filters),call(mapFn(key),filters)]),TV_RUNTIME.requestTimeoutMs);
+  if(!validDashboard(dashboard))throw new Error('TV_RUNTIME_INVALID_DASHBOARD');
+  if(!validMapData(mapData))throw new Error('TV_RUNTIME_INVALID_MAP');
+  return {dashboard,mapData,loadedAt:Date.now()};
+}
+async function stageServiceSnapshot(key){
+  return fetchVerifiedSnapshot(key);
+}
+function commitServiceSnapshot(key,snapshot,L){
+  buildLayer(key,snapshot.mapData,L);
+  CACHE[key]={dashboard:snapshot.dashboard,mapData:snapshot.mapData,loadedAt:snapshot.loadedAt};
+  VIEW_CACHE[filterKey(key)]=snapshot;
+}
+async function refreshAllRuntimeData(){
+  if(TV_STATE.refreshing)return;
+  TV_STATE.refreshing=true;TV_STATE.lastAttemptAt=Date.now();
+  setRuntimeState('REFRESHING','Memvalidasi snapshot canonical...');
+  try{
+    const [res,pass]=await Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])]);
+    const L=await ensureMap();
+    commitServiceSnapshot(SERVICES[0],res,L);
+    commitServiceSnapshot(SERVICES[1],pass,L);
+    await loadRunningTexts();
+    renderKpis();
+    const active=currentService===SERVICES[0]?res:pass;
+    renderRanking(active.dashboard.offices);renderTrend(active.dashboard.monthly);renderDistribution(active.dashboard.services,active.dashboard.grandTotal);renderServiceBars(active.dashboard.services);renderSummary(active.dashboard);showLayer(currentService);
+    TV_STATE.lastGoodAt=Date.now();TV_STATE.consecutiveFailures=0;
+    $('read').textContent='LAST READ · '+now()+' WIB';
+    setRuntimeState('ONLINE','Canonical snapshot verified · 10 Kantor · 8 Periode · read-only');
+  }catch(e){
+    TV_STATE.consecutiveFailures++;
+    const stale=TV_STATE.lastGoodAt>0;
+    setRuntimeState(TV_STATE.consecutiveFailures>=TV_RUNTIME.maxFailuresBeforeAttention?'DEGRADED':(stale?'STALE':'OFFLINE'),stale?'Menampilkan data terakhir yang valid · LAST READ '+$('read').textContent.replace('LAST READ · ',''):'Belum ada snapshot valid');
+  }finally{TV_STATE.refreshing=false;}
+}
+async function rotateServiceSafely(){
+  if(TV_STATE.rotationBusy)return;
+  TV_STATE.rotationBusy=true;
+  try{
+    const next=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];
+    if(!CACHE[next]?.dashboard||!CACHE[next]?.mapData){
+      const staged=await stageServiceSnapshot(next);
+      const L=await ensureMap();
+      commitServiceSnapshot(next,staged,L);
+    }
+    const snapshot=CACHE[next];
+    if(!validDashboard(snapshot.dashboard)||!validMapData(snapshot.mapData))throw new Error('TV_RUNTIME_INVALID_CACHED_SNAPSHOT');
+    currentService=next;updateSwitch();
+    $('mapBadge').textContent=(next===SERVICES[1]?'PASPOR':'IZIN TINGGAL')+' · '+metricLabel(TV_FILTERS.metric).toUpperCase();
+    renderRanking(snapshot.dashboard.offices);renderTrend(snapshot.dashboard.monthly);renderDistribution(snapshot.dashboard.services,snapshot.dashboard.grandTotal);renderServiceBars(snapshot.dashboard.services);renderSummary(snapshot.dashboard);showLayer(next);
+    $('read').textContent='LAST READ · '+new Date(snapshot.loadedAt).toLocaleTimeString('id-ID',{hour12:false})+' WIB';
+  }catch(e){TV_STATE.consecutiveFailures++;setRuntimeState('DEGRADED','Rotasi ditahan · data terakhir yang valid tetap tampil');}
+  finally{TV_STATE.rotationBusy=false;}
+}
 async function loadRunningTexts(){try{runningTexts=await call('getActiveRunningTexts');showTicker();}catch(e){runningTexts=[];showTicker();}}
 function showTicker(){
   const items=runningTexts.length?runningTexts:['Belum ada konten aktif untuk INTAL TV.'];
@@ -83,8 +156,28 @@ function showTicker(){
   const chars=items.reduce((n,v)=>n+String(v).length,0);
   $('ticker').style.animationDuration=Math.max(24,Math.min(90,chars*.12+items.length*3))+'s';
 }
-async function boot(){try{setLive('LIVE SYSTEM · PRELOADING');$('footerMeta').textContent='Memuat canonical datasets...';const results=await Promise.allSettled([preload(SERVICES[0]),preload(SERVICES[1]),loadRunningTexts()]);const first=results[0].status==='fulfilled'?results[0].value.dashboard:null;renderKpis();await activateService(currentService);$('footerMeta').textContent='10 Kantor · 8 Periode · read-only';}catch(e){setLive('LIVE SYSTEM · ATTENTION',true);$('footerMeta').textContent='Runtime attention';}}
-function tick(){ $('clock').textContent=now();}tick();setInterval(tick,1000);boot();setInterval(()=>{currentService=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];activateService(currentService);},30000);setInterval(()=>{preload(SERVICES[0]).catch(()=>{});preload(SERVICES[1]).catch(()=>{});loadRunningTexts();},60000);
+async function boot(){
+  try{
+    setRuntimeState('BOOTING','Memuat dan memvalidasi canonical snapshot...');
+    await refreshAllRuntimeData();
+    if(TV_STATE.status!=='ONLINE')throw new Error('TV_RUNTIME_BOOT_PARTIAL_FAILURE');
+    const active=CACHE[currentService];
+    if(!active||!validDashboard(active.dashboard)||!validMapData(active.mapData))throw new Error('TV_RUNTIME_BOOT_INVALID_SNAPSHOT');
+    await activateService(currentService);
+    TV_STATE.lastGoodAt=Date.now();TV_STATE.consecutiveFailures=0;
+    $('footerMeta').textContent='10 Kantor · 8 Periode · read-only';
+    setRuntimeState('ONLINE','Canonical snapshot verified · 10 Kantor · 8 Periode · read-only');
+  }catch(e){
+    TV_STATE.consecutiveFailures++;
+    setRuntimeState('OFFLINE','Runtime belum memiliki snapshot valid');
+  }
+}
+function tick(){ $('clock').textContent=now();}
+tick();
+boot();
+setInterval(rotateServiceSafely,TV_RUNTIME.rotationMs);
+setInterval(refreshAllRuntimeData,TV_RUNTIME.refreshMs);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-TV_STATE.lastAttemptAt>10000)refreshAllRuntimeData();});
 </script>
 </body>
 </html>
