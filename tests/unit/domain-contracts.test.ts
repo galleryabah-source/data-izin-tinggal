@@ -64,7 +64,7 @@ describe("legacy contract parity",()=>{
 
 describe("domain data integrity",()=>{
   it("normalizes both components of the canonical business key",()=>{
-    const {businessKey}=require("@dasmon/domain");
+    const {businessKey}=await import("@dasmon/domain");
     expect(businessKey(" 2026-01 "," Kantor A ")).toBe("2026-01::Kantor A");
   });
 
