@@ -251,7 +251,7 @@ assert(tvCharts.includes('service-more'), 'INTAL TV service list exposes hidden-
 assert(tvCharts.includes('class="rank-fill"'), 'INTAL TV has visual ranking bars');
 const perfTv=read('tv.html');
 assert(perfTv.includes('async function preload('), 'INTAL TV preloads service data');
-assert(perfTv.includes('const CACHE={}'), 'INTAL TV has client-side service cache');
+assert(perfTv.includes('const CACHE={},BASE_CACHE={}'), 'INTAL TV has client-side service cache with an unfiltered canonical trend baseline');
 assert(perfTv.includes('function showLayer'), 'INTAL TV swaps cached GIS layers');
 assert(perfTv.includes('async function rotateServiceSafely()'), 'INTAL TV rotates service presentation through guarded runtime seam');
 assert(perfTv.includes('Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])])'), 'INTAL TV stages dashboard and GIS snapshots in parallel');
@@ -395,7 +395,7 @@ assert(tvNew.includes("function commitServiceSnapshot(key,snapshot,L)"), 'INTAL 
 assert(tvNew.includes("const [res,pass]=await Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])])"), 'INTAL TV stages both services before commit');
 assert(tvNew.includes("commitServiceSnapshot(SERVICES[0],res,null);") && tvNew.includes("commitServiceSnapshot(SERVICES[1],pass,null);"), 'INTAL TV commits both valid dashboard snapshots before optional GIS rendering');
 assert(tvNew.includes("await refreshAllRuntimeData();"), 'INTAL TV bootstrap uses atomic runtime refresh');
-assert(tvNew.includes("async function preload(key){\n  if(CACHE[key]?.dashboard)return CACHE[key];"), 'INTAL TV preload requires canonical dashboard data only');
+assert(tvNew.includes('async function preload(key){if(BASE_CACHE[key]?.dashboard)'), 'INTAL TV preload reuses the unfiltered canonical baseline when available');
 assert(!tvNew.includes("const [res,pass]=await Promise.all([refreshService(SERVICES[0]),refreshService(SERVICES[1])])"), 'INTAL TV no longer mutates cache independently during atomic refresh');
 
 assert(tvNew.includes("await loadRunningTexts();\n    renderKpis();"), 'INTAL TV refresh cycle refreshes managed running text content');
