@@ -132,9 +132,8 @@ function renderKpis(){
   const context=$('tvCombinedContext'),momWrap=$('tvCombinedMomWrap'),mom=$('tvCombinedMom');
   if(selected){
     context.textContent=selected+' · DIPILIH';
-    const data=monthlyForKpi(SERVICES[0]).length?monthlyForKpi(SERVICES[0]):r.monthly||[];
-    const sorted=data.slice().sort((a,b)=>String(a.periode).localeCompare(String(b.periode)));
-    const idx=sorted.findIndex(x=>String(x.periode)===selected),previous=idx>0?String(sorted[idx-1].periode):'';
+    const periods=[...new Set(SERVICES.flatMap(monthlyForKpi).map(x=>String(x.periode||'')).filter(Boolean))].sort();
+    const idx=periods.indexOf(selected),previous=idx>0?periods[idx-1]:'';
     const currentValue=total,previousValue=previous?combinedMonthlyValue(previous):0;
     if(previousValue){
       const pct=(currentValue-previousValue)/previousValue*100,sign=pct>0?'+':'';
