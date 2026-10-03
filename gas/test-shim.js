@@ -331,6 +331,15 @@ assert(tvCharts.includes('closeTop10Modal()')&&tvCharts.includes('closeDistribut
 assert(tvCharts.includes("if(!$('top10Modal').classList.contains('hidden'))closeTop10Modal()"), 'Escape closes the Top 10 modal');
 assert(tvCharts.includes("if(!$('distributionModal').classList.contains('hidden'))closeDistributionModal()"), 'Escape closes the distribution modal');
 
+// Interactive distribution modal invariants
+assert(tvCharts.includes('.expand-donut-segment{cursor:pointer'), 'Distribution donut segments are interactive');
+assert(tvCharts.includes('function setDistributionActive(index)'), 'Distribution selection state is centralized');
+assert(tvCharts.includes('onmouseenter="setDistributionActive('), 'Distribution supports pointer hover');
+assert(tvCharts.includes('onfocus="setDistributionActive('), 'Distribution supports keyboard focus');
+assert(tvCharts.includes('role="button"'), 'Distribution legend items are keyboard-actionable');
+assert(tvCharts.includes('grid-template-columns:14px minmax(110px,1fr) auto'), 'Distribution legend keeps labels and percentages visually compact');
+assert(tvCharts.includes('window.__distributionData=data'), 'Interactive distribution retains canonical category data');
+assert(tvCharts.includes('window.__distributionGrandTotal'), 'Interactive distribution retains canonical grand total');
 // INTAL TV P0 runtime hardening invariants
 
 assert(tvNew.includes('const TV_RUNTIME=Object.freeze'), 'INTAL TV runtime hardening contract exists');
