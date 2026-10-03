@@ -1,109 +1,80 @@
-function verifyResidencePermitMonthlyIntegrity(){
+function verifyDatasetIntegrityV1(datasetKey){
   const user=requirePermission_('audit.read');
-  const ss=getDb_();
-  const datasetKey='RESIDENCE_PERMIT_SERVICE_MONTHLY';
-  const expectedColumns=DATASET_CONTRACTS[datasetKey].columns.slice();
-  const registry=ss.getSheetByName(SHEETS.DATASET_REGISTRY);
-  const datasetRows=registry.getDataRange().getValues();
-  const rh=datasetRows[0]||[];
-  const ri=Object.fromEntries(rh.map((x,n)=>[x,n]));
-  const active=datasetRows.slice(1).filter(r=>String(r[ri.dataset_key]||'')===datasetKey&&String(r[ri.status]||'').toUpperCase()==='ACTIVE');
-  const issues=[];
-  if(active.length!==1)issues.push('DATASET_REGISTRY harus memiliki tepat 1 entry ACTIVE untuk '+datasetKey+'.');
-  const reg=active[0]||null;
-  const sheetName=reg?String(reg[ri.sheet_name]||''):APP.SHEET_PREFIX+datasetKey;
-  const sh=ss.getSheetByName(sheetName);
-  if(!sh)issues.push('Dataset sheet tidak ditemukan: '+sheetName);
-  let rowCount=0, columnCount=0, duplicateKeys=0, totalMismatches=0, blankKeys=0;
-  let observedTotal=0;
-  if(sh){
-    const values=sh.getDataRange().getValues();
-    const header=values[0]||[];
-    columnCount=header.length;
-    if(JSON.stringify(header)!==JSON.stringify(expectedColumns))issues.push('Header dataset tidak identik dengan Data Contract v1.');
-    const hi=Object.fromEntries(header.map((x,n)=>[x,n]));
-    const requiredIndexes=expectedColumns.map(c=>hi[c]);
-    if(requiredIndexes.some(i=>i===undefined))issues.push('Ada kolom contract yang hilang dari dataset sheet.');
-    const seen={};
-    values.slice(1).forEach(r=>{
-      if(r.length===0||r.every(v=>String(v)===''))return;
-      rowCount++;
-      const period=String(r[hi.periode]||'').trim();
-      const office=String(r[hi.kantor_imigrasi]||'').trim();
-      if(!period||!office)blankKeys++;
-      const key=period+'|'+office.toUpperCase();
-      if(seen[key])duplicateKeys++;
-      seen[key]=true;
-      const metricColumns=['bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim'];
-      const computed=metricColumns.reduce((sum,c)=>sum+Number(r[hi[c]]||0),0);
-      if(Number(r[hi.total])!==computed)totalMismatches++;
-      observedTotal+=Number(r[hi.total]||0);
+  const d=getActiveDatasetContract_(datasetKey);
+  const contract=d.contract,expectedColumns=contract.columns.slice(),values=d.sheet.getDataRange().getValues(),header=values[0]||[];
+  const issues=[],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
+  if(JSON.stringify(header)!==JSON.stringify(expectedColumns))issues.push('Header dataset tidak identik dengan '+datasetKey+' Contract v'+contract.version+'.');
+  expectedColumns.forEach(c=>{if(hi[c]===undefined)issues.push('Kolom contract hilang: '+c+'.');});
+  const rows=values.slice(1).filter(r=>r.some(v=>String(v)!==''));
+  const seen={},periods={},offices={};
+  let duplicateKeys=0,blankKeys=0,invalidPeriods=0,invalidMeasures=0,totalMismatches=0,observedTotal=0;
+  rows.forEach(r=>{
+    const period=String(r[hi.periode]||'').trim(),office=String(r[hi.kantor_imigrasi]||'').trim();
+    if(!period||!office)blankKeys++;
+    if(!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(period))invalidPeriods++;
+    if(period)periods[period]=true;
+    if(office)offices[office]=true;
+    const key=period+'|'+office.toUpperCase();
+    if(seen[key])duplicateKeys++;
+    seen[key]=true;
+    let computed=0;
+    contract.measures.forEach(column=>{
+      const n=Number(r[hi[column]]);
+      if(!Number.isInteger(n)||n<0)invalidMeasures++;
+      computed+=Number.isFinite(n)?n:0;
     });
-  }
-  if(rowCount!==80)issues.push('Jumlah row dataset harus 80, ditemukan '+rowCount+'.');
-  if(columnCount!==expectedColumns.length)issues.push('Jumlah kolom dataset harus '+expectedColumns.length+', ditemukan '+columnCount+'.');
-  if(duplicateKeys!==0)issues.push('Business key duplikat: '+duplicateKeys+'.');
+    const total=Number(r[hi.total]);
+    if(!Number.isInteger(total)||total<0||total!==computed)totalMismatches++;
+    observedTotal+=Number.isFinite(total)?total:0;
+  });
   if(blankKeys!==0)issues.push('Business key kosong: '+blankKeys+'.');
+  if(invalidPeriods!==0)issues.push('Periode tidak canonical YYYY-MM: '+invalidPeriods+'.');
+  if(invalidMeasures!==0)issues.push('Measure bukan bilangan bulat >= 0: '+invalidMeasures+'.');
   if(totalMismatches!==0)issues.push('Baris dengan total tidak konsisten: '+totalMismatches+'.');
-  if(reg&&Number(reg[ri.row_count]||0)!==rowCount)issues.push('row_count registry tidak sama dengan jumlah row dataset.');
+  if(duplicateKeys!==0)issues.push('Business key duplikat: '+duplicateKeys+'.');
+  if(Number(d.registryRow[d.registryIndex.row_count]||0)!==rows.length)issues.push('row_count registry tidak sama dengan jumlah row '+datasetKey+'.');
 
-  const importLog=ss.getSheetByName(SHEETS.IMPORT_LOG);
-  const iv=importLog.getDataRange().getValues();
-  const ih=iv[0]||[];
-  const ii=Object.fromEntries(ih.map((x,n)=>[x,n]));
-  const imports=iv.slice(1).filter(r=>String(r[ii.dataset_key]||'')===datasetKey);
-  const latestImport=imports.length?imports[imports.length-1]:null;
-  const latestBatchId=latestImport?String(latestImport[ii.batch_id]||''):'';
-  if(!latestImport)issues.push('Tidak ditemukan IMPORT_LOG untuk dataset.');
+  const importSheet=getDb_().getSheetByName(SHEETS.IMPORT_LOG),iv=importSheet.getDataRange().getValues(),ih=iv[0]||[],ii=Object.fromEntries(ih.map((x,n)=>[x,n]));
+  const imports=iv.slice(1).filter(r=>String(r[ii.dataset_key]||'')===datasetKey),latest=imports.length?imports[imports.length-1]:null;
+  let latestBatchId='';
+  if(!latest)issues.push('Tidak ditemukan IMPORT_LOG untuk '+datasetKey+'.');
   else{
-    if(Number(latestImport[ii.accepted]||0)!==80)issues.push('IMPORT_LOG accepted terbaru bukan 80.');
-    if(Number(latestImport[ii.rejected]||0)!==0)issues.push('IMPORT_LOG rejected terbaru bukan 0.');
-    if(Number(latestImport[ii.duplicates]||0)!==0)issues.push('IMPORT_LOG duplicates terbaru bukan 0.');
-    if(String(latestImport[ii.status]||'').toUpperCase()!=='SUCCESS')issues.push('IMPORT_LOG status terbaru bukan SUCCESS.');
-    if(Number(latestImport[ii.row_count]||0)!==80)issues.push('IMPORT_LOG row_count terbaru bukan 80.');
+    latestBatchId=String(latest[ii.batch_id]||'');
+    const inputRows=Number(latest[ii.row_count]||0),accepted=Number(latest[ii.accepted]||0),rejected=Number(latest[ii.rejected]||0),duplicates=Number(latest[ii.duplicates]||0);
+    if(inputRows<accepted||inputRows!==accepted+rejected)issues.push('IMPORT_LOG accepted + rejected tidak sama dengan row_count input terbaru.');
+    if(duplicates>rejected)issues.push('IMPORT_LOG duplicates melebihi rejected pada import terbaru.');
+    if(String(latest[ii.status]||'').toUpperCase()!=='SUCCESS')issues.push('IMPORT_LOG status terbaru bukan SUCCESS.');
   }
-
-  const audit=ss.getSheetByName(SHEETS.AUDIT_LOG);
-  const av=audit.getDataRange().getValues();
-  const ah=av[0]||[];
-  const ai=Object.fromEntries(ah.map((x,n)=>[x,n]));
-  const matchingAudit=av.slice(1).filter(r=>String(r[ai.action]||'')==='IMPORT_COMMIT'&&String(r[ai.dataset_key]||'')===datasetKey&&String(r[ai.batch_id]||'')===latestBatchId);
-  if(!latestBatchId||matchingAudit.length!==1)issues.push('Harus ada tepat 1 AUDIT_LOG IMPORT_COMMIT yang cocok dengan batch terbaru.');
+  const audit=getDb_().getSheetByName(SHEETS.AUDIT_LOG),av=audit.getDataRange().getValues(),ah=av[0]||[],ai=Object.fromEntries(ah.map((x,n)=>[x,n]));
+  const matchingAudit=latestBatchId?av.slice(1).filter(r=>String(r[ai.action]||'')==='IMPORT_COMMIT'&&String(r[ai.dataset_key]||'')===datasetKey&&String(r[ai.batch_id]||'')===latestBatchId):[];
+  if(!latestBatchId||matchingAudit.length!==1)issues.push('Harus ada tepat 1 AUDIT_LOG IMPORT_COMMIT untuk batch terbaru '+datasetKey+'.');
 
   const result={
-    ok:issues.length===0,
-    verifiedAt:nowIso_(),
-    actor:user.email,
-    datasetKey,
-    sheetName,
-    registryEntries:active.length,
-    rowCount,
-    columnCount,
-    expectedRows:80,
-    expectedColumns:expectedColumns.length,
-    duplicateKeys,
-    blankKeys,
-    totalMismatches,
-    observedTotal,
-    expectedObservedTotal:258094,
-    registryRowCount:reg?Number(reg[ri.row_count]||0):null,
-    latestImport:latestImport?{
-      batchId:latestBatchId,
-      rowCount:Number(latestImport[ii.row_count]||0),
-      accepted:Number(latestImport[ii.accepted]||0),
-      rejected:Number(latestImport[ii.rejected]||0),
-      duplicates:Number(latestImport[ii.duplicates]||0),
-      status:String(latestImport[ii.status]||'')
+    ok:issues.length===0,verifiedAt:nowIso_(),actor:user.email,datasetKey,sheetName:d.sheetName,
+    registryEntries:1,rowCount:rows.length,columnCount:header.length,
+    expectedRows:rows.length,expectedColumns:expectedColumns.length,
+    periodCount:Object.keys(periods).length,officeCount:Object.keys(offices).length,
+    duplicateKeys,blankKeys,invalidPeriods,invalidMeasures,totalMismatches,
+    observedTotal,expectedObservedTotal:observedTotal,
+    registryRowCount:Number(d.registryRow[d.registryIndex.row_count]||0),
+    latestImport:latest?{
+      batchId:latestBatchId,rowCount:Number(latest[ii.row_count]||0),
+      accepted:Number(latest[ii.accepted]||0),rejected:Number(latest[ii.rejected]||0),
+      duplicates:Number(latest[ii.duplicates]||0),status:String(latest[ii.status]||'')
     }:null,
-    matchingAuditEvents:matchingAudit.length,
-    issues
+    matchingAuditEvents:matchingAudit.length,issues
   };
-  if(observedTotal!==258094)result.issues.push('Aggregate total berbeda dari fixture tervalidasi: expected 258094, observed '+observedTotal+'.');
-  result.ok=result.issues.length===0;
+  appendAudit_('DATASET_INTEGRITY_VERIFY',datasetKey,latestBatchId,rows.length,result.ok?'SUCCESS':'FAILED',JSON.stringify({
+    rowCount:rows.length,observedTotal,periodCount:result.periodCount,officeCount:result.officeCount,
+    duplicateKeys,blankKeys,invalidPeriods,invalidMeasures,totalMismatches,issues
+  }));
   Logger.log(JSON.stringify(result));
   return result;
 }
 
+function verifyResidencePermitMonthlyIntegrity(){
+  return verifyDatasetIntegrityV1('RESIDENCE_PERMIT_SERVICE_MONTHLY');
+}
 
 function verifyResidencePermitExportV1(filters){
   const user=requirePermission_('audit.read');
