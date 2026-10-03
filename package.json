@@ -1,7 +1,9 @@
 {
-  "name": "data-izin-tinggal",
+  "name": "dasmon-imigrasi",
   "private": true,
-  "scripts": {
-    "test": "node gas/test-shim.js"
-  }
+  "version": "0.1.0",
+  "packageManager": "npm@11",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {"lint":"eslint .","typecheck":"tsc -b","test":"vitest run","build":"npm run build -w @dasmon/web"},
+  "devDependencies": {"@eslint/js":"^9.39.1","eslint":"^9.39.1","typescript":"^5.9.3","typescript-eslint":"^8.46.3","vitest":"^3.2.4"}
 }
