@@ -397,6 +397,9 @@ assert(tvNew.includes("Menampilkan data terakhir yang valid"), 'INTAL TV preserv
 assert(tvNew.includes("async function rotateServiceSafely()"), 'INTAL TV has guarded service rotation');
 assert(tvNew.includes("TV_STATE.rotationBusy"), 'INTAL TV prevents overlapping rotation cycles');
 assert(tvNew.includes("setInterval(rotateServiceSafely,TV_RUNTIME.rotationMs)"), 'INTAL TV uses hardened rotation scheduler');
+assert(tvNew.includes("function scheduleRuntimeStart()"), 'INTAL TV uses an explicit runtime load scheduler');
+assert(tvNew.includes("window.addEventListener('load',startRuntime,{once:true})"), 'INTAL TV starts runtime from the Apps Script HTML load event');
+assert(tvNew.includes("runtimeStarted:false"), 'INTAL TV prevents duplicate runtime bootstrap');
 assert(tvNew.includes("setInterval(refreshAllRuntimeData,TV_RUNTIME.refreshMs)"), 'INTAL TV uses hardened refresh scheduler');
 assert(tvNew.includes("document.addEventListener('visibilitychange'"), 'INTAL TV refreshes after returning to visible state');
 assert(!tvNew.includes("setInterval(()=>{currentService=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];activateService(currentService);},30000)"), 'INTAL TV no longer uses unguarded rotation scheduler');
