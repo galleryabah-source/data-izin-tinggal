@@ -340,6 +340,18 @@ assert(tvCharts.includes('role="button"'), 'Distribution legend items are keyboa
 assert(tvCharts.includes('grid-template-columns:14px minmax(110px,1fr) auto'), 'Distribution legend keeps labels and percentages visually compact');
 assert(tvCharts.includes('window.__distributionData=data'), 'Interactive distribution retains canonical category data');
 assert(tvCharts.includes('window.__distributionGrandTotal'), 'Interactive distribution retains canonical grand total');
+// Interactive service drilldown invariants
+assert(tvCharts.includes('function openServiceDrilldown(key)'), 'Service bars open a dedicated drilldown');
+assert(tvCharts.includes('.service-drill-dialog{width:80vw;height:80vh'), 'Service drilldown uses the 80% viewport baseline');
+assert(tvCharts.includes('role="button" data-service-key'), 'Service rows are keyboard/click actionable');
+assert(tvCharts.includes('metric:String(key)'), 'Service drilldown reads the selected canonical service metric');
+assert(tvCharts.includes('function selectServiceDrillPeriod(period)'), 'Service drilldown supports period selection');
+assert(tvCharts.includes('function selectServiceDrillOffice(office)'), 'Service drilldown supports office selection');
+assert(tvCharts.includes('function resetServiceDrillOffice()'), 'Service drilldown can return to all offices');
+assert(tvCharts.includes('SERVICE_DRILL.baseDashboard'), 'Service drilldown preserves its canonical base snapshot');
+assert(tvCharts.includes('serviceDrillChart'), 'Service drilldown renders a period trend chart');
+assert(tvCharts.includes('serviceDrillOffices'), 'Service drilldown renders office distribution');
+assert(tvCharts.includes("if(!$('serviceDrillModal').classList.contains('hidden'))closeServiceDrilldown()"), 'Escape closes service drilldown');
 // INTAL TV P0 runtime hardening invariants
 
 assert(tvNew.includes('const TV_RUNTIME=Object.freeze'), 'INTAL TV runtime hardening contract exists');
