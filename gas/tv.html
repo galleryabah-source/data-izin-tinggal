@@ -113,6 +113,7 @@ async function refreshAllRuntimeData(){
   setRuntimeState('REFRESHING','Memvalidasi snapshot canonical...');
   try{
     const [res,pass]=await Promise.all([refreshService(SERVICES[0]),refreshService(SERVICES[1])]);
+    await loadRunningTexts();
     renderKpis();
     const active=currentService===SERVICES[0]?res:pass;
     renderRanking(active.dashboard.offices);renderTrend(active.dashboard.monthly);renderDistribution(active.dashboard.services,active.dashboard.grandTotal);renderServiceBars(active.dashboard.services);renderSummary(active.dashboard);showLayer(currentService);
