@@ -356,6 +356,11 @@ assert(tvCharts.includes('SERVICE_DRILL.baseDashboard'), 'Service drilldown pres
 assert(tvCharts.includes('serviceDrillChart'), 'Service drilldown renders a period trend chart');
 assert(tvCharts.includes('serviceDrillOffices'), 'Service drilldown renders office distribution');
 assert(tvCharts.includes("if(!$('serviceDrillModal').classList.contains('hidden'))closeServiceDrilldown()"), 'Escape closes service drilldown');
+// Data-first runtime invariants
+assert(tvCharts.includes("const dashboard=await withTimeout(call(serviceFn(key),filters),TV_RUNTIME.requestTimeoutMs);"), 'Canonical dashboard request is independent of GIS');
+assert(tvCharts.includes("return {dashboard,mapData:null,loadedAt:Date.now(),mapAvailable:false};"), 'Valid dashboard snapshot is committed without waiting for GIS');
+assert(tvCharts.includes("enrichSnapshotMap(SERVICES[0],CACHE[SERVICES[0]])"), 'GIS enrichment runs after dashboard rendering');
+assert(tvCharts.includes("setRuntimeState('ONLINE','Canonical data verified · GIS loading')"), 'Runtime reports data online before optional GIS enrichment');
 // Runtime data/GIS isolation invariants
 assert(tvCharts.includes('Promise.allSettled([call(serviceFn(key),filters),call(mapFn(key),filters)])'), 'Dashboard and GIS requests are isolated');
 assert(tvCharts.includes("dashboardResult.status!=='fulfilled'||!validDashboard(dashboardResult.value)"), 'Dashboard remains the required runtime dependency');
