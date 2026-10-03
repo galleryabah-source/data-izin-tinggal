@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "lint": "eslint .",
+    "lint": "eslint apps packages tests",
     "typecheck": "npm run build -w @dasmon/domain && tsc -p apps/web --noEmit",
     "test": "vitest run",
     "build": "npm run build -w @dasmon/web"
