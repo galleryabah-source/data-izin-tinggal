@@ -201,6 +201,15 @@ assert(tvCharts.includes('TOP 10 KANTOR'), 'INTAL TV ranking shows Top 10 office
 assert(tvCharts.includes("slice(0,10)"), 'INTAL TV renders up to 10 ranked offices');
 assert(tvCharts.includes('grid-template-columns:minmax(150px,1.08fr) minmax(120px,.92fr)'), 'INTAL TV distribution uses bounded responsive grid layout');
 assert(tvCharts.includes('function renderOfficeButtons(d)'), 'INTAL TV renders interactive office buttons');
+assert(tvCharts.includes('function openServiceBreakdown(datasetKey)'), 'INTAL TV metric panels open service breakdown modal');
+assert(tvCharts.includes('id="serviceBreakdownModal"'), 'INTAL TV service breakdown modal exists');
+assert(tvCharts.includes('width:80vw;height:80vh'), 'INTAL TV service breakdown modal targets 80 percent viewport');
+assert(tvCharts.includes('grid-template-columns:repeat(2,minmax(0,1fr))'), 'INTAL TV service breakdown uses responsive service grid');
+assert(tvCharts.includes('canonical · seluruh 10 kantor · read-only'), 'INTAL TV service breakdown is aggregated across offices');
+assert(tvCharts.includes("call(serviceFn(datasetKey),{periode:'',kantor_imigrasi:'',metric:'total'})"), 'INTAL TV service breakdown requests unfiltered canonical service data');
+assert(tvCharts.includes('services.map(x=>'), 'INTAL TV service breakdown renders service categories');
+assert(tvCharts.includes("onclick=\"openServiceBreakdown('RESIDENCE_PERMIT_SERVICE_MONTHLY')\""), 'Residence metric panel is interactive');
+assert(tvCharts.includes("onclick=\"openServiceBreakdown('PASSPORT_SERVICE_MONTHLY')\""), 'Passport metric panel is interactive');
 assert(tvCharts.includes('class="office-list"'), 'INTAL TV office list container exists');
 assert(tvCharts.includes('width:clamp(150px,15vw,300px)'), 'INTAL TV distribution donut scales responsively');
 assert(!tvCharts.includes('transform:perspective(520px)'), 'INTAL TV distribution is 2D');
