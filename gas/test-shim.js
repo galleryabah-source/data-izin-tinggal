@@ -5,6 +5,10 @@ const files=fs.readdirSync(__dirname).filter(x=>/\.(gs|js)$/.test(x));
 for(const name of files){new Function(fs.readFileSync(path.join(__dirname,name),'utf8'));}
 
 const assert=(condition,message)=>{if(!condition)throw new Error('TEST FAILED: '+message);};
+const tvHtml=fs.readFileSync(path.join(__dirname,'tv.html'),'utf8');
+const tvScriptMatch=tvHtml.match(/<script[^>]*>([\\s\\S]*?)<\\/script>/i);
+assert(!!tvScriptMatch,'INTAL TV HTML contains a script block');
+try{new Function(tvScriptMatch[1]);}catch(e){throw new Error('TEST FAILED: INTAL TV script syntax: '+e.message);}
 const read=(name)=>fs.readFileSync(path.join(__dirname,name),'utf8');
 
 const authCode=read('Auth.gs');
