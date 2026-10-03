@@ -155,23 +155,6 @@ async function preload(key){if(CACHE[key]?.dashboard&&CACHE[key]?.mapData)return
 async function loadServiceView(key,force=false){const cacheKey=filterKey(key);if(!force&&VIEW_CACHE[cacheKey])return VIEW_CACHE[cacheKey];const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};const [dashboard,mapData]=await Promise.all([call(serviceFn(key),filters),call(mapFn(key),filters)]);const L=await ensureMap();buildLayer(key,mapData,L);const result={dashboard,mapData,loadedAt:Date.now()};VIEW_CACHE[cacheKey]=result;return result;}
 async function activateService(key){currentService=key;updateSwitch();$('mapBadge').textContent=(key===SERVICES[1]?'PASPOR':'IZIN TINGGAL')+' · '+metricLabel(TV_FILTERS.metric).toUpperCase();setLive('LIVE SYSTEM · SWITCHING');try{let result;if(!TV_FILTERS.periode&&!TV_FILTERS.kantor_imigrasi&&TV_FILTERS.metric==='total'){if(!CACHE[key]?.dashboard)await preload(key);result=CACHE[key];}else{result=await loadServiceView(key);}const d=result.dashboard;renderRanking(d.offices);renderTrend(d.monthly);renderDistribution(d.services,d.grandTotal);renderServiceBars(d.services);renderOfficeButtons(d);if(result.mapData)showLayer(key);$('rankMeta').textContent=fmt(d.grandTotal)+' layanan';$('read').textContent='LAST READ · '+now()+' WIB';setLive('LIVE SYSTEM · ONLINE');}catch(e){setLive('LIVE SYSTEM · ATTENTION',true);$('ranking').innerHTML='<span class="attention">'+esc(e.message||String(e))+'</span>';}}
 
-const TV_RUNTIME=Object.freeze({refreshMs:60000,rotationMs:30000,staleAfterMs:180000,requestTimeoutMs:20000,maxFailuresBeforeAttention:2});
-const TV_STATE={status:'BOOTING',lastGoodAt:0,lastAttemptAt:0,consecutiveFailures:0,refreshing:false,rotationBusy:false};
-function setRuntimeState(status,detail){
-  TV_STATE.status=status;
-  const age=TV_STATE.lastGoodAt?Math.max(0,Date.now()-TV_STATE.lastGoodAt):null;
-  const stale=age!==null&&age>TV_RUNTIME.staleAfterMs;
-  const label=status==='ONLINE'&&!stale?'LIVE SYSTEM · ONLINE':status==='REFRESHING'?'LIVE SYSTEM · REFRESHING':status==='STALE'||stale?'LIVE SYSTEM · STALE':status==='OFFLINE'?'LIVE SYSTEM · OFFLINE':status==='DEGRADED'?'LIVE SYSTEM · DEGRADED':status==='BOOTING'?'LIVE SYSTEM · PREPARING':'LIVE SYSTEM · ATTENTION';
-  setLive(label,status!=='ONLINE'||stale);
-  $('footerMeta').textContent=detail||('Runtime · '+(stale?'stale':'healthy'));
-}
-function validDashboard(d){
-  return !!d&&Number.isFinite(Number(d.grandTotal))&&Array.isArray(d.offices)&&Array.isArray(d.monthly)&&Array.isArray(d.services)&&Number.isFinite(Number(d.rowCount));
-}
-function validMapData(d){
-  return !!d&&Array.isArray(d.markers)&&d.markers.every(m=>Number.isFinite(Number(m.latitude))&&Number.isFinite(Number(m.longitude)));
-}
-function withTimeout(p,ms){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error('TV_RUNTIME_TIMEOUT')),ms))]);}
 async function fetchVerifiedSnapshot(key){
   const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};
   const results=await withTimeout(Promise.allSettled([call(serviceFn(key),filters),call(mapFn(key),filters)]),TV_RUNTIME.requestTimeoutMs);
