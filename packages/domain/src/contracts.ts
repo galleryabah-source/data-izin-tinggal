@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const nonNegativeInteger = z.number().int().nonnegative();
 
-export const ResidencePermitRowSchema = z.object({
+export const ResidencePermitRowSchema = z.strictObject({
   periode: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), kantor_imigrasi: z.string().trim().min(1),
   bvk: nonNegativeInteger, voa: nonNegativeInteger, itk: nonNegativeInteger, itk_peralihan: nonNegativeInteger,
   itas: nonNegativeInteger, itap: nonNegativeInteger, itkt: nonNegativeInteger,
@@ -10,7 +10,7 @@ export const ResidencePermitRowSchema = z.object({
   abg: nonNegativeInteger, epo: nonNegativeInteger, imk: nonNegativeInteger, skim: nonNegativeInteger, total: nonNegativeInteger
 });
 
-export const PassportRowSchema = z.object({
+export const PassportRowSchema = z.strictObject({
   periode: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), kantor_imigrasi: z.string().trim().min(1),
   biasa_24: nonNegativeInteger, biasa_48: nonNegativeInteger, elektronik_48: nonNegativeInteger,
   e_polikarbonat: nonNegativeInteger, total: nonNegativeInteger
