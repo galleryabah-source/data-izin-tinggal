@@ -16,7 +16,7 @@ export type DatasetContractDefinition = {
   key: DatasetKey;
   version: 1;
   businessKey: readonly ["periode", "kantor_imigrasi"];
-  measures: readonly string[];
+  columns: readonly string[];\n  required: readonly string[];\n  optional: readonly string[];\n  measures: readonly string[];
   derivedTotal: "total";
   rowSchema: z.ZodType;
 };
@@ -24,12 +24,12 @@ export type DatasetContractDefinition = {
 export const DATASET_CONTRACTS: Readonly<Record<DatasetKey, DatasetContractDefinition>> = {
   RESIDENCE_PERMIT_SERVICE_MONTHLY: {
     ...RESIDENCE_PERMIT_SERVICE_MONTHLY,
-    measures: RESIDENCE_MEASURES,
+    columns: ["periode","kantor_imigrasi",...RESIDENCE_MEASURES,"total"],\n    required: ["periode","kantor_imigrasi",...RESIDENCE_MEASURES],\n    optional: ["total"],\n    measures: RESIDENCE_MEASURES,
     rowSchema: ResidencePermitRowSchema
   },
   PASSPORT_SERVICE_MONTHLY: {
     ...PASSPORT_SERVICE_MONTHLY,
-    measures: PASSPORT_MEASURES,
+    columns: ["periode","kantor_imigrasi",...PASSPORT_MEASURES,"total"],\n    required: ["periode","kantor_imigrasi",...PASSPORT_MEASURES],\n    optional: ["total"],\n    measures: PASSPORT_MEASURES,
     rowSchema: PassportRowSchema
   }
 };
