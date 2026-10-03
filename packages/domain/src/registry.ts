@@ -27,23 +27,25 @@ export type DatasetContractDefinition = {
 export const DATASET_CONTRACTS: Readonly<Record<DatasetKey, DatasetContractDefinition>> = {
   RESIDENCE_PERMIT_SERVICE_MONTHLY: {
     ...RESIDENCE_PERMIT_SERVICE_MONTHLY,
-    columns: ["periode","kantor_imigrasi",...RESIDENCE_MEASURES,"total"],
-    required: ["periode","kantor_imigrasi",...RESIDENCE_MEASURES],
+    columns: ["periode", "kantor_imigrasi", ...RESIDENCE_MEASURES, "total"],
+    required: ["periode", "kantor_imigrasi", ...RESIDENCE_MEASURES],
     optional: ["total"],
     measures: RESIDENCE_MEASURES,
     rowSchema: ResidencePermitRowSchema
   },
   PASSPORT_SERVICE_MONTHLY: {
     ...PASSPORT_SERVICE_MONTHLY,
-    columns: ["periode","kantor_imigrasi",...PASSPORT_MEASURES,"total"],
-    required: ["periode","kantor_imigrasi",...PASSPORT_MEASURES],
+    columns: ["periode", "kantor_imigrasi", ...PASSPORT_MEASURES, "total"],
+    required: ["periode", "kantor_imigrasi", ...PASSPORT_MEASURES],
     optional: ["total"],
     measures: PASSPORT_MEASURES,
     rowSchema: PassportRowSchema
   }
 };
 
-export const DATASET_KEYS = Object.freeze(Object.keys(DATASET_CONTRACTS) as DatasetKey[]);\n\nexport function getDatasetContract(key: DatasetKey): DatasetContractDefinition {
+export const DATASET_KEYS = Object.freeze(Object.keys(DATASET_CONTRACTS) as DatasetKey[]);
+
+export function getDatasetContract(key: DatasetKey): DatasetContractDefinition {
   return DATASET_CONTRACTS[key];
 }
 
