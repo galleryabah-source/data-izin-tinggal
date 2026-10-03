@@ -1,0 +1,26 @@
+name: P0 Foundation
+
+on:
+  push:
+    branches: ["dasmon-imigrasi-*"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node --version
+      - run: npm --version
+      - run: npm run dasmon:lint
+      - run: npm run dasmon:typecheck
+      - run: npm run dasmon:test
+      - run: npm run dasmon:build
