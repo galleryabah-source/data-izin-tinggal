@@ -27,12 +27,18 @@ export type DatasetContractDefinition = {
 export const DATASET_CONTRACTS: Readonly<Record<DatasetKey, DatasetContractDefinition>> = {
   RESIDENCE_PERMIT_SERVICE_MONTHLY: {
     ...RESIDENCE_PERMIT_SERVICE_MONTHLY,
-    columns: ["periode","kantor_imigrasi",...RESIDENCE_MEASURES,"total"],\n    required: ["periode","kantor_imigrasi",...RESIDENCE_MEASURES],\n    optional: ["total"],\n    measures: RESIDENCE_MEASURES,
+    columns: ["periode","kantor_imigrasi",...RESIDENCE_MEASURES,"total"],
+    required: ["periode","kantor_imigrasi",...RESIDENCE_MEASURES],
+    optional: ["total"],
+    measures: RESIDENCE_MEASURES,
     rowSchema: ResidencePermitRowSchema
   },
   PASSPORT_SERVICE_MONTHLY: {
     ...PASSPORT_SERVICE_MONTHLY,
-    columns: ["periode","kantor_imigrasi",...PASSPORT_MEASURES,"total"],\n    required: ["periode","kantor_imigrasi",...PASSPORT_MEASURES],\n    optional: ["total"],\n    measures: PASSPORT_MEASURES,
+    columns: ["periode","kantor_imigrasi",...PASSPORT_MEASURES,"total"],
+    required: ["periode","kantor_imigrasi",...PASSPORT_MEASURES],
+    optional: ["total"],
+    measures: PASSPORT_MEASURES,
     rowSchema: PassportRowSchema
   }
 };
