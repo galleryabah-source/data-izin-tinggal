@@ -16,6 +16,8 @@ function ensureOfficeReferenceSheet(){
 
 function getOfficeReferenceStatus(){
   requirePermission_('map.read');
+  const cacheKey=readCacheKey_('office-reference-status');
+  const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const ss=getDb_();
   const source=ss.getSheetByName(APP.SHEET_PREFIX+'RESIDENCE_PERMIT_SERVICE_MONTHLY');
   if(!source)throw new Error('DATASET_SHEET_NOT_FOUND: '+APP.SHEET_PREFIX+'RESIDENCE_PERMIT_SERVICE_MONTHLY');
@@ -40,7 +42,7 @@ function getOfficeReferenceStatus(){
     const lat=Number(r[ri.latitude]),lng=Number(r[ri.longitude]),address=String(r[ri.address]||'').trim(),sourceUrl=String(r[ri.source_url]||'').trim(),status=String(r[ri.status]||'').trim().toUpperCase();
     if(!address||!Number.isFinite(lat)||!Number.isFinite(lng)||lat<-90||lat>90||lng<-180||lng>180||!sourceUrl||status!=='VERIFIED')invalidOffices.push(name);
   });
-  return {ok:true,expectedOffices:expected,referenceRows:Math.max(0,rv.length-1),missingOffices,invalidOffices,ready:missingOffices.length===0&&invalidOffices.length===0};
+  return readCachePut_(cacheKey,{ok:true,expectedOffices:expected,referenceRows:Math.max(0,rv.length-1),missingOffices,invalidOffices,ready:missingOffices.length===0&&invalidOffices.length===0},60);
 }
 
 

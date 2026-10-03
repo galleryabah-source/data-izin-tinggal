@@ -8,6 +8,8 @@ function getDashboardSummary(){
 
 function getResidencePermitDashboard(filters){
   requirePermission_('dashboard.read');
+  const cacheKey=readCacheKey_('dashboard',{dataset:'RESIDENCE_PERMIT_SERVICE_MONTHLY',filters:filters||{}});
+  const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const datasetKey='RESIDENCE_PERMIT_SERVICE_MONTHLY';
   const ss=getDb_();
   const registry=ss.getSheetByName(SHEETS.DATASET_REGISTRY);
@@ -59,16 +61,7 @@ function getResidencePermitDashboard(filters){
     offices[office].rows++;
     serviceColumns.forEach(c=>services[c]+=Number(r[hi[c]]||0));
   });
-  return {
-    datasetKey,
-    rowCount:rows.length,
-    filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric,availablePeriods,availableOffices},
-    metric:requestedMetric,
-    grandTotal,
-    monthly:Object.values(monthly).sort((a,b)=>a.periode.localeCompare(b.periode)),
-    offices:Object.values(offices).sort((a,b)=>b.total-a.total),
-    services:serviceColumns.map(c=>({key:c,total:services[c]}))
-  };
+  return readCachePut_(cacheKey,{datasetKey,rowCount:rows.length,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric,availablePeriods,availableOffices},metric:requestedMetric,grandTotal,monthly:Object.values(monthly).sort((a,b)=>a.periode.localeCompare(b.periode)),offices:Object.values(offices).sort((a,b)=>b.total-a.total),services:serviceColumns.map(c=>({key:c,total:services[c]}))},READ_CACHE_TTL_SEC);
 }
 
 
@@ -80,6 +73,8 @@ function getPassportDashboard(filters){
 
 function getServiceDashboard_(datasetKey,serviceColumns,filters){
   requirePermission_('dashboard.read');
+  const cacheKey=readCacheKey_('dashboard',{dataset:datasetKey,filters:filters||{}});
+  const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const d=getActiveDatasetContract_(datasetKey);
   const values=d.sheet.getDataRange().getValues();
   if(values.length<2)return {datasetKey,rowCount:0,metric:'total',grandTotal:0,monthly:[],offices:[],services:[],filters:{periode:'',kantor_imigrasi:'',metric:'total',availablePeriods:[],availableOffices:[]}};
@@ -108,7 +103,7 @@ function getServiceDashboard_(datasetKey,serviceColumns,filters){
     offices[office].total+=metricValue;offices[office].rows++;
     serviceColumns.forEach(c=>services[c]+=Number(r[hi[c]]||0));
   });
-  return {datasetKey,rowCount:rows.length,metric:requestedMetric,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric,availablePeriods,availableOffices},grandTotal,monthly:Object.values(monthly).sort((a,b)=>a.periode.localeCompare(b.periode)),offices:Object.values(offices).sort((a,b)=>b.total-a.total),services:serviceColumns.map(c=>({key:c,total:services[c]}))};
+  return readCachePut_(cacheKey,{datasetKey,rowCount:rows.length,metric:requestedMetric,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric,availablePeriods,availableOffices},grandTotal,monthly:Object.values(monthly).sort((a,b)=>a.periode.localeCompare(b.periode)),offices:Object.values(offices).sort((a,b)=>b.total-a.total),services:serviceColumns.map(c=>({key:c,total:services[c]}))},READ_CACHE_TTL_SEC);
 }
 
 function getPassportMap(filters){
@@ -117,6 +112,8 @@ function getPassportMap(filters){
 
 function getServiceMap_(datasetKey,filters){
   requirePermission_('map.read');
+  const cacheKey=readCacheKey_('map',{dataset:datasetKey,filters:filters||{}});
+  const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const readiness=getOfficeReferenceStatus();
   if(!readiness.ready)throw new Error('OFFICE_REFERENCE_NOT_READY');
   const d=getActiveDatasetContract_(datasetKey),values=d.sheet.getDataRange().getValues();
@@ -143,7 +140,7 @@ function getServiceMap_(datasetKey,filters){
     markers[office].metricValue+=Number(r[metricIndex]||0);
     markers[office].rows++;
   });
-  return {datasetKey,rowCount:rows.length,metric:requestedMetric,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric},markers:Object.values(markers).sort((a,b)=>b.metricValue-a.metricValue)};
+  return readCachePut_(cacheKey,{datasetKey,rowCount:rows.length,metric:requestedMetric,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric},markers:Object.values(markers).sort((a,b)=>b.metricValue-a.metricValue)},READ_CACHE_TTL_SEC);
 }
 
 function csvEscape_(value){

@@ -133,13 +133,16 @@ function deleteRunningText(contentId){
 }
 function getActiveRunningTexts(){
   requirePermission_('dashboard.read');
+  const cacheKey=readCacheKey_('running-text-active');
+  const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const sh=getRunningTextSheet_();
   if(!sh)return [];
   const v=sh.getDataRange().getValues(),now=new Date();
   if(v.length<2)return [];
-  return v.slice(1).filter(r=>String(r[0]||'').trim()).map(r=>normalizeRunningTextRow_(r,v[0])).filter(x=>{
+  const result=v.slice(1).filter(r=>String(r[0]||'').trim()).map(r=>normalizeRunningTextRow_(r,v[0])).filter(x=>{
     if(x.status!=='ACTIVE')return false;
     const start=x.startAt?new Date(x.startAt).getTime():NaN,end=x.endAt?new Date(x.endAt).getTime():NaN,t=now.getTime();
     return (!Number.isFinite(start)||t>=start)&&(!Number.isFinite(end)||t<=end);
   }).sort((a,b)=>a.priority-b.priority||a.content.localeCompare(b.content)).map(x=>x.content);
+  return readCachePut_(cacheKey,result,10);
 }
