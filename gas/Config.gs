@@ -24,7 +24,10 @@ const DATASET_CONTRACTS = Object.freeze({
 });
 function getDb_(){const id=PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');if(!id)throw new Error('SPREADSHEET_ID belum dikonfigurasi. Jalankan setupApp().');return SpreadsheetApp.openById(id);}
 const READ_CACHE_TTL_SEC=10;
+const READ_CACHE_GENERATION_KEY='INTAL_READ_CACHE_GENERATION';
+function getReadCacheGeneration_(){const value=Number(PropertiesService.getScriptProperties().getProperty(READ_CACHE_GENERATION_KEY)||0);return Number.isFinite(value)&&value>=0?value:0;}
+function bumpReadCacheGeneration_(){const props=PropertiesService.getScriptProperties(),next=getReadCacheGeneration_()+1;props.setProperty(READ_CACHE_GENERATION_KEY,String(next));return next;}
 function readCacheGet_(key){try{const raw=CacheService.getScriptCache().get(String(key));return raw?JSON.parse(raw):null;}catch(e){return null;}}
 function readCachePut_(key,value,ttl){try{const raw=JSON.stringify(value);if(raw.length>90000) return value;CacheService.getScriptCache().put(String(key),raw,Math.max(1,Math.min(600,Number(ttl)||READ_CACHE_TTL_SEC)));}catch(e){}return value;}
-function readCacheKey_(scope,payload){return 'INTAL:v1:'+String(scope)+':'+JSON.stringify(payload||{});}
+function readCacheKey_(scope,payload){return 'INTAL:v2:g'+getReadCacheGeneration_()+':'+String(scope)+':'+JSON.stringify(payload||{});}
 function nowIso_(){return Utilities.formatDate(new Date(),APP.TZ,"yyyy-MM-dd'T'HH:mm:ssXXX");}
