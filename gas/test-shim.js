@@ -264,6 +264,17 @@ assert(tvCharts.includes('width:clamp(150px,15vw,300px)'), 'INTAL TV donut scale
 assert(tvCharts.includes('padding:clamp(8px,1.2vw,16px) clamp(10px,1.5vw,20px) clamp(14px,1.8vw,22px)'), 'INTAL TV distribution group has safe vertical centering space');
 assert(tvCharts.includes('font-size:clamp(9px,.75vw,14px)'), 'INTAL TV distribution legend scales responsively');
 
+// INTAL TV office list interaction invariants
+assert(tvCharts.includes('overflow-y:auto;overflow-x:hidden'), 'INTAL TV office list is a vertical scroll container');
+assert(tvCharts.includes('overscroll-behavior:contain'), 'INTAL TV office list contains scroll chaining');
+assert(tvCharts.includes('-webkit-overflow-scrolling:touch'), 'INTAL TV office list supports touch momentum scrolling');
+assert(tvCharts.includes('touch-action:pan-y'), 'INTAL TV office list permits vertical touch gestures');
+assert(tvCharts.includes('cursor:grab'), 'INTAL TV office list exposes drag affordance');
+assert(tvCharts.includes('function enableOfficeListInteraction()'), 'INTAL TV office list has explicit pointer interaction');
+assert(tvCharts.includes("tabindex=\"0\""), 'INTAL TV office list can receive keyboard focus');
+assert(tvCharts.includes("e.key==='ArrowDown'"), 'INTAL TV office list supports ArrowDown keyboard scrolling');
+assert(tvCharts.includes("e.key==='PageDown'"), 'INTAL TV office list supports PageDown keyboard scrolling');
+
 // INTAL TV P0 runtime hardening invariants
 
 assert(tvNew.includes('const TV_RUNTIME=Object.freeze'), 'INTAL TV runtime hardening contract exists');
