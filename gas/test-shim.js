@@ -232,7 +232,8 @@ assert(tvCharts.includes('ticker-item::after'), 'INTAL TV running text has blue 
 assert(tvCharts.includes('getActiveRunningTexts'), 'INTAL TV running text reads active database content');
 const codeSource=read('Code.gs');
 assert(codeSource.includes('function getRunningTextSheet_(){return getDb_().getSheetByName(SHEETS.RUNNING_TEXTS)||null;}'), 'Running text read path has non-mutating sheet lookup');
-const activeFn=codeSource.slice(codeSource.indexOf('function getActiveRunningTexts()'),codeSource.indexOf('function listRunningTextsAdmin()'));
+const activeStart=codeSource.indexOf('function getActiveRunningTexts()');
+const activeFn=codeSource.slice(activeStart,activeStart+1400);
 assert(activeFn.includes('getRunningTextSheet_()')&&!activeFn.includes('ensureRunningTextSheet_()'), 'Running text read endpoint cannot create storage');
 assert(codeSource.includes("if(startAt&&!Number.isFinite(startMs))throw new Error('Waktu mulai tidak valid.')"), 'Running text validates start date');
 assert(codeSource.includes("if(endAt&&!Number.isFinite(endMs))throw new Error('Waktu selesai tidak valid.')"), 'Running text validates end date');
