@@ -6,7 +6,13 @@
 - [ ] business-key uniqueness
 - [ ] derived totals
 
-### P1 Contract Certification\n\nP1 is certifiable only when the registry certification suite proves every registered dataset has a coherent v1 contract, exact legacy column parity, strict schema boundaries, canonical business keys, and derived-total integrity. The certification must be evidenced by a green CI run.\n\n## Data
+### P1 Contract Certification
+
+P1 is certifiable only when the registry certification suite proves every registered dataset has a coherent v1 contract, exact legacy column parity, strict schema boundaries, canonical business keys, and derived-total integrity. The certification must be evidenced by a green CI run.\n\n### P2 PostgreSQL Foundation
+
+P2 is certifiable only after the versioned migration is executed against a disposable PostgreSQL/PostGIS database and schema tests prove the required tables, constraints, indexes, derived totals, provenance, audit evidence, and RLS boundaries. The current repository schema contract is not itself evidence of database execution.
+
+## Data
 - [ ] source snapshot
 - [ ] row parity
 - [ ] aggregate parity
