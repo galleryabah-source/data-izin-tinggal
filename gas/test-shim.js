@@ -200,12 +200,15 @@ assert(tvCharts.includes('class="donut"'), 'INTAL TV has donut visualization');
 assert(tvCharts.includes('TOP 10 KANTOR'), 'INTAL TV ranking shows Top 10 offices');
 assert(tvCharts.includes("slice(0,10)"), 'INTAL TV renders up to 10 ranked offices');
 assert(tvCharts.includes('grid-template-columns:minmax(150px,1.08fr) minmax(120px,.92fr)'), 'INTAL TV distribution uses bounded responsive grid layout');
-assert(tvCharts.includes('summary-icon'), 'INTAL TV summary cards include visual icons');
+assert(tvCharts.includes('function renderOfficeButtons(d)'), 'INTAL TV renders interactive office buttons');
+assert(tvCharts.includes('class="office-list"'), 'INTAL TV office list container exists');
 assert(tvCharts.includes('width:clamp(150px,15vw,300px)'), 'INTAL TV distribution donut scales responsively');
 assert(!tvCharts.includes('transform:perspective(520px)'), 'INTAL TV distribution is 2D');
 assert(tvCharts.includes('--donut-bg'), 'INTAL TV donut segments are driven by responsive CSS variables');
 assert(tvCharts.includes('.donut:before{content:none}'), 'INTAL TV donut has no 3D extrusion layer');
-assert(tvCharts.includes('width:38px;height:38px'), 'INTAL TV summary icons fit the bounded summary panel');
+assert(tvCharts.includes('width:75vw;height:75vh'), 'INTAL TV office detail modal targets 75 percent viewport');
+assert(tvCharts.includes('function openOfficeDetail(office)'), 'INTAL TV office detail handler exists');
+assert(tvCharts.includes('kantor_imigrasi:office'), 'INTAL TV office detail uses canonical office filter');
 assert(tvCharts.includes('grid-template-columns:minmax(70px,.84fr) minmax(90px,1fr) 52px'), 'INTAL TV service rows fit the readable compact service panel');
 assert(tvCharts.includes('all.slice(0,8)'), 'INTAL TV service list caps visible rows to prevent clipping');
 assert(tvCharts.includes('service-more'), 'INTAL TV service list exposes hidden-row count');
@@ -225,19 +228,19 @@ assert(tvNew.includes('function buildLayer'), 'INTAL TV has visual GIS marker la
 assert(tvNew.includes('Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])])'), 'INTAL TV stages dashboard and GIS snapshots in parallel');
 
 // INTAL TV readable/compact visual regression invariants
-assert(tvCharts.includes('font-size:clamp(20px,1.65vw,27px)'), 'INTAL TV summary KPI typography scales responsively');
+assert(tvCharts.includes('font-size:10px;font-weight:1000'), 'INTAL TV office totals retain compact responsive typography');
 assert(tvCharts.includes('font-size:clamp(12px,1vw,17px)'), 'INTAL TV running text typography scales responsively');
 assert(tvCharts.includes('background:#d62f3f'), 'INTAL TV running text LIVE badge remains red');
-assert(tvCharts.includes('height:auto;min-height:0;box-sizing:border-box;overflow:hidden'), 'INTAL TV summary grid prevents bottom clipping');
+assert(tvCharts.includes('overflow-y:auto;overflow-x:hidden'), 'INTAL TV office list prevents vertical panel clipping');
 
 // Summary grid overflow regression
-assert(tvCharts.includes('grid-template-rows:repeat(2,minmax(0,1fr))'), 'INTAL TV summary uses bounded two-row grid');
-assert(tvCharts.includes('min-height:0;overflow:hidden;box-sizing:border-box'), 'INTAL TV summary container is shrink-safe');
-assert(tvCharts.includes('height:auto;min-width:0;box-sizing:border-box;overflow:hidden'), 'INTAL TV summary cards do not force 100% height overflow');
+assert(tvCharts.includes('grid-template-columns:1fr'), 'INTAL TV office list keeps one office button per row');
+assert(tvCharts.includes('min-height:0;overflow-y:auto'), 'INTAL TV office list remains shrink-safe and scrollable');
+assert(tvCharts.includes('.office-btn{width:100%'), 'INTAL TV office controls fill the bounded panel width');
 
 // INTAL TV summary overflow and continuous running-text regression invariants
-assert(tvCharts.includes('grid-template-rows:auto minmax(0,1fr)'), 'INTAL TV summary reserves header before content grid');
-assert(tvCharts.includes('height:auto;min-height:0;box-sizing:border-box;overflow:hidden'), 'INTAL TV summary grid no longer uses full panel height');
+assert(tvCharts.includes('grid-template-rows:auto minmax(0,1fr)'), 'INTAL TV office panel reserves header before scroll content');
+assert(tvCharts.includes('class="office-btn"'), 'INTAL TV office entries use dedicated interactive controls');
 assert(tvCharts.includes('animation:tickerLoop 45s linear infinite'), 'INTAL TV running text uses continuous linear animation');
 assert(tvCharts.includes('ticker-item::after'), 'INTAL TV running text has blue separator bullets');
 assert(tvCharts.includes('getActiveRunningTexts'), 'INTAL TV running text reads active database content');
