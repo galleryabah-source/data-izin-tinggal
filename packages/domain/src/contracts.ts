@@ -31,5 +31,22 @@ export function passportDerivedTotal(row: Omit<PassportRow,"total">): number {
   return PASSPORT_MEASURES.reduce((sum,key)=>sum+row[key],0);
 }
 export function businessKey(periode:string,kantor_imigrasi:string):string {
-  return periode+"::"+kantor_imigrasi.trim();
+  return periode.trim()+"::"+kantor_imigrasi.trim();
+}
+
+export function hasMatchingDerivedTotal(
+  row: (Omit<ResidencePermitRow, "total"> | Omit<PassportRow, "total">) & { total: number }
+): boolean {
+  const derived = "bvk" in row
+    ? residenceDerivedTotal(row as Omit<ResidencePermitRow, "total">)
+    : passportDerivedTotal(row as Omit<PassportRow, "total">);
+  return row.total === derived;
+}
+
+export function assertMatchingDerivedTotal(
+  row: (Omit<ResidencePermitRow, "total"> | Omit<PassportRow, "total">) & { total: number }
+): void {
+  if (!hasMatchingDerivedTotal(row)) {
+    throw new Error("DERIVED_TOTAL_MISMATCH");
+  }
 }
