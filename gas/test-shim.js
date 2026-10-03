@@ -190,7 +190,7 @@ assert(codeGs.includes("requirePermission_('admin.config')"), 'Running text writ
 assert(codeGs.includes("function getActiveRunningTexts()") && codeGs.includes("requirePermission_('dashboard.read')"), 'TV active running text read path is RBAC protected');
 assert(codeGs.includes("readCacheKey_('running-text-active')") && codeGs.includes('readCachePut_(cacheKey,result,10)'), 'TV running text read path uses bounded cache');
 assert(codeGs.includes("view==='tv'?'tv':'index'"), 'doGet routes TV to dedicated tv.html entry');
-assert(read('tv.html').includes('INTAL') && read('tv.html').includes('COMMAND DISPLAY'), 'Dedicated TV document exists');
+assert(read('tv.html').includes('KANTOR WILAYAH DIREKTORAT JENDERAL IMIGRASI') && read('tv.html').includes('JAWA BARAT'), 'Dedicated TV document exists');
 assert(!/<script[^>]+src=["'][^"']*leaflet\.js/i.test(read('tv.html')), 'Dedicated TV entry does not block on Leaflet CDN');
 const tv=read('tv.html');
 assert(!/<link[^>]+rel=["']stylesheet["'][^>]+href=["'][^"']*leaflet\.css/i.test(tv), 'Dedicated TV entry does not block on Leaflet CSS CDN');
