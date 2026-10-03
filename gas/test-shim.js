@@ -211,7 +211,7 @@ assert(!tvNew.includes('>RUNNING TEXT</'), 'INTAL TV does not display technical 
 assert(tvNew.includes('function renderDistribution'), 'INTAL TV has visual service distribution');
 assert(tvNew.includes('function renderTrend'), 'INTAL TV has visual trend chart');
 assert(tvNew.includes('function buildLayer'), 'INTAL TV has visual GIS marker layer');
-assert(tvNew.includes('Promise.all([call(serviceFn(key),{}),call(mapFn(key),{metric:\'total\'})])'), 'INTAL TV keeps dashboard and GIS preload parallel');
+assert(tvNew.includes('Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])])'), 'INTAL TV stages dashboard and GIS snapshots in parallel');
 
 // INTAL TV readable/compact visual regression invariants
 assert(tvCharts.includes('font-size:clamp(20px,1.65vw,27px)'), 'INTAL TV summary KPI typography scales responsively');
