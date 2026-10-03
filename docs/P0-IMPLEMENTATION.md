@@ -18,6 +18,3 @@ P0 establishes a runnable professional application foundation without touching t
 P0 is complete only when CI is green on the implementation branch.
 
 The domain package deliberately contains no database or UI dependencies. PostgreSQL/PostGIS integration starts in P2 after P1 contract extraction and certification.
-
-## Verification note
-The workflow uses `npm ci` once a committed lockfile is present. CI evidence must be green before P0 is certified.
