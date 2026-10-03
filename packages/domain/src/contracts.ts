@@ -27,7 +27,7 @@ export type PassportRow = z.infer<typeof PassportRowSchema>;
 export function residenceDerivedTotal(row: Omit<ResidencePermitRow,"total">): number {
   return RESIDENCE_MEASURES.reduce((sum,key)=>sum+row[key],0);
 }
-export function passportDerivedTotal(row: Omit<PassportPermitRow,"total">): number {
+export function passportDerivedTotal(row: Omit<PassportRow,"total">): number {
   return PASSPORT_MEASURES.reduce((sum,key)=>sum+row[key],0);
 }
 export function businessKey(periode:string,kantor_imigrasi:string):string {
