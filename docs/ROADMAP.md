@@ -170,12 +170,16 @@ Evidence chain:
 
 Phase 10.3 is now closed. The next controlled capability is the presentation-only **INTAL TV Design No. 6**, which must continue to consume the canonical analytics engine without creating a second data path.
 
+### INTAL TV implementation status
+
+INTAL TV Design No. 6 is implemented on the canonical production application as a read-only presentation layer. The implementation consumes the existing analytics/canonical monthly lifecycle and does not create a competing data path. The remaining acceptance step is live runtime UAT against the canonical deployment, including data rendering, clock/status initialization, service switching, trend interaction, GIS rendering, and graceful failure states.
+
 ### Phase 10 — Advanced platform capabilities
 - [ ] Cross-service reporting where metrics are semantically compatible
 - [ ] Advanced drill-down and analytics
 - [x] Service-aware geographic analytics — Phase 10.3 CLOSED / PASS
 - [ ] Document / knowledge integration
 - [ ] Controlled notifications and automation
-- [ ] INTAL TV Design No. 6 — presentation-only command display
+- [x] INTAL TV Design No. 6 — presentation-only command display implemented; runtime UAT remains a separate acceptance gate
 
 **Implementation rule:** future phases remain gated. No future service is enabled merely because it is documented. A new dataset family must pass contract, validation, deployment, integrity, export, backup, and runtime evidence gates without weakening the existing production baseline.
