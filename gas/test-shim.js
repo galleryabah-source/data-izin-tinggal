@@ -193,6 +193,9 @@ assert(codeGs.includes("view==='tv'?'tv':'index'"), 'doGet routes TV to dedicate
 assert(read('tv.html').includes('INTAL') && read('tv.html').includes('COMMAND DISPLAY'), 'Dedicated TV document exists');
 assert(!/<script[^>]+src=["'][^"']*leaflet\.js/i.test(read('tv.html')), 'Dedicated TV entry does not block on Leaflet CDN');
 const tv=read('tv.html');
+const tvScriptMatch=tv.match(/<script>([\\s\\S]*?)<\\/script>/);
+assert(tvScriptMatch&&tvScriptMatch[1], 'INTAL TV contains executable runtime script');
+try{new Function(tvScriptMatch[1]);}catch(e){throw new Error('INTAL TV runtime script syntax error: '+e.message);}
 assert(!/<link[^>]+rel=["']stylesheet["'][^>]+href=["'][^"']*leaflet\.css/i.test(tv), 'Dedicated TV entry does not block on Leaflet CSS CDN');
 assert(tv.includes('function loadLeafletCss()') && tv.includes("document.createElement('link')"), 'INTAL TV loads Leaflet CSS lazily after shell render');
 assert(tv.includes('const [L]=await Promise.all([loadLeaflet(),loadLeafletCss()])'), 'INTAL TV waits for Leaflet assets only at GIS initialization');
