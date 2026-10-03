@@ -356,6 +356,12 @@ assert(tvCharts.includes('SERVICE_DRILL.baseDashboard'), 'Service drilldown pres
 assert(tvCharts.includes('serviceDrillChart'), 'Service drilldown renders a period trend chart');
 assert(tvCharts.includes('serviceDrillOffices'), 'Service drilldown renders office distribution');
 assert(tvCharts.includes("if(!$('serviceDrillModal').classList.contains('hidden'))closeServiceDrilldown()"), 'Escape closes service drilldown');
+// Runtime data/GIS isolation invariants
+assert(tvCharts.includes('Promise.allSettled([call(serviceFn(key),filters),call(mapFn(key),filters)])'), 'Dashboard and GIS requests are isolated');
+assert(tvCharts.includes("dashboardResult.status!=='fulfilled'||!validDashboard(dashboardResult.value)"), 'Dashboard remains the required runtime dependency');
+assert(tvCharts.includes("const mapData=mapResult.status==='fulfilled'&&validMapData(mapResult.value)?mapResult.value:null"), 'GIS failure cannot invalidate a valid dashboard snapshot');
+assert(tvCharts.includes('function ensureSnapshotMap(key,snapshot)'), 'GIS rendering is best-effort after canonical data commit');
+assert(tvCharts.includes("if(!active||!validDashboard(active.dashboard))"), 'Boot validity requires canonical dashboard data, not GIS availability');
 // INTAL TV P0 runtime hardening invariants
 
 assert(tvNew.includes('const TV_RUNTIME=Object.freeze'), 'INTAL TV runtime hardening contract exists');
