@@ -204,7 +204,7 @@ assert(perfTv.includes('async function preload('), 'INTAL TV preloads service da
 assert(perfTv.includes('const CACHE={}'), 'INTAL TV has client-side service cache');
 assert(perfTv.includes('function showLayer'), 'INTAL TV swaps cached GIS layers');
 assert(perfTv.includes('async function rotateServiceSafely()'), 'INTAL TV rotates service presentation through guarded runtime seam');
-assert(perfTv.includes('Promise.all([call(serviceFn(key),{}),call(mapFn(key),{metric:\'total\'})])'), 'INTAL TV loads dashboard and GIS data in parallel');
+assert(perfTv.includes('Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])])'), 'INTAL TV stages dashboard and GIS snapshots in parallel');
 const tvNew=read('tv.html');
 assert(tvNew.includes('getActiveRunningTexts'), 'INTAL TV loads managed running text content');
 assert(!tvNew.includes('>RUNNING TEXT</'), 'INTAL TV does not display technical RUNNING TEXT label');
