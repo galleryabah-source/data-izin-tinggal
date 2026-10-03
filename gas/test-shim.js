@@ -356,6 +356,12 @@ assert(tvCharts.includes('SERVICE_DRILL.baseDashboard'), 'Service drilldown pres
 assert(tvCharts.includes('serviceDrillChart'), 'Service drilldown renders a period trend chart');
 assert(tvCharts.includes('serviceDrillOffices'), 'Service drilldown renders office distribution');
 assert(tvCharts.includes("if(!$('serviceDrillModal').classList.contains('hidden'))closeServiceDrilldown()"), 'Escape closes service drilldown');
+// Runtime data/GIS isolation invariants
+assert(tvCharts.includes('Promise.allSettled([call(serviceFn(key),filters),call(mapFn(key),filters)])'), 'Dashboard and GIS requests are isolated');
+assert(tvCharts.includes("dashboardResult.status!=='fulfilled'||!validDashboard(dashboardResult.value)"), 'Dashboard remains the required runtime dependency');
+assert(tvCharts.includes("const mapData=mapResult.status==='fulfilled'&&validMapData(mapResult.value)?mapResult.value:null"), 'GIS failure cannot invalidate a valid dashboard snapshot');
+assert(tvCharts.includes('function ensureSnapshotMap(key,snapshot)'), 'GIS rendering is best-effort after canonical data commit');
+assert(tvCharts.includes("if(!active||!validDashboard(active.dashboard))"), 'Boot validity requires canonical dashboard data, not GIS availability');
 // INTAL TV P0 runtime hardening invariants
 
 assert(tvNew.includes('const TV_RUNTIME=Object.freeze'), 'INTAL TV runtime hardening contract exists');
@@ -365,14 +371,14 @@ assert(tvNew.includes("requestTimeoutMs:20000"), 'INTAL TV request timeout is bo
 assert(tvNew.includes("function validDashboard(d)"), 'INTAL TV validates dashboard snapshots before commit');
 assert(tvNew.includes("function validMapData(d)"), 'INTAL TV validates GIS snapshots before commit');
 assert(tvNew.includes("async function fetchVerifiedSnapshot(key)"), 'INTAL TV has verified snapshot fetch seam');
-assert(tvNew.includes("Promise.all([call(serviceFn(key),filters),call(mapFn(key),filters)])"), 'INTAL TV validates dashboard and GIS in parallel');
+assert(tvNew.includes("Promise.allSettled([call(serviceFn(key),filters),call(mapFn(key),filters)])"), 'INTAL TV isolates dashboard and GIS requests in parallel');
 assert(tvNew.includes("async function refreshAllRuntimeData()"), 'INTAL TV has atomic all-service refresh cycle');
 assert(tvNew.includes("async function stageServiceSnapshot(key)"), 'INTAL TV stages snapshots before commit');
 assert(tvNew.includes("function commitServiceSnapshot(key,snapshot,L)"), 'INTAL TV commits staged snapshots through one seam');
 assert(tvNew.includes("const [res,pass]=await Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])])"), 'INTAL TV stages both services before commit');
-assert(tvNew.includes("commitServiceSnapshot(SERVICES[0],res,L);") && tvNew.includes("commitServiceSnapshot(SERVICES[1],pass,L);"), 'INTAL TV commits both service snapshots only after staging succeeds');
+assert(tvNew.includes("commitServiceSnapshot(SERVICES[0],res,null);") && tvNew.includes("commitServiceSnapshot(SERVICES[1],pass,null);"), 'INTAL TV commits both valid dashboard snapshots before optional GIS rendering');
 assert(tvNew.includes("await refreshAllRuntimeData();"), 'INTAL TV bootstrap uses atomic runtime refresh');
-assert(tvNew.includes("async function preload(key){if(CACHE[key]?.dashboard&&CACHE[key]?.mapData)return CACHE[key];const snapshot=await stageServiceSnapshot(key);"), 'INTAL TV preload stages before commit');
+assert(tvNew.includes("async function preload(key){\n  if(CACHE[key]?.dashboard)return CACHE[key];"), 'INTAL TV preload requires canonical dashboard data only');
 assert(!tvNew.includes("const [res,pass]=await Promise.all([refreshService(SERVICES[0]),refreshService(SERVICES[1])])"), 'INTAL TV no longer mutates cache independently during atomic refresh');
 
 assert(tvNew.includes("await loadRunningTexts();\n    renderKpis();"), 'INTAL TV refresh cycle refreshes managed running text content');

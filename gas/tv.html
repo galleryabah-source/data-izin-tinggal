@@ -153,7 +153,42 @@ function showLayer(key){if(!map||!layers[key])return;Object.keys(layers).forEach
 function filterKey(key){return key+'|'+TV_FILTERS.periode+'|'+TV_FILTERS.kantor_imigrasi+'|'+TV_FILTERS.metric;}
 async function preload(key){if(CACHE[key]?.dashboard&&CACHE[key]?.mapData)return CACHE[key];const snapshot=await stageServiceSnapshot(key);const L=await ensureMap();commitServiceSnapshot(key,snapshot,L);renderKpis();return CACHE[key];}
 async function loadServiceView(key,force=false){const cacheKey=filterKey(key);if(!force&&VIEW_CACHE[cacheKey])return VIEW_CACHE[cacheKey];const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};const [dashboard,mapData]=await Promise.all([call(serviceFn(key),filters),call(mapFn(key),filters)]);const L=await ensureMap();buildLayer(key,mapData,L);const result={dashboard,mapData,loadedAt:Date.now()};VIEW_CACHE[cacheKey]=result;return result;}
-async function activateService(key){currentService=key;updateSwitch();$('mapBadge').textContent=(key===SERVICES[1]?'PASPOR':'IZIN TINGGAL')+' · '+metricLabel(TV_FILTERS.metric).toUpperCase();setLive('LIVE SYSTEM · SWITCHING');try{let result;if(!TV_FILTERS.periode&&!TV_FILTERS.kantor_imigrasi&&TV_FILTERS.metric==='total'){if(!CACHE[key]?.dashboard)await preload(key);result={dashboard:CACHE[key].dashboard,mapData:CACHE[key].mapData};}else{result=await loadServiceView(key);}const d=result.dashboard;renderRanking(d.offices);renderTrend(d.monthly);renderDistribution(d.services,d.grandTotal);renderServiceBars(d.services);renderOfficeButtons(d);showLayer(key);$('rankMeta').textContent=fmt(d.grandTotal)+' layanan';$('read').textContent='LAST READ · '+now()+' WIB';setLive('LIVE SYSTEM · ONLINE');}catch(e){setLive('LIVE SYSTEM · ATTENTION',true);$('ranking').innerHTML='<span class="attention">'+esc(e.message||String(e))+'</span>';}}
+async function activateService(key){currentService=key;updateSwitch();$('mapBadge').textContent=(key===SERVICES[1]?'PASPOR':'IZIN TINGGAL')+' · '+metricLabel(TV_FILTERS.metric).toUpperCase();setLive('LIVE SYSTEM · SWITCHING');try{let result;if(!TV_FILTERS.periode&&!TV_FILTERS.kantor_imigrasi&&TV_FILTERS.metric==='total'){if(!CACHE[key]?.dashboard)await preload(key);result=CACHE[key];}else{result=await loadServiceView(key);}const d=result.dashboard;renderRanking(d.offices);renderTrend(d.monthly);renderDistribution(d.services,d.grandTotal);renderServiceBars(d.services);renderOfficeButtons(d);if(result.mapData)showLayer(key);$('rankMeta').textContent=fmt(d.grandTotal)+' layanan';$('read').textContent='LAST READ · '+now()+' WIB';setLive('LIVE SYSTEM · ONLINE');}catch(e){setLive('LIVE SYSTEM · ATTENTION',true);$('ranking').innerHTML='<span class="attention">'+esc(e.message||String(e))+'</span>';}}
+
+async function fetchVerifiedSnapshot(key){
+  const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};
+  const results=await withTimeout(Promise.allSettled([call(serviceFn(key),filters),call(mapFn(key),filters)]),TV_RUNTIME.requestTimeoutMs);
+  const dashboardResult=results[0],mapResult=results[1];
+  if(dashboardResult.status!=='fulfilled'||!validDashboard(dashboardResult.value))throw new Error(dashboardResult.status==='rejected'?'TV_RUNTIME_DASHBOARD_FAILED':'TV_RUNTIME_INVALID_DASHBOARD');
+  const mapData=mapResult.status==='fulfilled'&&validMapData(mapResult.value)?mapResult.value:null;
+  return {dashboard:dashboardResult.value,mapData,loadedAt:Date.now(),mapAvailable:!!mapData};
+}
+async function stageServiceSnapshot(key){return fetchVerifiedSnapshot(key);}
+function commitServiceSnapshot(key,snapshot,L){
+  CACHE[key]={dashboard:snapshot.dashboard,mapData:snapshot.mapData,loadedAt:snapshot.loadedAt,mapAvailable:snapshot.mapAvailable};
+  VIEW_CACHE[filterKey(key)]=snapshot;
+  if(L&&snapshot.mapData)buildLayer(key,snapshot.mapData,L);
+}
+async function ensureSnapshotMap(key,snapshot){
+  if(!snapshot?.mapData)return false;
+  try{const L=await ensureMap();buildLayer(key,snapshot.mapData,L);return true;}catch(e){return false;}
+}
+async function preload(key){
+  if(CACHE[key]?.dashboard)return CACHE[key];
+  const snapshot=await stageServiceSnapshot(key);
+  commitServiceSnapshot(key,snapshot,null);
+  await ensureSnapshotMap(key,snapshot);
+  renderKpis();
+  return CACHE[key];
+}
+async function loadServiceView(key,force=false){
+  const cacheKey=filterKey(key);
+  if(!force&&VIEW_CACHE[cacheKey])return VIEW_CACHE[cacheKey];
+  const snapshot=await stageServiceSnapshot(key);
+  VIEW_CACHE[cacheKey]=snapshot;
+  await ensureSnapshotMap(key,snapshot);
+  return snapshot;
+}
 
 const TV_RUNTIME=Object.freeze({refreshMs:60000,rotationMs:30000,staleAfterMs:180000,requestTimeoutMs:20000,maxFailuresBeforeAttention:2});
 const TV_STATE={status:'BOOTING',lastGoodAt:0,lastAttemptAt:0,consecutiveFailures:0,refreshing:false,rotationBusy:false};
@@ -172,37 +207,23 @@ function validMapData(d){
   return !!d&&Array.isArray(d.markers)&&d.markers.every(m=>Number.isFinite(Number(m.latitude))&&Number.isFinite(Number(m.longitude)));
 }
 function withTimeout(p,ms){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error('TV_RUNTIME_TIMEOUT')),ms))]);}
-async function fetchVerifiedSnapshot(key){
-  const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};
-  const [dashboard,mapData]=await withTimeout(Promise.all([call(serviceFn(key),filters),call(mapFn(key),filters)]),TV_RUNTIME.requestTimeoutMs);
-  if(!validDashboard(dashboard))throw new Error('TV_RUNTIME_INVALID_DASHBOARD');
-  if(!validMapData(mapData))throw new Error('TV_RUNTIME_INVALID_MAP');
-  return {dashboard,mapData,loadedAt:Date.now()};
-}
-async function stageServiceSnapshot(key){
-  return fetchVerifiedSnapshot(key);
-}
-function commitServiceSnapshot(key,snapshot,L){
-  buildLayer(key,snapshot.mapData,L);
-  CACHE[key]={dashboard:snapshot.dashboard,mapData:snapshot.mapData,loadedAt:snapshot.loadedAt};
-  VIEW_CACHE[filterKey(key)]=snapshot;
-}
 async function refreshAllRuntimeData(){
   if(TV_STATE.refreshing)return;
   TV_STATE.refreshing=true;TV_STATE.lastAttemptAt=Date.now();
   setRuntimeState('REFRESHING','Memvalidasi snapshot canonical...');
   try{
     const [res,pass]=await Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])]);
-    const L=await ensureMap();
-    commitServiceSnapshot(SERVICES[0],res,L);
-    commitServiceSnapshot(SERVICES[1],pass,L);
+    commitServiceSnapshot(SERVICES[0],res,null);
+    commitServiceSnapshot(SERVICES[1],pass,null);
     await loadRunningTexts();
     renderKpis();
     const active=currentService===SERVICES[0]?res:pass;
-    renderRanking(active.dashboard.offices);renderTrend(active.dashboard.monthly);renderDistribution(active.dashboard.services,active.dashboard.grandTotal);renderServiceBars(active.dashboard.services);renderOfficeButtons(active.dashboard);showLayer(currentService);
+    renderRanking(active.dashboard.offices);renderTrend(active.dashboard.monthly);renderDistribution(active.dashboard.services,active.dashboard.grandTotal);renderServiceBars(active.dashboard.services);renderOfficeButtons(active.dashboard);
+    await ensureSnapshotMap(currentService,active);
+    showLayer(currentService);
     TV_STATE.lastGoodAt=Date.now();TV_STATE.consecutiveFailures=0;
     $('read').textContent='LAST READ · '+now()+' WIB';
-    setRuntimeState('ONLINE','Canonical snapshot verified · 10 Kantor · 8 Periode · read-only');
+    setRuntimeState('ONLINE',active.mapAvailable?'Canonical snapshot verified · GIS + data online':'Canonical data verified · GIS unavailable');
   }catch(e){
     TV_STATE.consecutiveFailures++;
     const stale=TV_STATE.lastGoodAt>0;
@@ -214,16 +235,17 @@ async function rotateServiceSafely(){
   TV_STATE.rotationBusy=true;
   try{
     const next=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];
-    if(!CACHE[next]?.dashboard||!CACHE[next]?.mapData){
+    if(!CACHE[next]?.dashboard){
       const staged=await stageServiceSnapshot(next);
-      const L=await ensureMap();
-      commitServiceSnapshot(next,staged,L);
+      commitServiceSnapshot(next,staged,null);
+      await ensureSnapshotMap(next,staged);
     }
     const snapshot=CACHE[next];
-    if(!validDashboard(snapshot.dashboard)||!validMapData(snapshot.mapData))throw new Error('TV_RUNTIME_INVALID_CACHED_SNAPSHOT');
+    if(!validDashboard(snapshot.dashboard))throw new Error('TV_RUNTIME_INVALID_CACHED_SNAPSHOT');
     currentService=next;updateSwitch();
     $('mapBadge').textContent=(next===SERVICES[1]?'PASPOR':'IZIN TINGGAL')+' · '+metricLabel(TV_FILTERS.metric).toUpperCase();
-    renderRanking(snapshot.dashboard.offices);renderTrend(snapshot.dashboard.monthly);renderDistribution(snapshot.dashboard.services,snapshot.dashboard.grandTotal);renderServiceBars(snapshot.dashboard.services);renderOfficeButtons(snapshot.dashboard);showLayer(next);
+    renderRanking(snapshot.dashboard.offices);renderTrend(snapshot.dashboard.monthly);renderDistribution(snapshot.dashboard.services,snapshot.dashboard.grandTotal);renderServiceBars(snapshot.dashboard.services);renderOfficeButtons(snapshot.dashboard);
+    if(snapshot.mapData)showLayer(next);
     $('read').textContent='LAST READ · '+new Date(snapshot.loadedAt).toLocaleTimeString('id-ID',{hour12:false})+' WIB';
   }catch(e){TV_STATE.consecutiveFailures++;setRuntimeState('DEGRADED','Rotasi ditahan · data terakhir yang valid tetap tampil');}
   finally{TV_STATE.rotationBusy=false;}
@@ -242,7 +264,7 @@ async function boot(){
     await refreshAllRuntimeData();
     if(TV_STATE.status!=='ONLINE')throw new Error('TV_RUNTIME_BOOT_PARTIAL_FAILURE');
     const active=CACHE[currentService];
-    if(!active||!validDashboard(active.dashboard)||!validMapData(active.mapData))throw new Error('TV_RUNTIME_BOOT_INVALID_SNAPSHOT');
+    if(!active||!validDashboard(active.dashboard))throw new Error('TV_RUNTIME_BOOT_INVALID_SNAPSHOT');
     await activateService(currentService);
     TV_STATE.lastGoodAt=Date.now();TV_STATE.consecutiveFailures=0;
     $('footerMeta').textContent='10 Kantor · 8 Periode · read-only';
