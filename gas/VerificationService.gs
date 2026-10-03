@@ -283,6 +283,8 @@ function runProductionSmokeTestV1(){
   const registryIntegrity=check_('dataset_registry_identity',()=>verifyDatasetRegistryIntegrityV1());
   const residenceIntegrity=check_('residence_integrity',()=>verifyResidencePermitMonthlyIntegrity());
   const passportIntegrity=check_('passport_integrity',()=>verifyPassportServiceMonthly());
+  const annualIntegrity=check_('annual_dataset_integrity',()=>verifyRegisteredAnnualDatasetsV1());
+  if(annualIntegrity&&!annualIntegrity.ok)checks[checks.length-1].ok=false;
 
   const summary=check_('dashboard_summary',()=>getDashboardSummary());
   const residenceDashboard=check_('residence_dashboard',()=>getResidencePermitDashboard({}));
