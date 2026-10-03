@@ -371,6 +371,9 @@ assert(tvCharts.includes('function ensureSnapshotMap(key,snapshot)'), 'GIS rende
 assert(tvCharts.includes("if(!active||!validDashboard(active.dashboard))"), 'Boot validity requires canonical dashboard data, not GIS availability');
 // INTAL TV P0 runtime hardening invariants
 
+assert(tvUi.includes('data-service="RESIDENCE_PERMIT_SERVICE_MONTHLY"') && tvUi.includes('data-service="PASSPORT_SERVICE_MONTHLY"'), 'INTAL TV service switch uses data-service hooks instead of inline handlers');
+assert(!tvUi.includes('id="switchResidence" class="switch active" onclick=' ) && !tvUi.includes('id="switchPassport" class="switch" onclick='), 'INTAL TV service switch has no inline onclick attributes');
+assert(tvNew.includes('function bindServiceSwitches()') && tvNew.includes("button.addEventListener('click',()=>activateService(button.dataset.service))"), 'INTAL TV binds service switching through client event listeners');
 assert(tvNew.includes('const TV_RUNTIME=Object.freeze'), 'INTAL TV runtime hardening contract exists');
 assert(tvNew.includes("refreshMs:60000") && tvNew.includes("rotationMs:30000"), 'INTAL TV refresh and rotation cadence are explicit');
 assert(tvNew.includes("staleAfterMs:180000"), 'INTAL TV stale threshold is explicit');

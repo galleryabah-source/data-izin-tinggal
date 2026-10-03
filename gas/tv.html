@@ -61,7 +61,7 @@ header{display:grid;grid-template-columns:minmax(300px,1fr) auto auto;gap:14px;a
 <div class="tv">
 <header>
 <div class="brand-wrap"><div class="brand-mark">IN</div><div><div class="brand">INTAL <span>·</span> COMMAND DISPLAY</div><div class="subtitle">GIS FIRST · CANONICAL MONTHLY INTELLIGENCE</div></div></div>
-<div class="service-switch"><button id="switchResidence" class="switch active" onclick="activateService('RESIDENCE_PERMIT_SERVICE_MONTHLY')">IZIN TINGGAL</button><button id="switchPassport" class="switch" onclick="activateService('PASSPORT_SERVICE_MONTHLY')">PASPOR</button></div>
+<div class="service-switch"><button id="switchResidence" class="switch active" data-service="RESIDENCE_PERMIT_SERVICE_MONTHLY">IZIN TINGGAL</button><button id="switchPassport" class="switch" data-service="PASSPORT_SERVICE_MONTHLY">PASPOR</button></div>
 <div class="top-right"><span id="live" class="pill live">● LIVE SYSTEM · PREPARING</span><span id="read" class="pill read">LAST READ · —</span><button class="workspace" onclick="goWorkspace()">WORKSPACE</button><span id="clock" class="clock">--:--:--</span></div>
 </header>
 <section class="command-grid">
@@ -293,10 +293,16 @@ async function boot(){
   }
 }
 function tick(){ $('clock').textContent=now();}
+function bindServiceSwitches(){
+  document.querySelectorAll('.service-switch [data-service]').forEach(button=>{
+    button.addEventListener('click',()=>activateService(button.dataset.service));
+  });
+}
 function startRuntime(){
   if(TV_STATE.runtimeStarted)return;
   TV_STATE.runtimeStarted=true;
   try{
+    bindServiceSwitches();
     tick();
     boot();
     setInterval(rotateServiceSafely,TV_RUNTIME.rotationMs);
