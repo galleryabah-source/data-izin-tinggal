@@ -34,7 +34,7 @@ export const DATASET_CONTRACTS: Readonly<Record<DatasetKey, DatasetContractDefin
   }
 };
 
-export function getDatasetContract(key: DatasetKey): DatasetContractDefinition {
+export const DATASET_KEYS = Object.freeze(Object.keys(DATASET_CONTRACTS) as DatasetKey[]);\n\nexport function getDatasetContract(key: DatasetKey): DatasetContractDefinition {
   return DATASET_CONTRACTS[key];
 }
 
