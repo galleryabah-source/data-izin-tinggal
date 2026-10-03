@@ -6,7 +6,7 @@
 - [ ] business-key uniqueness
 - [ ] derived totals
 
-## Data
+### P1 Contract Certification\n\nP1 is certifiable only when the registry certification suite proves every registered dataset has a coherent v1 contract, exact legacy column parity, strict schema boundaries, canonical business keys, and derived-total integrity. The certification must be evidenced by a green CI run.\n\n## Data
 - [ ] source snapshot
 - [ ] row parity
 - [ ] aggregate parity
