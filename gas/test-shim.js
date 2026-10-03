@@ -319,6 +319,18 @@ assert(tvCharts.includes("e.key==='ArrowDown'"), 'INTAL TV office list supports 
 assert(tvCharts.includes("e.key==='PageDown'"), 'INTAL TV office list supports PageDown keyboard scrolling');
 assert(tvCharts.includes("if(el.setPointerCapture&&!el.hasPointerCapture(e.pointerId))el.setPointerCapture(e.pointerId)"), 'INTAL TV office drag captures pointer only after movement so click remains available');
 
+// INTAL TV expandable analytics panel invariants
+assert(tvCharts.includes('.expandable-card{cursor:pointer'), 'Top 10 and distribution cards are explicitly interactive');
+assert(tvCharts.includes('.expand-dialog{width:80vw;height:80vh'), 'Expanded analytics dialogs use the 80% viewport baseline');
+assert(tvCharts.includes('function openTop10Modal()'), 'Top 10 has a dedicated large-view modal');
+assert(tvCharts.includes('function openDistributionModal()'), 'Distribution has a dedicated large-view modal');
+assert(tvCharts.includes('id="top10Modal"'), 'Top 10 modal exists');
+assert(tvCharts.includes('id="distributionModal"'), 'Distribution modal exists');
+assert(tvCharts.includes('CACHE[currentService]?.dashboard'), 'Expanded views reuse the canonical active dashboard snapshot');
+assert(tvCharts.includes('closeTop10Modal()')&&tvCharts.includes('closeDistributionModal()'), 'Expanded analytics modals have explicit close paths');
+assert(tvCharts.includes("if(!$('top10Modal').classList.contains('hidden'))closeTop10Modal()"), 'Escape closes the Top 10 modal');
+assert(tvCharts.includes("if(!$('distributionModal').classList.contains('hidden'))closeDistributionModal()"), 'Escape closes the distribution modal');
+
 // INTAL TV P0 runtime hardening invariants
 
 assert(tvNew.includes('const TV_RUNTIME=Object.freeze'), 'INTAL TV runtime hardening contract exists');
