@@ -11,7 +11,7 @@ function verifyDatasetIntegrityV1(datasetKey){
   rows.forEach(r=>{
     const period=String(r[hi.periode]||'').trim(),office=String(r[hi.kantor_imigrasi]||'').trim();
     if(!period||!office)blankKeys++;
-    if(!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(period))invalidPeriods++;
+    if(!periodPattern.test(period))invalidPeriods++;
     if(period)periods[period]=true;
     if(office)offices[office]=true;
     const key=period+'|'+office.toUpperCase();
