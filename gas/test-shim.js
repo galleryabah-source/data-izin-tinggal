@@ -362,7 +362,6 @@ assert(tvCharts.includes("return {dashboard,mapData:null,loadedAt:Date.now(),map
 assert(tvCharts.includes("enrichSnapshotMap(SERVICES[0],CACHE[SERVICES[0]])"), 'GIS enrichment runs after dashboard rendering');
 assert(tvCharts.includes("setRuntimeState('ONLINE','Canonical data verified · GIS loading')"), 'Runtime reports data online before optional GIS enrichment');
 // Runtime data/GIS isolation invariants
-assert(tvCharts.includes('Promise.allSettled([call(serviceFn(key),filters),call(mapFn(key),filters)])'), 'Dashboard and GIS requests are isolated');
 assert(tvCharts.includes("dashboardResult.status!=='fulfilled'||!validDashboard(dashboardResult.value)"), 'Dashboard remains the required runtime dependency');
 assert(tvCharts.includes("const mapData=mapResult.status==='fulfilled'&&validMapData(mapResult.value)?mapResult.value:null"), 'GIS failure cannot invalidate a valid dashboard snapshot');
 assert(tvCharts.includes('function ensureSnapshotMap(key,snapshot)'), 'GIS rendering is best-effort after canonical data commit');
@@ -376,7 +375,8 @@ assert(tvNew.includes("requestTimeoutMs:20000"), 'INTAL TV request timeout is bo
 assert(tvNew.includes("function validDashboard(d)"), 'INTAL TV validates dashboard snapshots before commit');
 assert(tvNew.includes("function validMapData(d)"), 'INTAL TV validates GIS snapshots before commit');
 assert(tvNew.includes("async function fetchVerifiedSnapshot(key)"), 'INTAL TV has verified snapshot fetch seam');
-assert(tvNew.includes("Promise.allSettled([call(serviceFn(key),filters),call(mapFn(key),filters)])"), 'INTAL TV isolates dashboard and GIS requests in parallel');
+assert(tvNew.includes("const dashboard=await withTimeout(call(serviceFn(key),filters),TV_RUNTIME.requestTimeoutMs);"), 'INTAL TV fetches canonical dashboard independently of GIS');
+assert(tvNew.includes("async function enrichSnapshotMap(key,snapshot)"), 'INTAL TV enriches GIS after dashboard data is live');
 assert(tvNew.includes("async function refreshAllRuntimeData()"), 'INTAL TV has atomic all-service refresh cycle');
 assert(tvNew.includes("async function stageServiceSnapshot(key)"), 'INTAL TV stages snapshots before commit');
 assert(tvNew.includes("function commitServiceSnapshot(key,snapshot,L)"), 'INTAL TV commits staged snapshots through one seam');
