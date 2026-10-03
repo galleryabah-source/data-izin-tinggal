@@ -81,6 +81,14 @@ This is a future evolution and does not replace the current verified monthly pro
 
 ## Current delivery discipline
 
-**Phase 10.2 production certification is CLOSED / PASS as of 2026-10-02.** The certified production baseline is canonical Apps Script immutable version `71`, deployed from main commit `d186faee120aea48f97a063725e105d7d48bd61b`. Production smoke, dashboard regression, seven-workspace UAT, monitoring verification, and unauthorized/anonymous negative authorization testing are complete.
+Phase 10.2 certification remains a historical certification record. It is not the current deployment pointer. The current production deployment evidence is maintained by the canonical GitHub Actions deployment workflow and must always be read as:
 
-The Phase 10.2 baseline is locked as the production reference. New feature expansion is now permitted through the controlled delivery gate: requirement → contract/architecture impact → minimal implementation → CI → canonical deployment → live UAT → evidence. New work must not silently alter canonical dataset contracts, registry identity, historical baseline, or monthly grain.
+main commit → GitHub Actions run → Apps Script immutable version → canonical deployment ID → runtime evidence.
+
+The latest audited production deployment at the time of this documentation reconciliation is main commit 052cebfc131ab0a06e559159333f5da083bf089f, GitHub Actions run 37117703787 (run #412), with deployment evidence archived as artifact deployment-evidence-37117703787. The immutable Apps Script version is intentionally not hard-coded here; the deployment artifact is the authoritative release record.
+
+New feature expansion remains subject to the controlled delivery gate: requirement → contract/architecture impact → minimal implementation → CI → canonical deployment → live UAT → evidence. New work must not silently alter canonical dataset contracts, registry identity, historical baseline, or monthly grain.
+
+### INTAL TV Design No. 6
+
+INTAL TV is implemented as a presentation-only command display over the canonical analytics engine. It does not introduce a second canonical data path, dataset, importer, registry identity, or historical baseline. Runtime UAT remains a separate acceptance gate and must be evidenced against the canonical production deployment.
