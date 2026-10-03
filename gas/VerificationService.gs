@@ -1,7 +1,7 @@
 function verifyDatasetIntegrityV1(datasetKey){
   const user=requirePermission_('audit.read');
   const d=getActiveDatasetContract_(datasetKey);
-  const contract=d.contract,expectedColumns=contract.columns.slice(),values=d.sheet.getDataRange().getValues(),header=values[0]||[];
+  const contract=d.contract,expectedColumns=contract.columns.slice(),values=d.sheet.getDataRange().getValues(),header=values[0]||[],periodPattern=contract.periodGrain==='year'?/^[1-9][0-9]{3}$/:/^[1-9][0-9]{3}-(0[1-9]|1[0-2])$/;
   const issues=[],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
   if(JSON.stringify(header)!==JSON.stringify(expectedColumns))issues.push('Header dataset tidak identik dengan '+datasetKey+' Contract v'+contract.version+'.');
   expectedColumns.forEach(c=>{if(hi[c]===undefined)issues.push('Kolom contract hilang: '+c+'.');});
@@ -53,7 +53,7 @@ function verifyDatasetIntegrityV1(datasetKey){
     ok:issues.length===0,verifiedAt:nowIso_(),actor:user.email,datasetKey,sheetName:d.sheetName,
     registryEntries:1,rowCount:rows.length,columnCount:header.length,
     expectedRows:rows.length,expectedColumns:expectedColumns.length,
-    periodCount:Object.keys(periods).length,officeCount:Object.keys(offices).length,
+    periodGrain:contract.periodGrain||'month',periodCount:Object.keys(periods).length,officeCount:Object.keys(offices).length,
     duplicateKeys,blankKeys,invalidPeriods,invalidMeasures,totalMismatches,
     observedTotal,expectedObservedTotal:observedTotal,
     registryRowCount:Number(d.registryRow[d.registryIndex.row_count]||0),
