@@ -198,7 +198,8 @@ assert(tv.includes('function loadLeafletCss()') && tv.includes("document.createE
 assert(tv.includes('const [L]=await Promise.all([loadLeaflet(),loadLeafletCss()])'), 'INTAL TV waits for Leaflet assets only at GIS initialization');
 assert(tv.includes('function loadLeaflet()') && tv.includes('document.createElement(\'script\')'), 'INTAL TV loads GIS library lazily after shell render');
 assert(tv.includes("window.addEventListener('error'") && tv.includes("window.addEventListener('unhandledrejection'"), 'INTAL TV surfaces runtime script errors instead of remaining silently in PREPARING');
-assert(tv.includes('function startRuntime()') && tv.includes("document.addEventListener('DOMContentLoaded',startRuntime,{once:true})"), 'INTAL TV starts runtime after DOM readiness');
+assert(tv.includes('function startRuntime()') && tv.includes('function scheduleRuntimeStart()') && tv.includes("window.addEventListener('load',startRuntime,{once:true})"), 'INTAL TV starts runtime from the HTML load event');
+assert(tv.includes('runtimeStarted:false') && tv.includes('if(TV_STATE.runtimeStarted)return;'), 'INTAL TV prevents duplicate runtime bootstrap');
 assert(tv.includes("getPassportMap") && tv.includes("getResidencePermitMap"), 'INTAL TV routes GIS to canonical map endpoints');
 assert(tv.includes("metric:'total'"), 'INTAL TV preserves total-service map metric default');
 assert(tv.includes('getElementById') || tv.includes("$('map')"), 'INTAL TV renders GIS into dedicated map container');
@@ -397,6 +398,9 @@ assert(tvNew.includes("Menampilkan data terakhir yang valid"), 'INTAL TV preserv
 assert(tvNew.includes("async function rotateServiceSafely()"), 'INTAL TV has guarded service rotation');
 assert(tvNew.includes("TV_STATE.rotationBusy"), 'INTAL TV prevents overlapping rotation cycles');
 assert(tvNew.includes("setInterval(rotateServiceSafely,TV_RUNTIME.rotationMs)"), 'INTAL TV uses hardened rotation scheduler');
+assert(tvNew.includes("function scheduleRuntimeStart()"), 'INTAL TV uses an explicit runtime load scheduler');
+assert(tvNew.includes("window.addEventListener('load',startRuntime,{once:true})"), 'INTAL TV starts runtime from the Apps Script HTML load event');
+assert(tvNew.includes("runtimeStarted:false"), 'INTAL TV prevents duplicate runtime bootstrap');
 assert(tvNew.includes("setInterval(refreshAllRuntimeData,TV_RUNTIME.refreshMs)"), 'INTAL TV uses hardened refresh scheduler');
 assert(tvNew.includes("document.addEventListener('visibilitychange'"), 'INTAL TV refreshes after returning to visible state');
 assert(!tvNew.includes("setInterval(()=>{currentService=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];activateService(currentService);},30000)"), 'INTAL TV no longer uses unguarded rotation scheduler');

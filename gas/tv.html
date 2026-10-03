@@ -209,7 +209,7 @@ async function loadServiceView(key,force=false){
 }
 
 const TV_RUNTIME=Object.freeze({refreshMs:60000,rotationMs:30000,staleAfterMs:180000,requestTimeoutMs:20000,maxFailuresBeforeAttention:2});
-const TV_STATE={status:'BOOTING',lastGoodAt:0,lastAttemptAt:0,consecutiveFailures:0,refreshing:false,rotationBusy:false};
+const TV_STATE={status:'BOOTING',lastGoodAt:0,lastAttemptAt:0,consecutiveFailures:0,refreshing:false,rotationBusy:false,runtimeStarted:false};
 function setRuntimeState(status,detail){
   TV_STATE.status=status;
   const age=TV_STATE.lastGoodAt?Math.max(0,Date.now()-TV_STATE.lastGoodAt):null;
@@ -294,6 +294,8 @@ async function boot(){
 }
 function tick(){ $('clock').textContent=now();}
 function startRuntime(){
+  if(TV_STATE.runtimeStarted)return;
+  TV_STATE.runtimeStarted=true;
   try{
     tick();
     boot();
@@ -301,8 +303,11 @@ function startRuntime(){
     setInterval(refreshAllRuntimeData,TV_RUNTIME.refreshMs);
   }catch(e){reportRuntimeError('BOOTSTRAP',e);}
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startRuntime,{once:true});
-else window.setTimeout(startRuntime,0);
+function scheduleRuntimeStart(){
+  if(document.readyState==='complete')window.setTimeout(startRuntime,0);
+  else window.addEventListener('load',startRuntime,{once:true});
+}
+scheduleRuntimeStart();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-TV_STATE.lastAttemptAt>10000)refreshAllRuntimeData();});
 </script>
 </body>
