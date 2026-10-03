@@ -17,3 +17,27 @@ describe("canonical dataset contracts",()=>{
   });
   it("uses canonical business key",()=>expect(businessKey("2026-01"," Kantor A ")).toBe("2026-01::Kantor A"));
 });
+
+describe("dataset contract registry",()=>{
+  it("registers exactly the two certified v1 datasets",async()=>{
+    const {DATASET_CONTRACTS}=await import("@dasmon/domain");
+    expect(Object.keys(DATASET_CONTRACTS).sort()).toEqual([
+      "PASSPORT_SERVICE_MONTHLY","RESIDENCE_PERMIT_SERVICE_MONTHLY"
+    ]);
+    expect(DATASET_CONTRACTS.RESIDENCE_PERMIT_SERVICE_MONTHLY.measures).toHaveLength(13);
+    expect(DATASET_CONTRACTS.PASSPORT_SERVICE_MONTHLY.measures).toHaveLength(4);
+  });
+
+  it("keeps total derived rather than treating it as a measure",async()=>{
+    const {DATASET_CONTRACTS}=await import("@dasmon/domain");
+    for(const contract of Object.values(DATASET_CONTRACTS)){
+      expect(contract.measures).not.toContain(contract.derivedTotal);
+      expect(contract.businessKey).toEqual(["periode","kantor_imigrasi"]);
+    }
+  });
+
+  it("rejects unknown dataset contracts",async()=>{
+    const {assertKnownDataset}=await import("@dasmon/domain");
+    expect(()=>assertKnownDataset("UNKNOWN")).toThrow("UNKNOWN_DATASET_CONTRACT");
+  });
+});
