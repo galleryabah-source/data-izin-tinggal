@@ -231,8 +231,11 @@ assert(tvCharts.includes('grid-template-columns:repeat(2,minmax(0,1fr))'), 'INTA
 assert(tvCharts.includes('canonical · seluruh 10 kantor · read-only'), 'INTAL TV service breakdown is aggregated across offices');
 assert(tvCharts.includes("call(serviceFn(datasetKey),{periode:'',kantor_imigrasi:'',metric:'total'})"), 'INTAL TV service breakdown requests unfiltered canonical service data');
 assert(tvCharts.includes('services.map(x=>'), 'INTAL TV service breakdown renders service categories');
-assert(tvCharts.includes("onclick=\"openServiceBreakdown('RESIDENCE_PERMIT_SERVICE_MONTHLY')\""), 'Residence metric panel is interactive');
-assert(tvCharts.includes("onclick=\"openServiceBreakdown('PASSPORT_SERVICE_MONTHLY')\""), 'Passport metric panel is interactive');
+const tvShell=tvCharts.slice(0,tvCharts.indexOf('<script>'));
+assert(tvCharts.includes('function bindStaticInteractions()'), 'INTAL TV binds static HTML interactions through client listeners');
+assert(tvCharts.includes('data-action="workspace"'), 'INTAL TV workspace control uses a data hook');
+assert(tvCharts.includes('data-service-breakdown="RESIDENCE_PERMIT_SERVICE_MONTHLY"') && tvCharts.includes('data-service-breakdown="PASSPORT_SERVICE_MONTHLY"'), 'INTAL TV metric panels use data hooks');
+assert(!/\son[a-z]+="/i.test(tvShell), 'INTAL TV static HTML contains no inline event-handler attributes');
 assert(tvCharts.includes('class="office-list"'), 'INTAL TV office list container exists');
 assert(tvCharts.includes('width:clamp(150px,15vw,300px)'), 'INTAL TV distribution donut scales responsively');
 assert(!tvCharts.includes('transform:perspective(520px)'), 'INTAL TV distribution is 2D');
