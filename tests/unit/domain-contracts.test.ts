@@ -88,3 +88,27 @@ describe("domain data integrity",()=>{
     expect(()=>assertMatchingDerivedTotal(row)).toThrow("DERIVED_TOTAL_MISMATCH");
   });
 });
+
+
+describe("contract boundary strictness",()=>{
+  it("rejects unknown Residence Permit fields",async()=>{
+    const {ResidencePermitRowSchema}=await import("@dasmon/domain");
+    const row={
+      periode:"2026-01",kantor_imigrasi:"Kantor A",
+      bvk:1,voa:1,itk:1,itk_peralihan:1,itas:1,itap:1,itkt:1,
+      alih_status_itk_ke_itas:1,alih_status_itas_ke_itap:1,abg:1,epo:1,imk:1,skim:1,total:15,
+      unexpected_field:99
+    };
+    expect(ResidencePermitRowSchema.safeParse(row).success).toBe(false);
+  });
+
+  it("rejects unknown Passport fields",async()=>{
+    const {PassportRowSchema}=await import("@dasmon/domain");
+    const row={
+      periode:"2026-01",kantor_imigrasi:"Kantor A",
+      biasa_24:1,biasa_48:1,elektronik_48:1,e_polikarbonat:1,total:4,
+      unexpected_field:99
+    };
+    expect(PassportRowSchema.safeParse(row).success).toBe(false);
+  });
+});
