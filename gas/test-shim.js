@@ -249,3 +249,29 @@ assert(tvCharts.includes('align-content:start'), 'INTAL TV service distribution 
 assert(tvCharts.includes('width:clamp(150px,15vw,300px)'), 'INTAL TV donut scales responsively without circular container sizing');
 assert(tvCharts.includes('padding:clamp(8px,1.2vw,16px) clamp(10px,1.5vw,20px) clamp(14px,1.8vw,22px)'), 'INTAL TV distribution group has safe vertical centering space');
 assert(tvCharts.includes('font-size:clamp(9px,.75vw,14px)'), 'INTAL TV distribution legend scales responsively');
+
+// INTAL TV P0 runtime hardening invariants
+
+assert(tvNew.includes('const TV_RUNTIME=Object.freeze'), 'INTAL TV runtime hardening contract exists');
+assert(tvNew.includes("refreshMs:60000") && tvNew.includes("rotationMs:30000"), 'INTAL TV refresh and rotation cadence are explicit');
+assert(tvNew.includes("staleAfterMs:180000"), 'INTAL TV stale threshold is explicit');
+assert(tvNew.includes("requestTimeoutMs:20000"), 'INTAL TV request timeout is bounded');
+assert(tvNew.includes("function validDashboard(d)"), 'INTAL TV validates dashboard snapshots before commit');
+assert(tvNew.includes("function validMapData(d)"), 'INTAL TV validates GIS snapshots before commit');
+assert(tvNew.includes("async function fetchVerifiedSnapshot(key)"), 'INTAL TV has verified snapshot fetch seam');
+assert(tvNew.includes("Promise.all([call(serviceFn(key),filters),call(mapFn(key),filters)])"), 'INTAL TV validates dashboard and GIS in parallel');
+assert(tvNew.includes("async function refreshService(key)"), 'INTAL TV has explicit service refresh seam');
+assert(tvNew.includes("async function refreshAllRuntimeData()"), 'INTAL TV has atomic all-service refresh cycle');
+assert(tvNew.includes("TV_STATE.refreshing"), 'INTAL TV prevents overlapping refresh cycles');
+assert(tvNew.includes("LIVE SYSTEM · REFRESHING"), 'INTAL TV exposes refreshing runtime state');
+assert(tvNew.includes("LIVE SYSTEM · STALE"), 'INTAL TV exposes stale runtime state');
+assert(tvNew.includes("LIVE SYSTEM · OFFLINE"), 'INTAL TV exposes offline runtime state');
+assert(tvNew.includes("LIVE SYSTEM · DEGRADED"), 'INTAL TV exposes degraded runtime state');
+assert(tvNew.includes("Menampilkan data terakhir yang valid"), 'INTAL TV preserves last-known-good data on refresh failure');
+assert(tvNew.includes("async function rotateServiceSafely()"), 'INTAL TV has guarded service rotation');
+assert(tvNew.includes("TV_STATE.rotationBusy"), 'INTAL TV prevents overlapping rotation cycles');
+assert(tvNew.includes("setInterval(rotateServiceSafely,TV_RUNTIME.rotationMs)"), 'INTAL TV uses hardened rotation scheduler');
+assert(tvNew.includes("setInterval(refreshAllRuntimeData,TV_RUNTIME.refreshMs)"), 'INTAL TV uses hardened refresh scheduler');
+assert(tvNew.includes("document.addEventListener('visibilitychange'"), 'INTAL TV refreshes after returning to visible state');
+assert(!tvNew.includes("setInterval(()=>{currentService=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];activateService(currentService);},30000)"), 'INTAL TV no longer uses unguarded rotation scheduler');
+assert(!tvNew.includes("setInterval(()=>{preload(SERVICES[0]).catch(()=>{});preload(SERVICES[1]).catch(()=>{});loadRunningTexts();},60000)"), 'INTAL TV no longer uses blind background refresh scheduler');
