@@ -234,6 +234,22 @@ assert(!tvNew.includes('>RUNNING TEXT</'), 'INTAL TV does not display technical 
 assert(tvNew.includes('function renderDistribution'), 'INTAL TV has visual service distribution');
 assert(tvNew.includes('function renderTrend'), 'INTAL TV has visual trend chart');
 assert(tvNew.includes('function buildLayer'), 'INTAL TV has visual GIS marker layer');
+// GIS office combined detail regression invariants
+assert(tvCharts.includes('function openGisOfficeDetail(office)'), 'INTAL TV GIS office markers open combined office detail');
+assert(tvCharts.includes('id="gisOfficeModal"'), 'INTAL TV GIS office combined modal exists');
+assert(tvCharts.includes('width:80vw;height:80vh'), 'INTAL TV GIS office combined modal targets 80 percent viewport');
+assert(tvCharts.includes('grid-template-columns:repeat(2,minmax(0,1fr))'), 'INTAL TV GIS office combined modal uses two-domain responsive layout');
+assert(tvCharts.includes('serviceFn(SERVICES[0])') && tvCharts.includes('serviceFn(SERVICES[1])'), 'INTAL TV GIS office detail loads Residence and Passport through canonical dashboard endpoints');
+assert(tvCharts.includes('kantor_imigrasi:name') && tvCharts.includes("metric:'total'"), 'INTAL TV GIS office detail filters both domains to the clicked office');
+assert(tvCharts.includes('Promise.allSettled([call(serviceFn(SERVICES[0]),filters),call(serviceFn(SERVICES[1]),filters)])'), 'INTAL TV GIS office detail requests both domains in parallel');
+assert(tvCharts.includes('gisOfficeResidenceBody') && tvCharts.includes('gisOfficePassportBody'), 'INTAL TV GIS office detail renders separate Residence and Passport sections');
+assert(tvCharts.includes('Total Gabungan'), 'INTAL TV GIS office detail exposes combined office total');
+assert(tvCharts.includes('GIS_OFFICE_DETAIL_CACHE'), 'INTAL TV GIS office detail uses bounded client cache');
+assert(tvCharts.includes(".on('click',()=>openGisOfficeDetail(office))"), 'INTAL TV GIS markers open detail on marker/label click');
+assert(!tvCharts.includes(".bindPopup('<b>'+esc(m.kantor_imigrasi)"), 'INTAL TV GIS markers no longer use separate total-only popup');
+assert(tvCharts.includes('function closeGisOfficeDetail()'), 'INTAL TV GIS office combined modal has explicit close handler');
+assert(tvCharts.includes("if(!$('gisOfficeModal').classList.contains('hidden'))closeGisOfficeDetail()"), 'INTAL TV GIS office combined modal closes with Escape');
+
 assert(tvNew.includes('Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])])'), 'INTAL TV stages dashboard and GIS snapshots in parallel');
 
 // INTAL TV readable/compact visual regression invariants
