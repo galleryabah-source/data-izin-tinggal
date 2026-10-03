@@ -11,6 +11,8 @@ function getResidencePermitDashboard(filters){
   const cacheKey=readCacheKey_('dashboard',{dataset:'RESIDENCE_PERMIT_SERVICE_MONTHLY',filters:filters||{}});
   const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const datasetKey='RESIDENCE_PERMIT_SERVICE_MONTHLY';
+  const contract=DATASET_CONTRACTS[datasetKey];
+  if(!contract)throw new Error('DATASET_CONTRACT_NOT_FOUND: '+datasetKey);
   const ss=getDb_();
   const registry=ss.getSheetByName(SHEETS.DATASET_REGISTRY);
   const rv=registry.getDataRange().getValues();
@@ -40,7 +42,7 @@ function getResidencePermitDashboard(filters){
     (!requestedPeriod || periodOf_(r)===requestedPeriod) &&
     (!requestedOffice || officeOf_(r)===requestedOffice)
   );
-  const serviceColumns=['bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim'];
+  const serviceColumns=contract.measures.slice();
   const supportedMetrics=['total'].concat(serviceColumns);
   if(supportedMetrics.indexOf(requestedMetric)===-1)throw new Error('DASHBOARD_METRIC_NOT_SUPPORTED: '+requestedMetric);
   const metricIndex=requestedMetric==='total'?hi.total:hi[requestedMetric];
