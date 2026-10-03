@@ -407,7 +407,7 @@ assert(tvNew.includes("async function rotateServiceSafely()"), 'INTAL TV has gua
 assert(tvNew.includes("TV_STATE.rotationBusy"), 'INTAL TV prevents overlapping rotation cycles');
 assert(tvNew.includes("setInterval(rotateServiceSafely,TV_RUNTIME.rotationMs)"), 'INTAL TV uses hardened rotation scheduler');
 assert(tvNew.includes("function scheduleRuntimeStart()"), 'INTAL TV uses an explicit runtime load scheduler');
-assert(tvNew.includes("window.addEventListener('load',startRuntime,{once:true})"), 'INTAL TV starts runtime from the Apps Script HTML load event');
+assert(tvNew.includes("if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startRuntime,{once:true});") && tvNew.includes("else window.setTimeout(startRuntime,0);"), 'INTAL TV starts runtime without depending on the Apps Script HTML load event');
 assert(tvNew.includes("runtimeStarted:false"), 'INTAL TV prevents duplicate runtime bootstrap');
 assert(tvNew.includes("setInterval(refreshAllRuntimeData,TV_RUNTIME.refreshMs)"), 'INTAL TV uses hardened refresh scheduler');
 assert(tvNew.includes("document.addEventListener('visibilitychange'"), 'INTAL TV refreshes after returning to visible state');
