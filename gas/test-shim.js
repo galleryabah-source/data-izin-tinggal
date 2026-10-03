@@ -198,7 +198,7 @@ assert(tv.includes('function loadLeafletCss()') && tv.includes("document.createE
 assert(tv.includes('const [L]=await Promise.all([loadLeaflet(),loadLeafletCss()])'), 'INTAL TV waits for Leaflet assets only at GIS initialization');
 assert(tv.includes('function loadLeaflet()') && tv.includes('document.createElement(\'script\')'), 'INTAL TV loads GIS library lazily after shell render');
 assert(tv.includes("window.addEventListener('error'") && tv.includes("window.addEventListener('unhandledrejection'"), 'INTAL TV surfaces runtime script errors instead of remaining silently in PREPARING');
-assert(tv.includes('function startRuntime()') && tv.includes('function scheduleRuntimeStart()') && tv.includes("window.addEventListener('load',startRuntime,{once:true})"), 'INTAL TV starts runtime from the HTML load event');
+assert(tv.includes('function startRuntime()') && tv.includes('function scheduleRuntimeStart()') && tv.includes("if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startRuntime,{once:true});") && tv.includes("else window.setTimeout(startRuntime,0);"), 'INTAL TV starts runtime without depending on the HTML load event');
 assert(tv.includes('runtimeStarted:false') && tv.includes('if(TV_STATE.runtimeStarted)return;'), 'INTAL TV prevents duplicate runtime bootstrap');
 assert(tv.includes("getPassportMap") && tv.includes("getResidencePermitMap"), 'INTAL TV routes GIS to canonical map endpoints');
 assert(tv.includes("metric:'total'"), 'INTAL TV preserves total-service map metric default');
