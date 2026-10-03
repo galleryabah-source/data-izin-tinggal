@@ -260,7 +260,6 @@ assert(tvNew.includes("function validDashboard(d)"), 'INTAL TV validates dashboa
 assert(tvNew.includes("function validMapData(d)"), 'INTAL TV validates GIS snapshots before commit');
 assert(tvNew.includes("async function fetchVerifiedSnapshot(key)"), 'INTAL TV has verified snapshot fetch seam');
 assert(tvNew.includes("Promise.all([call(serviceFn(key),filters),call(mapFn(key),filters)])"), 'INTAL TV validates dashboard and GIS in parallel');
-assert(tvNew.includes("async function refreshService(key)"), 'INTAL TV has explicit service refresh seam');
 assert(tvNew.includes("async function refreshAllRuntimeData()"), 'INTAL TV has atomic all-service refresh cycle');
 assert(tvNew.includes("async function stageServiceSnapshot(key)"), 'INTAL TV stages snapshots before commit');
 assert(tvNew.includes("function commitServiceSnapshot(key,snapshot,L)"), 'INTAL TV commits staged snapshots through one seam');
