@@ -41,3 +41,22 @@ describe("dataset contract registry",()=>{
     expect(()=>assertKnownDataset("UNKNOWN")).toThrow("UNKNOWN_DATASET_CONTRACT");
   });
 });
+
+
+describe("legacy contract parity",()=>{
+  it("matches the certified Residence Permit v1 column contract",async()=>{
+    const {DATASET_CONTRACTS}=await import("@dasmon/domain");
+    const c=DATASET_CONTRACTS.RESIDENCE_PERMIT_SERVICE_MONTHLY;
+    expect(c.columns).toEqual(["periode","kantor_imigrasi","bvk","voa","itk","itk_peralihan","itas","itap","itkt","alih_status_itk_ke_itas","alih_status_itas_ke_itap","abg","epo","imk","skim","total"]);
+    expect(c.required).toEqual(c.columns.slice(0,-1));
+    expect(c.optional).toEqual(["total"]);
+  });
+
+  it("matches the certified Passport v1 column contract",async()=>{
+    const {DATASET_CONTRACTS}=await import("@dasmon/domain");
+    const c=DATASET_CONTRACTS.PASSPORT_SERVICE_MONTHLY;
+    expect(c.columns).toEqual(["periode","kantor_imigrasi","biasa_24","biasa_48","elektronik_48","e_polikarbonat","total"]);
+    expect(c.required).toEqual(c.columns.slice(0,-1));
+    expect(c.optional).toEqual(["total"]);
+  });
+});
