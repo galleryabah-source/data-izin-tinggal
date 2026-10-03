@@ -197,6 +197,7 @@ assert(!/<link[^>]+rel=["']stylesheet["'][^>]+href=["'][^"']*leaflet\.css/i.test
 assert(tv.includes('function loadLeafletCss()') && tv.includes("document.createElement('link')"), 'INTAL TV loads Leaflet CSS lazily after shell render');
 assert(tv.includes('const [L]=await Promise.all([loadLeaflet(),loadLeafletCss()])'), 'INTAL TV waits for Leaflet assets only at GIS initialization');
 assert(tv.includes('function loadLeaflet()') && tv.includes('document.createElement(\'script\')'), 'INTAL TV loads GIS library lazily after shell render');
+assert(!/\\/\\//.test(tv.match(/<script[^>]*>([\\s\\S]*?)<\\/script>/i)[1]), 'INTAL TV client script contains no literal double-slash sequences that Apps Script HTML injection can truncate');
 assert(tv.includes("window.addEventListener('error'") && tv.includes("window.addEventListener('unhandledrejection'"), 'INTAL TV surfaces runtime script errors instead of remaining silently in PREPARING');
 assert(tv.includes('function startRuntime()') && tv.includes('function scheduleRuntimeStart()') && tv.includes("if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startRuntime,{once:true});") && tv.includes("else window.setTimeout(startRuntime,0);"), 'INTAL TV starts runtime without depending on the HTML load event');
 assert(tv.includes('runtimeStarted:false') && tv.includes('if(TV_STATE.runtimeStarted)return;'), 'INTAL TV prevents duplicate runtime bootstrap');
