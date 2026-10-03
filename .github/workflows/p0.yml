@@ -2,8 +2,9 @@ name: P0 Foundation
 
 on:
   push:
-    branches: ["main", "dasmon-imigrasi-*"]
+    branches: ["dasmon-imigrasi-*"]
   pull_request:
+    branches: [main]
 
 permissions:
   contents: read
@@ -19,7 +20,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: node --version
       - run: npm --version
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+      - run: npm run dasmon:lint
+      - run: npm run dasmon:typecheck
+      - run: npm run dasmon:test
+      - run: npm run dasmon:build
