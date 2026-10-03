@@ -95,6 +95,17 @@ const WORKSPACE_URL='<?= ScriptApp.getService().getUrl() ?>';
 const SERVICES=['RESIDENCE_PERMIT_SERVICE_MONTHLY','PASSPORT_SERVICE_MONTHLY'];
 const CACHE={},VIEW_CACHE={},GIS_OFFICE_DETAIL_CACHE={};let currentService='RESIDENCE_PERMIT_SERVICE_MONTHLY',map=null,leafletPromise=null,leafletCssPromise=null,layers={},bounds={},runningTexts=[];
 const TV_FILTERS={periode:'',kantor_imigrasi:'',metric:'total'};
+function reportRuntimeError(kind,error){
+  const message=String(error&&error.message?error.message:error||'Unknown runtime error');
+  try{
+    const live=document.getElementById('live'),read=document.getElementById('read'),footer=document.getElementById('footerMeta');
+    if(live){live.textContent='● LIVE SYSTEM · ERROR';live.className='pill attention';}
+    if(read){read.textContent='LAST READ · ERROR';}
+    if(footer){footer.textContent='Runtime error · '+kind+' · '+message.slice(0,160);}
+  }catch(_){}
+}
+window.addEventListener('error',e=>reportRuntimeError('SCRIPT',e.error||e.message));
+window.addEventListener('unhandledrejection',e=>reportRuntimeError('PROMISE',e.reason));
 const $=id=>document.getElementById(id),fmt=n=>Number(n||0).toLocaleString('id-ID'),now=()=>new Date().toLocaleTimeString('id-ID',{hour12:false});
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c));}
 function goWorkspace(){window.top.location.href=WORKSPACE_URL;}
@@ -282,10 +293,16 @@ async function boot(){
   }
 }
 function tick(){ $('clock').textContent=now();}
-tick();
-boot();
-setInterval(rotateServiceSafely,TV_RUNTIME.rotationMs);
-setInterval(refreshAllRuntimeData,TV_RUNTIME.refreshMs);
+function startRuntime(){
+  try{
+    tick();
+    boot();
+    setInterval(rotateServiceSafely,TV_RUNTIME.rotationMs);
+    setInterval(refreshAllRuntimeData,TV_RUNTIME.refreshMs);
+  }catch(e){reportRuntimeError('BOOTSTRAP',e);}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startRuntime,{once:true});
+else window.setTimeout(startRuntime,0);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-TV_STATE.lastAttemptAt>10000)refreshAllRuntimeData();});
 </script>
 </body>
