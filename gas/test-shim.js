@@ -219,6 +219,11 @@ assert(workspaceUi.includes('href="#" onclick="openTv(event)"'), 'INTAL TV menu 
 
 const tvCharts=read('tv.html');
 assert(tvCharts.includes('function renderTrend'), 'INTAL TV renders visual trend chart');
+assert(tvCharts.includes('function dashboardForKpi') && tvCharts.includes('function combinedMonthlyValue'), 'INTAL TV contextual total KPI has canonical dashboard helpers');
+assert(tvCharts.includes('id="tvCombinedContext"') && tvCharts.includes('id="tvCombinedResidence"') && tvCharts.includes('id="tvCombinedPassport"') && tvCharts.includes('id="tvCombinedMom"'), 'INTAL TV total KPI exposes period context, service split, and MoM');
+assert(tvCharts.includes("if(next||previous)await Promise.all([loadServiceView(SERVICES[0],true),loadServiceView(SERVICES[1],true)])"), 'INTAL TV period selection loads both canonical service views for combined KPI context');
+assert(tvCharts.includes("context.textContent=selected+' · DIPILIH'"), 'INTAL TV total KPI labels the selected period');
+assert(tvCharts.includes("context.textContent=unique.length?(unique[0]+'–'+latest+' · '+unique.length+' PERIODE')"), 'INTAL TV total KPI labels the aggregate period range');
 assert(tvCharts.includes('class="point-hit"') && tvCharts.includes('r="11"'), 'INTAL TV trend points expose a generous clickable hit area');
 assert(tvCharts.includes('period-label') && tvCharts.includes('data-period'), 'INTAL TV trend period labels expose clickable period targets');
 assert(tvCharts.includes("document.querySelectorAll('#trend .point')")===false, 'INTAL TV trend interaction uses container delegation instead of fragile per-point binding');
