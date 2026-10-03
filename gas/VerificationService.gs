@@ -181,22 +181,14 @@ function findLatestResidencePermitSnapshot_(){
 
 function runDashboardRegressionSmokeV1(){
   const user=requirePermission_('audit.read');
-  const startedAt=nowIso_();
-  const checks=[];
+  const startedAt=nowIso_(),checks=[];
   const check_=(name,fn)=>{
-    try{
-      const result=fn();
-      const ok=Boolean(result&&result.ok!==false);
-      checks.push({name,ok,result});
-      return result;
-    }catch(e){
-      checks.push({name,ok:false,error:String(e&&e.message||e)});
-      return null;
-    }
+    try{const result=fn(),ok=Boolean(result&&result.ok!==false);checks.push({name,ok,result});return result;}
+    catch(e){checks.push({name,ok:false,error:String(e&&e.message||e)});return null;}
   };
-
   const registryIntegrity=check_('dataset_registry_identity',()=>verifyDatasetRegistryIntegrityV1());
-  if(registryIntegrity&&!registryIntegrity.ok)checks[checks.length-1].ok=false;
+  const residenceIntegrity=check_('residence_integrity',()=>verifyResidencePermitMonthlyIntegrity());
+  const passportIntegrity=check_('passport_integrity',()=>verifyPassportServiceMonthly());
 
   const summary=check_('dashboard_summary',()=>getDashboardSummary());
   if(summary){
@@ -205,32 +197,36 @@ function runDashboardRegressionSmokeV1(){
   }
 
   const residenceDashboard=check_('residence_dashboard',()=>getResidencePermitDashboard({}));
-  if(residenceDashboard){
-    if(Number(residenceDashboard.rowCount)!==80||Number(residenceDashboard.grandTotal)!==258094||residenceDashboard.monthly.length!==8||residenceDashboard.offices.length!==10)checks[checks.length-1].ok=false;
+  if(residenceDashboard&&residenceIntegrity){
+    if(Number(residenceDashboard.rowCount)!==residenceIntegrity.rowCount)checks[checks.length-1].ok=false;
+    if(Number(residenceDashboard.grandTotal)!==residenceIntegrity.observedTotal)checks[checks.length-1].ok=false;
+    if(residenceDashboard.monthly.length!==residenceIntegrity.periodCount||residenceDashboard.offices.length!==residenceIntegrity.officeCount)checks[checks.length-1].ok=false;
+  }
+
+  const passportDashboard=check_('passport_dashboard',()=>getPassportDashboard({}));
+  if(passportDashboard&&passportIntegrity){
+    if(Number(passportDashboard.rowCount)!==passportIntegrity.rowCount)checks[checks.length-1].ok=false;
+    if(Number(passportDashboard.grandTotal)!==passportIntegrity.observedTotal)checks[checks.length-1].ok=false;
+    if(passportDashboard.monthly.length!==passportIntegrity.periodCount||passportDashboard.offices.length!==passportIntegrity.officeCount)checks[checks.length-1].ok=false;
   }
 
   const crossService=check_('cross_service_reporting',()=>getCrossServiceReport({}));
-  if(crossService){
+  if(crossService&&residenceIntegrity&&passportIntegrity){
     const residence=crossService.services.find(s=>s.service==='RESIDENCE_PERMIT');
     const passport=crossService.services.find(s=>s.service==='PASSPORT');
-    if(!residence||Number(residence.rowCount)!==80||Number(residence.serviceVolume)!==258094||residence.monthly.length!==8||residence.offices.length!==10)checks[checks.length-1].ok=false;
-    if(!passport||Number(passport.rowCount)!==80||Number(passport.serviceVolume)!==327088||passport.monthly.length!==8||passport.offices.length!==10)checks[checks.length-1].ok=false;
-    if(Number(crossService.combinedServiceVolume)!==585182)checks[checks.length-1].ok=false;
+    if(!residence||Number(residence.rowCount)!==residenceIntegrity.rowCount||Number(residence.serviceVolume)!==residenceIntegrity.observedTotal||residence.monthly.length!==residenceIntegrity.periodCount||residence.offices.length!==residenceIntegrity.officeCount)checks[checks.length-1].ok=false;
+    if(!passport||Number(passport.rowCount)!==passportIntegrity.rowCount||Number(passport.serviceVolume)!==passportIntegrity.observedTotal||passport.monthly.length!==passportIntegrity.periodCount||passport.offices.length!==passportIntegrity.officeCount)checks[checks.length-1].ok=false;
+    if(Number(crossService.combinedServiceVolume)!==residenceIntegrity.observedTotal+passportIntegrity.observedTotal)checks[checks.length-1].ok=false;
     const provenance=crossService.provenance||[];
     if(provenance.some(p=>p.sourceMetric!=='total'||p.metric!=='service_volume'))checks[checks.length-1].ok=false;
   }
 
-  const passportDashboard=check_('passport_dashboard',()=>getPassportDashboard({}));
-  if(passportDashboard){
-    if(Number(passportDashboard.rowCount)!==80||Number(passportDashboard.grandTotal)!==327088||passportDashboard.monthly.length!==8||passportDashboard.offices.length!==10)checks[checks.length-1].ok=false;
-  }
-
   const residenceDrilldown=check_('residence_drilldown',()=>getResidencePermitDrilldown({}));
-  if(residenceDrilldown&&Number(residenceDrilldown.totalRows)!==80)checks[checks.length-1].ok=false;
+  if(residenceDrilldown&&residenceIntegrity&&Number(residenceDrilldown.totalRows)!==residenceIntegrity.rowCount)checks[checks.length-1].ok=false;
 
   const passportDrilldown=check_('passport_drilldown',()=>getPassportDrilldown({}));
-  if(passportDrilldown){
-    if(Number(passportDrilldown.totalRows)!==80)checks[checks.length-1].ok=false;
+  if(passportDrilldown&&passportIntegrity){
+    if(Number(passportDrilldown.totalRows)!==passportIntegrity.rowCount)checks[checks.length-1].ok=false;
     const periods=passportDrilldown.rows.map(r=>String(r[0]||''));
     if(periods.some(p=>/^\\d{4}-\\d{2}-\\d{2}$/.test(p)))checks[checks.length-1].ok=false;
   }
@@ -239,82 +235,76 @@ function runDashboardRegressionSmokeV1(){
   if(officeStatus&&!officeStatus.ready)checks[checks.length-1].ok=false;
 
   const residenceMap=check_('residence_map',()=>getResidencePermitMap({}));
-  if(residenceMap&&(Number(residenceMap.rowCount)!==80||residenceMap.markers.length!==10))checks[checks.length-1].ok=false;
+  if(residenceMap&&residenceIntegrity){
+    if(Number(residenceMap.rowCount)!==residenceIntegrity.rowCount||residenceMap.markers.length!==residenceIntegrity.officeCount)checks[checks.length-1].ok=false;
+  }
 
   const passportMap=check_('passport_map',()=>getPassportMap({}));
-  if(passportMap&&(Number(passportMap.rowCount)!==80||passportMap.markers.length!==10))checks[checks.length-1].ok=false;
+  if(passportMap&&passportIntegrity){
+    if(Number(passportMap.rowCount)!==passportIntegrity.rowCount||passportMap.markers.length!==passportIntegrity.officeCount)checks[checks.length-1].ok=false;
+  }
 
   const failed=checks.filter(c=>!c.ok);
   const result={
-    ok:failed.length===0,
-    smokeVersion:'1',
-    verifiedAt:nowIso_(),
-    startedAt,
-    actor:user.email,
-    expected:{
-      residence:{rowCount:80,grandTotal:258094,monthlyPeriods:8,offices:10},
-      passport:{rowCount:80,grandTotal:327088,monthlyPeriods:8,offices:10}
+    ok:failed.length===0,smokeVersion:'2-growth-safe',verifiedAt:nowIso_(),startedAt,actor:user.email,
+    observed:{
+      residence:residenceIntegrity?{rowCount:residenceIntegrity.rowCount,grandTotal:residenceIntegrity.observedTotal,monthlyPeriods:residenceIntegrity.periodCount,offices:residenceIntegrity.officeCount}:null,
+      passport:passportIntegrity?{rowCount:passportIntegrity.rowCount,grandTotal:passportIntegrity.observedTotal,monthlyPeriods:passportIntegrity.periodCount,offices:passportIntegrity.officeCount}:null
     },
-    checks:checks.map(c=>({name:c.name,ok:c.ok,error:c.error||null})),
-    failedChecks:failed.map(c=>c.name)
+    checks:checks.map(c=>({name:c.name,ok:c.ok,error:c.error||null})),failedChecks:failed.map(c=>c.name)
   };
-  appendAudit_('DASHBOARD_REGRESSION_SMOKE','MULTI_DATASET','',160,result.ok?'PASS':'FAILED',JSON.stringify(result));
+  const affectedRows=(residenceIntegrity?residenceIntegrity.rowCount:0)+(passportIntegrity?passportIntegrity.rowCount:0);
+  appendAudit_('DASHBOARD_REGRESSION_SMOKE','MULTI_DATASET','',affectedRows,result.ok?'PASS':'FAILED',JSON.stringify(result));
   Logger.log(JSON.stringify(result));
   return result;
 }
 
-
 function runProductionSmokeTestV1(){
   const user=requirePermission_('audit.read');
-  const startedAt=nowIso_();
-  const checks=[];
+  const startedAt=nowIso_(),checks=[];
   const check_=(name,fn)=>{
-    try{
-      const result=fn();
-      const ok=Boolean(result&&result.ok!==false);
-      checks.push({name,ok,result});
-      return result;
-    }catch(e){
-      checks.push({name,ok:false,error:String(e&&e.message||e)});
-      return null;
-    }
+    try{const result=fn(),ok=Boolean(result&&result.ok!==false);checks.push({name,ok,result});return result;}
+    catch(e){checks.push({name,ok:false,error:String(e&&e.message||e)});return null;}
   };
 
   const bootstrap=check_('identity',()=>getBootstrap());
   if(!bootstrap||!bootstrap.user||!bootstrap.user.authenticated)checks[checks.length-1].ok=false;
 
   const registryIntegrity=check_('dataset_registry_identity',()=>verifyDatasetRegistryIntegrityV1());
-  if(registryIntegrity&&!registryIntegrity.ok)checks[checks.length-1].ok=false;
+  const residenceIntegrity=check_('residence_integrity',()=>verifyResidencePermitMonthlyIntegrity());
+  const passportIntegrity=check_('passport_integrity',()=>verifyPassportServiceMonthly());
 
   const summary=check_('dashboard_summary',()=>getDashboardSummary());
-  const dashboard=check_('dashboard_baseline',()=>getResidencePermitDashboard({}));
-  if(dashboard){
-    if(Number(dashboard.rowCount)!==80)checks[checks.length-1].ok=false;
-    if(Number(dashboard.grandTotal)!==258094)checks[checks.length-1].ok=false;
-    if(!Array.isArray(dashboard.monthly)||dashboard.monthly.length!==8)checks[checks.length-1].ok=false;
-    if(!Array.isArray(dashboard.offices)||dashboard.offices.length!==10)checks[checks.length-1].ok=false;
+  const residenceDashboard=check_('residence_dashboard',()=>getResidencePermitDashboard({}));
+  if(residenceDashboard&&residenceIntegrity){
+    if(Number(residenceDashboard.rowCount)!==residenceIntegrity.rowCount||Number(residenceDashboard.grandTotal)!==residenceIntegrity.observedTotal||residenceDashboard.monthly.length!==residenceIntegrity.periodCount||residenceDashboard.offices.length!==residenceIntegrity.officeCount)checks[checks.length-1].ok=false;
   }
 
-  const drilldown=check_('drilldown_baseline',()=>getResidencePermitDrilldown({}));
-  if(drilldown&&Number(drilldown.totalRows)!==80)checks[checks.length-1].ok=false;
+  const passportDashboard=check_('passport_dashboard',()=>getPassportDashboard({}));
+  if(passportDashboard&&passportIntegrity){
+    if(Number(passportDashboard.rowCount)!==passportIntegrity.rowCount||Number(passportDashboard.grandTotal)!==passportIntegrity.observedTotal||passportDashboard.monthly.length!==passportIntegrity.periodCount||passportDashboard.offices.length!==passportIntegrity.officeCount)checks[checks.length-1].ok=false;
+  }
+
+  const residenceDrilldown=check_('residence_drilldown',()=>getResidencePermitDrilldown({}));
+  if(residenceDrilldown&&residenceIntegrity&&Number(residenceDrilldown.totalRows)!==residenceIntegrity.rowCount)checks[checks.length-1].ok=false;
+
+  const passportDrilldown=check_('passport_drilldown',()=>getPassportDrilldown({}));
+  if(passportDrilldown&&passportIntegrity&&Number(passportDrilldown.totalRows)!==passportIntegrity.rowCount)checks[checks.length-1].ok=false;
 
   const officeStatus=check_('office_reference_readiness',()=>getOfficeReferenceStatus());
   if(officeStatus&&!officeStatus.ready)checks[checks.length-1].ok=false;
 
-  const map=check_('map_baseline',()=>getResidencePermitMap({}));
-  if(map){
-    if(Number(map.rowCount)!==80)checks[checks.length-1].ok=false;
-    if(!Array.isArray(map.markers)||map.markers.length!==10)checks[checks.length-1].ok=false;
-  }
+  const residenceMap=check_('residence_map',()=>getResidencePermitMap({}));
+  if(residenceMap&&residenceIntegrity&&(Number(residenceMap.rowCount)!==residenceIntegrity.rowCount||residenceMap.markers.length!==residenceIntegrity.officeCount))checks[checks.length-1].ok=false;
 
-  const integrity=check_('dataset_integrity',()=>verifyResidencePermitMonthlyIntegrity());
-  if(integrity&&!integrity.ok)checks[checks.length-1].ok=false;
+  const passportMap=check_('passport_map',()=>getPassportMap({}));
+  if(passportMap&&passportIntegrity&&(Number(passportMap.rowCount)!==passportIntegrity.rowCount||passportMap.markers.length!==passportIntegrity.officeCount))checks[checks.length-1].ok=false;
 
-  const exportCheck=check_('export_verification',()=>verifyResidencePermitExportV1({}));
+  const exportCheck=check_('residence_export_verification',()=>verifyResidencePermitExportV1({}));
   if(exportCheck&&!exportCheck.ok)checks[checks.length-1].ok=false;
 
   const latestSnapshotId=findLatestResidencePermitSnapshot_();
-  const snapshot=check_('backup_snapshot',()=>{
+  const snapshot=check_('residence_backup_snapshot',()=>{
     if(!latestSnapshotId)throw new Error('NO_BACKUP_SNAPSHOT_FOUND');
     return verifyResidencePermitSnapshot(latestSnapshotId);
   });
@@ -322,20 +312,17 @@ function runProductionSmokeTestV1(){
 
   const failed=checks.filter(c=>!c.ok);
   const result={
-    ok:failed.length===0,
-    smokeVersion:'1',
-    verifiedAt:nowIso_(),
-    startedAt,
-    actor:user.email,
-    datasetKey:'RESIDENCE_PERMIT_SERVICE_MONTHLY',
-    deploymentId:APP.DEPLOYMENT_ID,
-    releaseEvidenceVersion:APP.RELEASE_EVIDENCE_VERSION,
-    expected:{rowCount:80,grandTotal:258094,monthlyPeriods:8,offices:10},
+    ok:failed.length===0,smokeVersion:'2-growth-safe',verifiedAt:nowIso_(),startedAt,actor:user.email,
+    deploymentId:APP.DEPLOYMENT_ID,releaseEvidenceVersion:APP.RELEASE_EVIDENCE_VERSION,
+    observed:{
+      residence:residenceIntegrity?{rowCount:residenceIntegrity.rowCount,grandTotal:residenceIntegrity.observedTotal,monthlyPeriods:residenceIntegrity.periodCount,offices:residenceIntegrity.officeCount}:null,
+      passport:passportIntegrity?{rowCount:passportIntegrity.rowCount,grandTotal:passportIntegrity.observedTotal,monthlyPeriods:passportIntegrity.periodCount,offices:passportIntegrity.officeCount}:null
+    },
     latestSnapshotId:latestSnapshotId||null,
-    checks:checks.map(c=>({name:c.name,ok:c.ok,error:c.error||null})),
-    failedChecks:failed.map(c=>c.name)
+    checks:checks.map(c=>({name:c.name,ok:c.ok,error:c.error||null})),failedChecks:failed.map(c=>c.name)
   };
-  appendAudit_('PRODUCTION_SMOKE_TEST','RESIDENCE_PERMIT_SERVICE_MONTHLY','',80,result.ok?'PASS':'FAILED',JSON.stringify(result));
+  const affectedRows=(residenceIntegrity?residenceIntegrity.rowCount:0)+(passportIntegrity?passportIntegrity.rowCount:0);
+  appendAudit_('PRODUCTION_SMOKE_TEST','MULTI_DATASET','',affectedRows,result.ok?'PASS':'FAILED',JSON.stringify(result));
   Logger.log(JSON.stringify(result));
   return result;
 }
