@@ -47,6 +47,14 @@ const schemaTemporal=read('SchemaService.gs');
 assert(schemaTemporal.includes('function inferPeriodGrain_'),'Schema inference detects temporal grain from input data');
 assert(schemaTemporal.includes("String(identity.datasetKey)+'|v'+String(identity.version)+'|grain:'+String(identity.periodGrain)"),'Non-monthly schema signatures include dataset identity and temporal grain');
 assert(schemaTemporal.includes("legacy=!identity||!identity.periodGrain||String(identity.periodGrain)==='month'"),'Existing monthly schema signatures retain backward compatibility');
+const temporalCode=read('TemporalService.gs');
+assert(temporalCode.includes('function getDatasetTemporalProfileV1'),'Temporal profile endpoint exists');
+assert(temporalCode.includes('function getAnnualRollupFromMonthlyV1'),'Annual roll-up endpoint exists');
+assert(temporalCode.includes('ANNUAL_ROLLUP_REQUIRES_MONTHLY_DATASET'),'Annual roll-up rejects non-monthly sources');
+assert(temporalCode.includes('readOnly:true'),'Temporal analytics are explicitly read-only');
+assert(verification.includes('function verifyRegisteredAnnualDatasetsV1'),'Annual datasets have a shared integrity smoke seam');
+assert(verification.includes("annual_dataset_integrity"),'Production/dashboard smoke includes annual integrity gate');
+
 
 assert(pureImport.normalizeInteger_('1,234','bvk')===1234,'integer comma normalization');
 
