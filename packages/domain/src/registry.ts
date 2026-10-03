@@ -16,7 +16,10 @@ export type DatasetContractDefinition = {
   key: DatasetKey;
   version: 1;
   businessKey: readonly ["periode", "kantor_imigrasi"];
-  columns: readonly string[];\n  required: readonly string[];\n  optional: readonly string[];\n  measures: readonly string[];
+  columns: readonly string[];
+  required: readonly string[];
+  optional: readonly string[];
+  measures: readonly string[];
   derivedTotal: "total";
   rowSchema: z.ZodType;
 };
