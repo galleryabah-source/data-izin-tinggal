@@ -93,8 +93,10 @@ function commitImport(pastedText){
     const dataset=ensureDataset_(schema,user.email),sh=getDb_().getSheetByName(dataset.sheetName),batchId=Utilities.getUuid();
     const start=sh.getLastRow()+1;sh.getRange(start,1,check.valid.length,schema.columns.length).setValues(check.valid);
     dataset.rowCount=sh.getLastRow()-1;updateDatasetRowCount_(dataset);
+    const cacheGeneration=bumpReadCacheGeneration_();
     getDb_().getSheetByName(SHEETS.IMPORT_LOG).appendRow([batchId,nowIso_(),user.email,dataset.datasetKey,schema.contractVersion||'1',matrix.length-1,check.valid.length,check.errors.length,check.duplicates,'SUCCESS',check.errors.slice(0,10).map(x=>x.error).join('; ')]);
-    appendAudit_('IMPORT_COMMIT',dataset.datasetKey,batchId,check.valid.length,'SUCCESS',JSON.stringify({rejected:check.errors.length,duplicates:check.duplicates,contractVersion:schema.contractVersion}));
-    return {ok:true,batchId,datasetKey:dataset.datasetKey,inserted:check.valid.length,rejected:check.errors.length,duplicates:check.duplicates,rowCount:dataset.rowCount};
+    appendAudit_('IMPORT_COMMIT',dataset.datasetKey,batchId,check.valid.length,'SUCCESS',JSON.stringify({rejected:check.errors.length,duplicates:check.duplicates,contractVersion:schema.contractVersion,cacheGeneration}));
+    SpreadsheetApp.flush();
+    return {ok:true,batchId,datasetKey:dataset.datasetKey,inserted:check.valid.length,rejected:check.errors.length,duplicates:check.duplicates,rowCount:dataset.rowCount,cacheGeneration};
   }finally{lock.releaseLock();}
 }

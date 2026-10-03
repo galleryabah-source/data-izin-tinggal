@@ -46,6 +46,20 @@ assert(configPerf.includes('CacheService.getScriptCache()'),'Backend read cache 
 assert(configPerf.includes('raw.length>90000'),'Backend cache bounds payload size');
 assert(configPerf.includes('READ_CACHE_TTL_SEC=10'),'Backend read cache TTL is explicit and bounded');
 assert(configPerf.includes('function readCacheKey_'),'Backend read cache keys are namespaced');
+assert(configPerf.includes("const READ_CACHE_GENERATION_KEY='INTAL_READ_CACHE_GENERATION'"),'Read cache has explicit data generation namespace');
+assert(configPerf.includes("function bumpReadCacheGeneration_()"),'Read cache generation can be advanced after canonical writes');
+assert(read('ImportService.gs').includes('const cacheGeneration=bumpReadCacheGeneration_();'),'Canonical import advances read cache generation');
+assert(read('ImportService.gs').includes('SpreadsheetApp.flush();'),'Canonical import flushes spreadsheet writes before release');
+const verification=read('VerificationService.gs');
+const passportGovernance=read('PassportGovernanceService.gs');
+assert(verification.includes('function verifyDatasetIntegrityV1(datasetKey)'), 'Dataset integrity uses a shared contract-driven verifier');
+assert(!verification.includes('rowCount!==80')&&!verification.includes('expectedObservedTotal:258094')&&!verification.includes('grandTotal)!==258094'), 'Residence verification/smoke is not pinned to the original 80-row/258094 baseline');
+assert(!verification.includes('rowCount!==80')&&!verification.includes('grandTotal)!==327088')&&!verification.includes('combinedServiceVolume)!==585182'), 'Regression smoke is not pinned to the original fixed totals');
+assert(passportGovernance.includes("return verifyDatasetIntegrityV1('PASSPORT_SERVICE_MONTHLY');"), 'Passport governance delegates to shared growth-safe integrity verifier');
+assert(!passportGovernance.includes('const expectedRows=80,expectedTotal=327088'), 'Passport integrity is not pinned to the original 80-row/327088 baseline');
+assert(read('DashboardService.gs').includes('const serviceColumns=contract.measures.slice();'), 'Residence dashboard measures derive from canonical contract');
+assert(verification.includes("smokeVersion:'2-growth-safe'"), 'Regression and production smoke use growth-safe version');
+
 
 const dashboard=read('DashboardService.gs');
 const officeRef=read('OfficeReferenceService.gs');

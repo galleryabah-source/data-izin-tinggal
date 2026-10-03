@@ -13,49 +13,7 @@ function getActiveDatasetContract_(datasetKey){
 }
 
 function verifyPassportServiceMonthly(){
-  const user=requirePermission_('audit.read');
-  const datasetKey='PASSPORT_SERVICE_MONTHLY';
-  const expectedRows=80,expectedTotal=327088;
-  const d=getActiveDatasetContract_(datasetKey),values=d.sheet.getDataRange().getValues(),header=values[0]||[];
-  const issues=[],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
-  if(JSON.stringify(header)!==JSON.stringify(d.contract.columns))issues.push('Header dataset tidak identik dengan Passport Contract v1.');
-  d.contract.columns.forEach(c=>{if(hi[c]===undefined)issues.push('Kolom contract hilang: '+c+'.');});
-  const rows=values.slice(1).filter(r=>r.some(v=>String(v)!==''));
-  const seen={};let duplicateKeys=0,blankKeys=0,totalMismatches=0,observedTotal=0;
-  rows.forEach(r=>{
-    const period=String(r[hi.periode]||'').trim(),office=String(r[hi.kantor_imigrasi]||'').trim();
-    if(!period||!office)blankKeys++;
-    const key=period+'|'+office.toUpperCase();
-    if(seen[key])duplicateKeys++;
-    seen[key]=true;
-    const computed=d.contract.measures.reduce((sum,c)=>sum+Number(r[hi[c]]||0),0);
-    if(Number(r[hi.total])!==computed)totalMismatches++;
-    observedTotal+=Number(r[hi.total]||0);
-  });
-  if(rows.length!==expectedRows)issues.push('Jumlah row Passport harus '+expectedRows+', ditemukan '+rows.length+'.');
-  if(duplicateKeys!==0)issues.push('Business key duplikat: '+duplicateKeys+'.');
-  if(blankKeys!==0)issues.push('Business key kosong: '+blankKeys+'.');
-  if(totalMismatches!==0)issues.push('Baris dengan total tidak konsisten: '+totalMismatches+'.');
-  if(observedTotal!==expectedTotal)issues.push('Aggregate total Passport harus '+expectedTotal+', ditemukan '+observedTotal+'.');
-  if(Number(d.registryRow[d.registryIndex.row_count]||0)!==rows.length)issues.push('row_count registry tidak sama dengan jumlah row Passport.');
-  const importSheet=getDb_().getSheetByName(SHEETS.IMPORT_LOG),iv=importSheet.getDataRange().getValues(),ih=iv[0]||[],ii=Object.fromEntries(ih.map((x,n)=>[x,n]));
-  const imports=iv.slice(1).filter(r=>String(r[ii.dataset_key]||'')===datasetKey),latest=imports.length?imports[imports.length-1]:null;
-  let latestBatchId='';
-  if(!latest)issues.push('Tidak ditemukan IMPORT_LOG Passport.');
-  else{
-    latestBatchId=String(latest[ii.batch_id]||'');
-    if(Number(latest[ii.row_count]||0)!==expectedRows)issues.push('IMPORT_LOG row_count terbaru bukan '+expectedRows+'.');
-    if(Number(latest[ii.accepted]||0)!==expectedRows)issues.push('IMPORT_LOG accepted terbaru bukan '+expectedRows+'.');
-    if(Number(latest[ii.rejected]||0)!==0)issues.push('IMPORT_LOG rejected terbaru bukan 0.');
-    if(Number(latest[ii.duplicates]||0)!==0)issues.push('IMPORT_LOG duplicates terbaru bukan 0.');
-    if(String(latest[ii.status]||'').toUpperCase()!=='SUCCESS')issues.push('IMPORT_LOG status terbaru bukan SUCCESS.');
-  }
-  const auditSheet=getDb_().getSheetByName(SHEETS.AUDIT_LOG),av=auditSheet.getDataRange().getValues(),ah=av[0]||[],ai=Object.fromEntries(ah.map((x,n)=>[x,n]));
-  const matchingAudit=latestBatchId?av.slice(1).filter(r=>String(r[ai.action]||'')==='IMPORT_COMMIT'&&String(r[ai.dataset_key]||'')===datasetKey&&String(r[ai.batch_id]||'')===latestBatchId):[];
-  if(!latestBatchId||matchingAudit.length!==1)issues.push('Harus ada tepat 1 AUDIT_LOG IMPORT_COMMIT untuk batch Passport terbaru.');
-  const result={ok:issues.length===0,verifiedAt:nowIso_(),actor:user.email,datasetKey,sheetName:d.sheetName,registryRowCount:Number(d.registryRow[d.registryIndex.row_count]||0),rowCount:rows.length,expectedRows,duplicateKeys,blankKeys,totalMismatches,observedTotal,expectedTotal,latestImport:latest?{batchId:latestBatchId,rowCount:Number(latest[ii.row_count]||0),accepted:Number(latest[ii.accepted]||0),rejected:Number(latest[ii.rejected]||0),duplicates:Number(latest[ii.duplicates]||0),status:String(latest[ii.status]||'')}:null,matchingAuditEvents:matchingAudit.length,issues};
-  appendAudit_('PASSPORT_INTEGRITY_VERIFY',datasetKey,latestBatchId,rows.length,result.ok?'SUCCESS':'FAILED',JSON.stringify(result));
-  return result;
+  return verifyDatasetIntegrityV1('PASSPORT_SERVICE_MONTHLY');
 }
 
 function exportPassportServiceMonthly(filters){
