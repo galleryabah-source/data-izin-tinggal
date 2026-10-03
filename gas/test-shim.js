@@ -41,8 +41,15 @@ assert(backupCode.includes('SNAPSHOT_NOT_FOUND'), 'snapshot verification handles
 assert(backupCode.includes('content_sha256'), 'snapshot verification checks manifest checksum');
 assert(backupCode.includes('inConfiguredFolder'), 'snapshot verification checks configured backup folder');
 
+const configPerf=read('Config.gs');
+assert(configPerf.includes('CacheService.getScriptCache()'),'Backend read cache uses Apps Script CacheService');
+assert(configPerf.includes('raw.length>90000'),'Backend cache bounds payload size');
+assert(configPerf.includes('READ_CACHE_TTL_SEC=10'),'Backend read cache TTL is explicit and bounded');
+assert(configPerf.includes('function readCacheKey_'),'Backend read cache keys are namespaced');
+
 const dashboard=read('DashboardService.gs');
 const officeRef=read('OfficeReferenceService.gs');
+assert(officeRef.includes("readCacheKey_('office-reference-status')") && officeRef.includes('readCachePut_(cacheKey'), 'Office reference readiness uses bounded cache');
 assert(officeRef.includes('function getOfficeReferenceStatus()'), 'office reference readiness endpoint exists');
 assert(officeRef.includes("requirePermission_('map.read')"), 'map readiness is RBAC protected');
 assert(officeRef.includes("status!=='VERIFIED'"), 'map readiness requires verified reference rows');
@@ -55,6 +62,9 @@ assert(officeRef.includes("requirePermission_('admin.config')"), 'office referen
 assert(officeRef.includes("status:'PENDING'"), 'office reference draft seed never marks rows VERIFIED');
 assert(officeRef.includes('if(rows.length)sh.getRange'), 'office reference draft seed writes only missing offices');
 
+assert(dashboard.includes("readCacheKey_('dashboard'"), 'Dashboard read path uses bounded cache');
+assert(dashboard.includes("readCacheKey_('map'"), 'GIS read path uses bounded cache');
+assert(dashboard.includes('readCachePut_(cacheKey'), 'Dashboard and GIS responses are cached after computation');
 assert(dashboard.includes('function getResidencePermitDrilldown(filters)'), 'drill-down endpoint exists');
 assert(dashboard.includes('function getResidencePermitMap(filters)'), 'map endpoint exists');
 assert(dashboard.includes("requirePermission_('map.read')"), 'map endpoint is RBAC protected');
@@ -160,6 +170,7 @@ assert(configRunningText.includes("RUNNING_TEXTS:'RUNNING_TEXTS'"), 'Running tex
 assert(codeGs.includes('function ensureRunningTextSheet_()') && codeGs.includes('function saveRunningText(payload)'), 'Running text server endpoints exist');
 assert(codeGs.includes("requirePermission_('admin.config')"), 'Running text write endpoints are RBAC protected');
 assert(codeGs.includes("function getActiveRunningTexts()") && codeGs.includes("requirePermission_('dashboard.read')"), 'TV active running text read path is RBAC protected');
+assert(codeGs.includes("readCacheKey_('running-text-active')") && codeGs.includes('readCachePut_(cacheKey,result,10)'), 'TV running text read path uses bounded cache');
 assert(codeGs.includes("view==='tv'?'tv':'index'"), 'doGet routes TV to dedicated tv.html entry');
 assert(read('tv.html').includes('INTAL') && read('tv.html').includes('COMMAND DISPLAY'), 'Dedicated TV document exists');
 assert(!/<script[^>]+src=["'][^"']*leaflet\.js/i.test(read('tv.html')), 'Dedicated TV entry does not block on Leaflet CDN');
