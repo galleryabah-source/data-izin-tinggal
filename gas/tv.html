@@ -157,13 +157,23 @@ async function activateService(key){currentService=key;updateSwitch();$('mapBadg
 
 async function fetchVerifiedSnapshot(key){
   const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};
-  const results=await withTimeout(Promise.allSettled([call(serviceFn(key),filters),call(mapFn(key),filters)]),TV_RUNTIME.requestTimeoutMs);
-  const dashboardResult=results[0],mapResult=results[1];
-  if(dashboardResult.status!=='fulfilled'||!validDashboard(dashboardResult.value))throw new Error(dashboardResult.status==='rejected'?'TV_RUNTIME_DASHBOARD_FAILED':'TV_RUNTIME_INVALID_DASHBOARD');
-  const mapData=mapResult.status==='fulfilled'&&validMapData(mapResult.value)?mapResult.value:null;
-  return {dashboard:dashboardResult.value,mapData,loadedAt:Date.now(),mapAvailable:!!mapData};
+  const dashboard=await withTimeout(call(serviceFn(key),filters),TV_RUNTIME.requestTimeoutMs);
+  if(!validDashboard(dashboard))throw new Error('TV_RUNTIME_INVALID_DASHBOARD');
+  return {dashboard,mapData:null,loadedAt:Date.now(),mapAvailable:false};
 }
 async function stageServiceSnapshot(key){return fetchVerifiedSnapshot(key);}
+async function enrichSnapshotMap(key,snapshot){
+  try{
+    const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};
+    const mapData=await withTimeout(call(mapFn(key),filters),8000);
+    if(!validMapData(mapData))return snapshot;
+    snapshot.mapData=mapData;snapshot.mapAvailable=true;
+    CACHE[key].mapData=mapData;CACHE[key].mapAvailable=true;
+    await ensureSnapshotMap(key,snapshot);
+    if(key===currentService)showLayer(key);
+  }catch(e){}
+  return snapshot;
+}
 function commitServiceSnapshot(key,snapshot,L){
   CACHE[key]={dashboard:snapshot.dashboard,mapData:snapshot.mapData,loadedAt:snapshot.loadedAt,mapAvailable:snapshot.mapAvailable};
   VIEW_CACHE[filterKey(key)]=snapshot;
@@ -210,7 +220,7 @@ function withTimeout(p,ms){return Promise.race([p,new Promise((_,reject)=>setTim
 async function refreshAllRuntimeData(){
   if(TV_STATE.refreshing)return;
   TV_STATE.refreshing=true;TV_STATE.lastAttemptAt=Date.now();
-  setRuntimeState('REFRESHING','Memvalidasi snapshot canonical...');
+  setRuntimeState('REFRESHING','Memvalidasi canonical data...');
   try{
     const [res,pass]=await Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])]);
     commitServiceSnapshot(SERVICES[0],res,null);
@@ -219,11 +229,11 @@ async function refreshAllRuntimeData(){
     renderKpis();
     const active=currentService===SERVICES[0]?res:pass;
     renderRanking(active.dashboard.offices);renderTrend(active.dashboard.monthly);renderDistribution(active.dashboard.services,active.dashboard.grandTotal);renderServiceBars(active.dashboard.services);renderOfficeButtons(active.dashboard);
-    await ensureSnapshotMap(currentService,active);
-    showLayer(currentService);
     TV_STATE.lastGoodAt=Date.now();TV_STATE.consecutiveFailures=0;
     $('read').textContent='LAST READ · '+now()+' WIB';
-    setRuntimeState('ONLINE',active.mapAvailable?'Canonical snapshot verified · GIS + data online':'Canonical data verified · GIS unavailable');
+    setRuntimeState('ONLINE','Canonical data verified · GIS loading');
+    enrichSnapshotMap(SERVICES[0],CACHE[SERVICES[0]]);
+    enrichSnapshotMap(SERVICES[1],CACHE[SERVICES[1]]);
   }catch(e){
     TV_STATE.consecutiveFailures++;
     const stale=TV_STATE.lastGoodAt>0;
