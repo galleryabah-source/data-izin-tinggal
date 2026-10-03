@@ -219,6 +219,11 @@ assert(workspaceUi.includes('href="#" onclick="openTv(event)"'), 'INTAL TV menu 
 
 const tvCharts=read('tv.html');
 assert(tvCharts.includes('function renderTrend'), 'INTAL TV renders visual trend chart');
+assert(tvCharts.includes('class="point-hit"') && tvCharts.includes('r="11"'), 'INTAL TV trend points expose a generous clickable hit area');
+assert(tvCharts.includes('class="period-label"') && tvCharts.includes('data-period="'+esc'), 'INTAL TV trend period labels expose clickable period targets');
+assert(tvCharts.includes("document.querySelectorAll('#trend .point')")===false, 'INTAL TV trend interaction uses container delegation instead of fragile per-point binding');
+assert(tvCharts.includes("$('trend').addEventListener('click'") && tvCharts.includes("closest('[data-period]')"), 'INTAL TV trend uses delegated click handling for dynamic period targets');
+assert(tvCharts.includes("$('trend').addEventListener('keydown'") && tvCharts.includes("e.key!=='Enter'&&e.key!==' '"), 'INTAL TV trend period targets support keyboard activation');
 assert(tvCharts.includes('function renderDistribution'), 'INTAL TV renders visual service distribution');
 assert(tvCharts.includes('class="donut"'), 'INTAL TV has donut visualization');
 assert(tvCharts.includes('TOP 10 KANTOR'), 'INTAL TV ranking shows Top 10 offices');
