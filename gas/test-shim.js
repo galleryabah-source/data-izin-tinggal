@@ -262,6 +262,7 @@ assert(tvNew.includes("async function fetchVerifiedSnapshot(key)"), 'INTAL TV ha
 assert(tvNew.includes("Promise.all([call(serviceFn(key),filters),call(mapFn(key),filters)])"), 'INTAL TV validates dashboard and GIS in parallel');
 assert(tvNew.includes("async function refreshService(key)"), 'INTAL TV has explicit service refresh seam');
 assert(tvNew.includes("async function refreshAllRuntimeData()"), 'INTAL TV has atomic all-service refresh cycle');
+assert(tvNew.includes("await loadRunningTexts();\n    renderKpis();"), 'INTAL TV refresh cycle refreshes managed running text content');
 assert(tvNew.includes("TV_STATE.refreshing"), 'INTAL TV prevents overlapping refresh cycles');
 assert(tvNew.includes("LIVE SYSTEM · REFRESHING"), 'INTAL TV exposes refreshing runtime state');
 assert(tvNew.includes("LIVE SYSTEM · STALE"), 'INTAL TV exposes stale runtime state');
