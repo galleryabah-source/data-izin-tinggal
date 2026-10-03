@@ -1,11 +1,11 @@
 const fs=require('fs');
-assert(tvNew.includes('function serviceDrillLabel(){return metricLabel(SERVICE_DRILL.key);}'), 'INTAL TV service drilldown defines its metric label before chart rendering');
 const path=require('path');
 
 const files=fs.readdirSync(__dirname).filter(x=>/\.(gs|js)$/.test(x));
 for(const name of files){new Function(fs.readFileSync(path.join(__dirname,name),'utf8'));}
 
 const assert=(condition,message)=>{if(!condition)throw new Error('TEST FAILED: '+message);};
+assert(tvNew.includes('function serviceDrillLabel(){return metricLabel(SERVICE_DRILL.key);}'), 'INTAL TV service drilldown defines its metric label before chart rendering');
 const tvHtml=fs.readFileSync(path.join(__dirname,'tv.html'),'utf8');
 const tvScriptMatch=tvHtml.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
 assert(!!tvScriptMatch,'INTAL TV HTML contains a script block');
