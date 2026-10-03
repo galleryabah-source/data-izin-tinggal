@@ -203,7 +203,7 @@ const perfTv=read('tv.html');
 assert(perfTv.includes('async function preload('), 'INTAL TV preloads service data');
 assert(perfTv.includes('const CACHE={}'), 'INTAL TV has client-side service cache');
 assert(perfTv.includes('function showLayer'), 'INTAL TV swaps cached GIS layers');
-assert(perfTv.includes('setInterval(()=>{currentService=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];activateService(currentService);},30000)'), 'INTAL TV rotates service presentation');
+assert(perfTv.includes('async function rotateServiceSafely()'), 'INTAL TV rotates service presentation through guarded runtime seam');
 assert(perfTv.includes('Promise.all([call(serviceFn(key),{}),call(mapFn(key),{metric:\'total\'})])'), 'INTAL TV loads dashboard and GIS data in parallel');
 const tvNew=read('tv.html');
 assert(tvNew.includes('getActiveRunningTexts'), 'INTAL TV loads managed running text content');
