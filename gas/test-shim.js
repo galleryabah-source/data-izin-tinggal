@@ -1,4 +1,5 @@
 const fs=require('fs');
+assert(tvNew.includes('function serviceDrillLabel(){return metricLabel(SERVICE_DRILL.key);}'), 'INTAL TV service drilldown defines its metric label before chart rendering');
 const path=require('path');
 
 const files=fs.readdirSync(__dirname).filter(x=>/\.(gs|js)$/.test(x));
