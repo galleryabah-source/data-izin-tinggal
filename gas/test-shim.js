@@ -34,6 +34,20 @@ const pureImport=new Function(importCode+'\nreturn {normalizePeriod_,normalizeIn
 assert(pureImport.normalizePeriod_('2026-01')==='2026-01','YYYY-MM period');
 assert(pureImport.normalizePeriod_('Januari 2026')==='2026-01','Indonesian month period');
 assert(pureImport.normalizePeriod_('8/2026')==='2026-08','numeric month period');
+assert(pureImport.normalizePeriod_('2023','year')==='2023','annual YYYY period');
+assert(pureImport.normalizePeriod_('1999','year')==='1999','historical annual YYYY period');
+assert(pureImport.normalizePeriod_('2099-12','month')==='2099-12','future monthly period');
+assert(importCode.includes("contract.periodGrain"),'Importer derives period normalization from the contract temporal grain');
+const configTemporal=read('Config.gs');
+assert(configTemporal.includes("periodGrain:'month'"),'Monthly contracts declare temporal grain');
+assert(configTemporal.includes("periodGrain:'year'"),'Annual contracts declare temporal grain');
+assert(configTemporal.includes('RESIDENCE_PERMIT_SERVICE_ANNUAL'),'Residence annual contract exists');
+assert(configTemporal.includes('PASSPORT_SERVICE_ANNUAL'),'Passport annual contract exists');
+const schemaTemporal=read('SchemaService.gs');
+assert(schemaTemporal.includes('function inferPeriodGrain_'),'Schema inference detects temporal grain from input data');
+assert(schemaTemporal.includes("String(identity.datasetKey)+'|v'+String(identity.version)+'|grain:'+String(identity.periodGrain)"),'Non-monthly schema signatures include dataset identity and temporal grain');
+assert(schemaTemporal.includes("legacy=!identity||!identity.periodGrain||String(identity.periodGrain)==='month'"),'Existing monthly schema signatures retain backward compatibility');
+
 assert(pureImport.normalizeInteger_('1,234','bvk')===1234,'integer comma normalization');
 
 const backupCode=read('BackupService.gs');
