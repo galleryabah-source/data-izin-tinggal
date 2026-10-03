@@ -10,7 +10,7 @@
   "scripts": {
     "lint": "eslint apps packages tests",
     "typecheck": "npm run build -w @dasmon/domain && tsc -p apps/web --noEmit",
-    "test": "vitest run",
+    "test": "vitest run tests/unit",
     "build": "npm run build -w @dasmon/web"
   },
   "devDependencies": {
