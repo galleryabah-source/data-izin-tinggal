@@ -274,6 +274,7 @@ assert(tvCharts.includes('function enableOfficeListInteraction()'), 'INTAL TV of
 assert(tvCharts.includes("tabindex=\"0\""), 'INTAL TV office list can receive keyboard focus');
 assert(tvCharts.includes("e.key==='ArrowDown'"), 'INTAL TV office list supports ArrowDown keyboard scrolling');
 assert(tvCharts.includes("e.key==='PageDown'"), 'INTAL TV office list supports PageDown keyboard scrolling');
+assert(tvCharts.includes("if(el.setPointerCapture&&!el.hasPointerCapture(e.pointerId))el.setPointerCapture(e.pointerId)"), 'INTAL TV office drag captures pointer only after movement so click remains available');
 
 // INTAL TV P0 runtime hardening invariants
 
