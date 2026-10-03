@@ -61,16 +61,7 @@ function getResidencePermitDashboard(filters){
     offices[office].rows++;
     serviceColumns.forEach(c=>services[c]+=Number(r[hi[c]]||0));
   });
-  return readCachePut_(cacheKey,{
-    datasetKey,
-    rowCount:rows.length,
-    filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric,availablePeriods,availableOffices},
-    metric:requestedMetric,
-    grandTotal,
-    monthly:Object.values(monthly).sort((a,b)=>a.periode.localeCompare(b.periode)),
-    offices:Object.values(offices).sort((a,b)=>b.total-a.total),
-    services:serviceColumns.map(c=>({key:c,total:services[c]}))
-  };
+  return readCachePut_(cacheKey,{datasetKey,rowCount:rows.length,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric,availablePeriods,availableOffices},metric:requestedMetric,grandTotal,monthly:Object.values(monthly).sort((a,b)=>a.periode.localeCompare(b.periode)),offices:Object.values(offices).sort((a,b)=>b.total-a.total),services:serviceColumns.map(c=>({key:c,total:services[c]}))},READ_CACHE_TTL_SEC);
 }
 
 
