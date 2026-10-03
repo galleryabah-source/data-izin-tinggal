@@ -350,6 +350,7 @@ function startRuntime(){
   if(TV_STATE.runtimeStarted)return;
   TV_STATE.runtimeStarted=true;
   try{
+    bindStaticInteractions();
     bindServiceSwitches();
     tick();
     boot();
