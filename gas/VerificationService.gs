@@ -72,6 +72,14 @@ function verifyDatasetIntegrityV1(datasetKey){
   return result;
 }
 
+function verifyRegisteredAnnualDatasetsV1(){
+  const user=requirePermission_('audit.read'),registry=getDb_().getSheetByName(SHEETS.DATASET_REGISTRY),values=registry.getDataRange().getValues(),header=values[0]||[],index=Object.fromEntries(header.map((x,n)=>[x,n]));
+  const activeKeys=values.slice(1).filter(r=>String(r[index.status]||'').toUpperCase()==='ACTIVE').map(r=>String(r[index.dataset_key]||'').trim()).filter(Boolean);
+  const annualKeys=Object.keys(DATASET_CONTRACTS).filter(k=>DATASET_CONTRACTS[k].periodGrain==='year'&&activeKeys.includes(k));
+  const datasets=annualKeys.map(datasetKey=>verifyDatasetIntegrityV1(datasetKey));
+  return {ok:datasets.every(d=>d.ok),actor:user.email,periodGrain:'year',datasets,checked:annualKeys.length};
+}
+
 function verifyResidencePermitMonthlyIntegrity(){
   return verifyDatasetIntegrityV1('RESIDENCE_PERMIT_SERVICE_MONTHLY');
 }
@@ -189,6 +197,8 @@ function runDashboardRegressionSmokeV1(){
   const registryIntegrity=check_('dataset_registry_identity',()=>verifyDatasetRegistryIntegrityV1());
   const residenceIntegrity=check_('residence_integrity',()=>verifyResidencePermitMonthlyIntegrity());
   const passportIntegrity=check_('passport_integrity',()=>verifyPassportServiceMonthly());
+  const annualIntegrity=check_('annual_dataset_integrity',()=>verifyRegisteredAnnualDatasetsV1());
+  if(annualIntegrity&&!annualIntegrity.ok)checks[checks.length-1].ok=false;
 
   const summary=check_('dashboard_summary',()=>getDashboardSummary());
   if(summary){
