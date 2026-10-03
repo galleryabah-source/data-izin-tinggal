@@ -236,7 +236,7 @@ assert(tvCharts.includes('overflow-y:auto;overflow-x:hidden'), 'INTAL TV office 
 // Summary grid overflow regression
 assert(tvCharts.includes('grid-template-columns:1fr'), 'INTAL TV office list keeps one office button per row');
 assert(tvCharts.includes('min-height:0;overflow-y:auto'), 'INTAL TV office list remains shrink-safe and scrollable');
-assert(tvCharts.includes('min-width:0;box-sizing:border-box'), 'INTAL TV office controls remain bounded within the panel');
+assert(tvCharts.includes('.office-btn{width:100%'), 'INTAL TV office controls fill the bounded panel width');
 
 // INTAL TV summary overflow and continuous running-text regression invariants
 assert(tvCharts.includes('grid-template-rows:auto minmax(0,1fr)'), 'INTAL TV office panel reserves header before scroll content');
