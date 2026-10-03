@@ -99,20 +99,23 @@ async function fetchVerifiedSnapshot(key){
   if(!validMapData(mapData))throw new Error('TV_RUNTIME_INVALID_MAP');
   return {dashboard,mapData,loadedAt:Date.now()};
 }
-async function refreshService(key){
-  const snapshot=await fetchVerifiedSnapshot(key);
-  const L=await ensureMap();
+async function stageServiceSnapshot(key){
+  return fetchVerifiedSnapshot(key);
+}
+function commitServiceSnapshot(key,snapshot,L){
   buildLayer(key,snapshot.mapData,L);
   CACHE[key]={dashboard:snapshot.dashboard,mapData:snapshot.mapData,loadedAt:snapshot.loadedAt};
   VIEW_CACHE[filterKey(key)]=snapshot;
-  return snapshot;
 }
 async function refreshAllRuntimeData(){
   if(TV_STATE.refreshing)return;
   TV_STATE.refreshing=true;TV_STATE.lastAttemptAt=Date.now();
   setRuntimeState('REFRESHING','Memvalidasi snapshot canonical...');
   try{
-    const [res,pass]=await Promise.all([refreshService(SERVICES[0]),refreshService(SERVICES[1])]);
+    const [res,pass]=await Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])]);
+    const L=await ensureMap();
+    commitServiceSnapshot(SERVICES[0],res,L);
+    commitServiceSnapshot(SERVICES[1],pass,L);
     await loadRunningTexts();
     renderKpis();
     const active=currentService===SERVICES[0]?res:pass;
@@ -131,7 +134,11 @@ async function rotateServiceSafely(){
   TV_STATE.rotationBusy=true;
   try{
     const next=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];
-    if(!CACHE[next]?.dashboard||!CACHE[next]?.mapData)await refreshService(next);
+    if(!CACHE[next]?.dashboard||!CACHE[next]?.mapData){
+      const staged=await stageServiceSnapshot(next);
+      const L=await ensureMap();
+      commitServiceSnapshot(next,staged,L);
+    }
     const snapshot=CACHE[next];
     if(!validDashboard(snapshot.dashboard)||!validMapData(snapshot.mapData))throw new Error('TV_RUNTIME_INVALID_CACHED_SNAPSHOT');
     currentService=next;updateSwitch();
