@@ -76,6 +76,7 @@ function ensureRunningTextSheet_(){
   sh.setFrozenRows(1);
   return sh;
 }
+function getRunningTextSheet_(){return getDb_().getSheetByName(SHEETS.RUNNING_TEXTS)||null;}
 function normalizeRunningTextRow_(r,h){
   const i=Object.fromEntries(h.map((x,n)=>[x,n]));
   return {
@@ -103,7 +104,10 @@ function saveRunningText(payload){
   if(content.length>1000)throw new Error('Konten running text maksimal 1000 karakter.');
   if(!['ACTIVE','INACTIVE'].includes(status))throw new Error('Status running text tidak valid.');
   const priority=Math.max(0,Number(p.priority||0)||0),startAt=String(p.startAt||'').trim(),endAt=String(p.endAt||'').trim();
-  if(startAt&&endAt&&new Date(startAt).getTime()>new Date(endAt).getTime())throw new Error('Waktu mulai tidak boleh melewati waktu selesai.');
+  const startMs=startAt?new Date(startAt).getTime():NaN,endMs=endAt?new Date(endAt).getTime():NaN;
+  if(startAt&&!Number.isFinite(startMs))throw new Error('Waktu mulai tidak valid.');
+  if(endAt&&!Number.isFinite(endMs))throw new Error('Waktu selesai tidak valid.');
+  if(startAt&&endAt&&startMs>endMs)throw new Error('Waktu mulai tidak boleh melewati waktu selesai.');
   const sh=ensureRunningTextSheet_(),v=sh.getDataRange().getValues(),h=v[0],id=String(p.contentId||'').trim(),actor=getCurrentUser_().email,now=nowIso_();
   let rowIndex=-1;
   if(id){for(let r=1;r<v.length;r++)if(String(v[r][0]||'')===id){rowIndex=r+1;break;}}
@@ -129,7 +133,9 @@ function deleteRunningText(contentId){
 }
 function getActiveRunningTexts(){
   requirePermission_('dashboard.read');
-  const sh=ensureRunningTextSheet_(),v=sh.getDataRange().getValues(),now=new Date();
+  const sh=getRunningTextSheet_();
+  if(!sh)return [];
+  const v=sh.getDataRange().getValues(),now=new Date();
   if(v.length<2)return [];
   return v.slice(1).filter(r=>String(r[0]||'').trim()).map(r=>normalizeRunningTextRow_(r,v[0])).filter(x=>{
     if(x.status!=='ACTIVE')return false;
