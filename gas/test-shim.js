@@ -266,6 +266,8 @@ assert(tvNew.includes("async function stageServiceSnapshot(key)"), 'INTAL TV sta
 assert(tvNew.includes("function commitServiceSnapshot(key,snapshot,L)"), 'INTAL TV commits staged snapshots through one seam');
 assert(tvNew.includes("const [res,pass]=await Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])])"), 'INTAL TV stages both services before commit');
 assert(tvNew.includes("commitServiceSnapshot(SERVICES[0],res,L);") && tvNew.includes("commitServiceSnapshot(SERVICES[1],pass,L);"), 'INTAL TV commits both service snapshots only after staging succeeds');
+assert(tvNew.includes("await refreshAllRuntimeData();"), 'INTAL TV bootstrap uses atomic runtime refresh');
+assert(tvNew.includes("async function preload(key){if(CACHE[key]?.dashboard&&CACHE[key]?.mapData)return CACHE[key];const snapshot=await stageServiceSnapshot(key);"), 'INTAL TV preload stages before commit');
 assert(!tvNew.includes("const [res,pass]=await Promise.all([refreshService(SERVICES[0]),refreshService(SERVICES[1])])"), 'INTAL TV no longer mutates cache independently during atomic refresh');
 
 assert(tvNew.includes("await loadRunningTexts();\n    renderKpis();"), 'INTAL TV refresh cycle refreshes managed running text content');
