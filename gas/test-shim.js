@@ -197,6 +197,8 @@ assert(!/<link[^>]+rel=["']stylesheet["'][^>]+href=["'][^"']*leaflet\.css/i.test
 assert(tv.includes('function loadLeafletCss()') && tv.includes("document.createElement('link')"), 'INTAL TV loads Leaflet CSS lazily after shell render');
 assert(tv.includes('const [L]=await Promise.all([loadLeaflet(),loadLeafletCss()])'), 'INTAL TV waits for Leaflet assets only at GIS initialization');
 assert(tv.includes('function loadLeaflet()') && tv.includes('document.createElement(\'script\')'), 'INTAL TV loads GIS library lazily after shell render');
+assert(tv.includes("window.addEventListener('error'") && tv.includes("window.addEventListener('unhandledrejection'"), 'INTAL TV surfaces runtime script errors instead of remaining silently in PREPARING');
+assert(tv.includes('function startRuntime()') && tv.includes("document.addEventListener('DOMContentLoaded',startRuntime,{once:true})"), 'INTAL TV starts runtime after DOM readiness');
 assert(tv.includes("getPassportMap") && tv.includes("getResidencePermitMap"), 'INTAL TV routes GIS to canonical map endpoints');
 assert(tv.includes("metric:'total'"), 'INTAL TV preserves total-service map metric default');
 assert(tv.includes('getElementById') || tv.includes("$('map')"), 'INTAL TV renders GIS into dedicated map container');
