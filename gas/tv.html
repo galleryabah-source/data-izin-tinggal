@@ -91,6 +91,13 @@ header{display:grid;grid-template-columns:minmax(300px,1fr) auto auto;gap:14px;a
 <footer class="footer"><div class="footer-live">● LIVE</div><div class="ticker"><div class="ticker-viewport"><div id="ticker" class="ticker-track"><span class="ticker-item">Konten tayang sedang disiapkan.</span><span class="ticker-item">Konten tayang sedang disiapkan.</span></div></div></div><div class="footer-meta"><span id="footerMeta">—</span></div></footer>
 </div>
 <script>
+(function(){
+  var el=document.getElementById('live');
+  if(el){el.textContent='● CLIENT JS EXECUTED';el.className='pill live';}
+  document.documentElement.dataset.intalTvClient='executed';
+})();
+</script>
+<script>
 const WORKSPACE_URL='<?= ScriptApp.getService().getUrl() ?>';
 const SERVICES=['RESIDENCE_PERMIT_SERVICE_MONTHLY','PASSPORT_SERVICE_MONTHLY'];
 const CACHE={},VIEW_CACHE={},GIS_OFFICE_DETAIL_CACHE={};let currentService='RESIDENCE_PERMIT_SERVICE_MONTHLY',map=null,leafletPromise=null,leafletCssPromise=null,layers={},bounds={},runningTexts=[];
