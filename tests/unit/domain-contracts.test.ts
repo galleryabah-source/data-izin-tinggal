@@ -60,3 +60,31 @@ describe("legacy contract parity",()=>{
     expect(c.optional).toEqual(["total"]);
   });
 });
+
+
+describe("domain data integrity",()=>{
+  it("normalizes both components of the canonical business key",()=>{
+    const {businessKey}=require("@dasmon/domain");
+    expect(businessKey(" 2026-01 "," Kantor A ")).toBe("2026-01::Kantor A");
+  });
+
+  it("accepts a matching derived total",async()=>{
+    const {assertMatchingDerivedTotal}=await import("@dasmon/domain");
+    const row={
+      periode:"2026-01",kantor_imigrasi:"Kantor A",
+      bvk:10,voa:20,itk:30,itk_peralihan:0,itas:0,itap:0,itkt:0,
+      alih_status_itk_ke_itas:0,alih_status_itas_ke_itap:0,abg:0,epo:0,imk:0,skim:0,total:60
+    };
+    expect(()=>assertMatchingDerivedTotal(row)).not.toThrow();
+  });
+
+  it("rejects a mismatched derived total",async()=>{
+    const {assertMatchingDerivedTotal}=await import("@dasmon/domain");
+    const row={
+      periode:"2026-01",kantor_imigrasi:"Kantor A",
+      bvk:10,voa:20,itk:30,itk_peralihan:0,itas:0,itap:0,itkt:0,
+      alih_status_itk_ke_itas:0,alih_status_itas_ke_itap:0,abg:0,epo:0,imk:0,skim:0,total:61
+    };
+    expect(()=>assertMatchingDerivedTotal(row)).toThrow("DERIVED_TOTAL_MISMATCH");
+  });
+});
