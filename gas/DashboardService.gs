@@ -8,6 +8,10 @@ function getDashboardSummary(){
 
 function getResidencePermitDashboard(filters){
   requirePermission_('dashboard.read');
+  return getResidencePermitDashboard_(filters);
+}
+
+function getResidencePermitDashboard_(filters){
   const cacheKey=readCacheKey_('dashboard',{dataset:'RESIDENCE_PERMIT_SERVICE_MONTHLY',filters:filters||{}});
   const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const datasetKey='RESIDENCE_PERMIT_SERVICE_MONTHLY';
@@ -70,11 +74,11 @@ function getResidencePermitDashboard(filters){
 
 
 function getPassportDashboard(filters){
+  requirePermission_('dashboard.read');
   return getServiceDashboard_('PASSPORT_SERVICE_MONTHLY',['biasa_24','biasa_48','elektronik_48','e_polikarbonat'],filters);
 }
 
 function getServiceDashboard_(datasetKey,serviceColumns,filters){
-  requirePermission_('dashboard.read');
   const cacheKey=readCacheKey_('dashboard',{dataset:datasetKey,filters:filters||{}});
   const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const d=getActiveDatasetContract_(datasetKey);
@@ -109,11 +113,11 @@ function getServiceDashboard_(datasetKey,serviceColumns,filters){
 }
 
 function getPassportMap(filters){
+  requirePermission_('map.read');
   return getServiceMap_('PASSPORT_SERVICE_MONTHLY',filters);
 }
 
 function getServiceMap_(datasetKey,filters){
-  requirePermission_('map.read');
   const cacheKey=readCacheKey_('map',{dataset:datasetKey,filters:filters||{}});
   const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const readiness=getOfficeReferenceStatus();
@@ -234,5 +238,6 @@ function getServiceDrilldown_(datasetKey,filters,periodMode){
 }
 
 function getResidencePermitMap(filters){
+  requirePermission_('map.read');
   return getServiceMap_('RESIDENCE_PERMIT_SERVICE_MONTHLY',filters);
 }
