@@ -133,6 +133,9 @@ function deleteRunningText(contentId){
 }
 function getActiveRunningTexts(){
   requirePermission_('dashboard.read');
+  return getActiveRunningTexts_();
+}
+function getActiveRunningTexts_(){
   const cacheKey=readCacheKey_('running-text-active');
   const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const sh=getRunningTextSheet_();
