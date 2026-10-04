@@ -1,7 +1,7 @@
 function verifyDatasetIntegrityV1(datasetKey){
   const user=requirePermission_('audit.read');
   const d=getActiveDatasetContract_(datasetKey);
-  const contract=d.contract,expectedColumns=contract.columns.slice(),values=d.sheet.getDataRange().getValues(),header=values[0]||[];
+  const contract=d.contract,expectedColumns=contract.columns.slice(),values=d.sheet.getDataRange().getValues(),header=values[0]||[],periodPattern=contract.periodGrain==='year'?/^[1-9][0-9]{3}$/:/^[1-9][0-9]{3}-(0[1-9]|1[0-2])$/;
   const issues=[],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
   if(JSON.stringify(header)!==JSON.stringify(expectedColumns))issues.push('Header dataset tidak identik dengan '+datasetKey+' Contract v'+contract.version+'.');
   expectedColumns.forEach(c=>{if(hi[c]===undefined)issues.push('Kolom contract hilang: '+c+'.');});
@@ -11,7 +11,7 @@ function verifyDatasetIntegrityV1(datasetKey){
   rows.forEach(r=>{
     const period=String(r[hi.periode]||'').trim(),office=String(r[hi.kantor_imigrasi]||'').trim();
     if(!period||!office)blankKeys++;
-    if(!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(period))invalidPeriods++;
+    if(!periodPattern.test(period))invalidPeriods++;
     if(period)periods[period]=true;
     if(office)offices[office]=true;
     const key=period+'|'+office.toUpperCase();
@@ -53,7 +53,7 @@ function verifyDatasetIntegrityV1(datasetKey){
     ok:issues.length===0,verifiedAt:nowIso_(),actor:user.email,datasetKey,sheetName:d.sheetName,
     registryEntries:1,rowCount:rows.length,columnCount:header.length,
     expectedRows:rows.length,expectedColumns:expectedColumns.length,
-    periodCount:Object.keys(periods).length,officeCount:Object.keys(offices).length,
+    periodGrain:contract.periodGrain||'month',periodCount:Object.keys(periods).length,officeCount:Object.keys(offices).length,
     duplicateKeys,blankKeys,invalidPeriods,invalidMeasures,totalMismatches,
     observedTotal,expectedObservedTotal:observedTotal,
     registryRowCount:Number(d.registryRow[d.registryIndex.row_count]||0),
@@ -70,6 +70,14 @@ function verifyDatasetIntegrityV1(datasetKey){
   }));
   Logger.log(JSON.stringify(result));
   return result;
+}
+
+function verifyRegisteredAnnualDatasetsV1(){
+  const user=requirePermission_('audit.read'),registry=getDb_().getSheetByName(SHEETS.DATASET_REGISTRY),values=registry.getDataRange().getValues(),header=values[0]||[],index=Object.fromEntries(header.map((x,n)=>[x,n]));
+  const activeKeys=values.slice(1).filter(r=>String(r[index.status]||'').toUpperCase()==='ACTIVE').map(r=>String(r[index.dataset_key]||'').trim()).filter(Boolean);
+  const annualKeys=Object.keys(DATASET_CONTRACTS).filter(k=>DATASET_CONTRACTS[k].periodGrain==='year'&&activeKeys.includes(k));
+  const datasets=annualKeys.map(datasetKey=>verifyDatasetIntegrityV1(datasetKey));
+  return {ok:datasets.every(d=>d.ok),actor:user.email,periodGrain:'year',datasets,checked:annualKeys.length};
 }
 
 function verifyResidencePermitMonthlyIntegrity(){
@@ -189,6 +197,8 @@ function runDashboardRegressionSmokeV1(){
   const registryIntegrity=check_('dataset_registry_identity',()=>verifyDatasetRegistryIntegrityV1());
   const residenceIntegrity=check_('residence_integrity',()=>verifyResidencePermitMonthlyIntegrity());
   const passportIntegrity=check_('passport_integrity',()=>verifyPassportServiceMonthly());
+  const annualIntegrity=check_('annual_dataset_integrity',()=>verifyRegisteredAnnualDatasetsV1());
+  if(annualIntegrity&&!annualIntegrity.ok)checks[checks.length-1].ok=false;
 
   const summary=check_('dashboard_summary',()=>getDashboardSummary());
   if(summary){
@@ -273,6 +283,8 @@ function runProductionSmokeTestV1(){
   const registryIntegrity=check_('dataset_registry_identity',()=>verifyDatasetRegistryIntegrityV1());
   const residenceIntegrity=check_('residence_integrity',()=>verifyResidencePermitMonthlyIntegrity());
   const passportIntegrity=check_('passport_integrity',()=>verifyPassportServiceMonthly());
+  const annualIntegrity=check_('annual_dataset_integrity',()=>verifyRegisteredAnnualDatasetsV1());
+  if(annualIntegrity&&!annualIntegrity.ok)checks[checks.length-1].ok=false;
 
   const summary=check_('dashboard_summary',()=>getDashboardSummary());
   const residenceDashboard=check_('residence_dashboard',()=>getResidencePermitDashboard({}));

@@ -15,13 +15,22 @@ function parseDelimitedLine_(line,delimiter){
   }
   out.push(buf.join('').trim());return out;
 }
-function normalizePeriod_(value){
+function normalizePeriod_(value,periodGrain){
   const s=String(value||'').trim().toUpperCase().replace(/\s+/g,' ');
-  if(/^[0-9]{4}-[0-9]{2}$/.test(s))return s;
-  const m=s.match(/^(JAN|JANUARI|FEB|FEBRUARI|MAR|MARET|APR|APRIL|MEI|MAY|JUN|JUNI|JUL|JULI|AGU|AGS|AGUST|AGUSTUS|SEP|SEPT|SEPTEMBER|OKT|OKTOBER|NOV|NOVEMBER|DES|DESEMBER)[ -](20[0-9]{2})$/);
+  const grain=String(periodGrain||'month');
+  if(grain==='year'){
+    if(/^[1-9][0-9]{3}$/.test(s))return s;
+    throw new Error('Periode tahunan harus berupa YYYY.');
+  }
+  if(/^\d{4}-\d{2}$/.test(s)){
+    const month=Number(s.slice(5));
+    if(month>=1&&month<=12)return s;
+  }
+  const m=s.match(/^(JAN|JANUARI|FEB|FEBRUARI|MAR|MARET|APR|APRIL|MEI|MAY|JUN|JUNI|JUL|JULI|AGU|AGS|AGUST|AGUSTUS|SEP|SEPT|SEPTEMBER|OKT|OKTOBER|NOV|NOVEMBER|DES|DESEMBER)[ -]([1-9][0-9]{3})$/);
   const names={JAN:'01',JANUARI:'01',FEB:'02',FEBRUARI:'02',MAR:'03',MARET:'03',APR:'04',APRIL:'04',MEI:'05',MAY:'05',JUN:'06',JUNI:'06',JUL:'07',JULI:'07',AGU:'08',AGS:'08',AGUST:'08',AGUSTUS:'08',SEP:'09',SEPT:'09',SEPTEMBER:'09',OKT:'10',OKTOBER:'10',NOV:'11',NOVEMBER:'11',DES:'12',DESEMBER:'12'};
   if(m)return m[2]+'-'+names[m[1]];
-  const n=s.match(/^([0-9]{1,2})[-/]((20)[0-9]{2})$/);if(n&&Number(n[1])>=1&&Number(n[1])<=12)return n[2]+'-'+('0'+n[1]).slice(-2);
+  const n=s.match(/^([0-9]{1,2})[-\/]([1-9][0-9]{3})$/);
+  if(n&&Number(n[1])>=1&&Number(n[1])<=12)return n[2]+'-'+('0'+n[1]).slice(-2);
   throw new Error('Periode harus berupa YYYY-MM atau nama bulan + tahun.');
 }
 function normalizeInteger_(value,key){
@@ -57,7 +66,7 @@ function validateRows_(schema,rows){
         out=contract.columns.map(key=>{
           if(contract.derived.includes(key))return null;
           const raw=r[positions[key]];
-          if(key==='periode')return normalizePeriod_(raw);
+          if(key==='periode')return normalizePeriod_(raw,contract.periodGrain);
           if(key==='kantor_imigrasi')return String(raw||'').trim();
           return normalizeInteger_(raw,key);
         });
@@ -80,12 +89,12 @@ function validateRows_(schema,rows){
 }
 function previewImport(pastedText){
   const user=requirePermission_('dataset.import'),matrix=parseDelimited_(pastedText);if(matrix.length<2)throw new Error('Header dan minimal satu baris data diperlukan.');
-  const schema=detectSchema_(matrix[0]),check=validateRows_(schema,matrix.slice(1)),dataset=getDatasetBySignature_(schema.signature);
+  const schema=detectSchema_(matrix[0],matrix.slice(1)),check=validateRows_(schema,matrix.slice(1)),dataset=getDatasetBySignature_(schema.signature);
   return {ok:true,dataset:dataset||{datasetKey:schema.datasetKey,sheetName:APP.SHEET_PREFIX+schema.datasetKey,columns:schema.columns,rowCount:0},schema,preview:check.valid.slice(0,20),validRows:check.valid.length,rejectedRows:check.errors.length,duplicates:check.duplicates,errors:check.errors.slice(0,50),actor:user.email};
 }
 function commitImport(pastedText){
   const user=requirePermission_('dataset.import'),matrix=parseDelimited_(pastedText);if(matrix.length<2)throw new Error('Header dan minimal satu baris data diperlukan.');
-  const schema=detectSchema_(matrix[0]),lock=LockService.getScriptLock();lock.waitLock(30000);
+  const schema=detectSchema_(matrix[0],matrix.slice(1)),lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
     // Validation and dataset creation must occur under the same script lock as the write.
     // This prevents two concurrent commits from both passing the business-key check.

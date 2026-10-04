@@ -11,12 +11,24 @@ const OFFICE_REFERENCE_CONTRACT = Object.freeze({datasetKey:'OFFICE_REFERENCE',v
 const DATASET_CONTRACTS = Object.freeze({
   RESIDENCE_PERMIT_SERVICE_MONTHLY:Object.freeze({
     datasetKey:'RESIDENCE_PERMIT_SERVICE_MONTHLY',version:'1',
-    columns:['periode','kantor_imigrasi','bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim','total'],
+    periodGrain:'month',periodKey:'periode',columns:['periode','kantor_imigrasi','bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim','total'],
     required:['periode','kantor_imigrasi','bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim'],
     optional:['total'],ignored:['no'],businessKey:['periode','kantor_imigrasi'],measures:['bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim'],derived:['total']
   }),
   PASSPORT_SERVICE_MONTHLY:Object.freeze({
-    datasetKey:'PASSPORT_SERVICE_MONTHLY',version:'1',
+    datasetKey:'PASSPORT_SERVICE_MONTHLY',version:'1',periodGrain:'month',periodKey:'periode',
+    columns:['periode','kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat','total'],
+    required:['periode','kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat'],
+    optional:['total'],ignored:['no'],businessKey:['periode','kantor_imigrasi'],measures:['biasa_24','biasa_48','elektronik_48','e_polikarbonat'],derived:['total']
+  }),
+  RESIDENCE_PERMIT_SERVICE_ANNUAL:Object.freeze({
+    datasetKey:'RESIDENCE_PERMIT_SERVICE_ANNUAL',version:'1',periodGrain:'year',periodKey:'periode',
+    columns:['periode','kantor_imigrasi','bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim','total'],
+    required:['periode','kantor_imigrasi','bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim'],
+    optional:['total'],ignored:['no'],businessKey:['periode','kantor_imigrasi'],measures:['bvk','voa','itk','itk_peralihan','itas','itap','itkt','alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim'],derived:['total']
+  }),
+  PASSPORT_SERVICE_ANNUAL:Object.freeze({
+    datasetKey:'PASSPORT_SERVICE_ANNUAL',version:'1',periodGrain:'year',periodKey:'periode',
     columns:['periode','kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat','total'],
     required:['periode','kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat'],
     optional:['total'],ignored:['no'],businessKey:['periode','kantor_imigrasi'],measures:['biasa_24','biasa_48','elektronik_48','e_polikarbonat'],derived:['total']

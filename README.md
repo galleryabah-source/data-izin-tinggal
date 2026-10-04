@@ -32,6 +32,19 @@ Contract nyata pertama adalah `RESIDENCE_PERMIT_SERVICE_MONTHLY`.
 
 Lihat `docs/DATA-CONTRACT-v1.md` untuk contract lengkap.
 
+## Temporal data growth contract
+
+The canonical data engine supports two explicit temporal grains:
+
+- Monthly (periodGrain=month): the existing RESIDENCE_PERMIT_SERVICE_MONTHLY and PASSPORT_SERVICE_MONTHLY contracts remain the canonical operational baseline.
+- Annual (periodGrain=year): authoritative annual source data uses isolated RESIDENCE_PERMIT_SERVICE_ANNUAL and PASSPORT_SERVICE_ANNUAL contracts.
+- Historical monthly data and future monthly data use the same canonical YYYY-MM representation; no schema change is required when adding new periods.
+- Historical annual data and future annual data use canonical YYYY.
+- Annual values derived from monthly data are exposed only through a read-only annual roll-up seam. They are not written back into the monthly source and are not mixed into cross-service monthly totals.
+- Existing monthly schema signatures remain backward-compatible; annual schema identity includes dataset identity, version, and temporal grain so monthly and annual datasets cannot collide in the registry.
+
+This means adding a new year or month is an append-by-business-key operation, not a schema migration. A new source grain is a contract change and must pass CI, forensic review, canonical deployment, and runtime evidence before production use.
+
 ## Current application scope
 The production application is now a governed monthly-data platform with Residence Permit and Passport dataset isolation and a GIS First workspace shell. **Phase 10.2 production certification is CLOSED / PASS as of 2026-10-02.** Source implementation, CI validation, canonical deployment, production regression, seven-workspace UAT, monitoring verification, and authorization negative testing have been evidenced against canonical Apps Script deployment version `71`.
 
