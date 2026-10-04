@@ -120,7 +120,7 @@ function getPassportMap(filters){
 function getServiceMap_(datasetKey,filters){
   const cacheKey=readCacheKey_('map',{dataset:datasetKey,filters:filters||{}});
   const cached=readCacheGet_(cacheKey);if(cached)return cached;
-  const readiness=getOfficeReferenceStatus();
+  const readiness=getOfficeReferenceStatus_();
   if(!readiness.ready)throw new Error('OFFICE_REFERENCE_NOT_READY');
   const d=getActiveDatasetContract_(datasetKey),values=d.sheet.getDataRange().getValues();
   if(values.length<2)return {datasetKey,rowCount:0,markers:[],metric:'total',filters:{periode:'',kantor_imigrasi:'',metric:'total'}};
