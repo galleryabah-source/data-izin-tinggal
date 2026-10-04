@@ -64,7 +64,7 @@ function seedDictionary_(){
   for(let r=1;r<existing.length;r++)byKey[String(existing[r][idx.canonical_key]||'')]=r+1;
   rows.forEach(row=>{const key=row[0],target=byKey[key];if(target)sh.getRange(target,1,1,row.length).setValues([row]);else sh.appendRow(row);});
 }
-function getBootstrap(){const u=getCurrentUser_();return {app:{name:APP.NAME,version:APP.VERSION,timezone:APP.TZ},user:u,permissions:u.permissions};}
+function getBootstrap(){const u=requireBackOfficeAccess_();return {app:{name:APP.NAME,version:APP.VERSION,timezone:APP.TZ},user:u,permissions:u.permissions};}
 
 
 function ensureRunningTextSheet_(){
