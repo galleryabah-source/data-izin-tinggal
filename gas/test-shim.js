@@ -564,3 +564,27 @@ const crossReportUi=read('index.html');
 assert(crossReportUi.includes("callWithTimeout('getCrossServiceReporting'"), 'Cross-service report UI calls canonical reporting seam');
 assert(crossReportUi.includes('CROSS_SERVICE_REPORTING_V1'), 'Cross-service report UI renders canonical contract');
 assert(!crossReportUi.includes("callWithTimeout('getCrossServiceReport'"), 'Cross-service report UI does not call obsolete reporting seam');
+
+
+
+// Period Closing & Controlled Correction v1
+const periodClosing=read('PeriodClosingService.gs');
+assert(periodClosing.includes('function ensurePeriodClosureSheet_()'), 'Period closing governance sheet seam exists');
+assert(periodClosing.includes('function closePeriod(datasetKey,periode,reason)'), 'Period close action exists');
+assert(periodClosing.includes("requirePermission_('admin.config')"), 'Period close/reopen is ADMIN configuration protected');
+assert(periodClosing.includes('function reopenPeriod(datasetKey,periode,reason)'), 'Controlled correction reopen action exists');
+assert(periodClosing.includes("appendAudit_('PERIOD_CLOSE'"), 'Period close writes audit evidence');
+assert(periodClosing.includes("appendAudit_('PERIOD_REOPEN'"), 'Controlled correction reopen writes audit evidence');
+assert(periodClosing.includes("correction:true"), 'Controlled correction is explicitly marked');
+assert(periodClosing.includes('PERIOD_EMPTY'), 'Empty periods cannot be closed');
+assert(periodClosing.includes('status'), 'Period closure state is explicit');
+
+const importService=read('ImportService.gs');
+assert(importService.includes('assertPeriodsOpenForImport_(schema.contractKey,check.valid)'), 'Canonical import enforces period closing guard');
+assert(periodClosing.includes('PERIOD_CLOSED'), 'Closed-period rejection is explicit in governance seam');
+
+const periodConfig=read('Config.gs');
+assert(periodConfig.includes("PERIOD_CLOSURES:'PERIOD_CLOSURES'"), 'Period closure sheet identity is explicit');
+
+const code=read('Code.gs');
+assert(code.includes("PERIOD_CLOSURES:['closure_id','dataset_key','periode','status','closed_by','closed_at','reason','reopened_by','reopened_at']"), 'Period closure schema is initialized');
