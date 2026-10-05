@@ -37,6 +37,23 @@ body{padding-bottom:calc(var(--mobile-nav-h) + env(safe-area-inset-bottom));over
 @media(max-width:390px){.top-service button{padding:7px 7px;font-size:9px}.page-title{font-size:19px}.mobile-nav-item{font-size:8px}}@media(max-width:650px){.content{padding:15px}.kpis{grid-template-columns:1fr 1fr}.top-service{display:none}.brand{min-width:0}.brand-sub{display:none}.map-wrap{height:430px}.service-grid{grid-template-columns:1fr}}
 
 .health-card{border:1px solid var(--line);border-radius:10px;padding:14px;background:#f8fafc}.health-title{font-size:14px;font-weight:800}.health-state{font-size:11px;font-weight:800}.health-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.health-metric{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px}.health-metric b{display:block;font-size:17px;margin-top:2px}.health-label{font-size:10px;color:var(--muted);font-weight:700}.health-issues{margin-top:10px;font-size:11px}.health-meta{font-size:10px;color:var(--muted);margin-top:7px}@media(max-width:900px){.health-metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){#healthCards{grid-template-columns:1fr!important}}
+
+/* Mobile runtime reinforcement: Android/touch devices may expose a CSS viewport wider than 650px. */
+html.mobile-runtime .mobile-menu-btn{display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border:0;border-radius:12px;background:#102f55;color:#fff;font-size:21px;line-height:1}
+html.mobile-runtime .mobile-bottom-nav{position:fixed;display:grid;grid-template-columns:repeat(5,1fr);left:0;right:0;bottom:0;z-index:1100;padding:7px 6px calc(7px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #dfe5ed;box-shadow:0 -4px 18px rgba(7,27,53,.12)}
+html.mobile-runtime body{padding-bottom:calc(68px + env(safe-area-inset-bottom));overflow-x:hidden}
+html.mobile-runtime .topbar{height:58px;padding:0 12px;gap:10px;position:sticky;top:0;box-shadow:0 2px 12px rgba(7,27,53,.16)}
+html.mobile-runtime .brand{min-width:0;flex:1;gap:8px}.brand-mark{width:32px;height:32px;border-radius:9px}
+html.mobile-runtime .brand-title{font-size:13px;white-space:nowrap}.brand-sub{display:none}
+html.mobile-runtime .top-service{display:none}.top-search{display:none}
+html.mobile-runtime .userbox{flex:0 0 auto;font-size:0}.userbox #user{display:none}.avatar{width:32px;height:32px;font-size:12px}
+html.mobile-runtime .layout{grid-template-columns:1fr}.sidebar{display:none}
+html.mobile-runtime .content{padding:15px;max-width:none}.page-head{display:block;margin-bottom:12px}
+html.mobile-runtime .filterbar{padding:10px;gap:8px;display:grid;grid-template-columns:1fr 1fr;align-items:stretch}
+html.mobile-runtime .filter{min-width:0}.filter-actions{grid-column:1/-1;margin-left:0;display:grid;grid-template-columns:.7fr 1fr 1fr;gap:7px}
+html.mobile-runtime .kpis{grid-template-columns:1fr 1fr;gap:8px}.analysis{grid-template-columns:1fr;gap:10px}
+html.mobile-runtime .map-wrap{height:430px}.service-grid{grid-template-columns:1fr}.detail-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.detail-wrap table{min-width:760px}
+html.mobile-runtime .admin-grid{grid-template-columns:1fr}
 </style>
 </head>
 <body>
@@ -408,6 +425,14 @@ function auditDetails(v){const s=String(v||'');return s.length>220?s.slice(0,220
 async function refreshAudit(){try{const status=document.getElementById('auditStatus');if(status)status.textContent='Memuat...';const r=await callWithTimeout('listAuditEventsAdmin',15000,{actor:document.getElementById('auditActor').value,action:document.getElementById('auditAction').value,datasetKey:document.getElementById('auditDataset').value,status:document.getElementById('auditStatusFilter').value,limit:100});const rows=r.rows||[];document.getElementById('auditCount').textContent=Number(r.total||0).toLocaleString('id-ID');document.getElementById('auditLatest').textContent=rows.length?formatAuditDate(rows[0].timestamp):'—';document.getElementById('auditLatestStatus').innerHTML=rows.length?'<span class="'+(rows[0].status==='SUCCESS'?'ok':'error')+'">'+esc(rows[0].status)+'</span>':'—';document.getElementById('auditRows').innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(formatAuditDate(x.timestamp))+'</td><td>'+esc(x.actor)+'</td><td><b>'+esc(x.action)+'</b></td><td>'+esc(x.datasetKey||'—')+'</td><td title="'+esc(x.eventId)+'">'+esc(x.batchId||x.eventId||'—')+'</td><td>'+esc(x.affectedRows)+'</td><td><span class="'+(x.status==='SUCCESS'?'ok':'error')+'">'+esc(x.status)+'</span></td><td title="'+esc(x.details)+'" style="max-width:360px;white-space:normal">'+esc(auditDetails(x.details))+'</td></tr>').join(''):'<tr><td colspan="8" class="muted">Tidak ada audit event sesuai filter.</td></tr>';if(status)status.textContent=rows.length+' event ditampilkan · '+Number(r.total||0)+' cocok';}catch(e){const status=document.getElementById('auditStatus');if(status)status.textContent='Gagal dimuat';document.getElementById('auditRows').innerHTML='<tr><td colspan="8" class="error">'+esc(e.message||e)+'</td></tr>';}}
 function clearAuditFilters(){['auditActor','auditAction'].forEach(id=>document.getElementById(id).value='');document.getElementById('auditDataset').value='';document.getElementById('auditStatusFilter').value='';refreshAudit();}
 async function boot(){showBootStatus('Menghubungkan ke server...',false);try{const b=await callWithTimeout('getBootstrap',15000);if(!b||!b.user){throw new Error('BOOTSTRAP_EMPTY_RESPONSE');}if(!b.user.authenticated){document.getElementById('user').innerHTML='<span class="error">BACK OFFICE · AKSES DITOLAK</span>';showBootStatus('Back office hanya untuk Owner/Editor.',true);return;}const backOfficeRoles=['ADMIN','SUPERVISOR'];if(!backOfficeRoles.includes(String(b.user.role||'').toUpperCase())){document.getElementById('user').innerHTML='<span class="error">BACK OFFICE · AKSES DITOLAK</span>';showBootStatus('Back office hanya untuk Owner/Editor.',true);return;}document.getElementById('user').textContent=b.user.displayName+' · '+(b.user.role==='ADMIN'?'OWNER':'EDITOR');showBootStatus('Back office terhubung · '+(b.user.role==='ADMIN'?'OWNER':'EDITOR'),false);if((b.permissions||[]).includes('admin.config')){document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');await refreshRunningTexts();}if((b.permissions||[]).includes('audit.read')){document.querySelectorAll('[data-target="auditSection"],[data-target="healthSection"]').forEach(el=>el.style.display='');await refreshAudit();await refreshDatasetHealth();}else{document.querySelectorAll('[data-target="auditSection"],[data-target="healthSection"]').forEach(el=>el.style.display='none');}await refreshDashboard();refreshRegistry();}catch(e){const msg='Dashboard gagal dimuat: '+(e&&e.message?e.message:String(e));document.getElementById('user').innerHTML='<span class="error">ERROR</span>';showBootStatus(msg,true);document.getElementById('mapStatus').innerHTML='<span class="error">'+esc(msg)+'</span>';}}
+
+(function(){
+  var mq=function(q){try{return window.matchMedia(q).matches;}catch(e){return false;}};
+  var touch=('ontouchstart' in window)||(navigator.maxTouchPoints||0)>0;
+  var coarse=mq('(pointer: coarse)')||mq('(any-pointer: coarse)');
+  var narrow=window.innerWidth<=1100;
+  if(touch&&coarse&&narrow){document.documentElement.classList.add('mobile-runtime');}
+})();
 if(TV_MODE){tvStart();}else{initSidebarNavigation();boot();}
 </script>
 
