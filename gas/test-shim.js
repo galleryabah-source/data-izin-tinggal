@@ -439,3 +439,17 @@ assert(tvNew.includes("setInterval(refreshAllRuntimeData,TV_RUNTIME.refreshMs)")
 assert(tvNew.includes("document.addEventListener('visibilitychange'"), 'INTAL TV refreshes after returning to visible state');
 assert(!tvNew.includes("setInterval(()=>{currentService=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];activateService(currentService);},30000)"), 'INTAL TV no longer uses unguarded rotation scheduler');
 assert(!tvNew.includes("setInterval(()=>{preload(SERVICES[0]).catch(()=>{});preload(SERVICES[1]).catch(()=>{});loadRunningTexts();},60000)"), 'INTAL TV no longer uses blind background refresh scheduler');
+
+
+// Phase 10.1 — Cross-Service Reporting Contract invariants
+const crossService=read('DashboardService.gs');
+assert(crossService.includes('function getCrossServiceReporting(filters)'), 'Phase 10.1 cross-service reporting adapter exists');
+assert(crossService.includes("requirePermission_('dashboard.read')"), 'Cross-service reporting is back-office RBAC protected');
+assert(crossService.includes("contract:'CROSS_SERVICE_REPORTING_V1'"), 'Cross-service reporting contract version is explicit');
+assert(crossService.includes("grain:'periode × kantor_imigrasi'"), 'Cross-service reporting grain is explicit');
+assert(crossService.includes("measure:'total'"), 'Cross-service reporting exposes only the shared total measure');
+assert(crossService.includes('readOnly:true'), 'Cross-service reporting contract is explicitly read-only');
+assert(crossService.includes("getResidencePermitDashboard_({periode,kantor_imigrasi:kantor,metric:'total'})"), 'Cross-service adapter reads Residence through private canonical core');
+assert(crossService.includes("getServiceDashboard_('PASSPORT_SERVICE_MONTHLY'"), 'Cross-service adapter reads Passport through private canonical core');
+assert(crossService.includes("contract:'CROSS_SERVICE_REPORTING_V1'"), 'Cross-service adapter does not create a persistent dataset contract');
+assert(!crossService.includes('appendRow(') || crossService.indexOf('function getCrossServiceReporting')<crossService.indexOf('appendRow('), 'Cross-service adapter itself has no write path');
