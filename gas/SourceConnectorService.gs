@@ -25,7 +25,7 @@ const SOURCE_HEADER_ALIASES_ = Object.freeze({
   ITAS:'itas',ITAP:'itap',ITKT:'itkt',
   ALIH_STATUS_ITK_KE_ITAS:'alih_status_itk_ke_itas',ITK_KE_ITAS:'alih_status_itk_ke_itas',
   ALIH_STATUS_ITAS_KE_ITAP:'alih_status_itas_ke_itap',ITAS_KE_ITAP:'alih_status_itas_ke_itap',
-  ABG:'abg',EPO:'epo',IMK:'imk',SKIM:'skim',TOTAL:'total',
+  ABG:'abg',EPO:'epo',IMK:'imk',SKIM:'skim',TOTAL:'total',JUMLAH:'total',
   BIASA_24:'biasa_24',BIASA_24_JAM:'biasa_24',PASPOR_BIASA_24:'biasa_24',PASPOR_BIASA_24_JAM:'biasa_24',
   BIASA_48:'biasa_48',BIASA_48_JAM:'biasa_48',PASPOR_BIASA_48:'biasa_48',PASPOR_BIASA_48_JAM:'biasa_48',
   ELEKTRONIK_48:'elektronik_48',ELEKTRONIK_48_JAM:'elektronik_48',PASPOR_ELEKTRONIK_48:'elektronik_48',
@@ -115,6 +115,12 @@ function adaptGoogleSourceMatrix_(payload){
   if(dup.length)throw new Error('SOURCE_COLUMN_DUPLICATE: '+[...new Set(dup)].join(', '));
   let rows=raw.values.slice(h.rowIndex+1).map(r=>r.slice(h.startColumn,h.endColumn+1)).filter(r=>r.some(v=>String(v)!==''));
   rows=rows.filter(r=>!isSourceSummaryRow_(r,sourceColumns));
+  const measureKeys=(DATASET_CONTRACTS[datasetKey]&&DATASET_CONTRACTS[datasetKey].measures)||[];
+  rows=rows.map(r=>r.map((v,i)=>{
+    const key=sourceColumns[i];
+    if(measureKeys.includes(key)&&(v===null||v===undefined||String(v).trim()===''))return 0;
+    return v;
+  }));
   if(!sourceColumns.includes('periode')){
     const period=String(p.sourcePeriod||'').trim();
     if(!period)throw new Error('SOURCE_PERIOD_REQUIRED: sumber tidak memiliki kolom Periode; isi periode import (YYYY-MM).');
