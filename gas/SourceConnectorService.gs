@@ -123,5 +123,14 @@ function commitGoogleSourceImport(payload){
   requirePermission_('dataset.import');
   const adapted=adaptGoogleSourceMatrix_(payload),schema=detectSchema_(adapted.sourceColumns),requestedDataset=String((payload||{}).datasetKey||'').trim();
   if(schema.contractKey!==schema.datasetKey||schema.datasetKey!==requestedDataset)throw new Error('SOURCE_SCHEMA_DATASET_MISMATCH: expected '+requestedDataset+', detected '+schema.datasetKey);
-  return commitImport(sourceMatrixToTsv_(adapted.sourceColumns,adapted.rows));
+  const result=commitImport(sourceMatrixToTsv_(adapted.sourceColumns,adapted.rows));
+  appendAudit_('IMPORT_SOURCE_COMMIT',result.datasetKey,result.batchId,result.inserted,'SUCCESS',JSON.stringify({
+    sourceType:'GOOGLE_SHEETS',
+    spreadsheetId:adapted.spreadsheetId,
+    spreadsheetName:adapted.spreadsheetName,
+    sheetName:adapted.sheetName,
+    sourceSchema:schema.signature,
+    contractVersion:schema.contractVersion
+  }));
+  return result;
 }
