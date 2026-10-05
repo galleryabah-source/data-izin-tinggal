@@ -503,3 +503,21 @@ assert(!crossService.includes('getCrossServiceReport('), 'Legacy duplicate cross
 assert(!fs.existsSync(path.join(__dirname,'CrossServiceReportingService.gs')), 'Phase 10.1 has exactly one canonical reporting implementation');
 assert(!crossService.includes('appendRow('), 'Cross-service adapter has no write path');
 assert(!crossService.includes('setValues('), 'Cross-service adapter has no spreadsheet write path');
+
+
+const backupRecovery=read('BackupRecoveryService.gs');
+assert(backupRecovery.includes('function getBackupRecoveryCenterV1()'), 'P0.3 backup recovery center service exists');
+assert(backupRecovery.includes("requirePermission_('audit.read')"), 'P0.3 backup recovery center is audit.read protected');
+assert(backupRecovery.includes("restoreEnabled:false"), 'P0.3 restore is explicitly disabled');
+assert(backupRecovery.includes("RESTORE_DISABLED_P0_3_READ_ONLY"), 'P0.3 restore policy is explicit');
+assert(backupRecovery.includes('function verifyBackupRecoverySnapshotV1(datasetKey,snapshotSpreadsheetId)'), 'P0.3 snapshot verification seam exists');
+assert(backupRecovery.includes('verifyResidencePermitSnapshot(id)'), 'P0.3 residence verification delegates to canonical backup verifier');
+assert(backupRecovery.includes('verifyPassportServiceSnapshot(id)'), 'P0.3 passport verification delegates to canonical backup verifier');
+assert(!backupRecovery.includes('createResidencePermitSnapshot('), 'P0.3 service has no residence snapshot creation path');
+assert(!backupRecovery.includes('createPassportServiceSnapshot('), 'P0.3 service has no passport snapshot creation path');
+
+const backupRecoveryUi=read('index.html');
+assert(backupRecoveryUi.includes('id="backupRecoverySection"'), 'P0.3 backup recovery UI section exists');
+assert(backupRecoveryUi.includes('getBackupRecoveryCenterV1'), 'P0.3 UI reads backup recovery center');
+assert(backupRecoveryUi.includes('verifyBackupRecoverySnapshotV1'), 'P0.3 UI exposes explicit verification action');
+assert(backupRecoveryUi.includes('Restore DISABLED'), 'P0.3 UI states restore is disabled');
