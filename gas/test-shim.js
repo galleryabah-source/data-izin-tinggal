@@ -583,8 +583,8 @@ const importService=read('ImportService.gs');
 assert(importService.includes('assertPeriodsOpenForImport_(schema.contractKey,check.valid)'), 'Canonical import enforces period closing guard');
 assert(importService.includes('PERIOD_CLOSED'), 'Canonical import has explicit closed-period rejection');
 
-const config=read('Config.gs');
-assert(config.includes("PERIOD_CLOSURES:'PERIOD_CLOSURES'"), 'Period closure sheet identity is explicit');
+const periodConfig=read('Config.gs');
+assert(periodConfig.includes("PERIOD_CLOSURES:'PERIOD_CLOSURES'"), 'Period closure sheet identity is explicit');
 
 const code=read('Code.gs');
 assert(code.includes("PERIOD_CLOSURES:['closure_id','dataset_key','periode','status','closed_by','closed_at','reason','reopened_by','reopened_at']"), 'Period closure schema is initialized');
