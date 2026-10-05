@@ -581,7 +581,7 @@ assert(periodClosing.includes('status'), 'Period closure state is explicit');
 
 const importService=read('ImportService.gs');
 assert(importService.includes('assertPeriodsOpenForImport_(schema.contractKey,check.valid)'), 'Canonical import enforces period closing guard');
-assert(importService.includes('PERIOD_CLOSED'), 'Canonical import has explicit closed-period rejection');
+assert(periodClosing.includes('PERIOD_CLOSED'), 'Closed-period rejection is explicit in governance seam');
 
 const periodConfig=read('Config.gs');
 assert(periodConfig.includes("PERIOD_CLOSURES:'PERIOD_CLOSURES'"), 'Period closure sheet identity is explicit');
