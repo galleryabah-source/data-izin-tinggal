@@ -243,6 +243,17 @@ assert(publicTv.includes('function getPublicTvResidenceDashboard') && publicTv.i
 assert(publicTv.includes('function getPublicTvResidenceMap') && publicTv.includes('function getPublicTvPassportMap'), 'Public TV GIS adapters exist');
 assert(publicTv.includes('function getPublicTvRunningTexts') && publicTv.includes('getActiveRunningTexts_()'), 'Public TV running text uses non-mutating core');
 assert(publicTv.includes('function getPublicTvAnalyticalRunningTexts'), 'Public TV exposes canonical analytical running-text adapter');
+assert(publicTv.includes('const monthly=(report.monthly||[]).map'), 'Analytical running text derives monthly trend from canonical cross-service monthly data');
+assert(publicTv.includes('signedPct(x.combined-prev.combined,prev.combined)'), 'Analytical running text calculates month-to-month combined change');
+assert(publicTv.includes('averageCombined=avg(monthly.map(x=>x.combined))'), 'Analytical running text calculates overall monthly average');
+assert(publicTv.includes('averagePassport=avg(monthly.map(x=>x.passport))'), 'Analytical running text calculates Passport monthly average');
+assert(publicTv.includes('averageResidence=avg(monthly.map(x=>x.residence))'), 'Analytical running text calculates Residence monthly average');
+assert(publicTv.includes("type:'average'"), 'Analytical running text emits an overall average narrative');
+assert(publicTv.includes("type:'trend-summary'"), 'Analytical running text emits a trend summary narrative');
+assert(publicTv.includes("type:'passport'"), 'Analytical running text emits Passport analytics narrative');
+assert(publicTv.includes("type:'residence'"), 'Analytical running text emits Residence Permit analytics narrative');
+assert(publicTv.includes('dataset PASSPORT_SERVICE_MONTHLY'), 'Passport narrative identifies its canonical dataset');
+assert(publicTv.includes('dataset RESIDENCE_PERMIT_SERVICE_MONTHLY'), 'Residence narrative identifies its canonical dataset');
 assert(publicTv.includes('getCrossServiceReporting_({})'), 'Analytical running text reads the single canonical Phase 10.1 seam');
 assert(publicTv.includes('residenceTotal') && publicTv.includes('passportTotal') && publicTv.includes('combinedTotal'), 'Analytical running text includes real cross-service office totals');
 assert(!publicTv.includes('appendRow(') && !publicTv.includes('setValues('), 'Analytical running text has no write path');

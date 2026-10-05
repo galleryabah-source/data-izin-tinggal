@@ -93,12 +93,38 @@ function getPublicTvAnalyticalRunningTexts(){
     residenceRows:Number(x.residenceRows||0),
     passportRows:Number(x.passportRows||0)
   }));
+  const monthly=(report.monthly||[]).map(x=>({
+    periode:String(x.periode||x.key||''),
+    residence:Number(x.residenceTotal||0),
+    passport:Number(x.passportTotal||0),
+    combined:Number(x.combinedTotal||0)
+  })).filter(x=>x.periode).sort((a,b)=>a.periode.localeCompare(b.periode,'id'));
   const total=Number(report.totals?.combined||0);
+  const residenceTotal=Number(report.totals?.residence||0);
+  const passportTotal=Number(report.totals?.passport||0);
   const fmt=n=>Number(n||0).toLocaleString('id-ID');
   const pct=(n,d)=>d?((Number(n||0)/d)*100).toFixed(1).replace('.',',')+'%':'0,0%';
-  return offices.map(o=>({
-    rank:o.rank,
-    kantor_imigrasi:o.kantor_imigrasi,
-    text:'Peringkat '+o.rank+' — '+o.kantor_imigrasi+' mencatat '+fmt(o.combined)+' layanan selama Januari–Agustus 2026, terdiri dari '+fmt(o.passport)+' layanan Paspor dan '+fmt(o.residence)+' layanan Izin Tinggal. Kontribusi kantor ini mencapai '+pct(o.combined,total)+' dari total '+fmt(total)+' layanan Paspor dan Izin Tinggal yang tercatat dalam aplikasi.'
-  }));
+  const signedPct=(n,d)=>d===0?'0,0%':(n>=0?'+':'')+((Number(n||0)/Math.abs(d))*100).toFixed(1).replace('.',',')+'%';
+  const monthLabel=p=>{const [y,m]=String(p||'').split('-');const names=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];return names[Math.max(0,Number(m||1)-1)]+' '+y;};
+  const avg=values=>values.length?values.reduce((s,n)=>s+Number(n||0),0)/values.length:0;
+  const first=monthly[0],last=monthly[monthly.length-1];
+  const averageCombined=avg(monthly.map(x=>x.combined));
+  const averagePassport=avg(monthly.map(x=>x.passport));
+  const averageResidence=avg(monthly.map(x=>x.residence));
+  const highest=monthly.reduce((a,b)=>!a||b.combined>a.combined?b:a,null);
+  const lowest=monthly.reduce((a,b)=>!a||b.combined<a.combined?b:a,null);
+  const trendTexts=monthly.map((x,i)=>{
+    if(i===0)return {type:'monthly',periode:x.periode,text:'Tren layanan '+monthLabel(x.periode)+' — total gabungan mencapai '+fmt(x.combined)+' layanan, terdiri dari '+fmt(x.passport)+' layanan Paspor dan '+fmt(x.residence)+' layanan Izin Tinggal. Ini menjadi titik awal pembacaan tren periode berjalan.'};
+    const prev=monthly[i-1];
+    return {type:'monthly',periode:x.periode,text:'Tren layanan '+monthLabel(x.periode)+' — total gabungan '+fmt(x.combined)+' layanan, berubah '+signedPct(x.combined-prev.combined,prev.combined)+' dibanding '+monthLabel(prev.periode)+' ('+fmt(prev.combined)+' layanan). Paspor tercatat '+fmt(x.passport)+' dan Izin Tinggal '+fmt(x.residence)+'.'};
+  });
+  const analytical=[...trendTexts];
+  if(monthly.length){
+    analytical.push({type:'average',text:'Rata-rata keseluruhan per bulan — selama '+fmt(monthly.length)+' periode, rata-rata layanan mencapai '+fmt(Math.round(averageCombined))+' layanan per bulan, terdiri dari rata-rata '+fmt(Math.round(averagePassport))+' layanan Paspor dan '+fmt(Math.round(averageResidence))+' layanan Izin Tinggal. Total kumulatif mencapai '+fmt(total)+' layanan.'});
+    analytical.push({type:'trend-summary',text:'Ringkasan tren — periode tertinggi adalah '+monthLabel(highest.periode)+' dengan '+fmt(highest.combined)+' layanan, sedangkan periode terendah adalah '+monthLabel(lowest.periode)+' dengan '+fmt(lowest.combined)+' layanan. Perubahan dari '+monthLabel(first.periode)+' ke '+monthLabel(last.periode)+' adalah '+signedPct(last.combined-first.combined,first.combined)+'.'});
+  }
+  analytical.push({type:'passport',text:'Analitik layanan Paspor — total '+fmt(passportTotal)+' layanan dengan rata-rata '+fmt(Math.round(averagePassport))+' layanan per bulan. Kontribusi Paspor sebesar '+pct(passportTotal,total)+' dari keseluruhan layanan Paspor dan Izin Tinggal. Pergerakan bulanan dibaca dari dataset PASSPORT_SERVICE_MONTHLY tanpa mengubah data sumber.'});
+  analytical.push({type:'residence',text:'Analitik layanan Izin Tinggal — total '+fmt(residenceTotal)+' layanan dengan rata-rata '+fmt(Math.round(averageResidence))+' layanan per bulan. Kontribusi Izin Tinggal sebesar '+pct(residenceTotal,total)+' dari keseluruhan layanan Paspor dan Izin Tinggal. Pergerakan bulanan dibaca dari dataset RESIDENCE_PERMIT_SERVICE_MONTHLY tanpa mengubah data sumber.'});
+  analytical.push(...offices.map(o=>({type:'office',rank:o.rank,kantor_imigrasi:o.kantor_imigrasi,text:'Peringkat '+o.rank+' — '+o.kantor_imigrasi+' mencatat '+fmt(o.combined)+' layanan selama '+(monthly.length?monthLabel(first.periode)+'–'+monthLabel(last.periode):'periode tersedia')+', terdiri dari '+fmt(o.passport)+' layanan Paspor dan '+fmt(o.residence)+' layanan Izin Tinggal. Kontribusi kantor ini mencapai '+pct(o.combined,total)+' dari total '+fmt(total)+' layanan Paspor dan Izin Tinggal yang tercatat dalam aplikasi.'})));
+  return analytical;
 }
