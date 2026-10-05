@@ -76,7 +76,11 @@ function findSourceHeader_(values,datasetKey){
   for(let i=0;i<limit;i++){
     const headers=values[i].map(String),mapped=canonicalizeSourceHeaders_(headers),compact=mapped.filter(Boolean);
     const recognized=compact.filter(c=>allowed.includes(c)).length;
-    const score=(recognized>=2?recognized:0)+(getContractForColumns_(compact)?1000:0);
+    const hasOffice=compact.includes('kantor_imigrasi');
+    const measures=(contract&&contract.measures)||[];
+    const recognizedMeasures=compact.filter(c=>measures.includes(c)).length;
+    const contractMatch=!!getContractForColumns_(compact);
+    const score=(hasOffice?100:0)+(recognizedMeasures*10)+(recognized>=2?recognized:0)+(contractMatch?1000:0);
     if(!best||score>best.score)best={index:i,headers,mapped,score};
   }
   if(!best||best.score<2)throw new Error('SOURCE_HEADER_NOT_FOUND: header tabel canonical tidak terdeteksi pada 20 baris pertama.');
@@ -110,7 +114,7 @@ function isSourceSummaryRow_(row,sourceColumns){
 }
 
 function adaptGoogleSourceMatrix_(payload){
-  const p=payload||{},raw=readGoogleSourceMatrix_(payload),h=raw.header,headers=h.headers,sourceColumns=canonicalizeSourceHeaders_(headers);
+  const p=payload||{},datasetKey=String(p.datasetKey||'').trim(),raw=readGoogleSourceMatrix_(payload),h=raw.header,headers=h.headers,sourceColumns=canonicalizeSourceHeaders_(headers);
   const dup=sourceColumns.filter((c,i)=>c&&sourceColumns.indexOf(c)!==i);
   if(dup.length)throw new Error('SOURCE_COLUMN_DUPLICATE: '+[...new Set(dup)].join(', '));
   let rows=raw.values.slice(h.rowIndex+1).map(r=>r.slice(h.startColumn,h.endColumn+1)).filter(r=>r.some(v=>String(v)!==''));
