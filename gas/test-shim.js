@@ -451,5 +451,7 @@ assert(crossService.includes("measure:'total'"), 'Cross-service reporting expose
 assert(crossService.includes('readOnly:true'), 'Cross-service reporting contract is explicitly read-only');
 assert(crossService.includes("getResidencePermitDashboard_({periode,kantor_imigrasi:kantor,metric:'total'})"), 'Cross-service adapter reads Residence through private canonical core');
 assert(crossService.includes("getServiceDashboard_('PASSPORT_SERVICE_MONTHLY'"), 'Cross-service adapter reads Passport through private canonical core');
-assert(crossService.includes("contract:'CROSS_SERVICE_REPORTING_V1'"), 'Cross-service adapter does not create a persistent dataset contract');
-assert(!crossService.includes('appendRow(') || crossService.indexOf('function getCrossServiceReporting')<crossService.indexOf('appendRow('), 'Cross-service adapter itself has no write path');
+assert(!crossService.includes('getCrossServiceReport('), 'Legacy duplicate cross-service function is not present in DashboardService');
+assert(!fs.existsSync(path.join(__dirname,'CrossServiceReportingService.gs')), 'Phase 10.1 has exactly one canonical reporting implementation');
+assert(!crossService.includes('appendRow('), 'Cross-service adapter has no write path');
+assert(!crossService.includes('setValues('), 'Cross-service adapter has no spreadsheet write path');
