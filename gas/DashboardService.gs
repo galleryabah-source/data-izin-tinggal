@@ -241,3 +241,33 @@ function getResidencePermitMap(filters){
   requirePermission_('map.read');
   return getServiceMap_('RESIDENCE_PERMIT_SERVICE_MONTHLY',filters);
 }
+
+
+/**
+ * Phase 10.1 — Cross-Service Reporting Contract.
+ * Read-only semantic adapter above the two canonical monthly datasets.
+ * It does not merge schemas or create a persistent dataset.
+ */
+function getCrossServiceReporting(filters){
+  requirePermission_('dashboard.read');
+  return getCrossServiceReporting_(filters);
+}
+function getCrossServiceReporting_(filters){
+  const f=filters||{},periode=String(f.periode||'').trim().slice(0,7),kantor=String(f.kantor_imigrasi||'').trim().slice(0,200);
+  const residence=getResidencePermitDashboard_({periode,kantor_imigrasi:kantor,metric:'total'});
+  const passport=getServiceDashboard_('PASSPORT_SERVICE_MONTHLY',['biasa_24','biasa_48','elektronik_48','e_polikarbonat'],{periode,kantor_imigrasi:kantor,metric:'total'});
+  return buildCrossServiceReport_(residence,passport,{periode,kantor_imigrasi:kantor});
+}
+function buildCrossServiceReport_(residence,passport,filters){
+  const rm=indexCrossServiceRows_(residence.monthly,'periode'),pm=indexCrossServiceRows_(passport.monthly,'periode'),ro=indexCrossServiceRows_(residence.offices,'kantor_imigrasi'),po=indexCrossServiceRows_(passport.offices,'kantor_imigrasi');
+  const monthly=uniqueSortedKeys_(Object.keys(rm).concat(Object.keys(pm))).map(k=>crossServiceRow_(k,rm[k],pm[k],'periode'));
+  const offices=uniqueSortedKeys_(Object.keys(ro).concat(Object.keys(po))).map(k=>crossServiceRow_(k,ro[k],po[k],'kantor_imigrasi')).sort((a,b)=>b.combinedTotal-a.combinedTotal||a.key.localeCompare(b.key,'id'));
+  const residenceTotal=Number(residence.grandTotal||0),passportTotal=Number(passport.grandTotal||0);
+  return {contract:'CROSS_SERVICE_REPORTING_V1',grain:'periode × kantor_imigrasi',measure:'total',readOnly:true,datasets:[
+    {datasetKey:'RESIDENCE_PERMIT_SERVICE_MONTHLY',rowCount:Number(residence.rowCount||0),grandTotal:residenceTotal},
+    {datasetKey:'PASSPORT_SERVICE_MONTHLY',rowCount:Number(passport.rowCount||0),grandTotal:passportTotal}
+  ],totals:{residence:residenceTotal,passport:passportTotal,combined:residenceTotal+passportTotal},monthly,offices,filters:{periode:String(filters?.periode||''),kantor_imigrasi:String(filters?.kantor_imigrasi||'')}};
+}
+function indexCrossServiceRows_(rows,keyField){const index={};(rows||[]).forEach(row=>{const key=String(row?.[keyField]||'').trim();if(key)index[key]={key,total:Number(row.total||0),rows:Number(row.rows||0)};});return index;}
+function uniqueSortedKeys_(keys){return [...new Set((keys||[]).map(String).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'id'));}
+function crossServiceRow_(key,residence,passport,keyField){const r=residence||{total:0,rows:0},p=passport||{total:0,rows:0};return {[keyField]:String(key),key:String(key),residenceTotal:Number(r.total||0),passportTotal:Number(p.total||0),combinedTotal:Number(r.total||0)+Number(p.total||0),residenceRows:Number(r.rows||0),passportRows:Number(p.rows||0)};}
