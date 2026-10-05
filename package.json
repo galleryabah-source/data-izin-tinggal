@@ -2,6 +2,21 @@
   "name": "data-izin-tinggal",
   "private": true,
   "scripts": {
-    "test": "node gas/test-shim.js"
+    "test": "node gas/test-shim.js",
+    "dasmon:lint": "eslint apps packages tests",
+    "dasmon:typecheck": "npm run build -w @dasmon/domain && tsc -p apps/web --noEmit",
+    "dasmon:test": "vitest run tests/unit",
+    "dasmon:build": "npm run build -w @dasmon/web"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.3",
+    "vitest": "^3.2.4"
   }
 }
