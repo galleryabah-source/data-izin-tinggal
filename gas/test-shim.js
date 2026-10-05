@@ -243,6 +243,9 @@ assert(publicTv.includes('function getPublicTvResidenceDashboard') && publicTv.i
 assert(publicTv.includes('function getPublicTvResidenceMap') && publicTv.includes('function getPublicTvPassportMap'), 'Public TV GIS adapters exist');
 assert(publicTv.includes('function getPublicTvRunningTexts') && publicTv.includes('getActiveRunningTexts_()'), 'Public TV running text uses non-mutating core');
 assert(publicTv.includes('function getPublicTvAnalyticalRunningTexts'), 'Public TV exposes canonical analytical running-text adapter');
+assert(tv.includes("call('getPublicTvRunningTexts')"), 'INTAL TV retains manual running-text source');
+assert(tv.includes('runningTexts=[...(analytical||[]).map(x=>x.text),...(manual||[])]'), 'Manual running text is additive and not replaced by analytical text');
+assert(tv.includes("runningTexts=[];showTicker();"), 'INTAL TV keeps an empty-content fallback when manual and analytical text are unavailable');
 assert(publicTv.includes('getCrossServiceReporting_({})'), 'Analytical running text reads the single canonical Phase 10.1 seam');
 assert(publicTv.includes('residenceTotal') && publicTv.includes('passportTotal') && publicTv.includes('combinedTotal'), 'Analytical running text includes real cross-service office totals');
 assert(!publicTv.includes('appendRow(') && !publicTv.includes('setValues('), 'Analytical running text has no write path');
