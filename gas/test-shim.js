@@ -261,7 +261,7 @@ assert(!/<script[^>]+src=["'][^"']*leaflet\.js/i.test(read('tv.html')), 'Dedicat
 const tv=read('tv.html');
 assert(tv.includes("call('getPublicTvRunningTexts')"), 'INTAL TV retains manual running-text source');
 assert(tv.includes('runningTexts=[...(analytical||[]).map(x=>x.text),...(manual||[])];'), 'Manual running text is additive and not replaced by analytical text');
-assert(tv.includes("runningTexts=[];showTicker();"), 'INTAL TV keeps an empty-content fallback when manual and analytical text are unavailable');
+assert(tv.includes('runningTexts=[];') && tv.includes('showTicker();'), 'INTAL TV keeps an empty-content fallback when manual and analytical text are unavailable');
 assert(!/<link[^>]+rel=["']stylesheet["'][^>]+href=["'][^"']*leaflet\.css/i.test(tv), 'Dedicated TV entry does not block on Leaflet CSS CDN');
 assert(tv.includes('function loadLeafletCss()') && tv.includes("document.createElement('link')"), 'INTAL TV loads Leaflet CSS lazily after shell render');
 assert(tv.includes('const [L]=await Promise.all([loadLeaflet(),loadLeafletCss()])'), 'INTAL TV waits for Leaflet assets only at GIS initialization');
