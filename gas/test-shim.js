@@ -324,7 +324,7 @@ assert(tvCharts.includes('font-size:22px;font-weight:1000;line-height:1'), 'INTA
 assert(tvCharts.includes('class="office-btn"'), 'INTAL TV office entries use dedicated interactive controls');
 assert(tvCharts.includes('animation:tickerLoop 45s linear infinite'), 'INTAL TV running text uses continuous linear animation');
 assert(tvCharts.includes('ticker-item::after'), 'INTAL TV running text has blue separator bullets');
-assert(tvCharts.includes('getActiveRunningTexts'), 'INTAL TV running text reads active database content');
+assert(tvCharts.includes('getPublicTvRunningTexts'), 'INTAL TV running text reads active database content through public adapter');
 const codeSource=read('Code.gs');
 assert(codeSource.includes('function getRunningTextSheet_(){return getDb_().getSheetByName(SHEETS.RUNNING_TEXTS)||null;}'), 'Running text read path has non-mutating sheet lookup');
 const activeStart=codeSource.indexOf('function getActiveRunningTexts()');
