@@ -531,3 +531,12 @@ assert(productionEvidence.includes('getDatasetHealthCenterV1()'), 'P0.4 evidence
 assert(productionEvidence.includes("latestAction('PRODUCTION_SMOKE_TEST')"), 'P0.4 evidence reads latest production smoke audit');
 assert(productionEvidence.includes("latestAction('DASHBOARD_REGRESSION_SMOKE')"), 'P0.4 evidence reads latest regression smoke audit');
 assert(!productionEvidence.includes('setValues(')&&!productionEvidence.includes('appendRow(')&&!productionEvidence.includes('deleteRow('), 'P0.4 evidence center is read-only');
+
+
+const pageNavigationUi=read('index.html');
+assert(pageNavigationUi.includes('function setBackOfficePage(targetId)'), 'Back office navigation uses explicit page-view controller');
+assert(pageNavigationUi.includes('class="page-analytics-hidden"'), 'Analytics wrapper has isolated page-view boundary');
+assert(pageNavigationUi.includes("targetId==='mapSection'"), 'Map is an isolated page target');
+assert(pageNavigationUi.includes("targetId==='analytics'"), 'Analytics is an isolated page target');
+assert(pageNavigationUi.includes("targetId==='dashboard'"), 'Dashboard is an isolated page target');
+assert(pageNavigationUi.includes('window.scrollTo({top:0,behavior:\'smooth\'})'), 'Navigation resets viewport to page top');
