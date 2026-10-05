@@ -16,6 +16,10 @@ function ensureOfficeReferenceSheet(){
 
 function getOfficeReferenceStatus(){
   requirePermission_('map.read');
+  return getOfficeReferenceStatus_();
+}
+
+function getOfficeReferenceStatus_(){
   const cacheKey=readCacheKey_('office-reference-status');
   const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const ss=getDb_();

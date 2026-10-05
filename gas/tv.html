@@ -112,8 +112,8 @@ const $=id=>document.getElementById(id),fmt=n=>Number(n||0).toLocaleString('id-I
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c));}
 function goWorkspace(){window.top.location.href=WORKSPACE_URL;}
 function call(fn,...args){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args));}
-function serviceFn(k){return k==='PASSPORT_SERVICE_MONTHLY'?'getPassportDashboard':'getResidencePermitDashboard';}
-function mapFn(k){return k==='PASSPORT_SERVICE_MONTHLY'?'getPassportMap':'getResidencePermitMap';}
+function serviceFn(k){return k==='PASSPORT_SERVICE_MONTHLY'?'getPublicTvPassportDashboard':'getPublicTvResidenceDashboard';}
+function mapFn(k){return k==='PASSPORT_SERVICE_MONTHLY'?'getPublicTvPassportMap':'getPublicTvResidenceMap';}
 function label(k){return ({bvk:'BVK',voa:'VOA',itk:'ITK',itk_peralihan:'ITK Peralihan',itas:'ITAS',itap:'ITAP',itkt:'ITKT',alih_status_itk_ke_itas:'Alih Status ITK → ITAS',alih_status_itas_ke_itap:'Alih Status ITAS → ITAP',abg:'ABG',epo:'EPO',imk:'IMK',skim:'SKIM',biasa_24:'Biasa 24',biasa_48:'Biasa 48',elektronik_48:'Elektronik 48',e_polikarbonat:'E-Polikarbonat'})[k]||k;}
 function setLive(text,attention=false){$('live').textContent='● '+text;$('live').className='pill '+(attention?'attention':'live');}
 function updateSwitch(){ $('switchResidence').classList.toggle('active',currentService===SERVICES[0]);$('switchPassport').classList.toggle('active',currentService===SERVICES[1]);}
@@ -344,7 +344,7 @@ async function rotateServiceSafely(){
   }catch(e){TV_STATE.consecutiveFailures++;setRuntimeState('DEGRADED','Rotasi ditahan · data terakhir yang valid tetap tampil');}
   finally{TV_STATE.rotationBusy=false;}
 }
-async function loadRunningTexts(){try{runningTexts=await call('getActiveRunningTexts');showTicker();}catch(e){runningTexts=[];showTicker();}}
+async function loadRunningTexts(){try{runningTexts=await call('getPublicTvRunningTexts');showTicker();}catch(e){runningTexts=[];showTicker();}}
 function showTicker(){
   const items=runningTexts.length?runningTexts:['Belum ada konten aktif untuk INTAL TV.'];
   const build=()=>items.map(text=>'<span class="ticker-item">'+esc(text)+'</span>').join('');

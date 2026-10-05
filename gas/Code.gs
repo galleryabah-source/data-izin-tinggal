@@ -1,4 +1,4 @@
-function doGet(e){const view=e&&e.parameter&&String(e.parameter.view||'').toLowerCase();const file=view==='tv'?'tv':'index';return HtmlService.createTemplateFromFile(file).evaluate().setTitle(view==='tv'?'INTAL TV · Command Display':APP.NAME).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
+function doGet(e){const view=e&&e.parameter&&String(e.parameter.view||'').toLowerCase();if(view!=='tv')requireBackOfficeAccess_();const file=view==='tv'?'tv':'index';return HtmlService.createTemplateFromFile(file).evaluate().setTitle(view==='tv'?'INTAL TV · Command Display':APP.NAME).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
 function setupApp(){
   const props=PropertiesService.getScriptProperties();
   const id=String(props.getProperty('SPREADSHEET_ID')||'').trim();
@@ -64,7 +64,7 @@ function seedDictionary_(){
   for(let r=1;r<existing.length;r++)byKey[String(existing[r][idx.canonical_key]||'')]=r+1;
   rows.forEach(row=>{const key=row[0],target=byKey[key];if(target)sh.getRange(target,1,1,row.length).setValues([row]);else sh.appendRow(row);});
 }
-function getBootstrap(){const u=getCurrentUser_();return {app:{name:APP.NAME,version:APP.VERSION,timezone:APP.TZ},user:u,permissions:u.permissions};}
+function getBootstrap(){const u=requireBackOfficeAccess_();return {app:{name:APP.NAME,version:APP.VERSION,timezone:APP.TZ},user:u,permissions:u.permissions};}
 
 
 function ensureRunningTextSheet_(){
@@ -133,6 +133,9 @@ function deleteRunningText(contentId){
 }
 function getActiveRunningTexts(){
   requirePermission_('dashboard.read');
+  return getActiveRunningTexts_();
+}
+function getActiveRunningTexts_(){
   const cacheKey=readCacheKey_('running-text-active');
   const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const sh=getRunningTextSheet_();
