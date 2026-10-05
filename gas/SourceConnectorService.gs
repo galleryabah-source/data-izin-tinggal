@@ -70,6 +70,23 @@ function canonicalizeSourceHeaders_(headers){
   });
 }
 
+function findSourceHeader_(values,datasetKey){
+  const contract=DATASET_CONTRACTS[datasetKey],allowed=contract?contract.columns.concat(contract.ignored||[]):[];
+  let best=null,limit=Math.min(values.length,20);
+  for(let i=0;i<limit;i++){
+    const headers=values[i].map(String),mapped=canonicalizeSourceHeaders_(headers),compact=mapped.filter(Boolean);
+    const recognized=compact.filter(c=>allowed.includes(c)).length;
+    const score=(recognized>=2?recognized:0)+(getContractForColumns_(compact)?1000:0);
+    if(!best||score>best.score)best={index:i,headers,mapped,score};
+  }
+  if(!best||best.score<2)throw new Error('SOURCE_HEADER_NOT_FOUND: header tabel canonical tidak terdeteksi pada 20 baris pertama.');
+  const first=best.headers.findIndex(x=>String(x).trim()!=='');
+  let last=-1;
+  for(let i=best.headers.length-1;i>=0;i--)if(String(best.headers[i]).trim()!==''){last=i;break;}
+  if(first<0||last<first)throw new Error('SOURCE_HEADER_EMPTY');
+  return {rowIndex:best.index,startColumn:first,endColumn:last,headers:best.headers.slice(first,last+1)};
+}
+
 function readGoogleSourceMatrix_(payload){
   const p=payload||{},datasetKey=String(p.datasetKey||'').trim(),configured=getConfiguredGoogleSource_(datasetKey);
   const spreadsheetId=normalizeGoogleSpreadsheetId_(p.spreadsheetId||configured.spreadsheetId);
@@ -77,23 +94,38 @@ function readGoogleSourceMatrix_(payload){
   if(!sheetName)throw new Error('Sheet sumber wajib dipilih.');
   const ss=SpreadsheetApp.openById(spreadsheetId),sh=ss.getSheetByName(sheetName);
   if(!sh)throw new Error('SOURCE_SHEET_NOT_FOUND: '+sheetName);
-  const maxRows=Math.min(APP.MAX_IMPORT_ROWS+1,Math.max(2,Number(p.maxRows)||APP.MAX_IMPORT_ROWS+1));
+  const maxRows=Math.min(APP.MAX_IMPORT_ROWS+20,Math.max(20,Number(p.maxRows)||APP.MAX_IMPORT_ROWS+20));
   const maxColumns=Math.min(100,Math.max(1,Number(p.maxColumns)||100));
   const rows=Math.min(sh.getLastRow(),maxRows),columns=Math.min(sh.getLastColumn(),maxColumns);
   if(rows<2||columns<1)throw new Error('SOURCE_SHEET_EMPTY');
-  const values=sh.getRange(1,1,rows,columns).getValues();
-  return {spreadsheetId,sheetName,spreadsheetName:ss.getName(),values};
+  const values=sh.getRange(1,1,rows,columns).getValues(),header=findSourceHeader_(values,datasetKey);
+  return {spreadsheetId,sheetName,spreadsheetName:ss.getName(),values,header};
+}
+
+function isSourceSummaryRow_(row,sourceColumns){
+  const officeIndex=sourceColumns.indexOf('kantor_imigrasi');
+  if(officeIndex<0)return false;
+  const office=String(row[officeIndex]||'').trim().toUpperCase().replace(/\s+/g,' ');
+  return /^(JUMLAH|TOTAL|SUBTOTAL|JUMLAH WILAYAH|TOTAL WILAYAH)$/.test(office);
 }
 
 function adaptGoogleSourceMatrix_(payload){
-  const raw=readGoogleSourceMatrix_(payload),headers=raw.values[0].map(String),sourceColumns=canonicalizeSourceHeaders_(headers);
-  const dup=sourceColumns.filter((c,i)=>sourceColumns.indexOf(c)!==i);
+  const p=payload||{},raw=readGoogleSourceMatrix_(payload),h=raw.header,headers=h.headers,sourceColumns=canonicalizeSourceHeaders_(headers);
+  const dup=sourceColumns.filter((c,i)=>c&&sourceColumns.indexOf(c)!==i);
   if(dup.length)throw new Error('SOURCE_COLUMN_DUPLICATE: '+[...new Set(dup)].join(', '));
-  const rows=raw.values.slice(1).filter(r=>r.some(v=>String(v)!=='')).map(r=>r.map((v,i)=>{
-    if(v instanceof Date&&sourceColumns[i]==='periode')return Utilities.formatDate(v,APP.TZ,'yyyy-MM');
-    return v;
-  }));
-  return {spreadsheetId:raw.spreadsheetId,spreadsheetName:raw.spreadsheetName,sheetName:raw.sheetName,sourceHeaders:headers,sourceColumns,rows};
+  let rows=raw.values.slice(h.rowIndex+1).map(r=>r.slice(h.startColumn,h.endColumn+1)).filter(r=>r.some(v=>String(v)!==''));
+  rows=rows.filter(r=>!isSourceSummaryRow_(r,sourceColumns));
+  if(!sourceColumns.includes('periode')){
+    const period=String(p.sourcePeriod||'').trim();
+    if(!period)throw new Error('SOURCE_PERIOD_REQUIRED: sumber tidak memiliki kolom Periode; isi periode import (YYYY-MM).');
+    const normalizedPeriod=normalizePeriod_(period);
+    headers.unshift('Periode (parameter)');
+    sourceColumns.unshift('periode');
+    rows=rows.map(r=>[normalizedPeriod].concat(r));
+  }else{
+    rows=rows.map(r=>r.map((v,i)=>v instanceof Date&&sourceColumns[i]==='periode'?Utilities.formatDate(v,APP.TZ,'yyyy-MM'):v));
+  }
+  return {spreadsheetId:raw.spreadsheetId,spreadsheetName:raw.spreadsheetName,sheetName:raw.sheetName,headerRow:h.rowIndex+1,sourceHeaders:headers,sourceColumns,rows};
 }
 
 function sourceMatrixToTsv_(headers,rows){
