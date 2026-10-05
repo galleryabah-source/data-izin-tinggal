@@ -521,3 +521,13 @@ assert(backupRecoveryUi.includes('id="backupRecoverySection"'), 'P0.3 backup rec
 assert(backupRecoveryUi.includes('getBackupRecoveryCenterV1'), 'P0.3 UI reads backup recovery center');
 assert(backupRecoveryUi.includes('verifyBackupRecoverySnapshotV1'), 'P0.3 UI exposes explicit verification action');
 assert(backupRecoveryUi.includes('Restore DISABLED'), 'P0.3 UI states restore is disabled');
+
+const productionEvidence=read('ProductionEvidenceService.gs');
+assert(productionEvidence.includes('function getProductionEvidenceCenterV1()'), 'P0.4 production evidence center exists');
+assert(productionEvidence.includes("requirePermission_('audit.read')"), 'P0.4 production evidence is audit.read protected');
+assert(productionEvidence.includes('APP.DEPLOYMENT_ID'), 'P0.4 evidence binds canonical deployment ID');
+assert(productionEvidence.includes('APP.RELEASE_EVIDENCE_VERSION'), 'P0.4 evidence binds release evidence contract');
+assert(productionEvidence.includes('getDatasetHealthCenterV1()'), 'P0.4 evidence includes dataset health');
+assert(productionEvidence.includes("latestAction('PRODUCTION_SMOKE_TEST')"), 'P0.4 evidence reads latest production smoke audit');
+assert(productionEvidence.includes("latestAction('DASHBOARD_REGRESSION_SMOKE')"), 'P0.4 evidence reads latest regression smoke audit');
+assert(!productionEvidence.includes('setValues(')&&!productionEvidence.includes('appendRow(')&&!productionEvidence.includes('deleteRow('), 'P0.4 evidence center is read-only');
