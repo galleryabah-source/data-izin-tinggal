@@ -30,11 +30,29 @@ assert(forbiddenRejected,'RBAC rejects unauthorized permission');
 assert(authViewer.requirePermission_('dataset.read').role==='VIEWER','RBAC permits assigned permission');
 
 const sourceConnector=read('SourceConnectorService.gs');
-const sourcePure=new Function('canonicalizeHeaders_',sourceConnector+'\nreturn {normalizeGoogleSpreadsheetId_,normalizeSourceHeader_,canonicalizeSourceHeaders_};')((headers)=>headers.map(h=>normalizeSourceHeaderForTest_(h)));
+const sourcePure=new Function('canonicalizeHeaders_',sourceConnector+'\nreturn {normalizeGoogleSpreadsheetId_,normalizeSourceHeader_,canonicalizeSourceHeaders_,canonicalizeHeaders_};')((headers)=>headers.map(h=>normalizeSourceHeaderForTest_(h)));
 function normalizeSourceHeaderForTest_(value){return String(value||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toLowerCase();}
 assert(sourcePure.normalizeGoogleSpreadsheetId_('1-eEQBLa_FK4S9uD05SGHDUnjJuN7rEEhOCE1MC3S-84')==='1-eEQBLa_FK4S9uD05SGHDUnjJuN7rEEhOCE1MC3S-84','Google source raw spreadsheet ID');
 assert(sourcePure.normalizeGoogleSpreadsheetId_('https://docs.google.com/spreadsheets/d/1JEGcYrfWRoCyWXXqN_TBGC4fLsF-Y10bOVZPUlkkB4/edit?gid=0#gid=0')==='1JEGcYrfWRoCyWXXqN_TBGC4fLsF-Y10bOVZPUlkkB4','Google source URL normalization');
 assert(sourcePure.normalizeSourceHeader_('E-Polikarbonat')==='E_POLIKARBONAT','Source header normalization');
+const sourceHeaderPure=new Function('canonicalizeHeaders_','getContractForColumns_','DATASET_CONTRACTS',sourceConnector+String.fromCharCode(10)+'return {findSourceHeader_,isSourceSummaryRow_};')(
+  sourcePure.canonicalizeHeaders_,
+  (headers)=>headers.map(h=>{
+    const n=String(h||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+    return ({NO:'no','KANTOR_IMIGRASI':'kantor_imigrasi','KANTOR':'kantor_imigrasi','BIASA_24':'biasa_24','BIASA_48':'biasa_48','ELEKTRONIK_48':'elektronik_48','E_POLIKARBONAT':'e_polikarbonat','JUMLAH':'total'}[n]||n.toLowerCase());
+  }),
+  (columns)=>columns.includes('kantor_imigrasi')&&columns.includes('biasa_24')&&columns.includes('biasa_48')&&columns.includes('elektronik_48')&&columns.includes('e_polikarbonat')?{datasetKey:'PASSPORT_SERVICE_MONTHLY'}:null,
+  {PASSPORT_SERVICE_MONTHLY:{columns:['periode','kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat','total'],ignored:['no']}}
+);
+const detected=sourceHeaderPure.findSourceHeader_([
+  ['Table9','','','','','','',''],
+  ['', 'No','Kantor Imigrasi','Biasa 24','Biasa 48','Elektronik 48','E-Polikarbonat','Jumlah'],
+  ['',1,'KANIM A',0,1,2,0,3]
+],'PASSPORT_SERVICE_MONTHLY');
+assert(detected.rowIndex===1,'Google source detects the actual header row below source metadata');
+assert(detected.headers[1]==='Kantor Imigrasi'&&detected.headers[6]==='Jumlah','Google source preserves canonical source header range');
+assert(sourceHeaderPure.isSourceSummaryRow_(['JUMLAH WILAYAH',2,3,4,5,6],['kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat','total']),'Google source skips summary/footer rows');
+
 const passportMapped=sourcePure.canonicalizeSourceHeaders_(['Periode','Kantor Imigrasi','Biasa 24 Jam','Biasa 48 Jam','Elektronik 48 Jam','E-Polikarbonat','Total']);
 assert(JSON.stringify(passportMapped)===JSON.stringify(['periode','kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat','total']),'Passport source headers map to canonical contract');
 const residenceMapped=sourcePure.canonicalizeSourceHeaders_(['Periode','Kantor','BVK','VOA','ITK','ITK Peralihan','ITAS','ITAP','ITKT','ITK ke ITAS','ITAS ke ITAP','ABG','EPO','IMK','SKIM','Total']);
