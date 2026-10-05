@@ -106,10 +106,9 @@ function sourceMatrixToTsv_(headers,rows){
 }
 
 function previewGoogleSourceImport(payload){
-  const user=requirePermission_('dataset.import'),adapted=adaptGoogleSourceMatrix_(payload);
+  const user=requirePermission_('dataset.import'),adapted=adaptGoogleSourceMatrix_(payload),requestedDataset=String((payload||{}).datasetKey||'').trim();
   const schema=detectSchema_(adapted.sourceColumns);
-  const configured=getConfiguredGoogleSource_(schema.datasetKey);
-  if(schema.contractKey!==schema.datasetKey)throw new Error('SOURCE_SCHEMA_NOT_RECOGNIZED: '+schema.datasetKey);
+  if(schema.contractKey!==schema.datasetKey||schema.datasetKey!==requestedDataset)throw new Error('SOURCE_SCHEMA_DATASET_MISMATCH: expected '+requestedDataset+', detected '+schema.datasetKey);
   const check=validateRows_(schema,adapted.rows),dataset=getDatasetBySignature_(schema.signature);
   return {
     ok:true,source:{type:'GOOGLE_SHEETS',spreadsheetId:adapted.spreadsheetId,spreadsheetName:adapted.spreadsheetName,sheetName:adapted.sheetName},
@@ -122,7 +121,7 @@ function previewGoogleSourceImport(payload){
 
 function commitGoogleSourceImport(payload){
   requirePermission_('dataset.import');
-  const adapted=adaptGoogleSourceMatrix_(payload),schema=detectSchema_(adapted.sourceColumns);
-  if(schema.contractKey!==schema.datasetKey)throw new Error('SOURCE_SCHEMA_NOT_RECOGNIZED: '+schema.datasetKey);
+  const adapted=adaptGoogleSourceMatrix_(payload),schema=detectSchema_(adapted.sourceColumns),requestedDataset=String((payload||{}).datasetKey||'').trim();
+  if(schema.contractKey!==schema.datasetKey||schema.datasetKey!==requestedDataset)throw new Error('SOURCE_SCHEMA_DATASET_MISMATCH: expected '+requestedDataset+', detected '+schema.datasetKey);
   return commitImport(sourceMatrixToTsv_(adapted.sourceColumns,adapted.rows));
 }
