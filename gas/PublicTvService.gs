@@ -73,3 +73,32 @@ function sanitizePublicTvMap_(m){
     }))
   };
 }
+
+
+/**
+ * Public analytical running text for INTAL TV.
+ *
+ * Builds narratives from the same canonical Phase 10.1 cross-service seam.
+ * Output is presentation-only: no raw rows, identities, office reference
+ * metadata, or write capability are exposed.
+ */
+function getPublicTvAnalyticalRunningTexts(){
+  const report=getCrossServiceReporting_({});
+  const offices=(report.offices||[]).map((x,i)=>({
+    rank:i+1,
+    kantor_imigrasi:String(x.kantor_imigrasi||''),
+    residence:Number(x.residenceTotal||0),
+    passport:Number(x.passportTotal||0),
+    combined:Number(x.combinedTotal||0),
+    residenceRows:Number(x.residenceRows||0),
+    passportRows:Number(x.passportRows||0)
+  }));
+  const total=Number(report.totals?.combined||0);
+  const fmt=n=>Number(n||0).toLocaleString('id-ID');
+  const pct=(n,d)=>d?((Number(n||0)/d)*100).toFixed(1).replace('.',',')+'%':'0,0%';
+  return offices.map(o=>({
+    rank:o.rank,
+    kantor_imigrasi:o.kantor_imigrasi,
+    text:'Peringkat '+o.rank+' — '+o.kantor_imigrasi+' mencatat '+fmt(o.combined)+' layanan selama Januari–Agustus 2026, terdiri dari '+fmt(o.passport)+' layanan Paspor dan '+fmt(o.residence)+' layanan Izin Tinggal. Kontribusi kantor ini mencapai '+pct(o.combined,total)+' dari total '+fmt(total)+' layanan Paspor dan Izin Tinggal yang tercatat dalam aplikasi.'
+  }));
+}

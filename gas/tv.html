@@ -344,7 +344,7 @@ async function rotateServiceSafely(){
   }catch(e){TV_STATE.consecutiveFailures++;setRuntimeState('DEGRADED','Rotasi ditahan · data terakhir yang valid tetap tampil');}
   finally{TV_STATE.rotationBusy=false;}
 }
-async function loadRunningTexts(){try{runningTexts=await call('getPublicTvRunningTexts');showTicker();}catch(e){runningTexts=[];showTicker();}}
+async function loadRunningTexts(){try{const [manual,analytical]=await Promise.all([call('getPublicTvRunningTexts'),call('getPublicTvAnalyticalRunningTexts')]);runningTexts=[...(analytical||[]).map(x=>x.text),...(manual||[])];showTicker();}catch(e){try{runningTexts=await call('getPublicTvRunningTexts');}catch(_){runningTexts=[];}showTicker();}}
 function showTicker(){
   const items=runningTexts.length?runningTexts:['Belum ada konten aktif untuk INTAL TV.'];
   const build=()=>items.map(text=>'<span class="ticker-item">'+esc(text)+'</span>').join('');
