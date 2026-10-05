@@ -49,7 +49,8 @@ const detected=sourceHeaderPure.findSourceHeader_([
   ['', 'No','Kantor Imigrasi','Biasa 24','Biasa 48','Elektronik 48','E-Polikarbonat','Jumlah'],
   ['',1,'KANIM A',0,1,2,0,3]
 ],'PASSPORT_SERVICE_MONTHLY');
-assert(detected.rowIndex===1&&detected.startColumn===1&&detected.endColumn===7,'Google source detects offset header row and trims empty leading column');
+assert(detected.rowIndex===1,'Google source detects the actual header row below source metadata');
+assert(detected.headers[1]==='Kantor Imigrasi'&&detected.headers[6]==='Jumlah','Google source preserves canonical source header range');
 assert(sourceHeaderPure.isSourceSummaryRow_(['JUMLAH WILAYAH',2,3,4,5,6],['kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat','total']),'Google source skips summary/footer rows');
 
 const passportMapped=sourcePure.canonicalizeSourceHeaders_(['Periode','Kantor Imigrasi','Biasa 24 Jam','Biasa 48 Jam','Elektronik 48 Jam','E-Polikarbonat','Total']);
