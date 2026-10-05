@@ -29,6 +29,25 @@ try{authViewer.requirePermission_('admin.config');}catch(e){forbiddenRejected=St
 assert(forbiddenRejected,'RBAC rejects unauthorized permission');
 assert(authViewer.requirePermission_('dataset.read').role==='VIEWER','RBAC permits assigned permission');
 
+const sourceConnector=read('SourceConnectorService.gs');
+const sourcePure=new Function('canonicalizeHeaders_',sourceConnector+'\nreturn {normalizeGoogleSpreadsheetId_,normalizeSourceHeader_,canonicalizeSourceHeaders_};')((headers)=>headers.map(h=>normalizeSourceHeaderForTest_(h)));
+function normalizeSourceHeaderForTest_(value){return String(value||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toLowerCase();}
+assert(sourcePure.normalizeGoogleSpreadsheetId_('1-eEQBLa_FK4S9uD05SGHDUnjJuN7rEEhOCE1MC3S-84')==='1-eEQBLa_FK4S9uD05SGHDUnjJuN7rEEhOCE1MC3S-84','Google source raw spreadsheet ID');
+assert(sourcePure.normalizeGoogleSpreadsheetId_('https://docs.google.com/spreadsheets/d/1JEGcYrfWRoCyWXXqN_TBGC4fLsF-Y10bOVZPUlkkB4/edit?gid=0#gid=0')==='1JEGcYrfWRoCyWXXqN_TBGC4fLsF-Y10bOVZPUlkkB4','Google source URL normalization');
+assert(sourcePure.normalizeSourceHeader_('E-Polikarbonat')==='E_POLIKARBONAT','Source header normalization');
+const passportMapped=sourcePure.canonicalizeSourceHeaders_(['Periode','Kantor Imigrasi','Biasa 24 Jam','Biasa 48 Jam','Elektronik 48 Jam','E-Polikarbonat','Total']);
+assert(JSON.stringify(passportMapped)===JSON.stringify(['periode','kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat','total']),'Passport source headers map to canonical contract');
+const residenceMapped=sourcePure.canonicalizeSourceHeaders_(['Periode','Kantor','BVK','VOA','ITK','ITK Peralihan','ITAS','ITAP','ITKT','ITK ke ITAS','ITAS ke ITAP','ABG','EPO','IMK','SKIM','Total']);
+assert(residenceMapped[0]==='periode'&&residenceMapped[1]==='kantor_imigrasi'&&residenceMapped[3]==='voa'&&residenceMapped[9]==='alih_status_itk_ke_itas'&&residenceMapped[10]==='alih_status_itas_ke_itap','Residence source headers map to canonical contract');
+assert(sourceConnector.includes("SpreadsheetApp.openById"),'Google source connector reads by spreadsheet ID');
+assert(sourceConnector.includes("requirePermission_('dataset.import')"),'Google source connector is import-RBAC protected');
+assert(sourceConnector.includes('function previewGoogleSourceImport'), 'Google source preview endpoint exists');
+assert(sourceConnector.includes('function commitGoogleSourceImport'), 'Google source commit endpoint exists');
+assert(sourceConnector.includes('commitImport(sourceMatrixToTsv_'), 'Google source connector delegates to existing canonical import seam');
+assert(sourceConnector.includes("appendAudit_('IMPORT_SOURCE_COMMIT'"), 'Google source commit records source provenance audit');
+assert(sourceConnector.includes('spreadsheetId:adapted.spreadsheetId'), 'Source provenance records spreadsheet identity');
+assert(!sourceConnector.includes('setValues(')&&!sourceConnector.includes('appendRow(')&&!sourceConnector.includes('deleteRow(')&&!sourceConnector.includes('insertSheet('), 'Google source connector never mutates the external source spreadsheet');
+
 const importCode=read('ImportService.gs');
 const pureImport=new Function(importCode+'\nreturn {normalizePeriod_,normalizeInteger_};')();
 assert(pureImport.normalizePeriod_('2026-01')==='2026-01','YYYY-MM period');
