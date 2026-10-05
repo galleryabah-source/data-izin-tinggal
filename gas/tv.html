@@ -350,7 +350,7 @@ function showTicker(){
   const build=()=>items.map(text=>'<span class="ticker-item">'+esc(text)+'</span>').join('');
   $('ticker').innerHTML='<span class="ticker-sequence">'+build()+'</span><span class="ticker-sequence">'+build()+'</span>';
   const chars=items.reduce((n,v)=>n+String(v).length,0);
-  $('ticker').style.animationDuration=Math.max(24,Math.min(90,chars*.12+items.length*3))+'s';
+  $('ticker').style.animationDuration=Math.max(50,Math.min(180,chars*.32+items.length*4))+'s';
 }
 async function boot(){
   try{
