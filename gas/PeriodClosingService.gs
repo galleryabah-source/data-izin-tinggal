@@ -58,7 +58,7 @@ function closePeriod(datasetKey,periode,reason){
   if(existing){
     const v=sh.getDataRange().getValues(),h=v[0],i=Object.fromEntries(h.map((x,n)=>[x,n]));
     const row=v.findIndex(r=>String(r[i.closure_id]||'')===id)+1;
-    sh.getRange(row,i.status+1,1,7).setValues([['CLOSED',user.email,now,why,'','']]);
+    sh.getRange(row,i.status+1,1,6).setValues([['CLOSED',user.email,now,why,'','']]);
   }else{
     sh.appendRow([id,key,period,'CLOSED',user.email,now,why,'','']);
   }
