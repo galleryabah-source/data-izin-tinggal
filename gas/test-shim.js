@@ -35,7 +35,7 @@ function normalizeSourceHeaderForTest_(value){return String(value||'').trim().to
 assert(sourcePure.normalizeGoogleSpreadsheetId_('1-eEQBLa_FK4S9uD05SGHDUnjJuN7rEEhOCE1MC3S-84')==='1-eEQBLa_FK4S9uD05SGHDUnjJuN7rEEhOCE1MC3S-84','Google source raw spreadsheet ID');
 assert(sourcePure.normalizeGoogleSpreadsheetId_('https://docs.google.com/spreadsheets/d/1JEGcYrfWRoCyWXXqN_TBGC4fLsF-Y10bOVZPUlkkB4/edit?gid=0#gid=0')==='1JEGcYrfWRoCyWXXqN_TBGC4fLsF-Y10bOVZPUlkkB4','Google source URL normalization');
 assert(sourcePure.normalizeSourceHeader_('E-Polikarbonat')==='E_POLIKARBONAT','Source header normalization');
-const sourceHeaderPure=new Function('canonicalizeSourceHeaders_','getContractForColumns_','DATASET_CONTRACTS',sourceConnector+'\\nreturn {findSourceHeader_,isSourceSummaryRow_};')(
+const sourceHeaderPure=new Function('canonicalizeSourceHeaders_','getContractForColumns_','DATASET_CONTRACTS',sourceConnector+String.fromCharCode(10)+'return {findSourceHeader_,isSourceSummaryRow_};')(
   (headers)=>headers.map(h=>{
     const n=String(h||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
     return ({NO:'no','KANTOR_IMIGRASI':'kantor_imigrasi','KANTOR':'kantor_imigrasi','BIASA_24':'biasa_24','BIASA_48':'biasa_48','ELEKTRONIK_48':'elektronik_48','E_POLIKARBONAT':'e_polikarbonat','JUMLAH':'total'}[n]||n.toLowerCase());
