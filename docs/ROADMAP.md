@@ -112,7 +112,24 @@ Certified baseline:
 - Dashboard regression: `ok=true`, `failedChecks=[]`.
 - Authorization: anonymous/unauthorized access denied; protected canonical data not exposed.
 
-The Phase 10.2 baseline is now locked as the production reference. Future feature work must preserve this baseline and follow the controlled delivery gate.
+The Phase 10.2 figures remain locked as historical certification evidence. The current production reference is the reconciled 2026-10-05 monthly baseline above. Future feature work must preserve canonical data integrity and follow the controlled delivery gate.
+
+## P0 controlled production hardening
+
+**Status: GREEN — reconciled 2026-10-05.**
+
+- [x] P0.1 Governance & Audit Center v1
+- [x] P0.2 Dataset Health Center v1
+- [x] P0.3 Backup & Recovery Center v1 — read-only; restore disabled
+- [x] P0.4 Production Evidence Center v1
+- [x] Reconcile production baseline: Residence 90 / 291,730 / 9 / 10
+- [x] Reconcile production baseline: Passport 90 / 373,839 / 9 / 10
+- [x] Canonical deployment evidence: Run #485 / merge `ae1a9bed19b81d954745f06e4ae35dd933e4b079`
+- [x] Production smoke: 16/16 PASS
+- [x] Dashboard regression: 12/12 PASS
+- [x] Export verification: Residence + Passport PASS
+- [x] Backup verification: Residence + Passport PASS
+- [x] Documentation reconciliation: `PRODUCTION-SMOKE-TEST.md` + `ROADMAP.md`
 
 ## Current gate
 
@@ -145,8 +162,8 @@ The deployment identity evidence chain remains part of the gate: Git commit SHA 
 - [x] Deploy canonical Phase 10.1 runtime
 - [x] Execute live production Regression Smoke
 - [x] Verify `cross_service_reporting.ok === true`
-- [x] Verify Residence baseline: 80 rows / 258,094 / 8 periods / 10 offices
-- [x] Verify Passport baseline: 80 rows / 327,088 / 8 periods / 10 offices
+- [x] Verify historical Residence certification baseline: 80 rows / 258,094 / 8 periods / 10 offices
+- [x] Verify historical Passport certification baseline: 80 rows / 327,088 / 8 periods / 10 offices
 - [x] Build functional GIS First Data Explorer workspace
 - [x] Build dedicated GIS workspace
 - [x] Build cross-service reporting workspace
@@ -172,7 +189,7 @@ Evidence chain:
 - GitHub Actions production deployment Run #215: PASS.
 - Canonical Apps Script immutable version: `74`.
 - Residence GIS service-aware metric runtime UAT: PASS.
-- Passport GIS service-aware metric runtime UAT: PASS, with production evidence showing **Elektronik 48 = 25,255** and the same office's **Total layanan = 29,506**, while the Passport baseline remains **80 rows / 327,088 services / 8 periods**.
+- Passport GIS service-aware metric runtime UAT: PASS, with production evidence showing **Elektronik 48 = 25,255** and the same office's **Total layanan = 29,506**, while the historical Passport certification baseline remains **80 rows / 327,088 services / 8 periods**.
 - Static forensic scan: PASS; metric resolution is isolated to the shared map seam, Residence export remains free of map-only metric state, and Office Reference remains VERIFIED/read-only.
 - No dataset, importer, registry identity, historical baseline, or canonical data lifecycle changes were introduced by Phase 10.3.
 
