@@ -39,8 +39,7 @@ function getProductionEvidenceCenterV1(){
   }));
   const productionSmoke=latestAction('PRODUCTION_SMOKE_TEST');
   const regressionSmoke=latestAction('DASHBOARD_REGRESSION_SMOKE');
-  const backupResidence=latestAction('BACKUP_SNAPSHOT_VERIFY');
-  const backupPassport=latestAction('BACKUP_SNAPSHOT_VERIFY');
+  const latestBackupVerification=latestAction('BACKUP_SNAPSHOT_VERIFY');
   const latestSmokeStatus=productionSmoke?String(productionSmoke.status||'').toUpperCase():'';
   return {
     ok:health.ok===true&&Boolean(deploymentId)&&(!productionSmoke||latestSmokeStatus==='PASS'),
@@ -53,7 +52,7 @@ function getProductionEvidenceCenterV1(){
     evidence:{
       productionSmoke,
       dashboardRegressionSmoke:regressionSmoke,
-      latestBackupVerification:backupResidence||backupPassport
+      latestBackupVerification
     }
   };
 }
