@@ -139,6 +139,26 @@ The current source model is monthly. The next work therefore remains controlled 
 
 The deployment identity evidence chain remains part of the gate: Git commit SHA -> GitHub Actions run -> Apps Script immutable version -> canonical deployment ID -> production smoke -> AUDIT_LOG -> backup snapshot.
 
+## Next controlled capability — Period Closing & Controlled Correction v1
+
+**Status: IN DELIVERY — not yet production-certified.**
+
+Purpose: establish explicit monthly data finality before downstream analytics, exports, and operational automation depend on a period.
+
+- [ ] Period closure registry (PERIOD_CLOSURES) with dataset + YYYY-MM grain
+- [ ] Closed periods reject canonical monthly imports at the single commitImport() write seam
+- [ ] Owner-controlled close/reopen actions with mandatory reason
+- [ ] Controlled correction requires explicit reopen before correction
+- [ ] PERIOD_CLOSE / PERIOD_REOPEN audit evidence
+- [ ] Preserve Residence/Passport contracts, registry identity, importer normalization, and historical data lifecycle
+- [ ] CI regression gate
+- [ ] Forensic diff
+- [ ] Canonical deployment
+- [ ] Live UAT: close → import denied → reopen → correction allowed → close again
+- [ ] Production evidence and roadmap reconciliation
+
+**Boundary:** governance state only. No new service dataset, no schema mutation of Residence/Passport monthly contracts, no daily reconstruction, and no second import path.
+
 ## Future platform expansion — planned, not yet implemented
 
 ### Phase 8 — Multi-service blueprint
