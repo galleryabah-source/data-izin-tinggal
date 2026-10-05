@@ -52,43 +52,51 @@
 
 ## Production verification baseline
 
+> **Reconciled 2026-10-05 against canonical production runtime.** Historical certification figures are retained below for traceability and are not the current runtime baseline.
+
 The current production baseline is verified against the real Web App and production spreadsheet:
 
 - dataset: `RESIDENCE_PERMIT_SERVICE_MONTHLY`
 - source sheet: `DATA_RESIDENCE_PERMIT_SERVICE_MONTHLY`
-- 80 operational rows
+- 90 operational rows
 - 16 columns
-- 8 monthly periods
+- 9 monthly periods
 - 10 immigration offices
-- grand total: 258,094 services
+- grand total: 291,730 services
 - duplicate business keys: 0
 - blank business keys: 0
+- invalid periods: 0
+- invalid measures: 0
 - total mismatches: 0
-- latest import: 80 accepted / 0 rejected / 0 duplicates
-- export verification: 80 rows / 258,094 services
+- latest import: 10 accepted / 0 rejected / 0 duplicates / SUCCESS
+- export verification: 90 rows / 291,730 services
 - backup snapshot verification: source, snapshot, and manifest checksums match
-- automated production smoke test: PASS
+- automated production smoke test: PASS (16/16)
 
-### Passport production verification baseline
-
-The Passport dataset is now verified against the real production Web App and production spreadsheet:
+### Passport current production verification baseline — reconciled 2026-10-05
 
 - dataset: `PASSPORT_SERVICE_MONTHLY`
 - source sheet: `DATA_PASSPORT_SERVICE_MONTHLY`
-- 80 operational rows
+- 90 operational rows
 - 7 columns
-- 8 monthly periods
+- 9 monthly periods
 - 10 immigration offices
-- grand total: 327,088 services
+- grand total: 373,839 services
 - duplicate business keys: 0
 - blank business keys: 0
+- invalid periods: 0
+- invalid measures: 0
 - total mismatches: 0
-- latest import: 80 accepted / 0 rejected / 0 duplicates / SUCCESS
+- latest import: 10 accepted / 0 rejected / 0 duplicates / SUCCESS
 - matching `IMPORT_COMMIT` audit evidence: 1
-- CSV export: 80 rows
-- backup snapshot: checksum, manifest, schema, row-count, and source/snapshot checksum match
-- dashboard runtime: 80 rows / 327,088 services / 8 periods / 10 offices
-- dashboard regression smoke: Residence Permit + Passport PASS
+- CSV export: 90 rows / 373,839 services
+- backup snapshot: checksum, manifest, schema, row-count, and source/snapshot equality verified
+- dashboard runtime: 90 rows / 373,839 services / 9 periods / 10 offices
+- dashboard regression smoke: PASS
+
+### Historical certification baseline
+
+The previously certified Phase 10.2 figures — Residence 80 / 258,094 and Passport 80 / 327,088 — remain historical reference evidence only. They are superseded as the current runtime baseline by the 2026-10-05 monthly production state.
 
 ## Phase 10.2 certification gate
 
