@@ -24,6 +24,11 @@ function normalizePeriod_(value){
   const n=s.match(/^([0-9]{1,2})[-/]((20)[0-9]{2})$/);if(n&&Number(n[1])>=1&&Number(n[1])<=12)return n[2]+'-'+('0'+n[1]).slice(-2);
   throw new Error('Periode harus berupa YYYY-MM atau nama bulan + tahun.');
 }
+function normalizePeriodCell_(value){
+  if(value===null||value===undefined||String(value).trim()==='')return '';
+  if(value instanceof Date)return Utilities.formatDate(value,APP.TZ,'yyyy-MM');
+  return normalizePeriod_(value);
+}
 function normalizeInteger_(value,key){
   const s=String(value===null||value===undefined?'':value).trim();if(s==='')throw new Error(key+' wajib diisi.');
   const n=Number(s.replace(/,/g,''));if(!Number.isFinite(n)||!Number.isInteger(n)||n<0)throw new Error(key+' harus bilangan bulat >= 0.');return n;

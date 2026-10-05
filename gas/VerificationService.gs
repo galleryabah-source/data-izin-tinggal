@@ -9,7 +9,7 @@ function verifyDatasetIntegrityV1(datasetKey){
   const seen={},periods={},offices={};
   let duplicateKeys=0,blankKeys=0,invalidPeriods=0,invalidMeasures=0,totalMismatches=0,observedTotal=0;
   rows.forEach(r=>{
-    const period=String(r[hi.periode]||'').trim(),office=String(r[hi.kantor_imigrasi]||'').trim();
+    const period=normalizePeriodCell_(r[hi.periode]),office=String(r[hi.kantor_imigrasi]||'').trim();
     if(!period||!office)blankKeys++;
     if(!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(period))invalidPeriods++;
     if(period)periods[period]=true;
@@ -303,12 +303,22 @@ function runProductionSmokeTestV1(){
   const exportCheck=check_('residence_export_verification',()=>verifyResidencePermitExportV1({}));
   if(exportCheck&&!exportCheck.ok)checks[checks.length-1].ok=false;
 
+  const passportExportCheck=check_('passport_export_verification',()=>verifyPassportServiceExportV1({}));
+  if(passportExportCheck&&!passportExportCheck.ok)checks[checks.length-1].ok=false;
+
   const latestSnapshotId=findLatestResidencePermitSnapshot_();
   const snapshot=check_('residence_backup_snapshot',()=>{
     if(!latestSnapshotId)throw new Error('NO_BACKUP_SNAPSHOT_FOUND');
     return verifyResidencePermitSnapshot(latestSnapshotId);
   });
   if(snapshot&&!snapshot.ok)checks[checks.length-1].ok=false;
+
+  const latestPassportSnapshotId=findLatestPassportServiceSnapshot_();
+  const passportSnapshot=check_('passport_backup_snapshot',()=>{
+    if(!latestPassportSnapshotId)throw new Error('NO_PASSPORT_BACKUP_SNAPSHOT_FOUND');
+    return verifyPassportServiceSnapshot(latestPassportSnapshotId);
+  });
+  if(passportSnapshot&&!passportSnapshot.ok)checks[checks.length-1].ok=false;
 
   const failed=checks.filter(c=>!c.ok);
   const result={

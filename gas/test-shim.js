@@ -67,10 +67,16 @@ assert(sourceConnector.includes('spreadsheetId:adapted.spreadsheetId'), 'Source 
 assert(!sourceConnector.includes('setValues(')&&!sourceConnector.includes('appendRow(')&&!sourceConnector.includes('deleteRow(')&&!sourceConnector.includes('insertSheet('), 'Google source connector never mutates the external source spreadsheet');
 
 const importCode=read('ImportService.gs');
-const pureImport=new Function(importCode+'\nreturn {normalizePeriod_,normalizeInteger_};')();
+const pureImport=new Function('Utilities','APP',importCode+'\nreturn {normalizePeriod_,normalizePeriodCell_,normalizeInteger_};')(
+  {formatDate:(date,tz,pattern)=>'2026-09'},
+  {TZ:'Asia/Jakarta'}
+);
 assert(pureImport.normalizePeriod_('2026-01')==='2026-01','YYYY-MM period');
 assert(pureImport.normalizePeriod_('Januari 2026')==='2026-01','Indonesian month period');
 assert(pureImport.normalizePeriod_('8/2026')==='2026-08','numeric month period');
+assert(pureImport.normalizePeriodCell_('2026-09')==='2026-09','string canonical period cell');
+assert(pureImport.normalizePeriodCell_(new Date('2026-08-31T17:00:00.000Z'))==='2026-09','Date-valued period cell normalizes to canonical YYYY-MM');
+assert(pureImport.normalizePeriodCell_('')==='','blank period cell remains blank for integrity reporting');
 assert(pureImport.normalizeInteger_('1,234','bvk')===1234,'integer comma normalization');
 
 const backupCode=read('BackupService.gs');
@@ -96,6 +102,11 @@ const passportGovernance=read('PassportGovernanceService.gs');
 assert(verification.includes('function verifyDatasetIntegrityV1(datasetKey)'), 'Dataset integrity uses a shared contract-driven verifier');
 assert(!verification.includes('rowCount!==80')&&!verification.includes('expectedObservedTotal:258094')&&!verification.includes('grandTotal)!==258094'), 'Residence verification/smoke is not pinned to the original 80-row/258094 baseline');
 assert(!verification.includes('rowCount!==80')&&!verification.includes('grandTotal)!==327088')&&!verification.includes('combinedServiceVolume)!==585182'), 'Regression smoke is not pinned to the original fixed totals');
+assert(verification.includes('normalizePeriodCell_(r[hi.periode])'), 'Dataset integrity normalizes Date-valued period cells');
+assert(passportGovernance.includes('function verifyPassportServiceExportV1(filters)'), 'Passport export verification endpoint exists');
+assert(passportGovernance.includes('normalizePeriodCell_(r[hi.periode])'), 'Passport export normalizes Date-valued period filters');
+assert(passportGovernance.includes('i===hi.periode?periodOf_(r):v'), 'Passport CSV serializes canonical YYYY-MM period values');
+assert(passportGovernance.includes('function findLatestPassportServiceSnapshot_()'), 'Passport production smoke can discover latest backup snapshot');
 assert(passportGovernance.includes("return verifyDatasetIntegrityV1('PASSPORT_SERVICE_MONTHLY');"), 'Passport governance delegates to shared growth-safe integrity verifier');
 assert(!passportGovernance.includes('const expectedRows=80,expectedTotal=327088'), 'Passport integrity is not pinned to the original 80-row/327088 baseline');
 assert(read('DashboardService.gs').includes('const serviceColumns=contract.measures.slice();'), 'Residence dashboard measures derive from canonical contract');
