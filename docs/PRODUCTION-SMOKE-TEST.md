@@ -1,4 +1,4 @@
-# Production Smoke Test v1 — Evidence Contract
+# Production Smoke Test v2 — Evidence Contract
 
 ## Purpose
 
@@ -28,18 +28,18 @@ A green source-level CI run must not be treated as a substitute for production r
 | Invariant | Expected |
 |---|---:|
 | Dataset | `RESIDENCE_PERMIT_SERVICE_MONTHLY` |
-| Dataset rows | 80 |
+| Dataset rows | 90 |
 | Dataset columns | 16 |
-| Monthly periods | 8 |
+| Monthly periods | 9 |
 | Immigration offices | 10 |
-| Grand total | 258,094 |
+| Grand total | 291,730 |
 | Duplicate business keys | 0 |
 | Blank business keys | 0 |
 | Total mismatches | 0 |
-| Latest import accepted | 80 |
+| Latest import accepted | 10 |
 | Latest import rejected | 0 |
 | Latest import duplicates | 0 |
-| Exported rows | 80 |
+| Exported rows | 90 |
 | Backup checksum relationship | source = snapshot = manifest |
 
 ## Required runtime checks
@@ -62,7 +62,7 @@ The result must also have:
 - `releaseEvidenceVersion: "1"`;
 
 - `ok: true`
-- `smokeVersion: "1"`
+- `smokeVersion: "2-growth-safe"`
 - `failedChecks: []`
 - a production actor identity
 - `verifiedAt`
@@ -78,18 +78,23 @@ The audit details contain the smoke result, including PASS/FAILED status, datase
 
 ## Current evidence
 
-The production smoke test was manually executed from the canonical Apps Script project on 2026-09-29 at approximately 20:48 Asia/Jakarta.
+The canonical production runtime was verified on 2026-10-05 at approximately 14:18 Asia/Jakarta using the deployed Apps Script runtime.
 
 Observed result:
 
 - overall: `PASS`
-- all 9 runtime checks: `PASS`
+- `smokeVersion`: `2-growth-safe`
 - failed checks: none
-- dataset rows: 80
-- grand total: 258,094
-- latest verified snapshot: `1ptjhuCK1puL-UdfQWaraaZjRcx41pbJCt-VYdWFKBJw`
+- Residence: 90 rows, 9 periods, 10 offices, grand total 291,730
+- Passport: 90 rows, 9 periods, 10 offices, grand total 373,839
+- Residence export: 90 rows, 291,730, zero value mismatches
+- Passport export: 90 rows, 373,839, zero value mismatches
+- latest Residence snapshot: `1bPXncDwgMTEhwnzzq-aJ0nI9u11EeoYn6W_8NHNql6o`
+- Residence source/snapshot/manifest checksums: identical
+- Passport backup snapshot: PASS
+- production deployment ID: `AKfycbzwhcpZWp8LhyidPFsvqwBQ6ZrgXjEB60NkyNmaQYsiewsvm9uZ_pwPdrG5xZINF2NK`
 
-This evidence demonstrates that the deployed production runtime and its real data/backup dependencies passed the v1 gate.
+This evidence closes the previously stale Residence backup snapshot gap after the canonical dataset grew from 80 to 90 rows.
 
 ## Operational rule
 
