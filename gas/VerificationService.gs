@@ -210,15 +210,18 @@ function runDashboardRegressionSmokeV1(){
     if(passportDashboard.monthly.length!==passportIntegrity.periodCount||passportDashboard.offices.length!==passportIntegrity.officeCount)checks[checks.length-1].ok=false;
   }
 
-  const crossService=check_('cross_service_reporting',()=>getCrossServiceReport({}));
+  const crossService=check_('cross_service_reporting',()=>getCrossServiceReporting({}));
   if(crossService&&residenceIntegrity&&passportIntegrity){
-    const residence=crossService.services.find(s=>s.service==='RESIDENCE_PERMIT');
-    const passport=crossService.services.find(s=>s.service==='PASSPORT');
-    if(!residence||Number(residence.rowCount)!==residenceIntegrity.rowCount||Number(residence.serviceVolume)!==residenceIntegrity.observedTotal||residence.monthly.length!==residenceIntegrity.periodCount||residence.offices.length!==residenceIntegrity.officeCount)checks[checks.length-1].ok=false;
-    if(!passport||Number(passport.rowCount)!==passportIntegrity.rowCount||Number(passport.serviceVolume)!==passportIntegrity.observedTotal||passport.monthly.length!==passportIntegrity.periodCount||passport.offices.length!==passportIntegrity.officeCount)checks[checks.length-1].ok=false;
-    if(Number(crossService.combinedServiceVolume)!==residenceIntegrity.observedTotal+passportIntegrity.observedTotal)checks[checks.length-1].ok=false;
-    const provenance=crossService.provenance||[];
-    if(provenance.some(p=>p.sourceMetric!=='total'||p.metric!=='service_volume'))checks[checks.length-1].ok=false;
+    const datasets=crossService.datasets||[];
+    const residence=datasets.find(d=>d.datasetKey==='RESIDENCE_PERMIT_SERVICE_MONTHLY');
+    const passport=datasets.find(d=>d.datasetKey==='PASSPORT_SERVICE_MONTHLY');
+    const expectedCombined=residenceIntegrity.observedTotal+passportIntegrity.observedTotal;
+    if(!residence||Number(residence.rowCount)!==residenceIntegrity.rowCount||Number(residence.grandTotal)!==residenceIntegrity.observedTotal)checks[checks.length-1].ok=false;
+    if(!passport||Number(passport.rowCount)!==passportIntegrity.rowCount||Number(passport.grandTotal)!==passportIntegrity.observedTotal)checks[checks.length-1].ok=false;
+    if(!crossService.totals||Number(crossService.totals.residence)!==residenceIntegrity.observedTotal||Number(crossService.totals.passport)!==passportIntegrity.observedTotal||Number(crossService.totals.combined)!==expectedCombined)checks[checks.length-1].ok=false;
+    if(String(crossService.contract||'')!=='CROSS_SERVICE_REPORTING_V1'||crossService.readOnly!==true||String(crossService.measure||'')!=='total')checks[checks.length-1].ok=false;
+    if((crossService.monthly||[]).length!==residenceIntegrity.periodCount)checks[checks.length-1].ok=false;
+    if((crossService.offices||[]).length!==residenceIntegrity.officeCount)checks[checks.length-1].ok=false;
   }
 
   const residenceDrilldown=check_('residence_drilldown',()=>getResidencePermitDrilldown({}));
