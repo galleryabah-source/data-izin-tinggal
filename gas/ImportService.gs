@@ -95,6 +95,7 @@ function commitImport(pastedText){
     // Validation and dataset creation must occur under the same script lock as the write.
     // This prevents two concurrent commits from both passing the business-key check.
     const check=validateRows_(schema,matrix.slice(1));if(!check.valid.length)throw new Error('Tidak ada baris valid untuk diimpor.');
+    if(DATASET_CONTRACTS[schema.contractKey||''])assertPeriodsOpenForImport_(schema.contractKey,check.valid);
     const dataset=ensureDataset_(schema,user.email),sh=getDb_().getSheetByName(dataset.sheetName),batchId=Utilities.getUuid();
     const start=sh.getLastRow()+1;sh.getRange(start,1,check.valid.length,schema.columns.length).setValues(check.valid);
     dataset.rowCount=sh.getLastRow()-1;updateDatasetRowCount_(dataset);
