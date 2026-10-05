@@ -55,7 +55,55 @@ html.mobile-runtime .kpis{grid-template-columns:1fr 1fr;gap:8px}html.mobile-runt
 html.mobile-runtime .map-wrap{height:430px}html.mobile-runtime .service-grid{grid-template-columns:1fr}html.mobile-runtime .detail-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}html.mobile-runtime .detail-wrap table{min-width:760px}
 html.mobile-runtime .admin-grid{grid-template-columns:1fr}
 </style>
-</head>
+<style>
+/* Smartphone Back Office UI v2 — visual system aligned to the approved mobile mockup. */
+@media(max-width:650px){
+  .mobile-drawer{width:min(88vw,350px);padding:14px 12px 20px;background:linear-gradient(180deg,#071b35 0%,#0b294d 100%);color:#fff;border-radius:0 22px 22px 0}
+  .mobile-drawer-head{border-bottom:1px solid rgba(255,255,255,.12);padding:5px 6px 14px;margin-bottom:10px}
+  .mobile-drawer-brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .mobile-drawer-mark{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);font-weight:900;color:#ffd84d}
+  .mobile-drawer-title{font-size:15px;font-weight:900;color:#fff}
+  .mobile-drawer-sub{font-size:9px;color:#a9bdd4;margin-top:2px}
+  .mobile-drawer-close{width:36px;height:36px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.12)}
+  .mobile-drawer-user{display:flex;align-items:center;gap:10px;padding:10px 9px;margin:0 0 10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);border-radius:13px}
+  .mobile-drawer-user .avatar{background:#fff;color:#071b35;width:34px;height:34px}
+  .mobile-drawer-user b{display:block;font-size:12px;color:#fff}
+  .mobile-drawer-user span{display:block;font-size:9px;color:#a9bdd4;margin-top:2px}
+  .mobile-menu-section{margin:10px 0 0}
+  .mobile-menu-section-title{font-size:9px;letter-spacing:.11em;font-weight:900;color:#7f9ab8;padding:7px 10px 5px}
+  .mobile-menu-link{display:flex;align-items:center;gap:11px;text-decoration:none;color:#dce7f4;padding:11px 10px;margin:3px 0;border-radius:11px;font-size:12px;font-weight:700;min-height:42px}
+  .mobile-menu-link:hover,.mobile-menu-link.active{background:#1769e0;color:#fff;box-shadow:0 6px 18px rgba(23,105,224,.22)}
+  .mobile-menu-link .menu-icon{width:23px;text-align:center;font-size:18px;line-height:1;color:#c6d8ef}
+  .mobile-menu-link.active .menu-icon{color:#fff}
+  .mobile-menu-link .menu-chevron{margin-left:auto;font-size:20px;color:#7f9ab8}
+  .mobile-menu-status{display:flex;align-items:center;gap:9px;margin:15px 4px 0;padding:10px;border-top:1px solid rgba(255,255,255,.1);color:#dce7f4}
+  .mobile-menu-status .status-dot{width:8px;height:8px;border-radius:50%;background:#24d17e;box-shadow:0 0 0 4px rgba(36,209,126,.12)}
+  .mobile-menu-status b{display:block;font-size:10px}
+  .mobile-menu-status small{display:block;font-size:8px;color:#7f9ab8;margin-top:2px}
+
+  html.mobile-runtime .content{padding:12px 12px 88px}
+  html.mobile-runtime .page-head{background:#fff;border:1px solid #e5eaf1;border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:0 4px 14px rgba(7,27,53,.05)}
+  html.mobile-runtime .page-title{font-size:21px;line-height:1.18}
+  html.mobile-runtime .page-desc{font-size:10px;line-height:1.45}
+  html.mobile-runtime .filterbar{background:#fff;border:1px solid #e5eaf1;border-radius:15px;box-shadow:0 4px 14px rgba(7,27,53,.04)}
+  html.mobile-runtime .kpi{box-shadow:0 4px 14px rgba(7,27,53,.05);border-radius:14px}
+  html.mobile-runtime .kpi-value{font-size:22px}
+  html.mobile-runtime .card{box-shadow:0 4px 14px rgba(7,27,53,.045)}
+  html.mobile-runtime .card-head{margin-bottom:9px}
+  html.mobile-runtime .card-title{font-size:14px}
+  html.mobile-runtime .map-card{border-radius:16px}
+  html.mobile-runtime .map-head{padding:13px 14px 9px}
+  html.mobile-runtime .map-wrap{height:390px}
+  html.mobile-runtime .detail-wrap{border-radius:12px}
+  html.mobile-runtime .mobile-bottom-nav{height:72px;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:rgba(255,255,255,.97);border-top:1px solid #dce3ec;box-shadow:0 -6px 22px rgba(7,27,53,.12)}
+  html.mobile-runtime .mobile-nav-item{font-size:8px;gap:2px;padding:5px 2px}
+  html.mobile-runtime .mobile-nav-item .mi{font-size:19px}
+  html.mobile-runtime .mobile-nav-item.active{background:#eaf2ff;color:#1769e0}
+}
+@media(min-width:651px){
+  .mobile-drawer{display:none!important}
+}
+</style></head>
 <body>
 <div id="tvView" class="tv-view hidden" aria-label="INTAL TV Command Display">
   <header class="tv-header">
@@ -116,22 +164,41 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
   <div class="card" style="padding:11px;margin:6px 0;background:#f8fafc"><div style="font-size:11px;font-weight:800">Canonical Data</div><div style="font-size:10px;color:#667085;margin-top:4px">RBAC · Audit · Registry</div></div>
 </aside>
 <div id="mobileNavBackdrop" class="mobile-nav-backdrop" onclick="if(event.target===this)closeMobileNav()">
-<nav class="mobile-drawer" aria-label="Navigasi mobile">
-<div class="mobile-drawer-head"><div><div class="mobile-drawer-title">Imigrasi24Jam</div><div class="mobile-drawer-sub">Back Office · Intelligence Workspace</div></div><button class="mobile-drawer-close" onclick="closeMobileNav()" aria-label="Tutup menu">×</button></div>
-<div class="nav-label">Analisis</div>
-<a class="nav-item active" href="#dashboard" data-target="dashboard" onclick="mobileNavigate(event,'dashboard')">⌂ &nbsp; Dashboard</a>
-<a class="nav-item" href="#" onclick="openTv(event);closeMobileNav()">▣ &nbsp; INTAL TV</a>
-<a class="nav-item" href="#mapSection" data-target="mapSection" onclick="mobileNavigate(event,'mapSection')">⌖ &nbsp; Peta Sebaran</a>
-<a class="nav-item" href="#drilldownSection" data-target="drilldownSection" onclick="mobileNavigate(event,'drilldownSection')">▤ &nbsp; Data Explorer</a>
-<a class="nav-item" href="#analytics" data-target="analytics" onclick="mobileNavigate(event,'analytics')">▥ &nbsp; Laporan & Statistik</a>
-<div class="nav-label">Operasional</div>
-<a class="nav-item" href="#adminSection" data-target="adminSection" onclick="mobileNavigate(event,'adminSection')">⇩ &nbsp; Import Data</a>
-<a class="nav-item" href="#registrySection" data-target="registrySection" onclick="mobileNavigate(event,'registrySection')">⚙ &nbsp; Administrasi</a>
-<a class="nav-item admin-only" style="display:none" href="#tvContentSection" data-target="tvContentSection" onclick="mobileNavigate(event,'tvContentSection');refreshRunningTexts()">▸ &nbsp; Konten TV</a>
-<a class="nav-item" href="#governanceSection" data-target="governanceSection" onclick="mobileNavigate(event,'governanceSection')">◷ &nbsp; Monitoring</a>
-<a class="nav-item" href="#healthSection" data-target="healthSection" onclick="mobileNavigate(event,'healthSection');refreshDatasetHealth()">♥ &nbsp; Dataset Health</a>
-<a class="nav-item" href="#backupRecoverySection" data-target="backupRecoverySection" onclick="mobileNavigate(event,'backupRecoverySection');refreshBackupRecovery()">↥ &nbsp; Backup & Recovery</a>
-<a class="nav-item" href="#auditSection" data-target="auditSection" onclick="mobileNavigate(event,'auditSection');refreshAudit()">✓ &nbsp; Governance & Audit</a>
+<nav class="mobile-drawer" aria-label="Navigasi Back Office smartphone">
+  <div class="mobile-drawer-head">
+    <div class="mobile-drawer-brand">
+      <div class="mobile-drawer-mark">I</div>
+      <div><div class="mobile-drawer-title">Imigrasi24Jam</div><div class="mobile-drawer-sub">Data Izin Tinggal · Back Office</div></div>
+    </div>
+    <button class="mobile-drawer-close" onclick="closeMobileNav()" aria-label="Tutup menu">×</button>
+  </div>
+  <div class="mobile-drawer-user"><div class="avatar">A</div><div><b id="mobileDrawerUser">Administrator</b><span>OWNER · Back Office</span></div></div>
+
+  <div class="mobile-menu-section">
+    <div class="mobile-menu-section-title">ANALISIS</div>
+    <a class="mobile-menu-link active" href="#dashboard" data-target="dashboard" onclick="mobileNavigate(event,'dashboard')"><span class="menu-icon">⌂</span><span>Beranda / Dashboard</span></a>
+    <a class="mobile-menu-link" href="#mapSection" data-target="mapSection" onclick="mobileNavigate(event,'mapSection')"><span class="menu-icon">⌖</span><span>Peta Sebaran</span></a>
+    <a class="mobile-menu-link" href="#drilldownSection" data-target="drilldownSection" onclick="mobileNavigate(event,'drilldownSection')"><span class="menu-icon">▤</span><span>Data Explorer</span></a>
+    <a class="mobile-menu-link" href="#analytics" data-target="analytics" onclick="mobileNavigate(event,'analytics')"><span class="menu-icon">▥</span><span>Laporan & Statistik</span></a>
+    <a class="mobile-menu-link" href="#" onclick="openTv(event);closeMobileNav()"><span class="menu-icon">▣</span><span>INTAL TV</span><span class="menu-chevron">›</span></a>
+  </div>
+
+  <div class="mobile-menu-section">
+    <div class="mobile-menu-section-title">OPERASIONAL</div>
+    <a class="mobile-menu-link" href="#adminSection" data-target="adminSection" onclick="mobileNavigate(event,'adminSection')"><span class="menu-icon">⇩</span><span>Import Data</span></a>
+    <a class="mobile-menu-link" href="#registrySection" data-target="registrySection" onclick="mobileNavigate(event,'registrySection')"><span class="menu-icon">⚙</span><span>Administrasi</span></a>
+    <a class="mobile-menu-link admin-only" style="display:none" href="#tvContentSection" data-target="tvContentSection" onclick="mobileNavigate(event,'tvContentSection');refreshRunningTexts()"><span class="menu-icon">▸</span><span>Konten TV</span></a>
+  </div>
+
+  <div class="mobile-menu-section">
+    <div class="mobile-menu-section-title">GOVERNANCE & DATA</div>
+    <a class="mobile-menu-link" href="#governanceSection" data-target="governanceSection" onclick="mobileNavigate(event,'governanceSection')"><span class="menu-icon">◷</span><span>Monitoring</span></a>
+    <a class="mobile-menu-link" href="#healthSection" data-target="healthSection" onclick="mobileNavigate(event,'healthSection');refreshDatasetHealth()"><span class="menu-icon">♥</span><span>Dataset Health</span></a>
+    <a class="mobile-menu-link" href="#backupRecoverySection" data-target="backupRecoverySection" onclick="mobileNavigate(event,'backupRecoverySection');refreshBackupRecovery()"><span class="menu-icon">↥</span><span>Backup & Recovery</span></a>
+    <a class="mobile-menu-link" href="#auditSection" data-target="auditSection" onclick="mobileNavigate(event,'auditSection');refreshAudit()"><span class="menu-icon">✓</span><span>Governance & Audit</span></a>
+  </div>
+
+  <div class="mobile-menu-status"><span class="status-dot"></span><div><b>Canonical Data</b><small>RBAC · Audit · Registry</small></div></div>
 </nav></div>
 <main class="content">
   <div class="page-head" id="dashboard">
