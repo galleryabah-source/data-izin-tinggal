@@ -25,21 +25,25 @@ A green source-level CI run must not be treated as a substitute for production r
 
 ## Production baseline
 
+> **Current production baseline — verified 2026-10-05 16:16 WIB.** The numeric values below supersede the historical v1 baseline further down this document.
+
 | Invariant | Expected |
 |---|---:|
 | Dataset | `RESIDENCE_PERMIT_SERVICE_MONTHLY` |
-| Dataset rows | 80 |
+| Dataset rows | 90 |
 | Dataset columns | 16 |
-| Monthly periods | 8 |
+| Monthly periods | 9 |
 | Immigration offices | 10 |
-| Grand total | 258,094 |
+| Grand total | 291,730 |
 | Duplicate business keys | 0 |
 | Blank business keys | 0 |
 | Total mismatches | 0 |
-| Latest import accepted | 80 |
+| Invalid periods | 0 |
+| Invalid measures | 0 |
+| Latest import accepted | 10 |
 | Latest import rejected | 0 |
 | Latest import duplicates | 0 |
-| Exported rows | 80 |
+| Exported rows | 90 |
 | Backup checksum relationship | source = snapshot = manifest |
 
 ## Required runtime checks
@@ -67,6 +71,25 @@ The result must also have:
 - a production actor identity
 - `verifiedAt`
 - `latestSnapshotId`
+
+
+### Current dual-dataset production evidence — 2026-10-05
+
+The canonical production runtime now verifies both monthly datasets:
+
+- Residence: **90 rows / 291,730 services / 9 periods / 10 offices**.
+- Passport: **90 rows / 373,839 services / 9 periods / 10 offices**.
+- Combined service volume: **665,569**.
+- Residence and Passport integrity: duplicate keys 0, blank keys 0, invalid periods 0, invalid measures 0, total mismatches 0.
+- Residence export: 90 rows / 291,730 services / 0 value mismatches.
+- Passport export: 90 rows / 373,839 services / 0 value mismatches.
+- Production smoke: **16/16 checks PASS**, `smokeVersion: "2-growth-safe"`, `failedChecks: []`.
+- Dashboard regression: **12/12 checks PASS**, `failedChecks: []`.
+- Canonical deployment: GitHub Actions **Run #485**, merge commit `ae1a9bed19b81d954745f06e4ae35dd933e4b079`, conclusion `success`.
+- Runtime deployment identity: canonical Apps Script deployment ID `AKfycbzwhcpZWp8LhyidPFsvqwBQ6ZrgXjEB60NkyNmaQYsiewsvm9uZ_pwPdrG5xZINF2NK`, release evidence version `1`.
+- Residence backup checksum: source = snapshot = manifest `3a06493e9042b14121bbdfd024f03cc3905e85fa6b5d2c607f98070aa125c5e0`.
+
+The earlier 80-row / 258,094 Residence and 80-row / 327,088 Passport values remain historical certification evidence and are not the current runtime baseline.
 
 ## Audit evidence
 
