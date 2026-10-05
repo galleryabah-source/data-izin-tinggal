@@ -281,7 +281,7 @@ assert(perfTv.includes('async function rotateServiceSafely()'), 'INTAL TV rotate
 assert(perfTv.includes('Promise.all([stageServiceSnapshot(SERVICES[0]),stageServiceSnapshot(SERVICES[1])])'), 'INTAL TV stages dashboard and GIS snapshots in parallel');
 const tvNew=read('tv.html');
 assert(tvNew.includes('function serviceDrillLabel(){return metricLabel(SERVICE_DRILL.key);}'), 'INTAL TV service drilldown defines its metric label before chart rendering');
-assert(tvNew.includes('getActiveRunningTexts'), 'INTAL TV loads managed running text content');
+assert(tvNew.includes('getPublicTvRunningTexts'), 'INTAL TV loads managed running text through public adapter');
 assert(!tvNew.includes('>RUNNING TEXT</'), 'INTAL TV does not display technical RUNNING TEXT label');
 assert(tvNew.includes('function renderDistribution'), 'INTAL TV has visual service distribution');
 assert(tvNew.includes('function renderTrend'), 'INTAL TV has visual trend chart');
