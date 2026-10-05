@@ -46,7 +46,7 @@ assert(sourceConnector.includes('function commitGoogleSourceImport'), 'Google so
 assert(sourceConnector.includes('commitImport(sourceMatrixToTsv_'), 'Google source connector delegates to existing canonical import seam');
 assert(sourceConnector.includes("appendAudit_('IMPORT_SOURCE_COMMIT'"), 'Google source commit records source provenance audit');
 assert(sourceConnector.includes('spreadsheetId:adapted.spreadsheetId'), 'Source provenance records spreadsheet identity');
-assert(!sourceConnector.includes('getRange(1,1')&&!sourceConnector.includes('insertSheet('), 'Google source connector never mutates the external source spreadsheet');
+assert(!sourceConnector.includes('setValues(')&&!sourceConnector.includes('appendRow(')&&!sourceConnector.includes('deleteRow(')&&!sourceConnector.includes('insertSheet('), 'Google source connector never mutates the external source spreadsheet');
 
 const importCode=read('ImportService.gs');
 const pureImport=new Function(importCode+'\nreturn {normalizePeriod_,normalizeInteger_};')();
