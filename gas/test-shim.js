@@ -94,7 +94,7 @@ assert(dashboard.includes('MAP_METRIC_NOT_SUPPORTED'), 'GIS metric rejects unsup
 assert(dashboard.includes("const supportedMetrics=['total'].concat(d.contract.measures||[]);"), 'GIS metric derives from active dataset measures');
 assert(dashboard.includes('metricValue'), 'GIS map exposes selected metric value separately from canonical total');
 assert(dashboard.includes("function getServiceMap_(datasetKey,filters)"), 'GIS metric runtime logic is in shared map seam');
-assert(dashboard.includes("function getResidencePermitMap(filters){\n  return getServiceMap_('RESIDENCE_PERMIT_SERVICE_MONTHLY',filters);\n}"), 'Residence map delegates to shared GIS map seam');
+assert(dashboard.includes("function getResidencePermitMap(filters){\n  requirePermission_('map.read');\n  return getServiceMap_('RESIDENCE_PERMIT_SERVICE_MONTHLY',filters);\n}"), 'Residence map delegates to shared GIS map seam with RBAC protection');
 assert(!dashboard.match(/function exportResidencePermitMonthly\(filters\)\{[\s\S]*?d\.contract\.measures/), 'Residence export does not reference map-only metric contract');
 assert(dashboard.match(/function getServiceMap_\(datasetKey,filters\)\{[\s\S]*?const metricIndex=requestedMetric==='total'\?hi\.total:hi\[requestedMetric\];/), 'GIS map declares metric index inside map seam');
 assert(dashboard.includes('getOfficeReferenceStatus()'), 'map endpoint enforces office reference readiness');
