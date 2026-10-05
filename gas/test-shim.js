@@ -540,3 +540,9 @@ assert(pageNavigationUi.includes("targetId==='mapSection'"), 'Map is an isolated
 assert(pageNavigationUi.includes("targetId==='analytics'"), 'Analytics is an isolated page target');
 assert(pageNavigationUi.includes("targetId==='dashboard'"), 'Dashboard is an isolated page target');
 assert(pageNavigationUi.includes('window.scrollTo({top:0,behavior:\'smooth\'})'), 'Navigation resets viewport to page top');
+
+
+const crossReportUi=read('index.html');
+assert(crossReportUi.includes("callWithTimeout('getCrossServiceReporting'"), 'Cross-service report UI calls canonical reporting seam');
+assert(crossReportUi.includes('CROSS_SERVICE_REPORTING_V1'), 'Cross-service report UI renders canonical contract');
+assert(!crossReportUi.includes("callWithTimeout('getCrossServiceReport'"), 'Cross-service report UI does not call obsolete reporting seam');
