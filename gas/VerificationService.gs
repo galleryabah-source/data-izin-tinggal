@@ -9,7 +9,7 @@ function verifyDatasetIntegrityV1(datasetKey){
   const seen={},periods={},offices={};
   let duplicateKeys=0,blankKeys=0,invalidPeriods=0,invalidMeasures=0,totalMismatches=0,observedTotal=0;
   rows.forEach(r=>{
-    const period=String(r[hi.periode]||'').trim(),office=String(r[hi.kantor_imigrasi]||'').trim();
+    const period=normalizePeriodCell_(r[hi.periode]),office=String(r[hi.kantor_imigrasi]||'').trim();
     if(!period||!office)blankKeys++;
     if(!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(period))invalidPeriods++;
     if(period)periods[period]=true;
