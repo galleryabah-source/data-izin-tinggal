@@ -547,6 +547,14 @@ assert(yoyCode.includes('commonPeriods'), 'Passport YoY matches only common peri
 assert(yoyCode.includes('new2026'), 'Passport YoY classifies offices introduced in 2026');
 assert(yoyCode.includes('base2025') && yoyCode.includes('compare2026'), 'Passport YoY output separates year totals');
 assert(yoyCode.includes('services={'), 'Passport YoY preserves year-specific service definitions');
+assert(yoyCode.includes('avgMonthlyBase2025'), 'Passport YoY exposes average monthly baseline');
+assert(yoyCode.includes('comparableOfficeGrowthPct'), 'Passport YoY exposes comparable-office growth');
+assert(yoyCode.includes('newOfficeContributionPct'), 'Passport YoY exposes new-office contribution');
+assert(yoyCode.includes('peakGrowth') && yoyCode.includes('lowestGrowth'), 'Passport YoY exposes peak and lowest monthly growth');
+assert(yoyUi.includes('id="passportYoyInsights"'), 'Passport YoY UI exposes analytical insight cards');
+assert(yoyUi.includes('id="passportYoyContribution"'), 'Passport YoY UI exposes contribution analysis');
+assert(yoyUi.includes('Tren Bulanan'), 'Passport YoY UI exposes monthly trend visualization');
+
 const governance2026=read('PassportGovernanceService.gs');
 assert(governance2026.includes('verifyPassportServiceMonthly2026Ytd'), 'Passport 2026 September YTD verification gate exists');
 assert(governance2026.includes("latestPeriod!=='2026-09'"), 'Passport 2026 gate requires September 2026 as latest period');
