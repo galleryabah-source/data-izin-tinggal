@@ -542,7 +542,12 @@ assert(configCode.includes("datasetKey:'PASSPORT_SERVICE_MONTHLY_2025'"), 'Passp
 assert(configCode.includes("columns:['periode','kantor_imigrasi','m_paspor','walk_in','prioritas','percepatan','eazy','inovasi','bap','total_permohonan','penerbitan']"), 'Passport 2025 historical contract preserves source measures and publication output');
 assert(configCode.includes("businessKey:['periode','kantor_imigrasi']"), 'Passport 2025 historical contract uses period + office business key');
 assert(configCode.includes("derived:['total_permohonan']"), 'Passport 2025 historical contract derives total from source service measures');
-assert(!read('DashboardService.gs').includes("PASSPORT_SERVICE_MONTHLY_2025"), 'Passport 2025 historical dataset is isolated from the canonical 2026 dashboard service');
+const dashboardService=read('DashboardService.gs');
+assert(dashboardService.includes("year==='2025'"), 'Passport dashboard selects the historical dataset only when year 2025 is requested');
+assert(dashboardService.includes("PASSPORT_SERVICE_MONTHLY_2025"), 'Passport dashboard has an explicit 2025 historical read path');
+assert(dashboardService.includes("getServiceMap_('PASSPORT_SERVICE_MONTHLY_2025'"), 'Passport map follows the selected 2025 historical dataset');
+assert(uiCode.includes('id="yearFilter"'), 'Passport dashboard exposes a year selector');
+assert(uiCode.includes("tahun:document.getElementById('yearFilter')?.value||''"), 'Dashboard requests carry the selected year');
 assert(!read('BackupRecoveryService.gs').includes("PASSPORT_SERVICE_MONTHLY_2025"), 'Passport 2025 historical dataset does not alter canonical backup recovery paths');
 assert(uiCode.includes('function importMonthPeriodFromSheetName_'), 'Passport 2025 import infers period from monthly sheet name');
 assert(uiCode.includes('function isPassport2025HeaderPair_'), 'Passport 2025 import recognizes the two-row source header');
