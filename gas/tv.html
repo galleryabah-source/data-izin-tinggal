@@ -277,13 +277,17 @@ async function activateQuotaMode(refreshOnly){
   }
 }
 function restoreServiceChrome(){
-  document.querySelector('.left-stack .metric-panel:nth-child(1) h3').textContent='IZIN TINGGAL';
-  document.querySelector('.left-stack .metric-panel:nth-child(1) .metric-note').textContent='layanan · canonical monthly';
-  document.querySelector('.left-stack .metric-panel:nth-child(2) h3').textContent='PASPOR';
-  document.querySelector('.left-stack .metric-panel:nth-child(2) .metric-note').textContent='layanan · canonical monthly';
-  document.querySelector('.left-stack .metric-panel:nth-child(3) h3').textContent='TOTAL LAYANAN';
-  document.querySelector('.left-stack .metric-panel:nth-child(3) .metric-note').textContent='';
-  $('map').innerHTML='';
+  const panels=document.querySelectorAll('.left-stack .metric-panel');
+  const setPanel=(index,title,note)=>{
+    const h=panels[index]?.querySelector('h3'),m=panels[index]?.querySelector('.metric-note');
+    if(h)h.textContent=title;
+    if(m)m.textContent=note;
+  };
+  setPanel(0,'IZIN TINGGAL','layanan · canonical monthly');
+  setPanel(1,'PASPOR','layanan · canonical monthly');
+  setPanel(2,'TOTAL LAYANAN','');
+  // Never mutate #map.innerHTML while a Leaflet instance is alive.
+  // Layer visibility is controlled exclusively through showLayer().
   const head=document.querySelector('.map-head .map-title'),sub=document.querySelector('.map-head .map-sub');
   if(head)head.textContent='PETA SEBARAN LAYANAN';
   if(sub)sub.textContent='Office Reference · verified coordinates · read-only';
@@ -362,7 +366,51 @@ function showLayer(key){if(!map||!layers[key])return;Object.keys(layers).forEach
 function filterKey(key){return key+'|'+TV_FILTERS.periode+'|'+TV_FILTERS.kantor_imigrasi+'|'+TV_FILTERS.metric;}
 async function preload(key){if(BASE_CACHE[key]?.dashboard){CACHE[key]=BASE_CACHE[key];return CACHE[key];}const snapshot=await stageServiceSnapshot(key);const L=await ensureMap();commitServiceSnapshot(key,snapshot,L);renderKpis();return CACHE[key];}
 async function loadServiceView(key,force=false){const cacheKey=filterKey(key);if(!force&&VIEW_CACHE[cacheKey])return VIEW_CACHE[cacheKey];const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};const [dashboard,mapData]=await Promise.all([call(serviceFn(key),filters),call(mapFn(key),filters)]);const L=await ensureMap();buildLayer(key,mapData,L);const result={dashboard,mapData,loadedAt:Date.now()};VIEW_CACHE[cacheKey]=result;return result;}
-async function activateService(key){if(key==='MPASPOR_QUOTA')return activateQuotaMode();if(map===null&&$('map').querySelector('.quota-tv-overview'))$('map').innerHTML='';restoreServiceChrome();currentService=key;updateSwitch();$('mapBadge').textContent=(key===SERVICES[1]?'PASPOR':'IZIN TINGGAL')+' · '+metricLabel(TV_FILTERS.metric).toUpperCase();setLive('LIVE SYSTEM · SWITCHING');try{let result;if(!TV_FILTERS.periode&&!TV_FILTERS.kantor_imigrasi&&TV_FILTERS.metric==='total'){await preload(key);result=BASE_CACHE[key];}else{result=await loadServiceView(key);}const d=result.dashboard;renderRanking(d.offices);renderTrend(trendRowsFor(key,d.monthly),TV_FILTERS.periode);renderDistribution(d.services,d.grandTotal);renderServiceBars(d.services);renderOfficeButtons(d);renderKpis();if(result.mapData)showLayer(key);$('rankMeta').textContent=fmt(d.grandTotal)+' layanan';$('read').textContent='LAST READ · '+now()+' WIB';setLive('LIVE SYSTEM · ONLINE');return true;}catch(e){setLive('LIVE SYSTEM · ATTENTION',true);$('ranking').innerHTML='<span class="attention">'+esc(e.message||String(e))+'</span>';return false;}}
+async function activateService(key){
+  if(key==='MPASPOR_QUOTA')return activateQuotaMode();
+  if(TV_STATE.switching)return currentService===key;
+  TV_STATE.switching=true;
+  const previous=currentService;
+  const label=key===SERVICES[1]?'PASPOR':'IZIN TINGGAL';
+  try{
+    setRuntimeState('REFRESHING','Mengalihkan ke '+label+' · memvalidasi snapshot canonical...');
+    let result;
+    if(!TV_FILTERS.periode&&!TV_FILTERS.kantor_imigrasi&&TV_FILTERS.metric==='total'){
+      await preload(key);
+      result=BASE_CACHE[key];
+    }else{
+      result=await loadServiceView(key);
+    }
+    if(!result||!validDashboard(result.dashboard))throw new Error('TV_RUNTIME_INVALID_SERVICE_SNAPSHOT');
+    const mapReady=await ensureSnapshotMap(key,result);
+    if(!mapReady)throw new Error('TV_RUNTIME_CANONICAL_GIS_UNAVAILABLE');
+    restoreServiceChrome();
+    currentService=key;
+    updateSwitch();
+    $('mapBadge').textContent=label+' · '+metricLabel(TV_FILTERS.metric).toUpperCase();
+    renderRanking(result.dashboard.offices);
+    renderTrend(trendRowsFor(key,result.dashboard.monthly),TV_FILTERS.periode);
+    renderDistribution(result.dashboard.services,result.dashboard.grandTotal);
+    renderServiceBars(result.dashboard.services);
+    renderOfficeButtons(result.dashboard);
+    renderKpis();
+    showLayer(key);
+    $('rankMeta').textContent=fmt(result.dashboard.grandTotal)+' layanan';
+    $('read').textContent='LAST READ · '+now()+' WIB';
+    TV_STATE.lastGoodAt=Date.now();
+    TV_STATE.consecutiveFailures=0;
+    setRuntimeState('ONLINE','Canonical '+label+' snapshot verified · GIS + data online');
+    return true;
+  }catch(e){
+    currentService=previous;
+    updateSwitch();
+    const msg=String(e&&e.message||e);
+    setRuntimeState('DEGRADED','Perpindahan ke '+label+' gagal · '+msg);
+    return false;
+  }finally{
+    TV_STATE.switching=false;
+  }
+}
 
 async function fetchVerifiedSnapshot(key){
   const filters={periode:TV_FILTERS.periode,kantor_imigrasi:TV_FILTERS.kantor_imigrasi,metric:TV_FILTERS.metric};
@@ -409,7 +457,7 @@ async function loadServiceView(key,force=false){
 }
 
 const TV_RUNTIME=Object.freeze({refreshMs:60000,rotationMs:30000,staleAfterMs:180000,requestTimeoutMs:20000,maxFailuresBeforeAttention:2});
-const TV_STATE={status:'BOOTING',lastGoodAt:0,lastAttemptAt:0,consecutiveFailures:0,refreshing:false,rotationBusy:false,runtimeStarted:false};
+const TV_STATE={status:'BOOTING',lastGoodAt:0,lastAttemptAt:0,consecutiveFailures:0,refreshing:false,rotationBusy:false,switching:false,runtimeStarted:false};
 function setRuntimeState(status,detail){
   TV_STATE.status=status;
   const age=TV_STATE.lastGoodAt?Math.max(0,Date.now()-TV_STATE.lastGoodAt):null;
@@ -426,7 +474,7 @@ function validMapData(d){
 }
 function withTimeout(p,ms){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error('TV_RUNTIME_TIMEOUT')),ms))]);}
 async function refreshAllRuntimeData(){
-  if(TV_STATE.refreshing)return;
+  if(TV_STATE.refreshing||TV_STATE.switching)return;
   TV_STATE.refreshing=true;TV_STATE.lastAttemptAt=Date.now();
   setRuntimeState('REFRESHING','Memvalidasi snapshot canonical...');
   try{
@@ -459,7 +507,7 @@ async function refreshAllRuntimeData(){
   }finally{TV_STATE.refreshing=false;}
 }
 async function rotateServiceSafely(){
-  if(TV_STATE.rotationBusy||currentService==='MPASPOR_QUOTA')return;
+  if(TV_STATE.rotationBusy||TV_STATE.switching||currentService==='MPASPOR_QUOTA')return;
   TV_STATE.rotationBusy=true;
   try{
     const next=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];
