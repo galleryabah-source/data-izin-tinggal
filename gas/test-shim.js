@@ -536,6 +536,29 @@ assert(uiCode.includes("XLSX.read(buffer,{type:'array',cellDates:true,raw:false}
 assert(uiCode.includes('XLSX.utils.sheet_to_csv') && uiCode.includes('XLSX.utils.aoa_to_sheet(rows)'), 'Back Office file import normalizes the selected workbook sheet to the existing TSV validation seam');
 assert(uiCode.includes("importSourceMode==='FILE'?importFileText"), 'Back Office file import reuses the canonical preview and commit pipeline');
 assert(uiCode.includes('Pilih file sumber terlebih dahulu.'), 'Back Office file import blocks preview until a source file exists');
+
+// Passport YoY September 2026 analytics invariants
+const yoyCode=read('PassportYearOverYearService.gs');
+assert(yoyCode.includes("contract:'PASSPORT_YOY_ANALYTICS_V1'"), 'Passport YoY analytics contract is explicit');
+assert(yoyCode.includes("baseDataset:'PASSPORT_SERVICE_MONTHLY_2025'"), 'Passport YoY uses isolated 2025 canonical dataset');
+assert(yoyCode.includes("compareDataset:'PASSPORT_SERVICE_MONTHLY'"), 'Passport YoY uses canonical 2026 dataset');
+assert(yoyCode.includes('readOnly:true'), 'Passport YoY analytics is explicitly read-only');
+assert(yoyCode.includes('commonPeriods'), 'Passport YoY matches only common periods');
+assert(yoyCode.includes('new2026'), 'Passport YoY classifies offices introduced in 2026');
+assert(yoyCode.includes('base2025') && yoyCode.includes('compare2026'), 'Passport YoY output separates year totals');
+assert(yoyCode.includes('services={'), 'Passport YoY preserves year-specific service definitions');
+const governance2026=read('PassportGovernanceService.gs');
+assert(governance2026.includes('verifyPassportServiceMonthly2026Ytd'), 'Passport 2026 September YTD verification gate exists');
+assert(governance2026.includes("expectedLatest='2026-09'"), 'Passport 2026 gate requires September 2026 as latest period');
+assert(governance2026.includes('periods2026.length!==9'), 'Passport 2026 gate requires nine monthly periods');
+assert(governance2026.includes('offices.length!==10'), 'Passport 2026 gate requires ten offices');
+assert(governance2026.includes('GARUT'), 'Passport 2026 gate explicitly checks Garut');
+const yoyUi=read('index.html');
+assert(yoyUi.includes('id="annualAnalyticsSection"'), 'Back Office exposes isolated annual analytics section');
+assert(yoyUi.includes('getPassportYearOverYearAnalytics'), 'Annual analytics UI calls canonical YoY adapter');
+assert(yoyUi.includes('YTD'), 'Annual analytics UI is explicit about YTD comparison');
+assert(yoyUi.includes('Tidak memaksakan perbandingan kategori layanan'), 'Annual analytics UI prevents invalid cross-year service category comparison');
+
 // Passport 2025 historical dataset invariants
 const configCode=read('Config.gs');
 assert(configCode.includes("datasetKey:'PASSPORT_SERVICE_MONTHLY_2025'"), 'Passport 2025 historical dataset contract exists');
