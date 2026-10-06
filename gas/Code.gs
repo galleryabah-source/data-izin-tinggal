@@ -44,7 +44,7 @@ function seedDictionary_(){
     ['status','Status','STATUS','TEXT','FALSE','','trim','INTERNAL','TRUE','TRUE','','1'],
     ['source','Sumber','SOURCE;SUMBER','TEXT','FALSE','','trim','INTERNAL','FALSE','FALSE','','1'],
     ['periode','Periode','PERIODE;PERIOD;BULAN','PERIOD','TRUE','','period','INTERNAL','TRUE','TRUE','','1'],
-    ['kantor_imigrasi','Kantor Imigrasi','KANTOR IMIGRASI;KANTOR;UPT IMIGRASI','TEXT','TRUE','','trim','INTERNAL','TRUE','TRUE','region','1'],
+    ['kantor_imigrasi','Kantor Imigrasi','KANTOR IMIGRASI;KANTOR;KANIM;UPT IMIGRASI','TEXT','TRUE','','trim','INTERNAL','TRUE','TRUE','region','1'],
     ['bvk','BVK','BVK','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
     ['voa','VOA','VOA','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
     ['itk','ITK','ITK','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
