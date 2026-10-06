@@ -533,7 +533,7 @@ assert(uiCode.includes('value="FILE"'), 'Back Office import exposes Excel/CSV fi
 assert(uiCode.includes('accept=".xlsx,.xls,.csv,.tsv'), 'Back Office import accepts XLSX/XLS/CSV/TSV files');
 assert(uiCode.includes('function handleImportFile(file)'), 'Back Office import parses uploaded files before server validation');
 assert(uiCode.includes("XLSX.read(buffer,{type:'array',cellDates:true,raw:false})"), 'Back Office Excel import uses a workbook parser');
-assert(uiCode.includes("XLSX.utils.sheet_to_csv(ws,{FS:'\\t',RS:'\\n',blankrows:false})"), 'Back Office file import normalizes workbook data to the existing TSV validation seam');
+assert(uiCode.includes("XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet(rows),{FS:'\\t',RS:'\\n',blankrows:false})"), 'Back Office file import normalizes the selected workbook sheet to the existing TSV validation seam');
 assert(uiCode.includes("importSourceMode==='FILE'?importFileText"), 'Back Office file import reuses the canonical preview and commit pipeline');
 assert(uiCode.includes('Pilih file sumber terlebih dahulu.'), 'Back Office file import blocks preview until a source file exists');
 // Multi-sheet / header-row file import invariants
