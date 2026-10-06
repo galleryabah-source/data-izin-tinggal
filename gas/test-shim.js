@@ -239,6 +239,9 @@ assert(codeGs.includes('function ensureRunningTextSheet_()') && codeGs.includes(
 assert(codeGs.includes("requirePermission_('admin.config')"), 'Running text write endpoints are RBAC protected');
 assert(codeGs.includes("function getActiveRunningTexts()") && codeGs.includes("requirePermission_('dashboard.read')"), 'Back-office running text read path is RBAC protected');
 const publicTv=read('PublicTvService.gs');
+assert(publicTv.includes('function getPublicTvPassportYoYContext'), 'Public TV exposes read-only Passport 2025 historical context');
+assert(publicTv.includes("getPassportYearOverYearAnalytics_({baseYear:'2025',compareYear:'2026'})"), 'Passport historical TV context reuses the verified YoY semantic adapter');
+assert(publicTv.includes('base2025') && publicTv.includes('compare2026') && publicTv.includes('growthPct'), 'Passport historical TV context exposes only aggregate year-over-year metrics');
 assert(publicTv.includes('function getPublicTvResidenceDashboard') && publicTv.includes('function getPublicTvPassportDashboard'), 'Public TV dashboard adapters exist');
 assert(publicTv.includes('function getPublicTvResidenceMap') && publicTv.includes('function getPublicTvPassportMap'), 'Public TV GIS adapters exist');
 assert(publicTv.includes('function getPublicTvRunningTexts') && publicTv.includes('getActiveRunningTexts_()'), 'Public TV running text uses non-mutating core');
@@ -271,7 +274,8 @@ assert(read('tv.html').includes('KANTOR WILAYAH DIREKTORAT JENDERAL IMIGRASI') &
 assert(!/<script[^>]+src=["'][^"']*leaflet\.js/i.test(read('tv.html')), 'Dedicated TV entry does not block on Leaflet CDN');
 const tv=read('tv.html');
 assert(tv.includes("call('getPublicTvRunningTexts')"), 'INTAL TV retains manual running-text source');
-assert(tv.includes('runningTexts=[...(analytical||[]).map(x=>x.text),...(manual||[])];'), 'Manual running text is additive and not replaced by analytical text');
+assert(tv.includes('const yoyText=buildPassportYoYText();'), 'INTAL TV builds a Passport historical narrative from the verified context');
+assert(tv.includes('runningTexts=[...(yoyText?[yoyText]:[]),...(analytical||[]).map(x=>x.text),...(manual||[])];'), 'Passport historical narrative is additive and does not replace managed running text');
 assert(tv.includes('runningTexts=[];') && tv.includes('showTicker();'), 'INTAL TV keeps an empty-content fallback when manual and analytical text are unavailable');
 assert(!/<link[^>]+rel=["']stylesheet["'][^>]+href=["'][^"']*leaflet\.css/i.test(tv), 'Dedicated TV entry does not block on Leaflet CSS CDN');
 assert(tv.includes('function loadLeafletCss()') && tv.includes("document.createElement('link')"), 'INTAL TV loads Leaflet CSS lazily after shell render');
@@ -299,6 +303,13 @@ assert(workspaceUi.includes('href="#" onclick="openTv(event)"'), 'INTAL TV menu 
 
 const tvCharts=read('tv.html');
 assert(tvCharts.includes('function renderTrend'), 'INTAL TV renders visual trend chart');
+assert(tvCharts.includes('function loadPassportYoYContext'), 'INTAL TV loads Passport 2025 historical context through a bounded read-only adapter');
+assert(tvCharts.includes("call('getPublicTvPassportYoYContext')"), 'INTAL TV calls the public Passport historical context adapter');
+assert(tvCharts.includes('id="tvPassYoY"') && tvCharts.includes('id="tvPassYoYBadge"') && tvCharts.includes('id="tvPassYoYDelta"'), 'INTAL TV Passport KPI exposes YoY context and delta');
+assert(tvCharts.includes('function renderPassportYoY'), 'INTAL TV renders Passport YoY KPI context');
+assert(tvCharts.includes('comparison.length&&currentService===SERVICES[1]'), 'INTAL TV enables historical comparison only for Passport');
+assert(tvCharts.includes('trend-yoy-base') && tvCharts.includes('trend-yoy-point'), 'INTAL TV renders a dedicated 2025 historical trend series');
+assert(tvCharts.includes('2026') && tvCharts.includes('2025'), 'INTAL TV labels the Passport comparison series by year');
 assert(tvCharts.includes('function dashboardForKpi') && tvCharts.includes('function combinedMonthlyValue'), 'INTAL TV contextual total KPI has canonical dashboard helpers');
 assert(tvCharts.includes('id="tvCombinedContext"') && tvCharts.includes('id="tvCombinedResidence"') && tvCharts.includes('id="tvCombinedPassport"') && tvCharts.includes('id="tvCombinedMom"'), 'INTAL TV total KPI exposes period context, service split, and MoM');
 assert(tvCharts.includes("if(next||previous)await Promise.all([loadServiceView(SERVICES[0],true),loadServiceView(SERVICES[1],true)])"), 'INTAL TV period selection loads both canonical service views for combined KPI context');
