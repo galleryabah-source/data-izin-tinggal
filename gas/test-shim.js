@@ -554,6 +554,8 @@ assert(uiCode.includes('PASSPORT_2025_SCHEMA_DRIFT'), 'Passport 2025 batch impor
 assert(uiCode.includes('function passport2025RowsToTsv_'), 'Passport 2025 normalization uses an explicit TSV serializer');
 assert(uiCode.includes("importFileText=passport2025RowsToTsv_(header,rows)"), 'Passport 2025 batch import serializes all canonical columns including PENERBITAN');
 assert(uiCode.includes("importFileText=passport2025RowsToTsv_(normalized.header,normalized.rows)"), 'Passport 2025 single-sheet import uses the same canonical TSV serializer');
+assert(uiCode.includes("XLSX.utils.encode_cell({r:i,c})"), 'Passport 2025 import reads source cells directly by worksheet coordinate');
+assert(uiCode.includes("cell(11)"), 'Passport 2025 import reads the L-column PENERBITAN cell directly');
 // Multi-sheet / header-row file import invariants
 assert(uiCode.includes('id="importFileSheet"'), 'Back Office file import exposes workbook sheet selection');
 assert(uiCode.includes('function detectImportFileHeaderRow_(ws)'), 'Back Office file import detects header rows beyond row 1');
