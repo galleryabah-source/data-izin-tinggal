@@ -276,7 +276,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
   <div id="drillDetail" class="detail-meta" style="margin-top:10px">Klik baris untuk melihat detail record.</div>
 </section>
 
-  <section class="card" id="annualAnalyticsSection">
+  <section class="card" id="annualAnalyticsSection"><div style="display:flex;justify-content:flex-end;margin:0 0 10px"><button class="btn" onclick="runPassportYoyForensic()">Forensic Closure</button></div>
   <div class="card-head"><div><h2 class="card-title">Analisis Antar Tahun · Paspor</h2><div class="card-sub">Read-only semantic adapter · 2025 vs 2026 · perbandingan YTD pada periode yang sama</div></div><span id="passportYoyStatus" class="muted">Belum dimuat</span></div>
   <div class="filterbar" style="margin:0 0 14px 0">
     <div class="filter"><label>TAHUN DASAR</label><select id="passportYoyBase"><option value="2025">2025</option></select></div>
@@ -582,6 +582,23 @@ function renderPassportYoy(r){
   const bs=(services.base2025||[]),cs=(services.compare2026||[]);
   document.getElementById('passportYoyServices').innerHTML='<div class="card-head"><div><div class="card-title">Service Mix · Per Definisi Tahun</div><div class="card-sub">Kategori ditampilkan terpisah sampai kesetaraan definisi terbukti</div></div></div><div class="detail-wrap"><table><thead><tr><th>2025 · Jenis Layanan</th><th>Total</th><th>2026 · Jenis Layanan</th><th>Total</th></tr></thead><tbody>'+Array.from({length:Math.max(bs.length,cs.length)},(_,i)=>'<tr><td>'+esc(bs[i]?.key||'')+'</td><td>'+yoyNum(bs[i]?.total||0)+'</td><td>'+esc(cs[i]?.key||'')+'</td><td>'+yoyNum(cs[i]?.total||0)+'</td></tr>').join('')+'</tbody></table></div>';
 }
+
+async function runPassportYoyForensic(){
+  const btn=event&&event.currentTarget; if(btn)btn.disabled=true;
+  try{
+    const r=await callWithTimeout('verifyPassportYearOverYearForensic',30000,{});
+    const status=document.getElementById('passportYoyStatus');
+    if(r.ok){
+      if(status)status.innerHTML='<span class="ok">FORENSIC PASS · 9 bulan · 9 comparable + Garut</span>';
+      alert('FORENSIC PASS\n2025 Jan-Sep vs 2026 Jan-Sep\nDelta: '+yoyNum(r.totals.delta)+'\nOffice reconciliation: PASS\nMonthly reconciliation: PASS\nComparable + Garut: PASS');
+    }else{
+      if(status)status.innerHTML='<span class="error">FORENSIC FAILED</span>';
+      alert('FORENSIC FAILED\n'+(r.issues||[]).join('\n'));
+    }
+  }catch(e){alert('Forensic Closure error: '+(e&&e.message||e));}
+  finally{if(btn)btn.disabled=false;}
+}
+
 async function refreshPassportYoy(){
   const status=document.getElementById('passportYoyStatus'),note=document.getElementById('passportYoyNote');
   if(status)status.textContent='Memuat...';
