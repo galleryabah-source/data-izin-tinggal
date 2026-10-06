@@ -551,6 +551,13 @@ assert(dashboardService.includes("requestedMetric==='total'?totalValueOf_(r):Num
 assert(dashboardService.includes('markers[office].total+=totalValueOf_(r);'), 'GIS total uses the same derived total calculation');
 assert(uiCode.includes('id="yearFilter"'), 'Passport dashboard exposes a year selector');
 assert(uiCode.includes("tahun:document.getElementById('yearFilter')?.value||''"), 'Dashboard requests carry the selected year');
+const governanceCode=read('PassportGovernanceService.gs');
+assert(governanceCode.includes("verifyPassportServiceMonthly2025"), 'Passport 2025 forensic verification seam exists');
+assert(governanceCode.includes("createPassportServiceMonthly2025Snapshot"), 'Passport 2025 snapshot seam exists');
+assert(governanceCode.includes("verifyPassportServiceMonthly2025Snapshot"), 'Passport 2025 snapshot verification seam exists');
+assert(uiCode.includes('verifyPassport2025()'), 'Governance UI exposes Passport 2025 verification');
+assert(uiCode.includes('createPassport2025Snapshot()'), 'Governance UI exposes Passport 2025 snapshot');
+
 assert(!read('BackupRecoveryService.gs').includes("PASSPORT_SERVICE_MONTHLY_2025"), 'Passport 2025 historical dataset does not alter canonical backup recovery paths');
 assert(uiCode.includes('function importMonthPeriodFromSheetName_'), 'Passport 2025 import infers period from monthly sheet name');
 assert(uiCode.includes('function isPassport2025HeaderPair_'), 'Passport 2025 import recognizes the two-row source header');
