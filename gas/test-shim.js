@@ -567,7 +567,7 @@ assert((yoyUi.match(/value="2026-0[1-9]"/g)||[]).length===9, 'Passport YoY perio
 assert(yoyUi.includes('id="annualAnalyticsSection"'), 'Back Office exposes isolated annual analytics section');
 assert(yoyUi.includes('getPassportYearOverYearAnalytics'), 'Annual analytics UI calls canonical YoY adapter');
 assert(yoyUi.includes('YTD'), 'Annual analytics UI is explicit about YTD comparison');
-assert(yoyUi.includes('Tidak memaksakan perbandingan kategori layanan'), 'Annual analytics UI prevents invalid cross-year service category comparison');
+assert(yoyUi.includes('Kategori ditampilkan terpisah sampai kesetaraan definisi terbukti'), 'Annual analytics UI prevents invalid cross-year service category comparison');
 
 // Passport 2025 historical dataset invariants
 const configCode=read('Config.gs');
