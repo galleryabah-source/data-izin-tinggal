@@ -293,8 +293,7 @@ function restoreServiceChrome(){
   setPanel(0,'IZIN TINGGAL','layanan · canonical monthly');
   setPanel(1,'PASPOR','layanan · canonical monthly');
   setPanel(2,'TOTAL LAYANAN','');
-  // Never mutate #map.innerHTML while a Leaflet instance is alive.
-  // Layer visibility is controlled exclusively through showLayer().
+
   const head=document.querySelector('.map-head .map-title'),sub=document.querySelector('.map-head .map-sub');
   if(head)head.textContent='PETA SEBARAN LAYANAN';
   if(sub)sub.textContent='Office Reference · verified coordinates · read-only';
