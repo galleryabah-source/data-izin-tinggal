@@ -161,6 +161,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
   <a class="nav-item" href="#mapSection" data-target="mapSection" onclick="navigateTo(event,'mapSection')">Peta Sebaran</a>
   <a class="nav-item" href="#drilldownSection" data-target="drilldownSection" onclick="navigateTo(event,'drilldownSection')">Data Explorer</a>
   <a class="nav-item" href="#analytics" data-target="analytics" onclick="navigateTo(event,'analytics')">Laporan & Statistik</a>
+  <a class="nav-item" href="#annualAnalyticsSection" data-target="annualAnalyticsSection" onclick="navigateTo(event,'annualAnalyticsSection');refreshPassportYoy()">Analisis Antar Tahun</a>
   <a class="nav-item" href="#mpasporQuotaSection" data-target="mpasporQuotaSection" onclick="navigateTo(event,'mpasporQuotaSection')">Kuota M-Paspor</a>
   <div class="nav-label">Operasional</div>
   <a class="nav-item" href="#adminSection" data-target="adminSection" onclick="navigateTo(event,'adminSection')">Import Data</a>
@@ -187,6 +188,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
     <a class="mobile-menu-link" href="#mapSection" data-target="mapSection" onclick="mobileNavigate(event,'mapSection')"><span class="menu-icon">⌖</span><span>Peta Sebaran</span></a>
     <a class="mobile-menu-link" href="#drilldownSection" data-target="drilldownSection" onclick="mobileNavigate(event,'drilldownSection')"><span class="menu-icon">▤</span><span>Data Explorer</span></a>
     <a class="mobile-menu-link" href="#analytics" data-target="analytics" onclick="mobileNavigate(event,'analytics')"><span class="menu-icon">▥</span><span>Laporan & Statistik</span></a>
+    <a class="mobile-menu-link" href="#annualAnalyticsSection" data-target="annualAnalyticsSection" onclick="mobileNavigate(event,'annualAnalyticsSection');refreshPassportYoy()"><span class="menu-icon">↕</span><span>Analisis Antar Tahun</span></a>
     <a class="mobile-menu-link" href="#mpasporQuotaSection" data-target="mpasporQuotaSection" onclick="mobileNavigate(event,'mpasporQuotaSection')"><span class="menu-icon">◈</span><span>Kuota M-Paspor</span></a>
     <a class="mobile-menu-link" href="#" onclick="openTv(event);closeMobileNav()"><span class="menu-icon">▣</span><span>INTAL TV</span><span class="menu-chevron">›</span></a>
   </div>
@@ -272,6 +274,21 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
     <button class="btn small" id="drillNext" onclick="changeExplorerPage(1)">Berikutnya →</button>
   </div>
   <div id="drillDetail" class="detail-meta" style="margin-top:10px">Klik baris untuk melihat detail record.</div>
+</section>
+
+  <section class="card" id="annualAnalyticsSection">
+  <div class="card-head"><div><h2 class="card-title">Analisis Antar Tahun · Paspor</h2><div class="card-sub">Read-only semantic adapter · 2025 vs 2026 · perbandingan YTD pada periode yang sama</div></div><span id="passportYoyStatus" class="muted">Belum dimuat</span></div>
+  <div class="filterbar" style="margin:0 0 14px 0">
+    <div class="filter"><label>TAHUN DASAR</label><select id="passportYoyBase"><option value="2025">2025</option></select></div>
+    <div class="filter"><label>TAHUN PEMBANDING</label><select id="passportYoyCompare"><option value="2026">2026</option></select></div>
+    <div class="filter"><label>PERIODE AKHIR YTD</label><select id="passportYoyEnd"><option value="2026-09">September 2026</option></select></div>
+    <div class="filter-actions"><button class="btn primary" onclick="refreshPassportYoy()">Analisis</button></div>
+  </div>
+  <div id="passportYoyNote" class="detail-meta">Guardrail: 2025 dan 2026 dibandingkan hanya pada bulan yang sama. Kantor Garut 2026 ditandai sebagai kantor baru dan tidak diberi pertumbuhan YoY 2025.</div>
+  <div id="passportYoyKpis" class="kpis" style="margin-top:12px">Memuat...</div>
+  <div id="passportYoyOffices" style="margin-top:12px">Memuat...</div>
+  <div id="passportYoyMonthly" style="margin-top:12px">Memuat...</div>
+  <div id="passportYoyServices" style="margin-top:12px">Memuat...</div>
 </section>
 
   <section class="card" id="adminSection">
@@ -529,6 +546,42 @@ function changeExplorerPageSize(){explorerState.pageSize=Number(document.getElem
 function sortExplorer(column){if(explorerState.sortBy===column)explorerState.sortDir=explorerState.sortDir==='asc'?'desc':'asc';else{explorerState.sortBy=column;explorerState.sortDir='asc';}explorerState.page=1;refreshDrilldown();}
 function showExplorerDetail(index){const r=explorerState.last;if(!r||!r.rows[index])return;const detail={};r.columns.forEach((k,i)=>detail[k]=r.rows[index][i]);document.getElementById('drillDetail').innerHTML='<b>Detail record</b><pre>'+esc(JSON.stringify(detail,null,2))+'</pre>';}
 async function refreshDrilldown(){try{const fn=serviceKey==='PASSPORT_SERVICE_MONTHLY'?'getPassportDrilldown':'getResidencePermitDrilldown';const r=await callWithTimeout(fn,20000,getExplorerFilters());explorerState.last=r;document.getElementById('drillMeta').textContent=Number(r.totalRows||r.rowCount||0).toLocaleString('id-ID')+' records';document.getElementById('drillPageInfo').textContent='Halaman '+r.page+' / '+r.totalPages+' · '+r.rowCount+' ditampilkan';document.getElementById('drillPrev').disabled=r.page<=1;document.getElementById('drillNext').disabled=r.page>=r.totalPages;if(!r.rowCount){document.getElementById('drilldown').innerHTML='<div class="detail-meta">0 baris sesuai filter.</div>';return;}const head=r.columns.map(x=>'<th class="explorer-sort" onclick="sortExplorer(\''+esc(x)+'\')">'+esc(x)+' '+(r.filters.sortBy===x?(r.filters.sortDir==='asc'?'↑':'↓'):'')+'</th>').join('');const body=r.rows.map((row,i)=>'<tr class="explorer-row" onclick="showExplorerDetail('+i+')">'+row.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('');document.getElementById('drilldown').innerHTML='<div class="detail-wrap"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div>';}catch(e){document.getElementById('drilldown').innerHTML='<span class="error">'+esc(e.message)+'</span>';document.getElementById('drillPageInfo').textContent='Gagal memuat';}}
+function yoyPct(v){return v===null||v===undefined||!Number.isFinite(Number(v))?'—':(Number(v)>=0?'+':'')+Number(v).toFixed(1).replace('.',',')+'%';}
+function yoyNum(v){return Number(v||0).toLocaleString('id-ID');}
+function renderPassportYoy(r){
+  const t=r.totals||{},p=r.period||{},o=r.offices||{},services=r.services||{};
+  document.getElementById('passportYoyStatus').innerHTML='<span class="ok">READY · '+esc((p.matchedPeriods||[]).length)+' bulan · '+esc(p.requestedEnd||'')+'</span>';
+  document.getElementById('passportYoyKpis').innerHTML=
+    '<div class="kpi"><div class="kpi-label">2025 · YTD</div><div class="kpi-value">'+yoyNum(t.base2025)+'</div><div class="kpi-meta">Jan–'+esc(String(p.requestedEnd||'').slice(5))+'</div></div>'+
+    '<div class="kpi"><div class="kpi-label">2026 · YTD</div><div class="kpi-value">'+yoyNum(t.compare2026)+'</div><div class="kpi-meta">periode yang sama</div></div>'+
+    '<div class="kpi"><div class="kpi-label">SELISIH</div><div class="kpi-value">'+yoyNum(t.delta)+'</div><div class="kpi-meta">2026 − 2025</div></div>'+
+    '<div class="kpi"><div class="kpi-label">PERTUMBUHAN YoY</div><div class="kpi-value">'+yoyPct(t.growthPct)+'</div><div class="kpi-meta">total layanan</div></div>';
+  const rows=(o.rows||[]).map((x,i)=>'<tr><td>'+String(i+1)+'</td><td><b>'+esc(x.kantor_imigrasi)+'</b></td><td>'+yoyNum(x.base2025)+'</td><td>'+yoyNum(x.compare2026)+'</td><td>'+yoyNum(x.delta)+'</td><td>'+yoyPct(x.growthPct)+'</td><td><span class="'+(x.status==='COMPARABLE'?'ok':'muted')+'">'+esc(x.status)+'</span></td></tr>').join('');
+  document.getElementById('passportYoyOffices').innerHTML='<div class="card-head"><div><div class="card-title">Perbandingan Kantor</div><div class="card-sub">'+o.comparableCount+' kantor comparable · '+(o.new2026||[]).length+' kantor baru 2026</div></div></div><div class="detail-wrap"><table><thead><tr><th>#</th><th>Kantor</th><th>2025 YTD</th><th>2026 YTD</th><th>Δ</th><th>YoY</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  const mrows=(r.monthly||[]).map(x=>'<tr><td>'+esc(x.periode2025.slice(5))+'</td><td>'+yoyNum(x.base2025)+'</td><td>'+yoyNum(x.compare2026)+'</td><td>'+yoyNum(x.delta)+'</td><td>'+yoyPct(x.growthPct)+'</td></tr>').join('');
+  document.getElementById('passportYoyMonthly').innerHTML='<div class="card-head"><div><div class="card-title">Tren Bulanan Matched Period</div><div class="card-sub">Hanya bulan yang tersedia pada kedua dataset</div></div></div><div class="detail-wrap"><table><thead><tr><th>Bulan</th><th>2025</th><th>2026</th><th>Δ</th><th>YoY</th></tr></thead><tbody>'+mrows+'</tbody></table></div>';
+  const bs=(services.base2025||[]).map(x=>'<tr><td>'+esc(x.key)+'</td><td>'+yoyNum(x.total)+'</td></tr>').join('');
+  const cs=(services.compare2026||[]).map(x=>'<tr><td>'+esc(x.key)+'</td><td>'+yoyNum(x.total)+'</td></tr>').join('');
+  document.getElementById('passportYoyServices').innerHTML='<div class="card-head"><div><div class="card-title">Service Mix · Per Definisi Tahun</div><div class="card-sub">Tidak memaksakan perbandingan kategori layanan yang berbeda antara 2025 dan 2026</div></div></div><div class="detail-wrap"><table><thead><tr><th>2025 · Jenis Layanan</th><th>Total</th><th>2026 · Jenis Layanan</th><th>Total</th></tr></thead><tbody>'+Array.from({length:Math.max((services.base2025||[]).length,(services.compare2026||[]).length)},(_,i)=>'<tr><td>'+esc(services.base2025?.[i]?.key||'')+'</td><td>'+yoyNum(services.base2025?.[i]?.total||0)+'</td><td>'+esc(services.compare2026?.[i]?.key||'')+'</td><td>'+yoyNum(services.compare2026?.[i]?.total||0)+'</td></tr>').join('')+'</tbody></table></div>';
+}
+async function refreshPassportYoy(){
+  const status=document.getElementById('passportYoyStatus'),note=document.getElementById('passportYoyNote');
+  if(status)status.textContent='Memuat...';
+  try{
+    const base=document.getElementById('passportYoyBase')?.value||'2025',compare=document.getElementById('passportYoyCompare')?.value||'2026',end=document.getElementById('passportYoyEnd')?.value||'2026-09';
+    const r=await callWithTimeout('getPassportYearOverYearAnalytics',20000,{baseYear:base,compareYear:compare,periodEnd:end});
+    renderPassportYoy(r);
+    if(note)note.innerHTML='Guardrail aktif · '+esc(r.period.monthCount)+' bulan matched · 2025 '+esc(r.datasets[0].officeCount)+' kantor · 2026 '+esc(r.datasets[1].officeCount)+' kantor · Garut '+((r.offices.new2026||[]).some(x=>String(x).toUpperCase().includes('GARUT'))?'NEW_2026':'status tidak terverifikasi')+'.';
+  }catch(e){
+    if(status)status.innerHTML='<span class="error">ERROR</span>';
+    const msg=esc(e&&e.message||e);
+    document.getElementById('passportYoyKpis').innerHTML='<span class="error">'+msg+'</span>';
+    document.getElementById('passportYoyOffices').innerHTML='';
+    document.getElementById('passportYoyMonthly').innerHTML='';
+    document.getElementById('passportYoyServices').innerHTML='';
+  }
+}
+
 async function refreshDashboard(){setLoading(true,'Memuat dashboard...');try{const fn=serviceKey==='PASSPORT_SERVICE_MONTHLY'?'getPassportDashboard':'getResidencePermitDashboard';const r=await callWithTimeout(fn,20000,getFilters());lastDashboard=r;populateFilters(r);await refreshCrossServiceReport();const passport=serviceKey==='PASSPORT_SERVICE_MONTHLY';document.getElementById('dashboardTitle').textContent=passport?'Dashboard Layanan Paspor':'Dashboard Layanan Izin Tinggal';document.getElementById('mapTitle').textContent=passport?'Peta Layanan Paspor':'Peta Layanan Izin Tinggal';document.getElementById('total').textContent=Number(r.rowCount).toLocaleString('id-ID');document.getElementById('grandTotal').textContent=Number(r.grandTotal).toLocaleString('id-ID');document.getElementById('trend').innerHTML=renderTrend(r.monthly);document.getElementById('ranking').innerHTML=renderRanking(r.offices);document.getElementById('services').innerHTML=renderServices(r.services);populateMapMetrics(r);setLoading(false,'Dashboard loaded · '+r.rowCount+' rows');const tasks=await Promise.allSettled([refreshDrilldown(),refreshMap()]);const failed=tasks.filter(x=>x.status==='rejected');if(failed.length)document.getElementById('mapStatus').innerHTML='<span class="error">Dashboard utama berhasil; komponen tambahan gagal dimuat.</span>';}catch(e){document.getElementById('grandTotal').innerHTML='<span class="error">!</span>';document.getElementById('total').innerHTML='<span class="error">!</span>';document.getElementById('trend').innerHTML='<span class="error">'+esc(e.message)+'</span>';document.getElementById('mapStatus').innerHTML='<span class="error">Dashboard gagal dimuat: '+esc(e.message)+'</span>';}finally{setLoading(false);}}
 function resetFilters(){
   const y=document.getElementById('yearFilter');
