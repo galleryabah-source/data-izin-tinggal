@@ -63,6 +63,13 @@ function getPassportYearOverYearAnalytics_(filters){
   };
   const comparableBase=comparable.reduce((s,o)=>s+(baseAgg.offices[o]?.total||0),0),comparableCompare=comparable.reduce((s,o)=>s+(compareAgg.offices[o]?.total||0),0);
   const newOfficeContribution=compareOnly.reduce((s,o)=>s+(compareAgg.offices[o]?.total||0),0);
+  const monthlyGrowth=monthly.filter(x=>x.growthPct!==null);
+  const peakGrowth=monthlyGrowth.reduce((best,x)=>!best||x.growthPct>best.growthPct?x:best,null);
+  const lowestGrowth=monthlyGrowth.reduce((best,x)=>!best||x.growthPct<best.growthPct?x:best,null);
+  const avgBase=matchedPeriods.length?baseTotal/matchedPeriods.length:0,avgCompare=matchedPeriods.length?compareTotal/matchedPeriods.length:0;
+  const comparableDelta=comparableCompare-comparableBase;
+  const comparableGrowthPct=comparableBase===0?null:(comparableDelta/comparableBase)*100;
+  const newOfficeContributionPct=compareTotal===0?null:(newOfficeContribution/compareTotal)*100;
   return {
     contract:PASSPORT_YOY_V1.contract,readOnly:true,measure:'total_permohonan/total',baseYear,compareYear,
     period:{requestedEnd:requestedEnd||compareMatchedPeriods[compareMatchedPeriods.length-1],matchedPeriods,monthCount:matchedPeriods.length,basePeriodsAvailable:basePeriods,comparePeriodsAvailable:comparePeriods},
@@ -70,8 +77,9 @@ function getPassportYearOverYearAnalytics_(filters){
       {datasetKey:PASSPORT_YOY_V1.baseDataset,rowCount:base.rows.length,periodCount:basePeriods.length,officeCount:baseOffices.length},
       {datasetKey:PASSPORT_YOY_V1.compareDataset,rowCount:compare.rows.length,periodCount:comparePeriods.length,officeCount:compareOffices.length}
     ],
-    totals:{base2025:baseTotal,compare2026:compareTotal,delta:compareTotal-baseTotal,growthPct,comparableOfficeBase2025:comparableBase,comparableOfficeCompare2026:comparableCompare,newOfficeContribution2026:newOfficeContribution},
+    totals:{base2025:baseTotal,compare2026:compareTotal,delta:compareTotal-baseTotal,growthPct,avgMonthlyBase2025:avgBase,avgMonthlyCompare2026:avgCompare,comparableOfficeBase2025:comparableBase,comparableOfficeCompare2026:comparableCompare,comparableOfficeDelta:comparableDelta,comparableOfficeGrowthPct:comparableGrowthPct,newOfficeContribution2026:newOfficeContribution,newOfficeContributionPct:newOfficeContributionPct},
     offices:{comparableCount:comparable.length,new2026:compareOnly,only2025:baseOnly,rows:officeRows},
+    insights:{peakGrowth,lowestGrowth},
     monthly,services
   };
 }
