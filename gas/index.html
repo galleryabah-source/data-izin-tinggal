@@ -160,7 +160,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
   <a class="nav-item" href="#mapSection" data-target="mapSection" onclick="navigateTo(event,'mapSection')">Peta Sebaran</a>
   <a class="nav-item" href="#drilldownSection" data-target="drilldownSection" onclick="navigateTo(event,'drilldownSection')">Data Explorer</a>
   <a class="nav-item" href="#analytics" data-target="analytics" onclick="navigateTo(event,'analytics')">Laporan & Statistik</a>
-  <a class="nav-item" href="#mpasporQuotaSection" data-target="mpasporQuotaSection" onclick="navigateTo(event,'mpasporQuotaSection');refreshMpasporQuota()">Kuota M-Paspor</a>
+  <a class="nav-item" href="#mpasporQuotaSection" data-target="mpasporQuotaSection" onclick="navigateTo(event,'mpasporQuotaSection')">Kuota M-Paspor</a>
   <div class="nav-label">Operasional</div>
   <a class="nav-item" href="#adminSection" data-target="adminSection" onclick="navigateTo(event,'adminSection')">Import Data</a>
   <a class="nav-item" href="#registrySection" data-target="registrySection" onclick="navigateTo(event,'registrySection')">Administrasi</a>
@@ -186,7 +186,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
     <a class="mobile-menu-link" href="#mapSection" data-target="mapSection" onclick="mobileNavigate(event,'mapSection')"><span class="menu-icon">⌖</span><span>Peta Sebaran</span></a>
     <a class="mobile-menu-link" href="#drilldownSection" data-target="drilldownSection" onclick="mobileNavigate(event,'drilldownSection')"><span class="menu-icon">▤</span><span>Data Explorer</span></a>
     <a class="mobile-menu-link" href="#analytics" data-target="analytics" onclick="mobileNavigate(event,'analytics')"><span class="menu-icon">▥</span><span>Laporan & Statistik</span></a>
-    <a class="mobile-menu-link" href="#mpasporQuotaSection" data-target="mpasporQuotaSection" onclick="mobileNavigate(event,'mpasporQuotaSection');refreshMpasporQuota()"><span class="menu-icon">◈</span><span>Kuota M-Paspor</span></a>
+    <a class="mobile-menu-link" href="#mpasporQuotaSection" data-target="mpasporQuotaSection" onclick="mobileNavigate(event,'mpasporQuotaSection')"><span class="menu-icon">◈</span><span>Kuota M-Paspor</span></a>
     <a class="mobile-menu-link" href="#" onclick="openTv(event);closeMobileNav()"><span class="menu-icon">▣</span><span>INTAL TV</span><span class="menu-chevron">›</span></a>
   </div>
 
@@ -403,6 +403,7 @@ function navigateTo(event,targetId){
   setBackOfficePage(targetId);
   history.replaceState(null,'','#'+targetId);
   window.scrollTo({top:0,behavior:'smooth'});
+  if(targetId==='mpasporQuotaSection') refreshMpasporQuota();
 }
 function initSidebarNavigation(){
   const items=[...document.querySelectorAll('.nav-item[data-target]')];
@@ -427,16 +428,17 @@ function renderMpasporQuota(r){
   document.getElementById('quotaSource').textContent='Sumber: '+r.sourceDocument+' · periode '+r.periodLabel+' · read-only snapshot';
 }
 async function refreshMpasporQuota(){
+  const status=document.getElementById('quotaStatus'),rows=document.getElementById('quotaRows');
+  if(status)status.textContent='Memuat...';
   try{
-    document.getElementById('quotaStatus').textContent='Memuat...';
     const r=await callWithTimeout('getMpasporQuotaDashboard',15000);
     if(!r||!r.totals||!Array.isArray(r.offices))throw new Error('MPASPOR_QUOTA_INVALID_RESPONSE');
     renderMpasporQuota(r);
-    document.getElementById('quotaStatus').innerHTML='<span class="ok">READY · '+esc(r.periodLabel)+'</span>';
+    if(status)status.innerHTML='<span class="ok">READY · '+esc(r.periodLabel||'Oktober 2026')+'</span>';
   }catch(e){
     const msg=String(e&&e.message||e);
-    document.getElementById('quotaStatus').innerHTML='<span class="error">ERROR · '+esc(msg)+'</span>';
-    document.getElementById('quotaRows').innerHTML='<tr><td colspan="6" class="error">Kuota M-Paspor gagal dimuat: '+esc(msg)+'</td></tr>';
+    if(status)status.innerHTML='<span class="error">ERROR · '+esc(msg)+'</span>';
+    if(rows)rows.innerHTML='<tr><td colspan="6" class="error">Kuota M-Paspor gagal dimuat: '+esc(msg)+'</td></tr>';
   }
 }
 function showBootStatus(message,isError){const el=document.getElementById('pipelineStatus');if(el){el.textContent=message;el.className=isError?'error':'';}const trend=document.getElementById('trend');if(isError&&trend)trend.innerHTML='<span class="error">'+esc(message)+'</span>';}
@@ -444,7 +446,20 @@ function showBootStatus(message,isError){const el=document.getElementById('pipel
 let serviceKey='RESIDENCE_PERMIT_SERVICE_MONTHLY',mapInstance=null,mapLayer=null,lastDashboard=null;
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function label(k){return ({bvk:'BVK',voa:'VOA',itk:'ITK',itk_peralihan:'ITK Peralihan',itas:'ITAS',itap:'ITAP',itkt:'ITKT',alih_status_itk_ke_itas:'Alih Status ITK → ITAS',alih_status_itas_ke_itap:'Alih Status ITAS → ITAP',abg:'ABG',epo:'EPO',imk:'IMK',skim:'SKIM',biasa_24:'Biasa 24',biasa_48:'Biasa 48',elektronik_48:'Elektronik 48',e_polikarbonat:'E-Polikarbonat'})[k]||k;}
-function setService(key){serviceKey=key;document.getElementById('svcQuota').classList.remove('active');document.getElementById('svcResidence').classList.toggle('active',key==='RESIDENCE_PERMIT_SERVICE_MONTHLY');document.getElementById('svcPassport').classList.toggle('active',key==='PASSPORT_SERVICE_MONTHLY');if(importSourceMode==='GOOGLE_SHEETS'){document.getElementById('googleSourceId').value=GOOGLE_SOURCE_IDS[serviceKey]||'';document.getElementById('googleSourceSheet').innerHTML='<option value=\"\">Pilih sheet...</option>';googleSourceReady=false;importReady=false;document.getElementById('commitBtn').disabled=true;}refreshDashboard();}
+function setService(key){
+  if(key!=='RESIDENCE_PERMIT_SERVICE_MONTHLY'&&key!=='PASSPORT_SERVICE_MONTHLY')return;
+  serviceKey=key;
+  document.getElementById('svcQuota').classList.remove('active');
+  document.getElementById('svcResidence').classList.toggle('active',key==='RESIDENCE_PERMIT_SERVICE_MONTHLY');
+  document.getElementById('svcPassport').classList.toggle('active',key==='PASSPORT_SERVICE_MONTHLY');
+  if(importSourceMode==='GOOGLE_SHEETS'){
+    document.getElementById('googleSourceId').value=GOOGLE_SOURCE_IDS[serviceKey]||'';
+    document.getElementById('googleSourceSheet').innerHTML='<option value="">Pilih sheet...</option>';
+    googleSourceReady=false;importReady=false;document.getElementById('commitBtn').disabled=true;
+  }
+  navigateTo(null,'dashboard');
+  refreshDashboard();
+}
 function getFilters(){return{periode:document.getElementById('periodFilter').value,kantor_imigrasi:document.getElementById('officeFilter').value};}
 function getMapFilters(){const f=getFilters();f.metric=document.getElementById('gisMetricFilter').value||'total';return f;}
 function populateMapMetrics(r){const el=document.getElementById('gisMetricFilter');if(!el)return;const current=el.value||'total';const metrics=['total'].concat((r.services||[]).map(x=>x.key));el.innerHTML=metrics.filter((x,i,a)=>a.indexOf(x)===i).map(x=>'<option value="'+esc(x)+'">'+esc(x==='total'?'Total layanan':label(x))+'</option>').join('');el.value=metrics.indexOf(current)>=0?current:'total';}
