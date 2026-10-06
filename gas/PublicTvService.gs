@@ -178,6 +178,49 @@ function getPublicTvPassportYoYContext(){
  * INTAL TV office detail modal. It reuses the verified semantic adapter and
  * exposes no raw rows or write capability.
  */
+/**
+ * Public Passport service-level YoY intelligence.
+ * Read-only adapter over canonical 2025/2026 monthly datasets.
+ * No write capability and no raw-row exposure.
+ */
+function getPublicTvPassportServiceYoYContext(){
+  const base=getServiceDashboard_('PASSPORT_SERVICE_MONTHLY_2025',['m_paspor','walk_in','prioritas','percepatan','eazy','inovasi','bap'],{},'total_permohonan');
+  const compare=getServiceDashboard_('PASSPORT_SERVICE_MONTHLY',['biasa_24','biasa_48','elektronik_48','e_polikarbonat'],{},'total');
+  const labels={
+    elektronik_48:'Elektronik 48',
+    biasa_48:'Biasa 48',
+    e_polikarbonat:'E-Polikarbonat',
+    biasa_24:'Biasa 24',
+    m_paspor:'M-Paspor',
+    walk_in:'Walk-in',
+    prioritas:'Prioritas',
+    percepatan:'Percepatan',
+    eazy:'Eazy',
+    inovasi:'Inovasi',
+    bap:'BAP'
+  };
+  const b=Object.fromEntries((base.services||[]).map(x=>[String(x.key||''),Number(x.total||0)]));
+  const c=Object.fromEntries((compare.services||[]).map(x=>[String(x.key||''),Number(x.total||0)]));
+  const keys=Array.from(new Set([...(base.services||[]).map(x=>String(x.key||'')),...(compare.services||[]).map(x=>String(x.key||''))])).filter(Boolean);
+  const services=keys.map(key=>{
+    const base2025=Number(b[key]||0),compare2026=Number(c[key]||0),delta=compare2026-base2025;
+    return {key,label:String(labels[key]||key),base2025,compare2026,delta,growthPct:base2025===0?null:(delta/base2025)*100};
+  }).sort((a,b)=>Number(b.compare2026)-Number(a.compare2026));
+  const totalBase=services.reduce((n,x)=>n+x.base2025,0);
+  const totalCompare=services.reduce((n,x)=>n+x.compare2026,0);
+  const delta=totalCompare-totalBase;
+  return {
+    contract:'PASSPORT_SERVICE_YOY_V1',
+    readOnly:true,baseYear:'2025',compareYear:'2026',
+    base2025:totalBase,compare2026:totalCompare,delta,
+    growthPct:totalBase===0?null:(delta/totalBase)*100,
+    services:services.map(x=>({
+      key:x.key,label:x.label,base2025:x.base2025,compare2026:x.compare2026,delta:x.delta,
+      growthPct:x.growthPct===null?null:x.growthPct
+    }))
+  };
+}
+
 function getPublicTvPassportOfficeYoYContext(filters){
   const f=filters||{},office=String(f.kantor_imigrasi||'').trim().slice(0,200);
   if(!office)throw new Error('PASSPORT_YOY_OFFICE_REQUIRED');
