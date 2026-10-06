@@ -54,6 +54,11 @@ html.mobile-runtime .filter{min-width:0}html.mobile-runtime .filter-actions{grid
 html.mobile-runtime .kpis{grid-template-columns:1fr 1fr;gap:8px}html.mobile-runtime .analysis{grid-template-columns:1fr;gap:10px}
 html.mobile-runtime .map-wrap{height:430px}html.mobile-runtime .service-grid{grid-template-columns:1fr}html.mobile-runtime .detail-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}html.mobile-runtime .detail-wrap table{min-width:760px}
 html.mobile-runtime .admin-grid{grid-template-columns:1fr}
+
+/* M-Paspor quota module */
+.quota-section{scroll-margin-top:80px}.quota-kpis{grid-template-columns:repeat(4,1fr);margin:0 0 14px}.quota-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}.quota-table{border-collapse:collapse;width:100%;min-width:980px}.quota-table th{background:#f8fafc;font-size:11px;color:#475467;position:sticky;top:0;z-index:1}.quota-table td,.quota-table th{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.quota-table td:nth-child(3),.quota-table td:nth-child(4){font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}.quota-ratio{min-width:120px}.quota-ratio>span{font-size:11px;font-weight:800}.quota-ratio i{display:block;height:6px;background:#edf2f7;border-radius:99px;overflow:hidden;margin-top:5px}.quota-ratio em{display:block;height:100%;background:#1769e0;border-radius:99px}.quota-location{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:2px 10px;padding:6px 0;border-bottom:1px dashed #e5eaf1;font-size:11px}.quota-location:last-child{border-bottom:0}.quota-location span{color:#667085;white-space:nowrap}.quota-location small{grid-column:1/-1;color:#98a2b3;line-height:1.35}.top-service #svcQuota{color:#ffd84d}.top-service #svcQuota:hover{background:#16385f;color:#fff}
+@media(max-width:900px){.quota-kpis{grid-template-columns:1fr 1fr}.quota-section .card-head{align-items:flex-start}}
+@media(max-width:650px){html.mobile-runtime .quota-kpis{grid-template-columns:1fr 1fr;gap:8px}.quota-section{margin-left:0;margin-right:0}.quota-table-wrap{margin:0 -1px}.quota-table{min-width:900px}.quota-location{grid-template-columns:1fr;gap:2px}.quota-location span{white-space:normal}}
 </style>
 <style>
 /* Smartphone Back Office UI v2 — visual system aligned to the approved mobile mockup. */
@@ -143,7 +148,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
 <div class="app">
 <header class="topbar"><button class="mobile-menu-btn" onclick="toggleMobileNav()" aria-label="Buka menu navigasi">☰</button>
   <div class="brand"><div class="brand-mark">I</div><div><div class="brand-title">Imigrasi24Jam</div><div class="brand-sub">Data Izin Tinggal · Intelligence Workspace</div></div></div>
-  <div class="top-service"><button id="svcResidence" class="active" onclick="setService('RESIDENCE_PERMIT_SERVICE_MONTHLY')">Izin Tinggal</button><button id="svcPassport" onclick="setService('PASSPORT_SERVICE_MONTHLY')">Paspor</button></div>
+  <div class="top-service"><button id="svcResidence" class="active" onclick="setService('RESIDENCE_PERMIT_SERVICE_MONTHLY')">Izin Tinggal</button><button id="svcPassport" onclick="setService('PASSPORT_SERVICE_MONTHLY')">Paspor</button><button id="svcQuota" onclick="navigateTo(event,'mpasporQuotaSection')">Kuota M-Paspor</button></div>
   <div class="top-search"><input id="globalSearch" placeholder="Cari kantor imigrasi..." oninput="applySearch()"></div>
   <div class="userbox"><div id="user">-</div><div class="avatar">A</div></div>
 </header>
@@ -155,6 +160,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
   <a class="nav-item" href="#mapSection" data-target="mapSection" onclick="navigateTo(event,'mapSection')">Peta Sebaran</a>
   <a class="nav-item" href="#drilldownSection" data-target="drilldownSection" onclick="navigateTo(event,'drilldownSection')">Data Explorer</a>
   <a class="nav-item" href="#analytics" data-target="analytics" onclick="navigateTo(event,'analytics')">Laporan & Statistik</a>
+  <a class="nav-item" href="#mpasporQuotaSection" data-target="mpasporQuotaSection" onclick="navigateTo(event,'mpasporQuotaSection');refreshMpasporQuota()">Kuota M-Paspor</a>
   <div class="nav-label">Operasional</div>
   <a class="nav-item" href="#adminSection" data-target="adminSection" onclick="navigateTo(event,'adminSection')">Import Data</a>
   <a class="nav-item" href="#registrySection" data-target="registrySection" onclick="navigateTo(event,'registrySection')">Administrasi</a>
@@ -180,6 +186,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
     <a class="mobile-menu-link" href="#mapSection" data-target="mapSection" onclick="mobileNavigate(event,'mapSection')"><span class="menu-icon">⌖</span><span>Peta Sebaran</span></a>
     <a class="mobile-menu-link" href="#drilldownSection" data-target="drilldownSection" onclick="mobileNavigate(event,'drilldownSection')"><span class="menu-icon">▤</span><span>Data Explorer</span></a>
     <a class="mobile-menu-link" href="#analytics" data-target="analytics" onclick="mobileNavigate(event,'analytics')"><span class="menu-icon">▥</span><span>Laporan & Statistik</span></a>
+    <a class="mobile-menu-link" href="#mpasporQuotaSection" data-target="mpasporQuotaSection" onclick="mobileNavigate(event,'mpasporQuotaSection');refreshMpasporQuota()"><span class="menu-icon">◈</span><span>Kuota M-Paspor</span></a>
     <a class="mobile-menu-link" href="#" onclick="openTv(event);closeMobileNav()"><span class="menu-icon">▣</span><span>INTAL TV</span><span class="menu-chevron">›</span></a>
   </div>
 
@@ -237,6 +244,17 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
   </div>
 
   <section class="card" id="serviceDistributionSection"><div class="card-head"><div><h2 class="card-title">Distribusi Layanan</h2><div class="card-sub">Canonical service metrics · mengikuti dataset aktif</div></div></div><div id="services" class="service-grid">-</div></section>
+<section class="card quota-section" id="mpasporQuotaSection">
+  <div class="card-head"><div><h2 class="card-title">Kuota M-Paspor Jawa Barat</h2><div class="card-sub">Snapshot sumber · Oktober 2026 · read-only · tidak mengubah dataset PASSPORT_SERVICE_MONTHLY</div></div><span id="quotaStatus" class="muted">Memuat...</span></div>
+  <div class="kpis quota-kpis">
+    <div class="kpi"><div class="kpi-label">TOTAL KUOTA M-PASPOR</div><div id="quotaMpasporTotal" class="kpi-value">—</div><div class="kpi-meta">10 Kantor Imigrasi</div></div>
+    <div class="kpi"><div class="kpi-label">TOTAL KUOTA KESELURUHAN</div><div id="quotaOverallTotal" class="kpi-value">—</div><div class="kpi-meta">Rekap sumber Oktober 2026</div></div>
+    <div class="kpi"><div class="kpi-label">PROPORSI M-PASPOR</div><div id="quotaRatioTotal" class="kpi-value">—</div><div class="kpi-meta">M-Paspor / keseluruhan</div></div>
+    <div class="kpi"><div class="kpi-label">KANTOR</div><div id="quotaOfficeCount" class="kpi-value">—</div><div class="kpi-meta">Kantor Imigrasi Jawa Barat</div></div>
+  </div>
+  <div class="quota-table-wrap"><table class="quota-table"><thead><tr><th>#</th><th>Kantor Imigrasi</th><th>M-Paspor</th><th>Total</th><th>Proporsi</th><th>Lokasi layanan</th></tr></thead><tbody id="quotaRows"><tr><td colspan="6" class="muted">Memuat data kuota...</td></tr></tbody></table></div>
+  <div id="quotaSource" class="detail-meta"></div>
+</section>
 
   <section class="card" id="drilldownSection">
   <div class="card-head"><div><h2 class="card-title">Data Explorer</h2><div class="card-sub">Workspace read-only · filter, search, sorting, pagination dari dataset canonical</div></div><span id="drillMeta" class="muted"></span></div>
@@ -395,12 +413,29 @@ function initSidebarNavigation(){
   navigateTo(null,target);
 }
 
+function formatQuota(n){return Number(n||0).toLocaleString('id-ID');}
+function renderMpasporQuota(r){
+  const rows=(r.offices||[]).map(o=>{
+    const loc=(o.locations||[]).map(x=>'<div class="quota-location"><b>'+esc(x.name)+'</b><span>'+formatQuota(x.daily)+' / hari · '+formatQuota(x.booths)+' booth</span>'+(x.note?'<small>'+esc(x.note)+'</small>':'')+'</div>').join('');
+    return '<tr><td>'+o.rank+'</td><td><b>'+esc(o.kantor_imigrasi)+'</b></td><td><strong>'+formatQuota(o.mpaspor)+'</strong></td><td>'+formatQuota(o.overall)+'</td><td><div class="quota-ratio"><span>'+((Number(o.ratio||0)*100).toFixed(1)).replace('.',',')+'%</span><i><em style="width:'+Math.min(100,Number(o.ratio||0)*100)+'%"></em></i></div></td><td>'+loc+'</td></tr>';
+  }).join('');
+  document.getElementById('quotaMpasporTotal').textContent=formatQuota(r.totals.mpaspor);
+  document.getElementById('quotaOverallTotal').textContent=formatQuota(r.totals.overall);
+  document.getElementById('quotaRatioTotal').textContent=((Number(r.totals.ratio||0)*100).toFixed(1)).replace('.',',')+'%';
+  document.getElementById('quotaOfficeCount').textContent=formatQuota(r.officeCount);
+  document.getElementById('quotaRows').innerHTML=rows||'<tr><td colspan="6" class="muted">Tidak ada data kuota.</td></tr>';
+  document.getElementById('quotaSource').textContent='Sumber: '+r.sourceDocument+' · periode '+r.periodLabel+' · read-only snapshot';
+}
+async function refreshMpasporQuota(){
+  try{document.getElementById('quotaStatus').textContent='Memuat...';const r=await callWithTimeout('getMpasporQuotaDashboard',15000);renderMpasporQuota(r);document.getElementById('quotaStatus').innerHTML='<span class="ok">READY · '+esc(r.periodLabel)+'</span>';}
+  catch(e){document.getElementById('quotaStatus').innerHTML='<span class="error">ERROR</span>';document.getElementById('quotaRows').innerHTML='<tr><td colspan="6" class="error">'+esc(e.message||e)+'</td></tr>';}
+}
 function showBootStatus(message,isError){const el=document.getElementById('pipelineStatus');if(el){el.textContent=message;el.className=isError?'error':'';}const trend=document.getElementById('trend');if(isError&&trend)trend.innerHTML='<span class="error">'+esc(message)+'</span>';}
 
 let serviceKey='RESIDENCE_PERMIT_SERVICE_MONTHLY',mapInstance=null,mapLayer=null,lastDashboard=null;
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function label(k){return ({bvk:'BVK',voa:'VOA',itk:'ITK',itk_peralihan:'ITK Peralihan',itas:'ITAS',itap:'ITAP',itkt:'ITKT',alih_status_itk_ke_itas:'Alih Status ITK → ITAS',alih_status_itas_ke_itap:'Alih Status ITAS → ITAP',abg:'ABG',epo:'EPO',imk:'IMK',skim:'SKIM',biasa_24:'Biasa 24',biasa_48:'Biasa 48',elektronik_48:'Elektronik 48',e_polikarbonat:'E-Polikarbonat'})[k]||k;}
-function setService(key){serviceKey=key;document.getElementById('svcResidence').classList.toggle('active',key==='RESIDENCE_PERMIT_SERVICE_MONTHLY');document.getElementById('svcPassport').classList.toggle('active',key==='PASSPORT_SERVICE_MONTHLY');if(importSourceMode==='GOOGLE_SHEETS'){document.getElementById('googleSourceId').value=GOOGLE_SOURCE_IDS[serviceKey]||'';document.getElementById('googleSourceSheet').innerHTML='<option value=\"\">Pilih sheet...</option>';googleSourceReady=false;importReady=false;document.getElementById('commitBtn').disabled=true;}refreshDashboard();}
+function setService(key){serviceKey=key;document.getElementById('svcQuota').classList.remove('active');document.getElementById('svcResidence').classList.toggle('active',key==='RESIDENCE_PERMIT_SERVICE_MONTHLY');document.getElementById('svcPassport').classList.toggle('active',key==='PASSPORT_SERVICE_MONTHLY');if(importSourceMode==='GOOGLE_SHEETS'){document.getElementById('googleSourceId').value=GOOGLE_SOURCE_IDS[serviceKey]||'';document.getElementById('googleSourceSheet').innerHTML='<option value=\"\">Pilih sheet...</option>';googleSourceReady=false;importReady=false;document.getElementById('commitBtn').disabled=true;}refreshDashboard();}
 function getFilters(){return{periode:document.getElementById('periodFilter').value,kantor_imigrasi:document.getElementById('officeFilter').value};}
 function getMapFilters(){const f=getFilters();f.metric=document.getElementById('gisMetricFilter').value||'total';return f;}
 function populateMapMetrics(r){const el=document.getElementById('gisMetricFilter');if(!el)return;const current=el.value||'total';const metrics=['total'].concat((r.services||[]).map(x=>x.key));el.innerHTML=metrics.filter((x,i,a)=>a.indexOf(x)===i).map(x=>'<option value="'+esc(x)+'">'+esc(x==='total'?'Total layanan':label(x))+'</option>').join('');el.value=metrics.indexOf(current)>=0?current:'total';}
@@ -450,7 +485,7 @@ async function loadGoogleSourceSheets(){try{const id=document.getElementById('go
 function renderImportMapping(r){const rows=(r.mapping||[]).map(x=>'<tr><td>'+esc(x.source)+'</td><td>→</td><td><b>'+esc(x.canonical)+'</b></td></tr>').join('');return rows?'<div class="detail-wrap" style="max-height:260px"><table><thead><tr><th>Sumber</th><th></th><th>Canonical</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'';}
 function renderImportPreview(r){const schema=r.schema||{};const rows=r.preview||[];const head=(schema.columns||[]).map(x=>'<th>'+esc(x)+'</th>').join('');const body=rows.slice(0,10).map(row=>'<tr>'+row.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('');return (r.source?'<div class="detail-meta" style="margin:8px 0">Source · '+esc(r.source.spreadsheetName)+' · '+esc(r.source.sheetName)+'</div>'+renderImportMapping(r):'')+'<div class="import-summary"><div class="import-stat"><span class="muted">Valid</span><b>'+r.validRows+'</b></div><div class="import-stat"><span class="muted">Rejected</span><b>'+r.rejectedRows+'</b></div><div class="import-stat"><span class="muted">Duplicates</span><b>'+r.duplicates+'</b></div><div class="import-stat"><span class="muted">Dataset</span><b style="font-size:12px">'+esc(r.dataset.datasetKey)+'</b></div></div>'+(r.errors&&r.errors.length?'<div class="error" style="margin:10px 0">Validation errors: '+esc(r.errors.map(x=>x.error).join('; '))+'</div>':'')+'<div class="detail-meta" style="margin:10px 0">Schema '+esc(schema.contractKey||schema.datasetKey||'unknown')+' · '+esc(schema.contractVersion||'1')+' · sample '+rows.length+' rows</div>'+(rows.length?'<div class="detail-wrap"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div>':'');}
 async function preview(){try{importReady=false;document.getElementById('commitBtn').disabled=true;document.getElementById('importStatus').textContent='Validating...';let r;if(importSourceMode==='GOOGLE_SHEETS'){const sheet=document.getElementById('googleSourceSheet').value;if(!sheet)throw new Error('Pilih sheet sumber terlebih dahulu.');r=await callWithTimeout('previewGoogleSourceImport',30000,{datasetKey:serviceKey,spreadsheetId:document.getElementById('googleSourceId').value,sheetName:sheet,sourcePeriod:document.getElementById('googleSourcePeriod').value});googleSourceReady=true;}else{r=await callWithTimeout('previewImport',20000,document.getElementById('paste').value);}document.getElementById('importPreview').innerHTML=renderImportPreview(r);importReady=Boolean(r.validRows>0&&r.rejectedRows===0&&r.duplicates===0);document.getElementById('commitBtn').disabled=!importReady;document.getElementById('importStatus').textContent=importReady?'Ready to commit':'Perlu diperbaiki';document.getElementById('result').innerHTML=importReady?'<span class="ok">Preview valid. Commit dapat dilakukan.</span>':'<span class="error">Preview belum memenuhi gate commit.</span>';}catch(e){document.getElementById('importStatus').textContent='Error';document.getElementById('importPreview').innerHTML='<span class="error">'+esc(e.message)+'</span>';document.getElementById('result').innerHTML='';}}
-async function commit(){if(!importReady){document.getElementById('result').innerHTML='<span class="error">Jalankan Preview & Validasi terlebih dahulu.</span>';return;}try{document.getElementById('commitBtn').disabled=true;const r=importSourceMode==='GOOGLE_SHEETS'?await callWithTimeout('commitGoogleSourceImport',30000,{datasetKey:serviceKey,spreadsheetId:document.getElementById('googleSourceId').value,sheetName:document.getElementById('googleSourceSheet').value,sourcePeriod:document.getElementById('googleSourcePeriod').value}):await callWithTimeout('commitImport',30000,document.getElementById('paste').value);document.getElementById('result').innerHTML='<span class="ok">Import berhasil. Batch '+esc(r.batchId)+' · '+r.inserted+' rows · dataset '+esc(r.datasetKey)+'.</span>';document.getElementById('importStatus').textContent='Committed';importReady=false;googleSourceReady=false;await refreshDashboard();refreshRegistry();}catch(e){document.getElementById('commitBtn').disabled=false;document.getElementById('importStatus').textContent='Commit gagal';document.getElementById('result').innerHTML='<span class="error">'+esc(e.message||e)+'</span>';}}
+async function commit(){if(!importReady){document.getElementById('result').innerHTML='<span class="error">Jalankan Preview & Validasi terlebih dahulu.</span>';return;}try{document.getElementById('commitBtn').disabled=true;const r=importSourceMode==='GOOGLE_SHEETS'?await callWithTimeout('commitGoogleSourceImport',30000,{datasetKey:serviceKey,spreadsheetId:document.getElementById('googleSourceId').value,sheetName:document.getElementById('googleSourceSheet').value,sourcePeriod:document.getElementById('googleSourcePeriod').value}):await callWithTimeout('commitImport',30000,document.getElementById('paste').value);document.getElementById('result').innerHTML='<span class="ok">Import berhasil. Batch '+esc(r.batchId)+' · '+r.inserted+' rows · dataset '+esc(r.datasetKey)+'.</span>';document.getElementById('importStatus').textContent='Committed';importReady=false;googleSourceReady=false;await refreshDashboard();await refreshMpasporQuota();refreshRegistry();}catch(e){document.getElementById('commitBtn').disabled=false;document.getElementById('importStatus').textContent='Commit gagal';document.getElementById('result').innerHTML='<span class="error">'+esc(e.message||e)+'</span>';}}
 function clearImport(){document.getElementById('paste').value='';document.getElementById('importPreview').innerHTML='';document.getElementById('result').innerHTML='';document.getElementById('commitBtn').disabled=true;document.getElementById('importStatus').textContent='Belum ada sumber';document.getElementById('googleSourceSheet').innerHTML='<option value="">Pilih sheet...</option>';document.getElementById('googleSourcePeriod').value='';googleSourceReady=false;importReady=false;}
 let runningTextRows=[];
 function formatRunningTextDate(v){if(!v)return '—';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString('id-ID',{dateStyle:'short',timeStyle:'short'});}
