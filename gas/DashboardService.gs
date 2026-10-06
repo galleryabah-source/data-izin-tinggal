@@ -97,7 +97,13 @@ function getServiceDashboard_(datasetKey,serviceColumns,filters,totalColumn){
   const supportedMetrics=['total'].concat(serviceColumns);
   if(supportedMetrics.indexOf(requestedMetric)===-1)throw new Error('DASHBOARD_METRIC_NOT_SUPPORTED: '+requestedMetric);
   const metricIndex=requestedMetric==='total'?hi[totalKey]:hi[requestedMetric];
-  if(metricIndex===undefined)throw new Error('DASHBOARD_METRIC_COLUMN_NOT_FOUND: '+requestedMetric);
+  if(requestedMetric==='total'&&metricIndex===undefined&&serviceColumns.length===0)throw new Error('DASHBOARD_METRIC_COLUMN_NOT_FOUND: total');
+  if(requestedMetric!=='total'&&metricIndex===undefined)throw new Error('DASHBOARD_METRIC_COLUMN_NOT_FOUND: '+requestedMetric);
+  const totalValueOf_=r=>{
+    const raw=metricIndex===undefined?'':r[metricIndex];
+    if(raw!==null&&raw!==undefined&&String(raw).trim()!=='')return Number(raw)||0;
+    return serviceColumns.reduce((sum,col)=>sum+Number(r[hi[col]]||0),0);
+  };
   const allRows=values.slice(1).filter(r=>r.some(v=>String(v)!==''));
   const periodOf_=r=>{const raw=r[hi.periode];return raw instanceof Date?Utilities.formatDate(raw,APP.TZ,'yyyy-MM'):String(raw||'').trim();};
   const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
@@ -112,7 +118,7 @@ function getServiceDashboard_(datasetKey,serviceColumns,filters,totalColumn){
   const monthly={},offices={},services={};serviceColumns.forEach(c=>services[c]=0);
   let grandTotal=0;
   rows.forEach(r=>{
-    const period=periodOf_(r),office=officeOf_(r),metricValue=Number(r[metricIndex]||0);
+    const period=periodOf_(r),office=officeOf_(r),metricValue=requestedMetric==='total'?totalValueOf_(r):Number(r[metricIndex]||0);
     grandTotal+=metricValue;
     if(!monthly[period])monthly[period]={periode:period,total:0,rows:0};
     monthly[period].total+=metricValue;monthly[period].rows++;
@@ -146,7 +152,13 @@ function getServiceMap_(datasetKey,filters,totalColumn){
   const supportedMetrics=['total'].concat(d.contract.measures||[]);
   if(supportedMetrics.indexOf(requestedMetric)===-1)throw new Error('MAP_METRIC_NOT_SUPPORTED: '+requestedMetric);
   const metricIndex=requestedMetric==='total'?hi[totalKey]:hi[requestedMetric];
-  if(metricIndex===undefined)throw new Error('MAP_METRIC_COLUMN_NOT_FOUND: '+requestedMetric);
+  if(requestedMetric==='total'&&metricIndex===undefined&&!(d.contract.measures||[]).length)throw new Error('MAP_METRIC_COLUMN_NOT_FOUND: total');
+  if(requestedMetric!=='total'&&metricIndex===undefined)throw new Error('MAP_METRIC_COLUMN_NOT_FOUND: '+requestedMetric);
+  const totalValueOf_=r=>{
+    const raw=metricIndex===undefined?'':r[metricIndex];
+    if(raw!==null&&raw!==undefined&&String(raw).trim()!=='')return Number(raw)||0;
+    return (d.contract.measures||[]).reduce((sum,col)=>sum+Number(r[hi[col]]||0),0);
+  };
   const periodOf_=r=>{const raw=r[hi.periode];return raw instanceof Date?Utilities.formatDate(raw,APP.TZ,'yyyy-MM'):String(raw||'').trim();};
   const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
   const rows=values.slice(1).filter(r=>r.some(v=>String(v)!=='')).filter(r=>(!requestedYear||periodOf_(r).slice(0,4)===requestedYear)&&(!requestedPeriod||periodOf_(r)===requestedPeriod)&&(!requestedOffice||officeOf_(r)===requestedOffice));
@@ -157,7 +169,7 @@ function getServiceMap_(datasetKey,filters,totalColumn){
     const office=officeOf_(r),reference=byOffice[office];if(!reference)throw new Error('OFFICE_REFERENCE_MISSING_FOR_DATASET: '+office);
     const lat=Number(reference[ri.latitude]),lng=Number(reference[ri.longitude]);if(!Number.isFinite(lat)||!Number.isFinite(lng))throw new Error('OFFICE_REFERENCE_COORDINATE_INVALID: '+office);
     if(!markers[office])markers[office]={office_key:String(reference[ri.office_key]||''),kantor_imigrasi:office,address:String(reference[ri.address]||''),latitude:lat,longitude:lng,source_url:String(reference[ri.source_url]||''),total:0,metricValue:0,rows:0};
-    markers[office].total+=Number(r[hi[totalKey]]||0);
+    markers[office].total+=totalValueOf_(r);
     markers[office].metricValue+=Number(r[metricIndex]||0);
     markers[office].rows++;
   });
