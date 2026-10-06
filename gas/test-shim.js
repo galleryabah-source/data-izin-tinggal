@@ -507,6 +507,19 @@ assert(!tvNew.includes("setInterval(()=>{currentService=currentService===SERVICE
 assert(!tvNew.includes("setInterval(()=>{preload(SERVICES[0]).catch(()=>{});preload(SERVICES[1]).catch(()=>{});loadRunningTexts();},60000)"), 'INTAL TV no longer uses blind background refresh scheduler');
 
 
+// Service-switch lifecycle regression invariants
+assert(!tvNew.includes("$('map').innerHTML"), 'INTAL TV never mutates the Leaflet map container directly during service switching');
+assert(tvNew.includes('function restoreServiceChrome()'), 'INTAL TV restores service chrome without rebuilding the Leaflet map DOM');
+const switchFnStart=tvNew.indexOf('async function activateService');
+const switchFnEnd=tvNew.indexOf('async function fetchVerifiedSnapshot',switchFnStart);
+const switchFn=switchFnStart>=0&&switchFnEnd>switchFnStart?tvNew.slice(switchFnStart,switchFnEnd):'';
+assert(switchFn.includes('TV_STATE.switching=true') && switchFn.includes('finally{\n    TV_STATE.switching=false;'), 'INTAL TV serializes manual service switching');
+assert(switchFn.indexOf('await ensureSnapshotMap(key,result)')>=0 && switchFn.indexOf('await ensureSnapshotMap(key,result)')<switchFn.indexOf('currentService=key;'), 'INTAL TV validates canonical GIS before committing the new active service');
+assert(switchFn.includes('const previous=currentService;') && switchFn.includes('currentService=previous;'), 'INTAL TV restores the previous service after a failed switch');
+assert(tvNew.includes("if(TV_STATE.refreshing||TV_STATE.switching)return;"), 'INTAL TV pauses periodic refresh while a manual switch is active');
+assert(tvNew.includes("if(TV_STATE.rotationBusy||TV_STATE.switching||currentService==='MPASPOR_QUOTA')return;"), 'INTAL TV pauses automatic rotation while a manual switch is active');
+assert(tvNew.includes('if(TV_STATE.switching)return currentService===\'MPASPOR_QUOTA\';'), 'INTAL TV serializes M-Paspor switching with the same runtime lock');
+
 // Phase 10.1 — Cross-Service Reporting Contract invariants
 const crossService=read('DashboardService.gs');
 assert(crossService.includes('function getCrossServiceReporting(filters)'), 'Phase 10.1 cross-service reporting adapter exists');
