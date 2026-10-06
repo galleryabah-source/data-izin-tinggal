@@ -467,6 +467,8 @@ function setService(key){
   document.getElementById('svcQuota').classList.remove('active');
   document.getElementById('svcResidence').classList.toggle('active',key==='RESIDENCE_PERMIT_SERVICE_MONTHLY');
   document.getElementById('svcPassport').classList.toggle('active',key==='PASSPORT_SERVICE_MONTHLY');
+  const yearWrap=document.getElementById('yearFilterWrap');
+  if(yearWrap)yearWrap.style.display=key==='PASSPORT_SERVICE_MONTHLY'?'block':'none';
   if(importSourceMode==='GOOGLE_SHEETS'){
     document.getElementById('googleSourceId').value=GOOGLE_SOURCE_IDS[serviceKey]||'';
     document.getElementById('googleSourceSheet').innerHTML='<option value="">Pilih sheet...</option>';
@@ -475,7 +477,13 @@ function setService(key){
   navigateTo(null,'dashboard');
   refreshDashboard();
 }
-function getFilters(){return{periode:document.getElementById('periodFilter').value,kantor_imigrasi:document.getElementById('officeFilter').value};}
+function getFilters(){
+  return{
+    tahun:document.getElementById('yearFilter')?.value||'',
+    periode:document.getElementById('periodFilter').value,
+    kantor_imigrasi:document.getElementById('officeFilter').value
+  };
+}
 function getMapFilters(){const f=getFilters();f.metric=document.getElementById('gisMetricFilter').value||'total';return f;}
 function populateMapMetrics(r){const el=document.getElementById('gisMetricFilter');if(!el)return;const current=el.value||'total';const metrics=['total'].concat((r.services||[]).map(x=>x.key));el.innerHTML=metrics.filter((x,i,a)=>a.indexOf(x)===i).map(x=>'<option value="'+esc(x)+'">'+esc(x==='total'?'Total layanan':label(x))+'</option>').join('');el.value=metrics.indexOf(current)>=0?current:'total';}
 function populateFilters(r){
