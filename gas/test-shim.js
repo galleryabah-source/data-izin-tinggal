@@ -554,6 +554,7 @@ assert(governance2026.includes('periods2026.length!==9'), 'Passport 2026 gate re
 assert(governance2026.includes('offices.length!==10'), 'Passport 2026 gate requires ten offices');
 assert(governance2026.includes('GARUT'), 'Passport 2026 gate explicitly checks Garut');
 const yoyUi=read('index.html');
+assert((yoyUi.match(/value="2026-0[1-9]"/g)||[]).length===9, 'Passport YoY period selector exposes January-September 2026');
 assert(yoyUi.includes('id="annualAnalyticsSection"'), 'Back Office exposes isolated annual analytics section');
 assert(yoyUi.includes('getPassportYearOverYearAnalytics'), 'Annual analytics UI calls canonical YoY adapter');
 assert(yoyUi.includes('YTD'), 'Annual analytics UI is explicit about YTD comparison');
