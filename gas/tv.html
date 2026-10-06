@@ -435,7 +435,7 @@ function openOfficeDetail(office){
   $('officeDialogBody').innerHTML='<div class="office-detail-status">Memuat detail layanan kantor...</div>';
   const fn=serviceFn(currentService);
   const servicePromise=call(fn,{periode:TV_FILTERS.periode||'',kantor_imigrasi:office,metric:'total'});
-  const yoyPromise=currentService===SERVICES[1]?withTimeout(call('getPublicTvPassportOfficeYoYContext',{kantor_imigrasi:office,periodEnd:TV_FILTERS.periode||''}),TV_RUNTIME.requestTimeoutMs).catch(()=>null):Promise.resolve(null);
+  const yoyPromise=currentService===SERVICES[1]?withTimeout(call('getPublicTvPassportOfficeYoYContext',{kantor_imigrasi:office}),TV_RUNTIME.requestTimeoutMs).catch(()=>null):Promise.resolve(null);
   Promise.all([servicePromise,yoyPromise]).then(([d,yoy])=>{
     const services=(d.services||[]).filter(x=>Number(x.total)>0).sort((a,b)=>Number(b.total)-Number(a.total));
     setOfficeDialogKpis(d.grandTotal,d.rowCount,(d.monthly||[]).length);
