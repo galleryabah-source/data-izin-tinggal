@@ -253,7 +253,6 @@ async function openDistributionModal(){
         const base=comparable?fmt(x.base2025):'—', d=comparable?((x.delta>=0?'+':'')+fmt(x.delta)):'—';
         return '<div class="passport-service-yoy-row"><span>'+esc(x.label)+'</span><b>'+base+'</b><b>'+fmt(x.compare2026)+'</b><b class="'+(comparable?cls:'muted')+'">'+d+'</b><b class="'+(comparable?cls:'muted')+'">'+growth+'</b></div>';
       }).join('');
-      const recon=Number(c.base2025)===Number(c.compare2026)-Number(c.delta);
       const recon=comparable?Number(c.base2025)===Number(c.compare2026)-Number(c.delta):false;
       const title=comparable?'Service Intelligence · YoY':'Service Intelligence · Current';
       const sub=comparable?'Jenis layanan · 2025 vs 2026 · read-only semantic adapter':'Jenis layanan · 2026 · canonical current composition · read-only';
