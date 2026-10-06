@@ -256,6 +256,9 @@ function openQuotaOfficeDetail(i){
   modal.classList.remove('is-loading');
 }
 async function activateQuotaMode(refreshOnly){
+  if(TV_STATE.switching)return currentService==='MPASPOR_QUOTA';
+  TV_STATE.switching=true;
+  const previous=currentService;
   try{
     setRuntimeState('REFRESHING','Memuat snapshot kuota M-Paspor Oktober 2026...');
     const q=await withTimeout(call('getPublicTvMpasporQuota'),TV_RUNTIME.requestTimeoutMs);
@@ -270,10 +273,14 @@ async function activateQuotaMode(refreshOnly){
   }catch(e){
     TV_STATE.consecutiveFailures++;
     const msg='Kuota M-Paspor gagal dimuat: '+String(e&&e.message||e);
+    currentService=previous;
+    updateSwitch();
     setRuntimeState('DEGRADED',msg);
     $('ranking').innerHTML='<span class="attention">'+esc(msg)+'</span>';
     $('rankMeta').textContent='ERROR';
     return false;
+  }finally{
+    TV_STATE.switching=false;
   }
 }
 function restoreServiceChrome(){
