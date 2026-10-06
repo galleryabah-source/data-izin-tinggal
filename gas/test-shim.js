@@ -556,6 +556,7 @@ assert(governanceCode.includes("verifyPassportServiceMonthly2025"), 'Passport 20
 assert(governanceCode.includes("createPassportServiceMonthly2025Snapshot"), 'Passport 2025 snapshot seam exists');
 assert(governanceCode.includes("verifyPassportServiceMonthly2025Snapshot"), 'Passport 2025 snapshot verification seam exists');
 assert(governanceCode.includes("repairPassportServiceMonthly2025DerivedTotal"), 'Passport 2025 derived total repair seam exists');
+assert(governanceCode.includes('let beforeTotal=0,afterTotal=0'), 'Passport 2025 repair totals are mutable accumulators');
 const verificationCode=read('VerificationService.gs');
 assert(verificationCode.includes("const totalKey=contract.derived.find"), 'Integrity verification resolves derived total by contract');
 assert(uiCode.includes('repairPassport2025Total()'), 'Governance UI exposes audited Passport 2025 total repair');

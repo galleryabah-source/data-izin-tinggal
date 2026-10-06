@@ -181,7 +181,7 @@ function repairPassportServiceMonthly2025DerivedTotal(){
     const totalKey=d.contract.derived.find(k=>k==='total'||k==='total_permohonan'||k==='total_layanan');
     if(!totalKey||hi[totalKey]===undefined)throw new Error('DERIVED_TOTAL_COLUMN_NOT_FOUND: '+datasetKey);
     const measures=d.contract.measures||[];
-    const updates=[],beforeTotal=0,afterTotal=0;
+    const updates=[]; let beforeTotal=0,afterTotal=0;
     let changedRows=0;
     for(let i=1;i<values.length;i++){
       const row=values[i]||[];if(!row.some(v=>String(v)!==''))continue;
