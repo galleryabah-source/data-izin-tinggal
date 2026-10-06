@@ -16,6 +16,30 @@ function verifyPassportServiceMonthly(){
   return verifyDatasetIntegrityV1('PASSPORT_SERVICE_MONTHLY');
 }
 
+function verifyPassportServiceMonthly2026Ytd(){
+  requirePermission_('audit.read');
+  const datasetKey='PASSPORT_SERVICE_MONTHLY';
+  const base=verifyDatasetIntegrityV1(datasetKey);
+  const d=getActiveDatasetContract_(datasetKey);
+  const values=d.sheet.getDataRange().getValues();
+  const header=values[0]||[];
+  const hi=Object.fromEntries(header.map((x,n)=>[x,n]));
+  const rows=values.slice(1).filter(r=>r.some(v=>String(v)!==''));
+  const periods=[...new Set(rows.map(r=>normalizePeriodCell_(r[hi.periode])).filter(Boolean))].sort();
+  const offices=[...new Set(rows.map(r=>String(r[hi.kantor_imigrasi]||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'id'));
+  const periods2026=periods.filter(p=>p.slice(0,4)==='2026');
+  const latestPeriod=periods[periods.length-1]||'';
+  const issues=(base.issues||[]).slice();
+  if(periods2026.length!==9)issues.push('Periode 2026 harus tepat 9 bulan (Januari-September).');
+  if(latestPeriod!=='2026-09')issues.push('Periode terakhir canonical Paspor 2026 bukan 2026-09.');
+  if(offices.length!==10)issues.push('Jumlah kantor canonical Paspor 2026 harus 10.');
+  const garut=offices.find(o=>o.toUpperCase().indexOf('GARUT')>=0);
+  if(!garut)issues.push('Kantor Garut belum ditemukan pada canonical Paspor 2026.');
+  const result={ok:issues.length===0,contract:'PASSPORT_2026_YTD_SEPTEMBER_GATE_V1',readOnly:true,verifiedAt:nowIso_(),datasetKey,latestPeriod,periods2026,periodCount2026:periods2026.length,officeCount:offices.length,offices,garutPresent:!!garut,rowCount:rows.length,integrity:base,issues};
+  appendAudit_('PASSPORT_2026_YTD_VERIFY',datasetKey,'',rows.length,result.ok?'SUCCESS':'FAILED',JSON.stringify(result));
+  return result;
+}
+
 function exportPassportServiceMonthly(filters){
   const user=requirePermission_('dataset.export');
   const d=getActiveDatasetContract_('PASSPORT_SERVICE_MONTHLY'),values=d.sheet.getDataRange().getValues();
