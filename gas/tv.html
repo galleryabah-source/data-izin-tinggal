@@ -244,15 +244,22 @@ async function openDistributionModal(){
   if(currentService===SERVICES[1]){
     try{
       const c=await withTimeout(call('getPublicTvPassportServiceYoYContext'),TV_RUNTIME.requestTimeoutMs);
-      const services=(c?.services||[]).filter(x=>Number(x.base2025)>0||Number(x.compare2026)>0).sort((a,b)=>Number(b.compare2026)-Number(a.compare2026));
-      const delta=Number(c.delta||0);
+      const services=(c?.services||[]).filter(x=>Number(x.compare2026)>0).sort((a,b)=>Number(b.compare2026)-Number(a.compare2026));
+      const comparable=c?.comparisonStatus==='COMPARABLE';
+      const delta=comparable?Number(c.delta||0):null;
       const rows=services.map(x=>{
         const cls=Number(x.delta)>0?'up':Number(x.delta)<0?'down':'muted';
-        const growth=x.growthPct===null?'—':((Number(x.growthPct)>=0?'+':'')+Number(x.growthPct).toFixed(1)+'%');
-        return '<div class="passport-service-yoy-row"><span>'+esc(x.label)+'</span><b>'+fmt(x.base2025)+'</b><b>'+fmt(x.compare2026)+'</b><b class="'+cls+'">'+(x.delta>=0?'+':'')+fmt(x.delta)+'</b><b class="'+cls+'">'+growth+'</b></div>';
+        const growth=comparable?(x.growthPct===null?'—':((Number(x.growthPct)>=0?'+':'')+Number(x.growthPct).toFixed(1)+'%')):'—';
+        const base=comparable?fmt(x.base2025):'—', d=comparable?((x.delta>=0?'+':'')+fmt(x.delta)):'—';
+        return '<div class="passport-service-yoy-row"><span>'+esc(x.label)+'</span><b>'+base+'</b><b>'+fmt(x.compare2026)+'</b><b class="'+(comparable?cls:'muted')+'">'+d+'</b><b class="'+(comparable?cls:'muted')+'">'+growth+'</b></div>';
       }).join('');
       const recon=Number(c.base2025)===Number(c.compare2026)-Number(c.delta);
-      html+='<section class="passport-service-yoy"><div class="passport-service-yoy-head"><div><div class="passport-service-yoy-title">Service Intelligence · YoY</div><div class="passport-service-yoy-sub">Jenis layanan · 2025 vs 2026 · read-only semantic adapter</div></div><span class="passport-service-yoy-total">'+(delta>=0?'+':'')+fmt(delta)+' Δ</span></div><div class="passport-service-yoy-grid"><div class="passport-service-yoy-row head"><span>Jenis layanan</span><span style="text-align:right">2025</span><span style="text-align:right">2026</span><span style="text-align:right">Δ</span><span style="text-align:right">YoY</span></div>'+rows+'</div><div class="passport-service-yoy-note '+(recon?'ok':'warn')+'"><b>Rekonsiliasi service:</b> 2025 '+fmt(c.base2025)+' · 2026 '+fmt(c.compare2026)+' · Δ '+fmt(c.delta)+(recon?' · konsisten dengan total service adapter.':' · perlu audit mapping kategori sebelum production close.')+'</div></section>';
+      const recon=comparable?Number(c.base2025)===Number(c.compare2026)-Number(c.delta):false;
+      const title=comparable?'Service Intelligence · YoY':'Service Intelligence · Current';
+      const sub=comparable?'Jenis layanan · 2025 vs 2026 · read-only semantic adapter':'Jenis layanan · 2026 · canonical current composition · read-only';
+      const totalText=comparable?((delta>=0?'+':'')+fmt(delta)+' Δ'):fmt(c.compare2026)+' layanan';
+      const note=comparable?('<b>Rekonsiliasi service:</b> 2025 '+fmt(c.base2025)+' · 2026 '+fmt(c.compare2026)+' · Δ '+fmt(c.delta)+(recon?' · konsisten dengan total service adapter.':' · perlu audit mapping kategori sebelum production close.')):('<b>Comparability guard:</b> '+esc(c.comparisonReason||'Taxonomy 2025 dan 2026 belum memiliki mapping terverifikasi.')+' Perbandingan YoY service-level ditahan agar tidak menghasilkan angka menyesatkan.');
+      html+='<section class="passport-service-yoy"><div class="passport-service-yoy-head"><div><div class="passport-service-yoy-title">'+title+'</div><div class="passport-service-yoy-sub">'+sub+'</div></div><span class="passport-service-yoy-total">'+totalText+'</span></div><div class="passport-service-yoy-grid"><div class="passport-service-yoy-row head"><span>Jenis layanan</span><span style="text-align:right">2025</span><span style="text-align:right">2026</span><span style="text-align:right">Δ</span><span style="text-align:right">YoY</span></div>'+rows+'</div><div class="passport-service-yoy-note '+(comparable&&recon?'ok':'warn')+'">'+note+'</div></section>';
     }catch(e){html+='<section class="passport-service-yoy"><div class="passport-service-yoy-note warn">Service Intelligence belum tersedia pada runtime ini; distribusi canonical tetap ditampilkan.</div></section>';}
   }
   $('distributionModalBody').innerHTML=html;
