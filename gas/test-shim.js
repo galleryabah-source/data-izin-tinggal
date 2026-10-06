@@ -536,6 +536,11 @@ assert(uiCode.includes("XLSX.read(buffer,{type:'array',cellDates:true,raw:false}
 assert(uiCode.includes("XLSX.utils.sheet_to_csv(ws,{FS:'\\t',RS:'\\n',blankrows:false})"), 'Back Office file import normalizes workbook data to the existing TSV validation seam');
 assert(uiCode.includes("importSourceMode==='FILE'?importFileText"), 'Back Office file import reuses the canonical preview and commit pipeline');
 assert(uiCode.includes('Pilih file sumber terlebih dahulu.'), 'Back Office file import blocks preview until a source file exists');
+// Multi-sheet / header-row file import invariants
+assert(uiCode.includes('id="importFileSheet"'), 'Back Office file import exposes workbook sheet selection');
+assert(uiCode.includes('function detectImportFileHeaderRow_(ws)'), 'Back Office file import detects header rows beyond row 1');
+assert(uiCode.includes('function prepareImportFileSheet()'), 'Back Office file import prepares the selected workbook sheet');
+assert(uiCode.includes('sheet '+String.fromCharCode(39)), 'Back Office file import source UI reports selected sheet');
 // Phase 10.1 — Cross-Service Reporting Contract invariants
 const crossService=read('DashboardService.gs');
 assert(crossService.includes('function getCrossServiceReporting(filters)'), 'Phase 10.1 cross-service reporting adapter exists');
