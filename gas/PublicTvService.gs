@@ -158,7 +158,17 @@ function getPublicTvPassportYoYContext(){
       compare2026:Number(x.compare2026||0),
       delta:Number(x.delta||0),
       growthPct:x.growthPct===null?null:Number(x.growthPct)
-    }))
+    })),
+    offices:(report.offices?.rows||[]).map(x=>({
+      kantor_imigrasi:String(x.kantor_imigrasi||''),
+      base2025:Number(x.base2025||0),
+      compare2026:Number(x.compare2026||0),
+      delta:Number(x.delta||0),
+      growthPct:x.growthPct===null?null:Number(x.growthPct),
+      status:String(x.status||'')
+    })),
+    comparableCount:Number(report.offices?.comparableCount||0),
+    new2026Count:Number((report.offices?.new2026||[]).length||0)
   };
 }
 
