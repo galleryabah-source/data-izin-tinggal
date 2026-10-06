@@ -314,6 +314,10 @@ assert(tvCharts.includes('function renderOfficeYoYPanel'), 'INTAL TV renders off
 assert(tvCharts.includes("call('getPublicTvPassportOfficeYoYContext'"), 'INTAL TV loads office YoY through the read-only public adapter');
 assert(tvCharts.includes('Perbandingan Kinerja Kantor') && tvCharts.includes('2025 YTD') && tvCharts.includes('2026 YTD'), 'Office YoY modal exposes YTD comparison KPIs');
 assert(tvCharts.includes('office-yoy-row') && tvCharts.includes('YoY'), 'Office YoY modal exposes matched monthly delta and growth rows');
+assert(tvCharts.includes('function openTop10Modal') && tvCharts.includes('Performance Insight · YoY'), 'INTAL TV Top 10 modal includes Passport YoY performance insight');
+assert(tvCharts.includes('Penyumbang kenaikan') && tvCharts.includes('Penyumbang penurunan'), 'Passport performance insight separates positive and negative contributors');
+assert(tvCharts.includes('comparableOfficeDelta') && tvCharts.includes('newOfficeContribution2026'), 'Passport performance insight reconciles comparable and NEW 2026 contribution');
+assert(publicTv.includes('offices:(report.offices?.rows||[])') && publicTv.includes('comparableCount'), 'Public Passport YoY context exposes sanitized office-level performance rows');
 assert(tvCharts.includes('font-size:clamp(10px,.68vw,13px)') && tvCharts.includes('font-size:clamp(11px,.78vw,14px)'), 'Office YoY typography uses responsive readable font sizes');
 assert(tvCharts.includes('@media(max-width:620px)') && tvCharts.includes('min-width:440px'), 'Office YoY table remains horizontally usable on narrow screens');
 assert(tvCharts.includes('comparison.length&&currentService===SERVICES[1]'), 'INTAL TV enables historical comparison only for Passport');
