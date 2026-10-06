@@ -574,7 +574,7 @@ function normalizePassport2025Sheet_(ws,sheetName){
     const source=[
       cell(2)||office,
       cell(3),cell(4),cell(5),cell(6),cell(7),cell(8),cell(9),
-      cell(10),cell(11),cell(12)
+      cell(10),cell(11)
     ];
     // Workbook has a leading blank A column: C:L are the 11 canonical source fields.
     rows.push([period,...source]);
