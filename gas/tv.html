@@ -515,23 +515,16 @@ async function refreshAllRuntimeData(){
 async function rotateServiceSafely(){
   if(TV_STATE.rotationBusy||TV_STATE.switching||currentService==='MPASPOR_QUOTA')return;
   TV_STATE.rotationBusy=true;
+  const next=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];
   try{
-    const next=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];
-    const filtered=!!(TV_FILTERS.periode||TV_FILTERS.kantor_imigrasi||TV_FILTERS.metric!=='total');
-    if(filtered){
-      await loadServiceView(next);
-    }else if(!BASE_CACHE[next]?.dashboard){
-      await preload(next);
-    }
-    const snapshot=filtered?VIEW_CACHE[filterKey(next)]:BASE_CACHE[next];
-    if(!validDashboard(snapshot.dashboard))throw new Error('TV_RUNTIME_INVALID_CACHED_SNAPSHOT');
-    currentService=next;updateSwitch();
-    $('mapBadge').textContent=(next===SERVICES[1]?'PASPOR':'IZIN TINGGAL')+' · '+metricLabel(TV_FILTERS.metric).toUpperCase();
-    renderRanking(snapshot.dashboard.offices);renderTrend(trendRowsFor(next,snapshot.dashboard.monthly),TV_FILTERS.periode);renderDistribution(snapshot.dashboard.services,snapshot.dashboard.grandTotal);renderServiceBars(snapshot.dashboard.services);renderOfficeButtons(snapshot.dashboard);
-    if(snapshot.mapData)showLayer(next);
-    $('read').textContent='LAST READ · '+new Date(snapshot.loadedAt).toLocaleTimeString('id-ID',{hour12:false})+' WIB';
-  }catch(e){TV_STATE.consecutiveFailures++;setRuntimeState('DEGRADED','Rotasi ditahan · data terakhir yang valid tetap tampil');}
-  finally{TV_STATE.rotationBusy=false;}
+    const activated=await activateService(next);
+    if(!activated)throw new Error('TV_RUNTIME_ROTATION_ACTIVATION_FAILED');
+  }catch(e){
+    TV_STATE.consecutiveFailures++;
+    setRuntimeState('DEGRADED','Rotasi ditahan · data terakhir yang valid tetap tampil');
+  }finally{
+    TV_STATE.rotationBusy=false;
+  }
 }
 async function loadRunningTexts(){try{const [manual,analytical]=await Promise.all([call('getPublicTvRunningTexts'),call('getPublicTvAnalyticalRunningTexts')]);runningTexts=[...(analytical||[]).map(x=>x.text),...(manual||[])];showTicker();}catch(e){try{runningTexts=await call('getPublicTvRunningTexts');}catch(_){runningTexts=[];}showTicker();}}
 function showTicker(){
