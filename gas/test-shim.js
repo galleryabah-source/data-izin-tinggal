@@ -240,6 +240,9 @@ assert(codeGs.includes("requirePermission_('admin.config')"), 'Running text writ
 assert(codeGs.includes("function getActiveRunningTexts()") && codeGs.includes("requirePermission_('dashboard.read')"), 'Back-office running text read path is RBAC protected');
 const publicTv=read('PublicTvService.gs');
 assert(publicTv.includes('function getPublicTvPassportYoYContext'), 'Public TV exposes read-only Passport 2025 historical context');
+assert(publicTv.includes('function getPublicTvPassportOfficeYoYContext'), 'Public TV exposes read-only Passport YoY context per office');
+assert(publicTv.includes("getServiceDashboard_('PASSPORT_SERVICE_MONTHLY_2025'") && publicTv.includes("getServiceDashboard_('PASSPORT_SERVICE_MONTHLY'"), 'Office YoY adapter reads both canonical Passport datasets through read-only dashboard cores');
+assert(publicTv.includes('status:String(row.status||\'\')') && publicTv.includes('monthly'), 'Office YoY adapter exposes office status and matched monthly comparison');
 assert(publicTv.includes("getPassportYearOverYearAnalytics_({baseYear:'2025',compareYear:'2026'})"), 'Passport historical TV context reuses the verified YoY semantic adapter');
 assert(publicTv.includes('base2025') && publicTv.includes('compare2026') && publicTv.includes('growthPct'), 'Passport historical TV context exposes only aggregate year-over-year metrics');
 assert(publicTv.includes('function getPublicTvResidenceDashboard') && publicTv.includes('function getPublicTvPassportDashboard'), 'Public TV dashboard adapters exist');
@@ -307,6 +310,10 @@ assert(tvCharts.includes('function loadPassportYoYContext'), 'INTAL TV loads Pas
 assert(tvCharts.includes("call('getPublicTvPassportYoYContext')"), 'INTAL TV calls the public Passport historical context adapter');
 assert(tvCharts.includes('id="tvPassYoY"') && tvCharts.includes('id="tvPassYoYBadge"') && tvCharts.includes('id="tvPassYoYDelta"'), 'INTAL TV Passport KPI exposes YoY context and delta');
 assert(tvCharts.includes('function renderPassportYoY'), 'INTAL TV renders Passport YoY KPI context');
+assert(tvCharts.includes('function renderOfficeYoYPanel'), 'INTAL TV renders office-level Passport YoY intelligence inside the existing office modal');
+assert(tvCharts.includes("call('getPublicTvPassportOfficeYoYContext'"), 'INTAL TV loads office YoY through the read-only public adapter');
+assert(tvCharts.includes('Perbandingan Kinerja Kantor') && tvCharts.includes('2025 YTD') && tvCharts.includes('2026 YTD'), 'Office YoY modal exposes YTD comparison KPIs');
+assert(tvCharts.includes('office-yoy-row') && tvCharts.includes('YoY'), 'Office YoY modal exposes matched monthly delta and growth rows');
 assert(tvCharts.includes('comparison.length&&currentService===SERVICES[1]'), 'INTAL TV enables historical comparison only for Passport');
 assert(tvCharts.includes('trend-yoy-base') && tvCharts.includes('trend-yoy-point'), 'INTAL TV renders a dedicated 2025 historical trend series');
 assert(tvCharts.includes('2026') && tvCharts.includes('2025'), 'INTAL TV labels the Passport comparison series by year');
