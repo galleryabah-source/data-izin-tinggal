@@ -513,9 +513,11 @@ async function refreshAllRuntimeData(){
   }finally{TV_STATE.refreshing=false;}
 }
 async function rotateServiceSafely(){
-  if(TV_STATE.rotationBusy||TV_STATE.switching||currentService==='MPASPOR_QUOTA')return;
+  if(TV_STATE.rotationBusy||TV_STATE.switching)return;
   TV_STATE.rotationBusy=true;
-  const next=currentService===SERVICES[0]?SERVICES[1]:SERVICES[0];
+  const next=currentService==='MPASPOR_QUOTA'
+    ?SERVICES[0]
+    :(currentService===SERVICES[0]?SERVICES[1]:'MPASPOR_QUOTA');
   try{
     const activated=await activateService(next);
     if(!activated)throw new Error('TV_RUNTIME_ROTATION_ACTIVATION_FAILED');
