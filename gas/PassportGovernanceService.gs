@@ -171,3 +171,29 @@ function verifyPassportServiceMonthly2025Snapshot(snapshotSpreadsheetId){
   appendAudit_('BACKUP_SNAPSHOT_VERIFY',datasetKey,snapshotId,sourceRowCount,result.ok?'SUCCESS':'FAILED',JSON.stringify(result));
   return result;
 }
+
+
+function repairPassportServiceMonthly2025DerivedTotal(){
+  const user=requirePermission_('dataset.write'),datasetKey='PASSPORT_SERVICE_MONTHLY_2025';
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try{
+    const d=getActiveDatasetContract_(datasetKey),values=d.sheet.getDataRange().getValues(),header=values[0]||[],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
+    const totalKey=d.contract.derived.find(k=>k==='total'||k==='total_permohonan'||k==='total_layanan');
+    if(!totalKey||hi[totalKey]===undefined)throw new Error('DERIVED_TOTAL_COLUMN_NOT_FOUND: '+datasetKey);
+    const measures=d.contract.measures||[];
+    const updates=[],beforeTotal=0,afterTotal=0;
+    let changedRows=0;
+    for(let i=1;i<values.length;i++){
+      const row=values[i]||[];if(!row.some(v=>String(v)!==''))continue;
+      const computed=measures.reduce((sum,key)=>sum+Number(row[hi[key]]||0),0);
+      const current=Number(row[hi[totalKey]]||0);
+      beforeTotal+=Number.isFinite(current)?current:0;
+      afterTotal+=computed;
+      if(current!==computed){updates.push([i+1,computed,current]);d.sheet.getRange(i+1,hi[totalKey]+1).setValue(computed);changedRows++;}
+    }
+    const cacheGeneration=bumpReadCacheGeneration_();SpreadsheetApp.flush();
+    const result={ok:true,datasetKey,sheetName:d.sheetName,totalKey,measureCount:measures.length,rowCount:values.length-1,changedRows,beforeTotal,afterTotal,cacheGeneration,actor:user.email,verifiedAt:nowIso_()};
+    appendAudit_('DATASET_DERIVED_TOTAL_REPAIR',datasetKey,'',changedRows,'SUCCESS',JSON.stringify(result));
+    return result;
+  }finally{lock.releaseLock();}
+}
