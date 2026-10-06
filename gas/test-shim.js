@@ -550,6 +550,9 @@ assert(yoyCode.includes('services={'), 'Passport YoY preserves year-specific ser
 assert(yoyCode.includes('avgMonthlyBase2025'), 'Passport YoY exposes average monthly baseline');
 assert(yoyCode.includes('comparableOfficeGrowthPct'), 'Passport YoY exposes comparable-office growth');
 assert(yoyCode.includes('newOfficeContributionPct'), 'Passport YoY exposes new-office contribution');
+assert(yoyCode.includes('comparableDeltaContributionPct'), 'Passport YoY exposes comparable-office contribution to total delta');
+assert(yoyCode.includes('newOfficeDeltaContributionPct'), 'Passport YoY exposes new-office contribution to total delta');
+
 assert(yoyCode.includes('peakGrowth') && yoyCode.includes('lowestGrowth'), 'Passport YoY exposes peak and lowest monthly growth');
 
 const governance2026=read('PassportGovernanceService.gs');

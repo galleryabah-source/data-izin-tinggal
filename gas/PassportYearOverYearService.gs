@@ -77,7 +77,7 @@ function getPassportYearOverYearAnalytics_(filters){
       {datasetKey:PASSPORT_YOY_V1.baseDataset,rowCount:base.rows.length,periodCount:basePeriods.length,officeCount:baseOffices.length},
       {datasetKey:PASSPORT_YOY_V1.compareDataset,rowCount:compare.rows.length,periodCount:comparePeriods.length,officeCount:compareOffices.length}
     ],
-    totals:{base2025:baseTotal,compare2026:compareTotal,delta:compareTotal-baseTotal,growthPct,avgMonthlyBase2025:avgBase,avgMonthlyCompare2026:avgCompare,comparableOfficeBase2025:comparableBase,comparableOfficeCompare2026:comparableCompare,comparableOfficeDelta:comparableDelta,comparableOfficeGrowthPct:comparableGrowthPct,newOfficeContribution2026:newOfficeContribution,newOfficeContributionPct:newOfficeContributionPct},
+    totals:{base2025:baseTotal,compare2026:compareTotal,delta:compareTotal-baseTotal,growthPct,avgMonthlyBase2025:avgBase,avgMonthlyCompare2026:avgCompare,comparableOfficeBase2025:comparableBase,comparableOfficeCompare2026:comparableCompare,comparableOfficeDelta:comparableDelta,comparableOfficeGrowthPct:comparableGrowthPct,newOfficeContribution2026:newOfficeContribution,newOfficeContributionPct:newOfficeContributionPct,comparableDeltaContributionPct:(compareTotal-baseTotal)===0?null:(comparableDelta/(compareTotal-baseTotal))*100,newOfficeDeltaContributionPct:(compareTotal-baseTotal)===0?null:(newOfficeContribution/(compareTotal-baseTotal))*100},
     offices:{comparableCount:comparable.length,new2026:compareOnly,only2025:baseOnly,rows:officeRows},
     insights:{peakGrowth,lowestGrowth},
     monthly,services
