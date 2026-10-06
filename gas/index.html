@@ -215,6 +215,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
   </div>
 
   <section class="filterbar">
+    <div class="filter" id="yearFilterWrap" style="display:none"><label>TAHUN</label><select id="yearFilter" onchange="refreshDashboard()"><option value="">Pilih Tahun</option></select></div>
     <div class="filter"><label>PERIODE</label><select id="periodFilter" onchange="refreshDashboard()"><option value="">Semua Periode</option></select></div>
     <div class="filter"><label>KANTOR IMIGRASI</label><select id="officeFilter" onchange="refreshDashboard()"><option value="">Semua Kantor</option></select></div>
     <div class="filter-actions"><button class="btn" onclick="resetFilters()">Reset</button><button class="btn primary" onclick="refreshDashboard()">Terapkan Filter</button><button class="btn" onclick="exportCsv()">Export CSV</button></div>
