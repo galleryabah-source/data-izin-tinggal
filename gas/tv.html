@@ -174,38 +174,63 @@ function renderQuotaRanking(rows){const top=(rows||[]).slice(0,10),max=Math.max(
 
 function renderQuotaSnapshot(q){
   quotaSnapshot=q;
+  const offices=Array.isArray(q?.offices)?q.offices:[];
   const total=Number(q?.totals?.mpaspor||0),overall=Number(q?.totals?.overall||0),ratio=Number(q?.totals?.ratio||0);
+  const maxQuota=Math.max(...offices.map(x=>Number(x.mpaspor)||0),1);
   const setText=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
+  const setHtml=(id,v)=>{const el=$(id);if(el)el.innerHTML=v;};
+  const setDisabled=(id,v)=>{const el=$(id);if(el)el.disabled=!!v;};
+
   const left=document.querySelectorAll('.left-stack .metric-panel');
   if(left.length>=3){
-    left[0].querySelector('h3').textContent='M-PASPOR';
-    left[0].querySelector('.metric-note').textContent='kuota · Oktober 2026';
-    left[1].querySelector('h3').textContent='TOTAL KUOTA';
-    left[1].querySelector('.metric-note').textContent='seluruh skema kuota';
-    left[2].querySelector('h3').textContent='PROPORSI M-PASPOR';
-    left[2].querySelector('.metric-note').textContent='M-Paspor / keseluruhan';
+    const panel=(n,title,note)=>{
+      const h=left[n]?.querySelector('h3'),m=left[n]?.querySelector('.metric-note');
+      if(h)h.textContent=title;
+      if(m)m.textContent=note;
+    };
+    panel(0,'M-PASPOR','kuota · Oktober 2026');
+    panel(1,'TOTAL KUOTA','seluruh skema kuota');
+    panel(2,'PROPORSI M-PASPOR','M-Paspor / keseluruhan');
   }
-  setText('tvResMetric',fmt(total));setText('tvPassMetric',fmt(overall));setText('tvCombinedMetric',(ratio*100).toFixed(1)+'%');
+
+  setText('tvResMetric',fmt(total));
+  setText('tvPassMetric',fmt(overall));
+  setText('tvCombinedMetric',(ratio*100).toFixed(1)+'%');
   setText('tvCombinedContext','OKTOBER 2026 · 10 KANIM');
   setText('tvCombinedResidence','M-Paspor '+fmt(total));
   setText('tvCombinedPassport','Total '+fmt(overall));
   setText('tvCombinedMom','Non-M '+fmt(Math.max(0,overall-total)));
-  const mom=$('tvCombinedMomWrap');if(mom){mom.className='metric-breakdown-item metric-mom flat';mom.querySelector('span').textContent='SELISIH';}
-  $('mapBadge').textContent='KUOTA M-PASPOR · OKTOBER 2026';
+  const mom=$('tvCombinedMomWrap');
+  if(mom){
+    mom.className='metric-breakdown-item metric-mom flat';
+    const span=mom.querySelector('span');
+    if(span)span.textContent='SELISIH';
+  }
+
+  setText('mapBadge','KUOTA M-PASPOR · OKTOBER 2026');
   const head=document.querySelector('.map-head .map-title'),sub=document.querySelector('.map-head .map-sub');
   if(head)head.textContent='KAPASITAS KUOTA M-PASPOR JAWA BARAT';
   if(sub)sub.textContent='10 Kantor Imigrasi · source snapshot · read-only';
   if(map){try{map.remove();}catch(_){ }map=null;}
-  $('map').innerHTML='<div class="quota-tv-overview"><div class="quota-tv-total"><b>'+fmt(total)+'</b><span>M-Paspor</span><em>'+fmt(overall)+' total · '+(ratio*100).toFixed(1)+'%</em></div><div class="quota-tv-bars">'+(q.offices||[]).map((x,i)=>'<div class="quota-tv-row"><span>'+String(i+1).padStart(2,'0')+'</span><b title="'+esc(x.kantor_imigrasi)+'">'+esc(x.kantor_imigrasi)+'</b><i><em style="width:'+Math.max(2,Number(x.mpaspor)/Math.max(...q.offices.map(y=>Number(y.mpaspor)||0),1)*100)+'%"></em></i><strong>'+fmt(x.mpaspor)+'</strong></div>').join('')+'</div></div>';
-  $('ranking').innerHTML='';renderQuotaRanking(q.offices);
-  $('rankMeta').textContent=fmt(q.officeCount)+' kantor';
-  $('trendSub').textContent='Kuota M-Paspor per Kantor · Oktober 2026';
-  $('trendSelection').textContent='OKTOBER 2026';$('trendReset').disabled=true;
-  $('trend').innerHTML='<div class="quota-tv-mini-bars">'+(q.offices||[]).map(x=>'<div><b>'+fmt(x.mpaspor)+'</b><i style="height:'+Math.max(6,Number(x.mpaspor)/Math.max(...q.offices.map(y=>Number(y.mpaspor)||0),1)*110)+'px"></i><span>'+esc(String(x.kantor_imigrasi).replace('KANIM KELAS ','').replace(' NON TPI','').replace(' TPI','').replace(' KELAS II',' II').replace(' KELAS III',' III'))+'</span></div>').join('')+'</div>';
-  $('donutWrap').innerHTML='<div class="donut-wrap"><div class="donut" style="--donut-bg:conic-gradient(#19c8ff 0 '+(ratio*100).toFixed(2)+'%,#183653 '+(ratio*100).toFixed(2)+'% 100%)"><div class="donut-center">'+(ratio*100).toFixed(1)+'%<small>M-Paspor</small></div></div><div class="legend-list"><div class="legend-item"><span class="legend-dot" style="background:#19c8ff;color:#19c8ff"></span><span>M-Paspor</span><b>'+fmt(total)+'</b></div><div class="legend-item"><span class="legend-dot" style="background:#183653;color:#183653"></span><span>Non-M-Paspor</span><b>'+fmt(Math.max(0,overall-total))+'</b></div></div></div>';
-  $('serviceBars').innerHTML=(q.offices||[]).slice().sort((a,b)=>Number(b.mpaspor)-Number(a.mpaspor)).map(x=>'<div class="service-row"><span title="'+esc(x.kantor_imigrasi)+'">'+esc(x.kantor_imigrasi)+'</span><div class="service-track"><div class="service-fill" style="width:'+Math.max(2,Number(x.mpaspor)/Math.max(...q.offices.map(y=>Number(y.mpaspor)||0),1)*100)+'%"></div></div><b>'+fmt(x.mpaspor)+'</b></div>').join('');
-  $('officeListMeta').textContent=fmt(q.officeCount)+' kantor';
-  $('officeList').innerHTML=(q.offices||[]).map((x,i)=>'<button class="office-btn" type="button" onclick="openQuotaOfficeDetail('+i+')"><span class="office-no">'+String(i+1).padStart(2,'0')+'</span><span><span class="office-name">'+esc(x.kantor_imigrasi)+'</span><span class="office-meta">'+fmt(x.overall)+' total · '+(Number(x.ratio||0)*100).toFixed(1)+'% M-Paspor</span></span><span class="office-total">'+fmt(x.mpaspor)+'</span></button>').join('');
+
+  const mapEl=$('map');
+  if(mapEl){
+    mapEl.innerHTML=`<div class="quota-tv-overview"><div class="quota-tv-total"><b>${fmt(total)}</b><span>M-Paspor</span><em>${fmt(overall)} total · ${(ratio*100).toFixed(1)}%</em></div><div class="quota-tv-bars">${offices.map((x,i)=>`<div class="quota-tv-row"><span>${String(i+1).padStart(2,'0')}</span><b title="${esc(x.kantor_imigrasi)}">${esc(x.kantor_imigrasi)}</b><i><em style="width:${Math.max(2,Number(x.mpaspor)/maxQuota*100)}%"></em></i><strong>${fmt(x.mpaspor)}</strong></div>`).join('')}</div></div>`;
+  }
+
+  setHtml('ranking','');
+  renderQuotaRanking(offices);
+  setText('rankMeta',fmt(q?.officeCount||offices.length)+' kantor');
+  setText('trendSub','Kuota M-Paspor per Kantor · Oktober 2026');
+  setText('trendSelection','OKTOBER 2026');
+  setDisabled('trendReset',true);
+  setHtml('trend',`<div class="quota-tv-mini-bars">${offices.map(x=>`<div><b>${fmt(x.mpaspor)}</b><i style="height:${Math.max(6,Number(x.mpaspor)/maxQuota*110)}px"></i><span>${esc(String(x.kantor_imigrasi).replace('KANIM KELAS ','').replace(' NON TPI','').replace(' TPI','').replace(' KELAS II',' II').replace(' KELAS III',' III'))}</span></div>`).join('')}</div>`);
+  setHtml('donutWrap',`<div class="donut-wrap"><div class="donut" style="--donut-bg:conic-gradient(#19c8ff 0 ${(ratio*100).toFixed(2)}%,#183653 ${(ratio*100).toFixed(2)}% 100%)"><div class="donut-center">${(ratio*100).toFixed(1)}%<small>M-Paspor</small></div></div><div class="legend-list"><div class="legend-item"><span class="legend-dot" style="background:#19c8ff;color:#19c8ff"></span><span>M-Paspor</span><b>${fmt(total)}</b></div><div class="legend-item"><span class="legend-dot" style="background:#183653;color:#183653"></span><span>Non-M-Paspor</span><b>${fmt(Math.max(0,overall-total))}</b></div></div></div>`);
+  const serviceBars=offices.slice().sort((a,b)=>Number(b.mpaspor)-Number(a.mpaspor)).map(x=>`<div class="service-row"><span title="${esc(x.kantor_imigrasi)}">${esc(x.kantor_imigrasi)}</span><div class="service-track"><div class="service-fill" style="width:${Math.max(2,Number(x.mpaspor)/maxQuota*100)}%"></div></div><b>${fmt(x.mpaspor)}</b></div>`).join('');
+  setHtml('serviceBars',serviceBars);
+  setText('officeListMeta',fmt(q?.officeCount||offices.length)+' kantor');
+  const officeList=offices.map((x,i)=>`<button class="office-btn" type="button" onclick="openQuotaOfficeDetail(${i})"><span class="office-no">${String(i+1).padStart(2,'0')}</span><span><span class="office-name">${esc(x.kantor_imigrasi)}</span><span class="office-meta">${fmt(x.overall)} total · ${(Number(x.ratio||0)*100).toFixed(1)}% M-Paspor</span></span><span class="office-total">${fmt(x.mpaspor)}</span></button>`).join('');
+  setHtml('officeList',officeList);
 }
 function openQuotaOfficeDetail(i){
   const o=quotaSnapshot?.offices?.[i];if(!o)return;
@@ -393,6 +418,7 @@ async function refreshAllRuntimeData(){
     renderKpis();
     if(currentService==='MPASPOR_QUOTA'){
       const q=await withTimeout(call('getPublicTvMpasporQuota'),TV_RUNTIME.requestTimeoutMs);
+      if(!q||!q.totals||!Array.isArray(q.offices))throw new Error('MPASPOR_QUOTA_INVALID_RESPONSE');
       renderQuotaSnapshot(q);
       TV_STATE.lastGoodAt=Date.now();TV_STATE.consecutiveFailures=0;
       $('read').textContent='LAST READ · '+now()+' WIB';
