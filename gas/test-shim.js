@@ -523,6 +523,11 @@ assert(tvNew.includes("const next=currentService==='MPASPOR_QUOTA'\n    ?SERVICE
 assert(!tvNew.includes("currentService==='MPASPOR_QUOTA')return"), 'INTAL TV does not permanently exclude M-Paspor from automatic rotation');
 assert(tvNew.includes('if(TV_STATE.switching)return currentService===\'MPASPOR_QUOTA\';'), 'INTAL TV serializes M-Paspor switching with the same runtime lock');
 
+// INTAL TV office-detail readability invariants
+assert(tvNew.includes('.office-dialog-title{font-size:22px'), 'INTAL TV office detail title is readable on the operational modal');
+assert(tvNew.includes('.office-detail-status{font-size:14px'), 'INTAL TV office detail status/content is readable');
+assert(tvNew.includes('.office-service-card span{font-size:15px'), 'INTAL TV office detail service labels are readable');
+assert(tvNew.includes('.office-service-card b{font-size:28px'), 'INTAL TV office detail service values are prominent');
 // Phase 10.1 — Cross-Service Reporting Contract invariants
 const crossService=read('DashboardService.gs');
 assert(crossService.includes('function getCrossServiceReporting(filters)'), 'Phase 10.1 cross-service reporting adapter exists');
