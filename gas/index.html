@@ -557,18 +557,28 @@ function normalizePassport2025Sheet_(ws,sheetName){
   if(!detected.passport2025)throw new Error('PASSPORT_2025_HEADER_NOT_DETECTED: struktur sheet bukan laporan Paspor 2025 yang diharapkan.');
   const period=importMonthPeriodFromSheetName_(sheetName);
   if(!period)throw new Error('PASSPORT_2025_PERIOD_REQUIRED: pilih sheet bulanan JANUARI-DESEMBER 2025, bukan TOTAL REKAP 2025.');
-  // The original workbook has a two-row header with a leading NO column.
-  // Normalize it to the exact historical contract before server-side schema detection.
+  // Original workbook layout: C=KANIM, D:J=service measures, K=JUMLAH, L=PENERBITAN.
+  // Read the canonical cells directly so merged header cells cannot affect the final PENERBITAN value.
   const header=['PERIODE','KANTOR_IMIGRASI','M_PASPOR','WALK_IN','PRIORITAS','PERCEPATAN','EAZY','INOVASI','BAP','TOTAL_PERMOHONAN','PENERBITAN'];
-  const data=detected.rows.slice(detected.index+detected.headerRows).filter(row=>{
-    const office=String(row[2]||'').trim().toUpperCase();
-    return office&&office!=='KANIM'&&office!=='JUMLAH';
-  });
-  const rows=data.map(row=>[
-    period,
-    String(row[2]||'').trim(),
-    row[3],row[4],row[5],row[6],row[7],row[8],row[9],row[10],row[11]
-  ]);
+  const rows=[];
+  const dataStart=detected.index+detected.headerRows;
+  for(let i=dataStart;i<detected.rows.length;i++){
+    const row=detected.rows[i]||[];
+    const office=String(row[2]||'').trim();
+    if(!office||office.toUpperCase()==='KANIM'||office.toUpperCase()==='JUMLAH')continue;
+    const cell=(c)=>{
+      const ref=XLSX.utils.encode_cell({r:i,c});
+      const x=ws[ref];
+      return x&&x.v!==undefined&&x.v!==null?x.v:'';
+    };
+    const source=[
+      cell(2)||office,
+      cell(3),cell(4),cell(5),cell(6),cell(7),cell(8),cell(9),
+      cell(10),cell(11),cell(12)
+    ];
+    // Workbook has a leading blank A column: C:L are the 11 canonical source fields.
+    rows.push([period,...source]);
+  }
   return {period,header,rows,headerRow:detected.index+1,dataRows:rows.length};
 }
 function passport2025RowsToTsv_(header,rows){
