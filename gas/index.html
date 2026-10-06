@@ -571,6 +571,10 @@ function normalizePassport2025Sheet_(ws,sheetName){
   ]);
   return {period,header,rows,headerRow:detected.index+1,dataRows:rows.length};
 }
+function passport2025RowsToTsv_(header,rows){
+  const clean=v=>String(v===null||v===undefined?'':v).replace(/[\t\r\n]/g,' ').trim();
+  return [header,...rows].map(row=>row.map(clean).join('\t')).join('\n');
+}
 function prepareImportFileSheet(){
   if(!importFileWorkbook)return;
   const select=document.getElementById('importFileSheet');
@@ -585,14 +589,14 @@ function prepareImportFileSheet(){
       const header=parts[0].header;
       if(parts.some(p=>JSON.stringify(p.header)!==JSON.stringify(header)))throw new Error('PASSPORT_2025_SCHEMA_DRIFT: struktur header antar-sheet bulanan berbeda.');
       const rows=parts.flatMap(p=>p.rows);
-      importFileText=XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet([header].concat(rows)),{FS:'\t',RS:'\n',blankrows:false});
+      importFileText=passport2025RowsToTsv_(header,rows);
       if(!rows.length)throw new Error('PASSPORT_2025_NO_DATA');
       document.getElementById('fileSourceInfo').innerHTML='<span class="ok">Mode batch 2025 · '+monthSheets.length+' sheet bulanan · '+rows.length+' baris data · periode 2025-01 → 2025-12 · siap dipreview.</span>';
     }else{
       const ws=importFileWorkbook.Sheets[selectedName],detected=detectImportFileHeaderRow_(ws);
       if(detected.passport2025){
         const normalized=normalizePassport2025Sheet_(ws,selectedName);
-        importFileText=XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet([normalized.header].concat(normalized.rows)),{FS:'\t',RS:'\n',blankrows:false});
+        importFileText=passport2025RowsToTsv_(normalized.header,normalized.rows);
         document.getElementById('fileSourceInfo').innerHTML='<span class="ok">Sheet '+esc(selectedName)+' · header baris '+normalized.headerRow+'–'+(normalized.headerRow+1)+' · '+normalized.dataRows+' baris data · periode '+normalized.period+' · siap dipreview.</span>';
       }else{
         const rows=detected.rows.slice(detected.index),tsv=XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet(rows),{FS:'\t',RS:'\n',blankrows:false});
