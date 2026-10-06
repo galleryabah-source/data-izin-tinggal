@@ -215,6 +215,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
   </div>
 
   <section class="filterbar">
+    <div class="filter" id="yearFilterWrap" style="display:none"><label>TAHUN</label><select id="yearFilter" onchange="refreshDashboard()"><option value="">Pilih Tahun</option></select></div>
     <div class="filter"><label>PERIODE</label><select id="periodFilter" onchange="refreshDashboard()"><option value="">Semua Periode</option></select></div>
     <div class="filter"><label>KANTOR IMIGRASI</label><select id="officeFilter" onchange="refreshDashboard()"><option value="">Semua Kantor</option></select></div>
     <div class="filter-actions"><button class="btn" onclick="resetFilters()">Reset</button><button class="btn primary" onclick="refreshDashboard()">Terapkan Filter</button><button class="btn" onclick="exportCsv()">Export CSV</button></div>
@@ -467,6 +468,8 @@ function setService(key){
   document.getElementById('svcQuota').classList.remove('active');
   document.getElementById('svcResidence').classList.toggle('active',key==='RESIDENCE_PERMIT_SERVICE_MONTHLY');
   document.getElementById('svcPassport').classList.toggle('active',key==='PASSPORT_SERVICE_MONTHLY');
+  const yearWrap=document.getElementById('yearFilterWrap');
+  if(yearWrap)yearWrap.style.display=key==='PASSPORT_SERVICE_MONTHLY'?'block':'none';
   if(importSourceMode==='GOOGLE_SHEETS'){
     document.getElementById('googleSourceId').value=GOOGLE_SOURCE_IDS[serviceKey]||'';
     document.getElementById('googleSourceSheet').innerHTML='<option value="">Pilih sheet...</option>';
@@ -475,10 +478,29 @@ function setService(key){
   navigateTo(null,'dashboard');
   refreshDashboard();
 }
-function getFilters(){return{periode:document.getElementById('periodFilter').value,kantor_imigrasi:document.getElementById('officeFilter').value};}
+function getFilters(){
+  return{
+    tahun:document.getElementById('yearFilter')?.value||'',
+    periode:document.getElementById('periodFilter').value,
+    kantor_imigrasi:document.getElementById('officeFilter').value
+  };
+}
 function getMapFilters(){const f=getFilters();f.metric=document.getElementById('gisMetricFilter').value||'total';return f;}
 function populateMapMetrics(r){const el=document.getElementById('gisMetricFilter');if(!el)return;const current=el.value||'total';const metrics=['total'].concat((r.services||[]).map(x=>x.key));el.innerHTML=metrics.filter((x,i,a)=>a.indexOf(x)===i).map(x=>'<option value="'+esc(x)+'">'+esc(x==='total'?'Total layanan':label(x))+'</option>').join('');el.value=metrics.indexOf(current)>=0?current:'total';}
-function populateFilters(r){const p=document.getElementById('periodFilter'),o=document.getElementById('officeFilter');const sp=r.filters.periode,so=r.filters.kantor_imigrasi;p.innerHTML='<option value="">Semua Periode</option>'+r.filters.availablePeriods.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');o.innerHTML='<option value="">Semua Kantor</option>'+r.filters.availableOffices.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');p.value=sp;o.value=so;document.getElementById('periodCount').textContent=r.filters.availablePeriods.length;document.getElementById('officeCount').textContent=r.filters.availableOffices.length;}
+function populateFilters(r){
+  const p=document.getElementById('periodFilter'),o=document.getElementById('officeFilter'),y=document.getElementById('yearFilter');
+  const sp=r.filters.periode,so=r.filters.kantor_imigrasi,sy=String(r.filters.tahun||'');
+  if(y){
+    const years=(r.filters.availableYears||['2026']).map(String);
+    y.innerHTML='<option value="">Pilih Tahun</option>'+years.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+    y.value=sy||years[years.length-1]||'';
+  }
+  p.innerHTML='<option value="">Semua Periode</option>'+r.filters.availablePeriods.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+  o.innerHTML='<option value="">Semua Kantor</option>'+r.filters.availableOffices.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+  p.value=sp;o.value=so;
+  document.getElementById('periodCount').textContent=r.filters.availablePeriods.length;
+  document.getElementById('officeCount').textContent=r.filters.availableOffices.length;
+}
 let gisMarkers={};
 function initMap(){if(mapInstance||typeof L==='undefined')return;mapInstance=L.map('map').setView([-6.9,107.6],8);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(mapInstance);mapLayer=L.layerGroup().addTo(mapInstance);}
 function renderGisOfficeDetail(m){const metric=document.getElementById('gisMetricFilter').value||'total';const metricName=metric==='total'?'Total layanan':label(metric);const value=Number(m.metricValue==null?m.total:m.metricValue);document.getElementById('gisOfficeDetail').innerHTML='<h3>'+esc(m.kantor_imigrasi)+'</h3><div class="muted">'+esc(m.address)+'</div><div class="gis-value">'+value.toLocaleString('id-ID')+'</div><div class="muted">'+esc(metricName)+' · '+m.rows+' record</div><div class="muted" style="margin-top:8px">Total layanan: '+Number(m.total).toLocaleString('id-ID')+'</div><div class="muted">Koordinat: '+Number(m.latitude).toFixed(5)+', '+Number(m.longitude).toFixed(5)+'</div>'+(m.source_url?'<div style="margin-top:10px"><a href="'+esc(m.source_url)+'" target="_blank" rel="noopener noreferrer">Buka sumber referensi ↗</a></div>':'');}
@@ -508,7 +530,13 @@ function sortExplorer(column){if(explorerState.sortBy===column)explorerState.sor
 function showExplorerDetail(index){const r=explorerState.last;if(!r||!r.rows[index])return;const detail={};r.columns.forEach((k,i)=>detail[k]=r.rows[index][i]);document.getElementById('drillDetail').innerHTML='<b>Detail record</b><pre>'+esc(JSON.stringify(detail,null,2))+'</pre>';}
 async function refreshDrilldown(){try{const fn=serviceKey==='PASSPORT_SERVICE_MONTHLY'?'getPassportDrilldown':'getResidencePermitDrilldown';const r=await callWithTimeout(fn,20000,getExplorerFilters());explorerState.last=r;document.getElementById('drillMeta').textContent=Number(r.totalRows||r.rowCount||0).toLocaleString('id-ID')+' records';document.getElementById('drillPageInfo').textContent='Halaman '+r.page+' / '+r.totalPages+' · '+r.rowCount+' ditampilkan';document.getElementById('drillPrev').disabled=r.page<=1;document.getElementById('drillNext').disabled=r.page>=r.totalPages;if(!r.rowCount){document.getElementById('drilldown').innerHTML='<div class="detail-meta">0 baris sesuai filter.</div>';return;}const head=r.columns.map(x=>'<th class="explorer-sort" onclick="sortExplorer(\''+esc(x)+'\')">'+esc(x)+' '+(r.filters.sortBy===x?(r.filters.sortDir==='asc'?'↑':'↓'):'')+'</th>').join('');const body=r.rows.map((row,i)=>'<tr class="explorer-row" onclick="showExplorerDetail('+i+')">'+row.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('');document.getElementById('drilldown').innerHTML='<div class="detail-wrap"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div>';}catch(e){document.getElementById('drilldown').innerHTML='<span class="error">'+esc(e.message)+'</span>';document.getElementById('drillPageInfo').textContent='Gagal memuat';}}
 async function refreshDashboard(){setLoading(true,'Memuat dashboard...');try{const fn=serviceKey==='PASSPORT_SERVICE_MONTHLY'?'getPassportDashboard':'getResidencePermitDashboard';const r=await callWithTimeout(fn,20000,getFilters());lastDashboard=r;populateFilters(r);await refreshCrossServiceReport();const passport=serviceKey==='PASSPORT_SERVICE_MONTHLY';document.getElementById('dashboardTitle').textContent=passport?'Dashboard Layanan Paspor':'Dashboard Layanan Izin Tinggal';document.getElementById('mapTitle').textContent=passport?'Peta Layanan Paspor':'Peta Layanan Izin Tinggal';document.getElementById('total').textContent=Number(r.rowCount).toLocaleString('id-ID');document.getElementById('grandTotal').textContent=Number(r.grandTotal).toLocaleString('id-ID');document.getElementById('trend').innerHTML=renderTrend(r.monthly);document.getElementById('ranking').innerHTML=renderRanking(r.offices);document.getElementById('services').innerHTML=renderServices(r.services);populateMapMetrics(r);setLoading(false,'Dashboard loaded · '+r.rowCount+' rows');const tasks=await Promise.allSettled([refreshDrilldown(),refreshMap()]);const failed=tasks.filter(x=>x.status==='rejected');if(failed.length)document.getElementById('mapStatus').innerHTML='<span class="error">Dashboard utama berhasil; komponen tambahan gagal dimuat.</span>';}catch(e){document.getElementById('grandTotal').innerHTML='<span class="error">!</span>';document.getElementById('total').innerHTML='<span class="error">!</span>';document.getElementById('trend').innerHTML='<span class="error">'+esc(e.message)+'</span>';document.getElementById('mapStatus').innerHTML='<span class="error">Dashboard gagal dimuat: '+esc(e.message)+'</span>';}finally{setLoading(false);}}
-function resetFilters(){document.getElementById('periodFilter').value='';document.getElementById('officeFilter').value='';refreshDashboard();}
+function resetFilters(){
+  const y=document.getElementById('yearFilter');
+  if(y&&serviceKey==='PASSPORT_SERVICE_MONTHLY')y.value='2026';
+  document.getElementById('periodFilter').value='';
+  document.getElementById('officeFilter').value='';
+  refreshDashboard();
+}
 function applySearch(){const q=document.getElementById('globalSearch').value.toLowerCase().trim();if(!lastDashboard)return;const hit=(lastDashboard.offices||[]).find(x=>String(x.kantor_imigrasi).toLowerCase().includes(q));if(q&&hit){document.getElementById('officeFilter').value=hit.kantor_imigrasi;refreshDashboard();}else if(!q){document.getElementById('officeFilter').value='';refreshDashboard();}}
 async function exportCsv(){try{const fn=serviceKey==='PASSPORT_SERVICE_MONTHLY'?'exportPassportServiceMonthly':'exportResidencePermitMonthly';const r=await call(fn,getFilters());const blob=new Blob([r.content],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=r.filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}catch(e){alert(e.message);}}
 async function refreshRegistry(){try{const d=await callWithTimeout('listDatasets',15000);document.getElementById('registry').innerHTML='<div class="detail-wrap"><table><thead><tr><th>Dataset</th><th>Status</th><th>Rows</th><th>Sheet</th><th>Schema Signature</th><th>Columns</th></tr></thead><tbody>'+d.map(x=>'<tr><td><b>'+esc(x.datasetKey)+'</b></td><td><span class="ok">'+esc(x.status)+'</span></td><td>'+Number(x.rowCount).toLocaleString('id-ID')+'</td><td>'+esc(x.sheetName)+'</td><td style="font-family:monospace;font-size:10px">'+esc(x.signature)+'</td><td>'+x.columns.map(esc).join(', ')+'</td></tr>').join('')+'</tbody></table></div>';}catch(e){document.getElementById('registry').innerHTML='<span class="error">Registry: '+esc(e.message)+'</span>';}}
