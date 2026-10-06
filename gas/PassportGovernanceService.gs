@@ -221,3 +221,49 @@ function repairPassportServiceMonthly2025DerivedTotal(){
     return result;
   }finally{lock.releaseLock();}
 }
+
+
+function verifyPassportYearOverYearForensic(){
+  requirePermission_('audit.read');
+  const analytics=getPassportYearOverYearAnalytics_({baseYear:'2025',compareYear:'2026',periodEnd:'2026-09'});
+  const issues=[];
+  const p=analytics.period, t=analytics.totals, o=analytics.offices;
+  if(!p||p.monthCount!==9||p.matchedPeriods.length!==9)issues.push('Matched period harus tepat 9 bulan.');
+  if(p.matchedPeriods[0]!=='2025-01'||p.matchedPeriods[8]!=='2025-09')issues.push('Matched period harus 2025-01 s.d. 2025-09.');
+  if(!analytics.datasets||analytics.datasets.length!==2)issues.push('Dua canonical dataset tidak terdeteksi.');
+  const d25=analytics.datasets[0],d26=analytics.datasets[1];
+  if(d25.datasetKey!=='PASSPORT_SERVICE_MONTHLY_2025')issues.push('Dataset 2025 tidak sesuai canonical key.');
+  if(d26.datasetKey!=='PASSPORT_SERVICE_MONTHLY')issues.push('Dataset 2026 tidak sesuai canonical key.');
+  if(d25.officeCount!==9)issues.push('Dataset 2025 harus memiliki 9 kantor.');
+  if(d26.officeCount!==10)issues.push('Dataset 2026 harus memiliki 10 kantor.');
+  if(o.comparableCount!==9)issues.push('Jumlah kantor comparable harus 9.');
+  const garut=(o.new2026||[]).filter(x=>String(x).toUpperCase().includes('GARUT'));
+  if(garut.length!==1)issues.push('Garut harus tepat satu kali sebagai NEW_2026.');
+  const officeDelta=(o.rows||[]).reduce((s,r)=>s+Number(r.delta||0),0);
+  if(officeDelta!==Number(t.delta||0))issues.push('Jumlah delta kantor tidak sama dengan delta total.');
+  const monthlyDelta=(analytics.monthly||[]).reduce((s,r)=>s+Number(r.delta||0),0);
+  if(monthlyDelta!==Number(t.delta||0))issues.push('Jumlah delta bulanan tidak sama dengan delta total.');
+  const contribution=(Number(t.comparableOfficeDelta||0)+Number(t.newOfficeContribution2026||0));
+  if(contribution!==Number(t.delta||0))issues.push('Comparable + Garut tidak merekonsiliasi delta total.');
+  const comparableContribution=(Number(t.comparableDeltaContributionPct||0));
+  const newContribution=(Number(t.newOfficeDeltaContributionPct||0));
+  if(Number(t.delta||0)!==0 && Math.abs((comparableContribution+newContribution)-100)>0.2)issues.push('Kontribusi delta tidak merekonsiliasi 100%.');
+  const negativeBase=(o.rows||[]).filter(r=>Number(r.base2025)<0||Number(r.compare2026)<0);
+  if(negativeBase.length)issues.push('Terdapat nilai layanan negatif.');
+  const result={
+    ok:issues.length===0,
+    contract:'PASSPORT_YOY_FORENSIC_CLOSURE_V1',
+    readOnly:true,
+    verifiedAt:nowIso_(),
+    period:{from:'2025-01',to:'2025-09',months:9},
+    datasets:analytics.datasets,
+    offices:{comparable:o.comparableCount,new2026:o.new2026,only2025:o.only2025},
+    totals:t,
+    monthlyChecks:{rowCount:(analytics.monthly||[]).length,sumDelta:monthlyDelta,expectedDelta:t.delta},
+    officeChecks:{rowCount:(o.rows||[]).length,sumDelta:officeDelta,expectedDelta:t.delta},
+    contributionChecks:{comparableDelta:t.comparableOfficeDelta,newOfficeDelta:t.newOfficeContribution2026,delta:t.delta,comparablePct:comparableContribution,newOfficePct:newContribution},
+    issues
+  };
+  appendAudit_('PASSPORT_YOY_FORENSIC_CLOSURE','PASSPORT_YOY_ANALYTICS_V1','',0,result.ok?'SUCCESS':'FAILED',JSON.stringify(result));
+  return result;
+}

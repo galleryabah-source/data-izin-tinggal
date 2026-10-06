@@ -698,3 +698,13 @@ assert(periodConfig.includes("PERIOD_CLOSURES:'PERIOD_CLOSURES'"), 'Period closu
 
 const code=read('Code.gs');
 assert(code.includes("PERIOD_CLOSURES:['closure_id','dataset_key','periode','status','closed_by','closed_at','reason','reopened_by','reopened_at']"), 'Period closure schema is initialized');
+
+// Passport YoY forensic closure invariants
+const forensicGov=read('PassportGovernanceService.gs');
+assert(forensicGov.includes('verifyPassportYearOverYearForensic'), 'Passport YoY forensic closure function exists');
+assert(forensicGov.includes('PASSPORT_YOY_FORENSIC_CLOSURE_V1'), 'Passport YoY forensic closure contract is explicit');
+assert(forensicGov.includes('monthlyDelta'), 'Passport YoY forensic closure reconciles monthly deltas');
+assert(forensicGov.includes('officeDelta'), 'Passport YoY forensic closure reconciles office deltas');
+assert(forensicGov.includes('contribution'), 'Passport YoY forensic closure reconciles comparable plus new-office contribution');
+const forensicUi=read('index.html');
+assert(forensicUi.includes('runPassportYoyForensic'), 'Back Office exposes Passport YoY forensic closure control');
