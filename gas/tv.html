@@ -59,6 +59,26 @@ header{display:grid;grid-template-columns:minmax(360px,1fr) auto auto;gap:14px;a
 /* INTAL TV M-Paspor quota view */
 .quota-tv-overview{height:100%;padding:18px 20px;overflow:auto}.quota-tv-total{display:flex;align-items:baseline;gap:12px;padding:10px 0 15px;border-bottom:1px solid #18507d}.quota-tv-total b{font-size:38px;color:#19c8ff;font-weight:1000}.quota-tv-total span{font-size:13px;font-weight:900;color:#d7e7f6}.quota-tv-total em{margin-left:auto;font-size:10px;color:#8fa9c4;font-style:normal}.quota-tv-bars{display:flex;flex-direction:column;gap:10px;padding-top:14px}.quota-tv-row{display:grid;grid-template-columns:24px minmax(160px,1fr) minmax(120px,2fr) 60px;gap:8px;align-items:center;font-size:10px}.quota-tv-row>span{color:#6f89a5;font-weight:900}.quota-tv-row>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.quota-tv-row>i{height:7px;background:#102e4b;border-radius:99px;overflow:hidden}.quota-tv-row>i em{display:block;height:100%;background:linear-gradient(90deg,#19c8ff,#7b7cff);border-radius:99px}.quota-tv-row>strong{text-align:right;font-size:11px}.quota-tv-mini-bars{height:100%;display:flex;align-items:end;gap:8px;padding:10px 4px 4px;border-bottom:1px solid #18507d;overflow:hidden}.quota-tv-mini-bars>div{flex:1;min-width:20px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}.quota-tv-mini-bars b{font-size:7px;color:#cfe2f4}.quota-tv-mini-bars i{display:block;width:70%;max-width:30px;background:linear-gradient(180deg,#55a8ff,#1769e0);border-radius:4px 4px 0 0;min-height:4px}.quota-tv-mini-bars span{font-size:6px;color:#7891ac;max-width:55px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 @media(max-width:1100px){.quota-tv-row{grid-template-columns:20px 1fr 1fr 52px}.quota-tv-total b{font-size:30px}}
+
+/* Office detail modal: prioritize readable operational data over chrome */
+.office-dialog{width:80vw;height:80vh;max-width:1500px;max-height:920px;min-width:620px;min-height:440px}
+.office-dialog-head{padding:18px 20px}
+.office-dialog-title{font-size:22px;line-height:1.15}
+.office-dialog-sub{font-size:11px;margin-top:5px}
+.office-dialog-kpis{gap:10px;padding:13px 15px}
+.office-dialog-kpi{padding:12px 14px}
+.office-dialog-kpi span{font-size:10px}
+.office-dialog-kpi b{font-size:28px;margin-top:5px}
+.office-dialog-body{padding:16px}
+.office-detail-status{font-size:14px;padding:6px 3px 12px}
+.office-service-grid{gap:10px}
+.office-service-card{padding:13px 15px;min-height:58px;gap:14px}
+.office-service-card span{font-size:15px;line-height:1.2}
+.office-service-card b{font-size:28px}
+.office-service-card small{display:block;color:#8fa9c4;font-size:11px;line-height:1.25;margin-top:3px}
+.office-detail-error{font-size:14px}
+@media(max-width:900px){.office-dialog{width:92vw;height:88vh}.office-dialog-title{font-size:19px}.office-dialog-kpi b{font-size:23px}.office-service-card span{font-size:13px}.office-service-card b{font-size:24px}}
+@media(max-width:620px){.office-dialog{width:96vw;height:92vh}.office-dialog-title{font-size:17px}.office-dialog-kpis{gap:6px;padding:9px}.office-dialog-kpi{padding:9px}.office-dialog-kpi span{font-size:8px}.office-dialog-kpi b{font-size:18px}.office-dialog-body{padding:10px}.office-detail-status{font-size:11px}.office-service-grid{grid-template-columns:1fr}.office-service-card{padding:10px 12px;min-height:50px}.office-service-card span{font-size:12px}.office-service-card b{font-size:21px}.office-service-card small{font-size:9px}}
 </style>
 </head>
 <body>
