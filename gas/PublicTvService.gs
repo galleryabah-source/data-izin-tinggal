@@ -161,3 +161,36 @@ function getPublicTvPassportYoYContext(){
     }))
   };
 }
+
+
+/**
+ * Read-only Passport YoY context for one office, used by the existing
+ * INTAL TV office detail modal. It reuses the verified semantic adapter and
+ * exposes no raw rows or write capability.
+ */
+function getPublicTvPassportOfficeYoYContext(filters){
+  const f=filters||{},office=String(f.kantor_imigrasi||'').trim().slice(0,200);
+  if(!office)throw new Error('PASSPORT_YOY_OFFICE_REQUIRED');
+  const requestedEnd=String(f.periodEnd||'').trim().slice(0,7);
+  const report=getPassportYearOverYearAnalytics_({baseYear:'2025',compareYear:'2026',periodEnd:requestedEnd});
+  const row=(report.offices?.rows||[]).find(x=>String(x.kantor_imigrasi||'')===office);
+  if(!row)throw new Error('PASSPORT_YOY_OFFICE_NOT_FOUND: '+office);
+  const base=getServiceDashboard_('PASSPORT_SERVICE_MONTHLY_2025',['m_paspor','walk_in','prioritas','percepatan','eazy','inovasi','bap'],{kantor_imigrasi:office,metric:'total'},'total_permohonan');
+  const compare=getServiceDashboard_('PASSPORT_SERVICE_MONTHLY',['m_paspor','walk_in','prioritas','percepatan','eazy','inovasi','bap'],{kantor_imigrasi:office,metric:'total'},'total');
+  const baseByPeriod=Object.fromEntries((base.monthly||[]).map(x=>[String(x.periode||''),Number(x.total||0)]));
+  const compareByPeriod=Object.fromEntries((compare.monthly||[]).map(x=>[String(x.periode||''),Number(x.total||0)]));
+  const monthly=(report.monthly||[]).map(m=>{
+    const p25=String(m.periode2025||''),p26=String(m.periode2026||'');
+    const b=Number(baseByPeriod[p25]||0),c=Number(compareByPeriod[p26]||0),delta=c-b;
+    return {periode2025:p25,periode2026:p26,base2025:b,compare2026:c,delta,growthPct:b===0?null:(delta/b)*100};
+  });
+  return {
+    contract:String(report.contract||''),readOnly:true,kantor_imigrasi:office,
+    baseYear:'2025',compareYear:'2026',status:String(row.status||''),
+    monthCount:Number(report.period?.monthCount||0),
+    latestPeriod:String((report.period?.comparePeriodsAvailable||[]).slice(-1)[0]||''),
+    base2025:Number(row.base2025||0),compare2026:Number(row.compare2026||0),
+    delta:Number(row.delta||0),growthPct:row.growthPct===null?null:Number(row.growthPct),
+    monthly
+  };
+}
