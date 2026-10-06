@@ -116,3 +116,58 @@ function verifyPassportServiceSnapshot(snapshotSpreadsheetId){
   appendAudit_('BACKUP_SNAPSHOT_VERIFY','PASSPORT_SERVICE_MONTHLY',snapshotId,sourceRowCount,result.ok?'SUCCESS':'FAILED',JSON.stringify(result));
   return result;
 }
+
+
+function verifyPassportServiceMonthly2025(){
+  return verifyDatasetIntegrityV1('PASSPORT_SERVICE_MONTHLY_2025');
+}
+
+function createPassportServiceMonthly2025Snapshot(){
+  requirePermission_('admin.config');
+  const cfg=backupConfig_();if(!cfg.folderId)throw new Error('BACKUP_FOLDER_NOT_CONFIGURED');
+  const datasetKey='PASSPORT_SERVICE_MONTHLY_2025',d=getActiveDatasetContract_(datasetKey),source=getDb_(),values=d.sheet.getDataRange().getValues();
+  const normalized=values.map(row=>row.map(v=>v instanceof Date?Utilities.formatDate(v,APP.TZ,"yyyy-MM-dd'T'HH:mm:ssXXX"):v));
+  const csv=normalized.map(r=>r.map(csvEscapeBackup_).join(',')).join('\\n'),checksum=sha256Hex_(csv),rowCount=Math.max(0,values.length-1),snapshotId=Utilities.getUuid(),timestamp=nowIso_();
+  const filename='BACKUP_'+datasetKey+'_'+Utilities.formatDate(new Date(),APP.TZ,'yyyyMMdd_HHmmss');
+  const backup=SpreadsheetApp.create(filename),backupId=backup.getId(),dataSheet=backup.getSheets()[0];
+  dataSheet.setName(datasetKey);
+  dataSheet.getRange(1,1,values.length,values[0].length).setValues(normalized);dataSheet.setFrozenRows(1);
+  const manifest=backup.insertSheet('SNAPSHOT_MANIFEST');manifest.getRange(1,1,1,2).setValues([['key','value']]);
+  manifest.getRange(2,1,10,2).setValues([
+    ['snapshot_id',snapshotId],['created_at',timestamp],['dataset_key',datasetKey],['schema_version',String(d.contract.version)],
+    ['schema_signature',String(d.registryRow[d.registryIndex.schema_signature]||'')],['source_spreadsheet_id',source.getId()],
+    ['source_sheet',d.sheetName],['row_count',rowCount],['content_sha256',checksum],['status','COMPLETE']
+  ]);manifest.setFrozenRows(1);
+  const folder=DriveApp.getFolderById(cfg.folderId),file=DriveApp.getFileById(backupId);folder.addFile(file);try{DriveApp.getRootFolder().removeFile(file);}catch(e){}
+  appendAudit_('BACKUP_SNAPSHOT_CREATE',datasetKey,snapshotId,rowCount,'SUCCESS',JSON.stringify({backupSpreadsheetId:backupId,filename,checksum,folderId:cfg.folderId}));
+  return {ok:true,snapshotId,backupSpreadsheetId:backupId,filename,rowCount,checksum,folderId:cfg.folderId};
+}
+
+function verifyPassportServiceMonthly2025Snapshot(snapshotSpreadsheetId){
+  const user=requirePermission_('audit.read'),cfg=backupConfig_();if(!cfg.folderId)throw new Error('BACKUP_FOLDER_NOT_CONFIGURED');
+  const snapshotId=String(snapshotSpreadsheetId||'').trim();if(!snapshotId)throw new Error('SNAPSHOT_SPREADSHEET_ID_REQUIRED');
+  const datasetKey='PASSPORT_SERVICE_MONTHLY_2025',d=getActiveDatasetContract_(datasetKey),source=getDb_();
+  const sourceValues=d.sheet.getDataRange().getValues(),normalizedSource=sourceValues.map(row=>row.map(v=>v instanceof Date?Utilities.formatDate(v,APP.TZ,"yyyy-MM-dd'T'HH:mm:ssXXX"):v));
+  const sourceCsv=normalizedSource.map(r=>r.map(csvEscapeBackup_).join(',')).join('\\n'),sourceChecksum=sha256Hex_(sourceCsv),sourceRowCount=Math.max(0,sourceValues.length-1);
+  let snapshot;try{snapshot=SpreadsheetApp.openById(snapshotId);}catch(e){throw new Error('SNAPSHOT_NOT_FOUND: '+snapshotId);}
+  const parents=DriveApp.getFileById(snapshotId).getParents();let inConfiguredFolder=false;while(parents.hasNext()){if(parents.next().getId()===cfg.folderId){inConfiguredFolder=true;break;}}
+  const dataSheet=snapshot.getSheetByName(datasetKey),manifest=snapshot.getSheetByName('SNAPSHOT_MANIFEST');if(!dataSheet)throw new Error('SNAPSHOT_DATASET_SHEET_NOT_FOUND');if(!manifest)throw new Error('SNAPSHOT_MANIFEST_NOT_FOUND');
+  const mv=manifest.getDataRange().getValues(),mm={};mv.slice(1).forEach(r=>{if(String(r[0]||''))mm[String(r[0])]=String(r[1]??'');});
+  const snapshotValues=dataSheet.getDataRange().getValues(),normalizedSnapshot=snapshotValues.map(row=>row.map(v=>v instanceof Date?Utilities.formatDate(v,APP.TZ,"yyyy-MM-dd'T'HH:mm:ssXXX"):v));
+  const snapshotCsv=normalizedSnapshot.map(r=>r.map(csvEscapeBackup_).join(',')).join('\\n'),snapshotChecksum=sha256Hex_(snapshotCsv),snapshotRowCount=Math.max(0,snapshotValues.length-1),issues=[];
+  if(mm.status!=='COMPLETE')issues.push('Snapshot manifest status bukan COMPLETE.');
+  if(mm.dataset_key!==datasetKey)issues.push('Manifest dataset_key berbeda.');
+  if(mm.schema_version!==String(d.contract.version))issues.push('Manifest schema_version berbeda.');
+  if(mm.source_spreadsheet_id!==source.getId())issues.push('Manifest source_spreadsheet_id berbeda.');
+  if(mm.source_sheet!==d.sheetName)issues.push('Manifest source_sheet berbeda.');
+  if(mm.schema_signature!==String(d.registryRow[d.registryIndex.schema_signature]||''))issues.push('Manifest schema_signature berbeda.');
+  if(Number(mm.row_count)!==sourceRowCount)issues.push('Manifest row_count berbeda dari source.');
+  if(mm.content_sha256!==sourceChecksum)issues.push('Manifest checksum berbeda dari source.');
+  if(!inConfiguredFolder)issues.push('Snapshot berada di luar BACKUP_FOLDER_ID.');
+  if(JSON.stringify(snapshotValues[0]||[])!==JSON.stringify(sourceValues[0]||[]))issues.push('Snapshot header berbeda dari source.');
+  if(snapshotRowCount!==sourceRowCount)issues.push('Snapshot row count berbeda dari source.');
+  if(snapshotChecksum!==sourceChecksum)issues.push('Snapshot content checksum berbeda dari source.');
+  const result={ok:issues.length===0,verifiedAt:nowIso_(),actor:user.email,datasetKey,snapshotSpreadsheetId:snapshotId,inConfiguredFolder,sourceRowCount,snapshotRowCount,sourceChecksum,snapshotChecksum,manifestChecksum:String(mm.content_sha256||''),issues};
+  appendAudit_('BACKUP_SNAPSHOT_VERIFY',datasetKey,snapshotId,sourceRowCount,result.ok?'SUCCESS':'FAILED',JSON.stringify(result));
+  return result;
+}
