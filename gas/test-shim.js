@@ -241,6 +241,9 @@ assert(codeGs.includes("function getActiveRunningTexts()") && codeGs.includes("r
 const publicTv=read('PublicTvService.gs');
 assert(publicTv.includes('function getPublicTvPassportYoYContext'), 'Public TV exposes read-only Passport 2025 historical context');
 assert(publicTv.includes('function getPublicTvPassportOfficeYoYContext'), 'Public TV exposes read-only Passport YoY context per office');
+assert(publicTv.includes('function getPublicTvPassportServiceYoYContext'), 'Public TV exposes read-only Passport service-level YoY context');
+assert(publicTv.includes("PASSPORT_SERVICE_MONTHLY_2025") && publicTv.includes("PASSPORT_SERVICE_MONTHLY'"), 'Service YoY adapter reads both canonical Passport service datasets');
+assert(publicTv.includes('base2025') && publicTv.includes('compare2026') && publicTv.includes('growthPct'), 'Service YoY adapter exposes service comparison metrics');
 assert(publicTv.includes("getServiceDashboard_('PASSPORT_SERVICE_MONTHLY_2025'") && publicTv.includes("getServiceDashboard_('PASSPORT_SERVICE_MONTHLY'"), 'Office YoY adapter reads both canonical Passport datasets through read-only dashboard cores');
 assert(publicTv.includes('status:String(row.status||\'\')') && publicTv.includes('monthly'), 'Office YoY adapter exposes office status and matched monthly comparison');
 assert(publicTv.includes("getPassportYearOverYearAnalytics_({baseYear:'2025',compareYear:'2026'})"), 'Passport historical TV context reuses the verified YoY semantic adapter');
@@ -316,6 +319,9 @@ assert(tvCharts.includes('Perbandingan Kinerja Kantor') && tvCharts.includes('20
 assert(tvCharts.includes('office-yoy-row') && tvCharts.includes('YoY'), 'Office YoY modal exposes matched monthly delta and growth rows');
 assert(tvCharts.includes('function openTop10Modal') && tvCharts.includes('Performance Insight · YoY'), 'INTAL TV Top 10 modal includes Passport YoY performance insight');
 assert(tvCharts.includes('Penyumbang kenaikan') && tvCharts.includes('Penyumbang penurunan'), 'Passport performance insight separates positive and negative contributors');
+assert(tvCharts.includes('Service Intelligence · YoY'), 'INTAL TV exposes Passport service-level YoY intelligence in distribution modal');
+assert(tvCharts.includes('passport-service-yoy-row') && tvCharts.includes('Rekonsiliasi service'), 'Passport service intelligence renders comparison rows and reconciliation status');
+assert(tvCharts.includes("call('getPublicTvPassportServiceYoYContext')"), 'INTAL TV loads service YoY through the read-only public adapter');
 assert(tvCharts.includes('comparableOfficeDelta') && tvCharts.includes('newOfficeContribution2026'), 'Passport performance insight reconciles comparable and NEW 2026 contribution');
 assert(publicTv.includes('offices:(report.offices?.rows||[])') && publicTv.includes('comparableCount'), 'Public Passport YoY context exposes sanitized office-level performance rows');
 assert(tvCharts.includes('font-size:clamp(10px,.68vw,13px)') && tvCharts.includes('font-size:clamp(11px,.78vw,14px)'), 'Office YoY typography uses responsive readable font sizes');
