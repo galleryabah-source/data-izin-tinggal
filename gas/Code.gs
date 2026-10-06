@@ -58,6 +58,15 @@ function seedDictionary_(){
     ['epo','EPO','EPO','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
     ['imk','IMK','IMK','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
     ['skim','SKIM','SKIM','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
+    ['m_paspor','M-Paspor','M-PASPOR;M PASPOR;MPASPOR','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
+    ['walk_in','Walk In','WALK IN;WALK-IN;WALKIN','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
+    ['prioritas','Prioritas','PRIORITAS','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
+    ['percepatan','Percepatan','PERCEPATAN','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
+    ['eazy','Eazy','EAZY','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
+    ['inovasi','Inovasi','INOVASI','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
+    ['bap','BAP','BAP','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
+    ['total_permohonan','Total Permohonan','JUMLAH;TOTAL PERMOHONAN','INTEGER','FALSE','','derived_integer','INTERNAL','TRUE','TRUE','','1'],
+    ['penerbitan','Penerbitan','PENERBITAN;JUMLAH PENERBITAN','INTEGER','TRUE','','integer','INTERNAL','TRUE','TRUE','','1'],
     ['total','Total','TOTAL','INTEGER','FALSE','','derived_integer','INTERNAL','TRUE','TRUE','','1']
   ];
   const existing=sh.getDataRange().getValues(),byKey={};
