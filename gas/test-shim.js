@@ -551,6 +551,9 @@ assert(uiCode.includes('importFileWorkbook.SheetNames.filter(name=>importMonthPe
 assert(uiCode.includes('Gabungkan seluruh sheet bulanan 2025'), 'Passport 2025 import exposes explicit batch mode');
 assert(uiCode.includes('PASSPORT_2025_PERIOD_REQUIRED'), 'Passport 2025 import rejects the partial TOTAL REKAP sheet as a monthly source');
 assert(uiCode.includes('PASSPORT_2025_SCHEMA_DRIFT'), 'Passport 2025 batch import blocks cross-sheet schema drift');
+assert(uiCode.includes('function passport2025RowsToTsv_'), 'Passport 2025 normalization uses an explicit TSV serializer');
+assert(uiCode.includes("importFileText=passport2025RowsToTsv_(header,rows)"), 'Passport 2025 batch import serializes all canonical columns including PENERBITAN');
+assert(uiCode.includes("importFileText=passport2025RowsToTsv_(normalized.header,normalized.rows)"), 'Passport 2025 single-sheet import uses the same canonical TSV serializer');
 // Multi-sheet / header-row file import invariants
 assert(uiCode.includes('id="importFileSheet"'), 'Back Office file import exposes workbook sheet selection');
 assert(uiCode.includes('function detectImportFileHeaderRow_(ws)'), 'Back Office file import detects header rows beyond row 1');
