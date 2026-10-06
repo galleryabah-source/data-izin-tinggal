@@ -75,29 +75,40 @@ function getResidencePermitDashboard_(filters){
 
 function getPassportDashboard(filters){
   requirePermission_('dashboard.read');
-  return getServiceDashboard_('PASSPORT_SERVICE_MONTHLY',['biasa_24','biasa_48','elektronik_48','e_polikarbonat'],filters);
+  const f=filters||{};
+  const year=String(f.tahun||'2026').trim();
+  if(year==='2025')return getServiceDashboard_('PASSPORT_SERVICE_MONTHLY_2025',['m_paspor','walk_in','prioritas','percepatan','eazy','inovasi','bap'],f,'total_permohonan');
+  return getServiceDashboard_('PASSPORT_SERVICE_MONTHLY',['biasa_24','biasa_48','elektronik_48','e_polikarbonat'],f,'total');
 }
 
-function getServiceDashboard_(datasetKey,serviceColumns,filters){
+function getServiceDashboard_(datasetKey,serviceColumns,filters,totalColumn){
   const cacheKey=readCacheKey_('dashboard',{dataset:datasetKey,filters:filters||{}});
   const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const d=getActiveDatasetContract_(datasetKey);
   const values=d.sheet.getDataRange().getValues();
-  if(values.length<2)return {datasetKey,rowCount:0,metric:'total',grandTotal:0,monthly:[],offices:[],services:[],filters:{periode:'',kantor_imigrasi:'',metric:'total',availablePeriods:[],availableOffices:[]}};
+  const emptyFilters={tahun:String((filters&&filters.tahun)||''),periode:'',kantor_imigrasi:'',metric:'total',availableYears:['2025','2026'],availablePeriods:[],availableOffices:[]};
+  if(values.length<2)return {datasetKey,rowCount:0,metric:'total',grandTotal:0,monthly:[],offices:[],services:[],filters:emptyFilters};
   const header=values[0],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
+  const requestedYear=String((filters&&filters.tahun)||'').trim();
   const requestedPeriod=String((filters&&filters.periode)||'').trim();
   const requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
   const requestedMetric=String((filters&&filters.metric)||'total').trim()||'total';
+  const totalKey=totalColumn||'total';
   const supportedMetrics=['total'].concat(serviceColumns);
   if(supportedMetrics.indexOf(requestedMetric)===-1)throw new Error('DASHBOARD_METRIC_NOT_SUPPORTED: '+requestedMetric);
-  const metricIndex=requestedMetric==='total'?hi.total:hi[requestedMetric];
+  const metricIndex=requestedMetric==='total'?hi[totalKey]:hi[requestedMetric];
   if(metricIndex===undefined)throw new Error('DASHBOARD_METRIC_COLUMN_NOT_FOUND: '+requestedMetric);
   const allRows=values.slice(1).filter(r=>r.some(v=>String(v)!==''));
   const periodOf_=r=>{const raw=r[hi.periode];return raw instanceof Date?Utilities.formatDate(raw,APP.TZ,'yyyy-MM'):String(raw||'').trim();};
   const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
   const availablePeriods=[...new Set(allRows.map(periodOf_).filter(Boolean))].sort();
   const availableOffices=[...new Set(allRows.map(officeOf_).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'id'));
-  const rows=allRows.filter(r=>(!requestedPeriod||periodOf_(r)===requestedPeriod)&&(!requestedOffice||officeOf_(r)===requestedOffice));
+  const availableYears=['2025','2026'];
+  const rows=allRows.filter(r=>
+    (!requestedYear||periodOf_(r).slice(0,4)===requestedYear)&&
+    (!requestedPeriod||periodOf_(r)===requestedPeriod)&&
+    (!requestedOffice||officeOf_(r)===requestedOffice)
+  );
   const monthly={},offices={},services={};serviceColumns.forEach(c=>services[c]=0);
   let grandTotal=0;
   rows.forEach(r=>{
@@ -107,34 +118,38 @@ function getServiceDashboard_(datasetKey,serviceColumns,filters){
     monthly[period].total+=metricValue;monthly[period].rows++;
     if(!offices[office])offices[office]={kantor_imigrasi:office,total:0,rows:0};
     offices[office].total+=metricValue;offices[office].rows++;
-    serviceColumns.forEach(c=>services[c]+=Number(r[hi[c]]||0));
+    serviceColumns.forEach(col=>services[col]+=Number(r[hi[col]]||0));
   });
-  return readCachePut_(cacheKey,{datasetKey,rowCount:rows.length,metric:requestedMetric,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric,availablePeriods,availableOffices},grandTotal,monthly:Object.values(monthly).sort((a,b)=>a.periode.localeCompare(b.periode)),offices:Object.values(offices).sort((a,b)=>b.total-a.total),services:serviceColumns.map(c=>({key:c,total:services[c]}))},READ_CACHE_TTL_SEC);
+  const selectedYear=requestedYear||((availablePeriods[0]||'').slice(0,4));
+  return readCachePut_(cacheKey,{datasetKey,rowCount:rows.length,metric:requestedMetric,grandTotal,monthly:Object.values(monthly).sort((x,y)=>x.periode.localeCompare(y.periode)),offices:Object.values(offices).sort((x,y)=>y.total-x.total),services:serviceColumns.map(col=>({key:col,total:services[col]})),filters:{tahun:selectedYear,periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric,availableYears,availablePeriods,availableOffices}},READ_CACHE_TTL_SEC);
 }
 
 function getPassportMap(filters){
   requirePermission_('map.read');
-  return getServiceMap_('PASSPORT_SERVICE_MONTHLY',filters);
+  const f=filters||{},year=String(f.tahun||'2026').trim();
+  return year==='2025'?getServiceMap_('PASSPORT_SERVICE_MONTHLY_2025',f,'total_permohonan'):getServiceMap_('PASSPORT_SERVICE_MONTHLY',f,'total');
 }
 
-function getServiceMap_(datasetKey,filters){
+function getServiceMap_(datasetKey,filters,totalColumn){
   const cacheKey=readCacheKey_('map',{dataset:datasetKey,filters:filters||{}});
   const cached=readCacheGet_(cacheKey);if(cached)return cached;
   const readiness=getOfficeReferenceStatus_();
   if(!readiness.ready)throw new Error('OFFICE_REFERENCE_NOT_READY');
   const d=getActiveDatasetContract_(datasetKey),values=d.sheet.getDataRange().getValues();
-  if(values.length<2)return {datasetKey,rowCount:0,markers:[],metric:'total',filters:{periode:'',kantor_imigrasi:'',metric:'total'}};
+  if(values.length<2)return {datasetKey,rowCount:0,markers:[],metric:'total',filters:{tahun:String((filters&&filters.tahun)||''),periode:'',kantor_imigrasi:'',metric:'total'}};
   const header=values[0],hi=Object.fromEntries(header.map((x,n)=>[x,n]));
+  const requestedYear=String((filters&&filters.tahun)||'').trim();
   const requestedPeriod=String((filters&&filters.periode)||'').trim();
   const requestedOffice=String((filters&&filters.kantor_imigrasi)||'').trim();
   const requestedMetric=String((filters&&filters.metric)||'total').trim()||'total';
+  const totalKey=totalColumn||'total';
   const supportedMetrics=['total'].concat(d.contract.measures||[]);
   if(supportedMetrics.indexOf(requestedMetric)===-1)throw new Error('MAP_METRIC_NOT_SUPPORTED: '+requestedMetric);
-  const metricIndex=requestedMetric==='total'?hi.total:hi[requestedMetric];
+  const metricIndex=requestedMetric==='total'?hi[totalKey]:hi[requestedMetric];
   if(metricIndex===undefined)throw new Error('MAP_METRIC_COLUMN_NOT_FOUND: '+requestedMetric);
   const periodOf_=r=>{const raw=r[hi.periode];return raw instanceof Date?Utilities.formatDate(raw,APP.TZ,'yyyy-MM'):String(raw||'').trim();};
   const officeOf_=r=>String(r[hi.kantor_imigrasi]||'').trim();
-  const rows=values.slice(1).filter(r=>r.some(v=>String(v)!=='')).filter(r=>(!requestedPeriod||periodOf_(r)===requestedPeriod)&&(!requestedOffice||officeOf_(r)===requestedOffice));
+  const rows=values.slice(1).filter(r=>r.some(v=>String(v)!=='')).filter(r=>(!requestedYear||periodOf_(r).slice(0,4)===requestedYear)&&(!requestedPeriod||periodOf_(r)===requestedPeriod)&&(!requestedOffice||officeOf_(r)===requestedOffice));
   const ref=getDb_().getSheetByName('OFFICE_REFERENCE'),rv=ref.getDataRange().getValues(),rh=rv[0]||[],ri=Object.fromEntries(rh.map((x,n)=>[x,n])),byOffice={};
   rv.slice(1).filter(r=>r.some(v=>String(v)!=='')).forEach(r=>{const name=String(r[ri.kantor_imigrasi]||'').trim(),status=String(r[ri.status]||'').trim().toUpperCase();if(name&&status==='VERIFIED')byOffice[name]=r;});
   const markers={};
@@ -142,11 +157,11 @@ function getServiceMap_(datasetKey,filters){
     const office=officeOf_(r),reference=byOffice[office];if(!reference)throw new Error('OFFICE_REFERENCE_MISSING_FOR_DATASET: '+office);
     const lat=Number(reference[ri.latitude]),lng=Number(reference[ri.longitude]);if(!Number.isFinite(lat)||!Number.isFinite(lng))throw new Error('OFFICE_REFERENCE_COORDINATE_INVALID: '+office);
     if(!markers[office])markers[office]={office_key:String(reference[ri.office_key]||''),kantor_imigrasi:office,address:String(reference[ri.address]||''),latitude:lat,longitude:lng,source_url:String(reference[ri.source_url]||''),total:0,metricValue:0,rows:0};
-    markers[office].total+=Number(r[hi.total]||0);
+    markers[office].total+=Number(r[hi[totalKey]]||0);
     markers[office].metricValue+=Number(r[metricIndex]||0);
     markers[office].rows++;
   });
-  return readCachePut_(cacheKey,{datasetKey,rowCount:rows.length,metric:requestedMetric,filters:{periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric},markers:Object.values(markers).sort((a,b)=>b.metricValue-a.metricValue)},READ_CACHE_TTL_SEC);
+  return readCachePut_(cacheKey,{datasetKey,rowCount:rows.length,metric:requestedMetric,filters:{tahun:requestedYear,periode:requestedPeriod,kantor_imigrasi:requestedOffice,metric:requestedMetric},markers:Object.values(markers).sort((x,y)=>y.metricValue-x.metricValue)},READ_CACHE_TTL_SEC);
 }
 
 function csvEscape_(value){
@@ -190,7 +205,8 @@ function getResidencePermitDrilldown(filters){
 }
 
 function getPassportDrilldown(filters){
-  return getServiceDrilldown_('PASSPORT_SERVICE_MONTHLY',filters,'month');
+  const f=filters||{},year=String(f.tahun||'2026').trim();
+  return getServiceDrilldown_(year==='2025'?'PASSPORT_SERVICE_MONTHLY_2025':'PASSPORT_SERVICE_MONTHLY',f,'month');
 }
 
 function getServiceDrilldown_(datasetKey,filters,periodMode){
