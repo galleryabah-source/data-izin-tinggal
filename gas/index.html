@@ -557,10 +557,19 @@ function normalizePassport2025Sheet_(ws,sheetName){
   if(!detected.passport2025)throw new Error('PASSPORT_2025_HEADER_NOT_DETECTED: struktur sheet bukan laporan Paspor 2025 yang diharapkan.');
   const period=importMonthPeriodFromSheetName_(sheetName);
   if(!period)throw new Error('PASSPORT_2025_PERIOD_REQUIRED: pilih sheet bulanan JANUARI-DESEMBER 2025, bukan TOTAL REKAP 2025.');
-  const upper=detected.rows[detected.index]||[],lower=detected.rows[detected.index+1]||[];
-  const header=['PERIODE'].concat(upper.map((x,i)=>lower[i]||x));
-  const data=detected.rows.slice(detected.index+detected.headerRows).filter(row=>String(row[2]||'').trim()&&String(row[2]||'').trim().toUpperCase()!=='JUMLAH');
-  return {period,header,rows:data.map(row=>[period].concat(row)),headerRow:detected.index+1,dataRows:data.length};
+  // The original workbook has a two-row header with a leading NO column.
+  // Normalize it to the exact historical contract before server-side schema detection.
+  const header=['PERIODE','KANTOR_IMIGRASI','M_PASPOR','WALK_IN','PRIORITAS','PERCEPATAN','EAZY','INOVASI','BAP','TOTAL_PERMOHONAN','PENERBITAN'];
+  const data=detected.rows.slice(detected.index+detected.headerRows).filter(row=>{
+    const office=String(row[2]||'').trim().toUpperCase();
+    return office&&office!=='KANIM'&&office!=='JUMLAH';
+  });
+  const rows=data.map(row=>[
+    period,
+    String(row[2]||'').trim(),
+    row[3],row[4],row[5],row[6],row[7],row[8],row[9],row[10],row[11]
+  ]);
+  return {period,header,rows,headerRow:detected.index+1,dataRows:rows.length};
 }
 function prepareImportFileSheet(){
   if(!importFileWorkbook)return;
