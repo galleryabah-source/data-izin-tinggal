@@ -128,3 +128,36 @@ function getPublicTvAnalyticalRunningTexts(){
   analytical.push(...offices.map(o=>({type:'office',rank:o.rank,kantor_imigrasi:o.kantor_imigrasi,text:'Peringkat '+o.rank+' — '+o.kantor_imigrasi+' mencatat '+fmt(o.combined)+' layanan selama '+(monthly.length?monthLabel(first.periode)+'–'+monthLabel(last.periode):'periode tersedia')+', terdiri dari '+fmt(o.passport)+' layanan Paspor dan '+fmt(o.residence)+' layanan Izin Tinggal. Kontribusi kantor ini mencapai '+pct(o.combined,total)+' dari total '+fmt(total)+' layanan Paspor dan Izin Tinggal yang tercatat dalam aplikasi.'})));
   return analytical;
 }
+
+/**
+ * Public Passport historical context for INTAL TV.
+ *
+ * Read-only presentation adapter over the already-verified Passport YoY
+ * semantic adapter. No canonical dataset, registry, importer, or historical
+ * baseline is written or altered here.
+ */
+function getPublicTvPassportYoYContext(){
+  const report=getPassportYearOverYearAnalytics_({baseYear:'2025',compareYear:'2026'});
+  return {
+    contract:String(report.contract||''),
+    readOnly:true,
+    baseYear:'2025',
+    compareYear:'2026',
+    monthCount:Number(report.period?.monthCount||0),
+    latestPeriod:String((report.period?.comparePeriodsAvailable||[]).slice(-1)[0]||''),
+    base2025:Number(report.totals?.base2025||0),
+    compare2026:Number(report.totals?.compare2026||0),
+    delta:Number(report.totals?.delta||0),
+    growthPct:report.totals?.growthPct===null?null:Number(report.totals?.growthPct),
+    comparableOfficeDelta:Number(report.totals?.comparableOfficeDelta||0),
+    newOfficeContribution2026:Number(report.totals?.newOfficeContribution2026||0),
+    monthly:(report.monthly||[]).map(x=>({
+      periode2025:String(x.periode2025||''),
+      periode2026:String(x.periode2026||''),
+      base2025:Number(x.base2025||0),
+      compare2026:Number(x.compare2026||0),
+      delta:Number(x.delta||0),
+      growthPct:x.growthPct===null?null:Number(x.growthPct)
+    }))
+  };
+}
