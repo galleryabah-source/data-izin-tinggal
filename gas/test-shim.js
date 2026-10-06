@@ -540,7 +540,7 @@ assert(uiCode.includes('Pilih file sumber terlebih dahulu.'), 'Back Office file 
 assert(uiCode.includes('id="importFileSheet"'), 'Back Office file import exposes workbook sheet selection');
 assert(uiCode.includes('function detectImportFileHeaderRow_(ws)'), 'Back Office file import detects header rows beyond row 1');
 assert(uiCode.includes('function prepareImportFileSheet()'), 'Back Office file import prepares the selected workbook sheet');
-assert(uiCode.includes('sheet '+String.fromCharCode(39)), 'Back Office file import source UI reports selected sheet');
+assert(uiCode.includes("sheet '+esc(importFileWorkbook.SheetNames[importFileSheetIndex])"), 'Back Office file import source UI reports selected sheet');
 // Phase 10.1 — Cross-Service Reporting Contract invariants
 const crossService=read('DashboardService.gs');
 assert(crossService.includes('function getCrossServiceReporting(filters)'), 'Phase 10.1 cross-service reporting adapter exists');
