@@ -551,9 +551,6 @@ assert(yoyCode.includes('avgMonthlyBase2025'), 'Passport YoY exposes average mon
 assert(yoyCode.includes('comparableOfficeGrowthPct'), 'Passport YoY exposes comparable-office growth');
 assert(yoyCode.includes('newOfficeContributionPct'), 'Passport YoY exposes new-office contribution');
 assert(yoyCode.includes('peakGrowth') && yoyCode.includes('lowestGrowth'), 'Passport YoY exposes peak and lowest monthly growth');
-assert(yoyUi.includes('id="passportYoyInsights"'), 'Passport YoY UI exposes analytical insight cards');
-assert(yoyUi.includes('id="passportYoyContribution"'), 'Passport YoY UI exposes contribution analysis');
-assert(yoyUi.includes('Tren Bulanan'), 'Passport YoY UI exposes monthly trend visualization');
 
 const governance2026=read('PassportGovernanceService.gs');
 assert(governance2026.includes('verifyPassportServiceMonthly2026Ytd'), 'Passport 2026 September YTD verification gate exists');
@@ -562,6 +559,10 @@ assert(governance2026.includes('periods2026.length!==9'), 'Passport 2026 gate re
 assert(governance2026.includes('offices.length!==10'), 'Passport 2026 gate requires ten offices');
 assert(governance2026.includes('GARUT'), 'Passport 2026 gate explicitly checks Garut');
 const yoyUi=read('index.html');
+assert(yoyUi.includes('id="passportYoyInsights"'), 'Passport YoY UI exposes analytical insight cards');
+assert(yoyUi.includes('id="passportYoyContribution"'), 'Passport YoY UI exposes contribution analysis');
+assert(yoyUi.includes('Tren Bulanan'), 'Passport YoY UI exposes monthly trend visualization');
+
 assert((yoyUi.match(/value="2026-0[1-9]"/g)||[]).length===9, 'Passport YoY period selector exposes January-September 2026');
 assert(yoyUi.includes('id="annualAnalyticsSection"'), 'Back Office exposes isolated annual analytics section');
 assert(yoyUi.includes('getPassportYearOverYearAnalytics'), 'Annual analytics UI calls canonical YoY adapter');
