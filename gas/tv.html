@@ -211,10 +211,26 @@ async function renderQuotaSnapshot(q){
   const head=document.querySelector('.map-head .map-title'),sub=document.querySelector('.map-head .map-sub');
   if(head)head.textContent='PETA SEBARAN KUOTA M-PASPOR JAWA BARAT';
   if(sub)sub.textContent='Office Reference · verified coordinates · read-only';
-  const mapData=q?.markers;
-  if(!validMapData(mapData))throw new Error('MPASPOR_QUOTA_MAP_INVALID');
+  const quotaByOffice=Object.fromEntries(offices.map(o=>[String(o.kantor_imigrasi||'').trim(),Number(o.mpaspor||0)]));
+  let canonicalMap=CACHE[SERVICES[0]]?.mapData||BASE_CACHE[SERVICES[0]]?.mapData;
+  if(!validMapData(canonicalMap)){
+    const canonicalSnapshot=CACHE[SERVICES[0]]||BASE_CACHE[SERVICES[0]];
+    if(canonicalSnapshot)await ensureSnapshotMap(SERVICES[0],canonicalSnapshot);
+    canonicalMap=canonicalSnapshot?.mapData||CACHE[SERVICES[0]]?.mapData||BASE_CACHE[SERVICES[0]]?.mapData;
+  }
+  if(!validMapData(canonicalMap))throw new Error('MPASPOR_QUOTA_MAP_INVALID_CANONICAL_OFFICE_REFERENCE');
+  const mapData={
+    markers:canonicalMap.markers.map((m,i)=>({
+      ...m,
+      quotaIndex:offices.findIndex(o=>String(o.kantor_imigrasi||'').trim()===String(m.kantor_imigrasi||'').trim()),
+      total:quotaByOffice[String(m.kantor_imigrasi||'').trim()]||0,
+      metricValue:quotaByOffice[String(m.kantor_imigrasi||'').trim()]||0,
+      rows:1
+    })).filter(m=>m.quotaIndex>=0)
+  };
+  if(!validMapData(mapData)||mapData.markers.length!==offices.length)throw new Error('MPASPOR_QUOTA_MAP_OFFICE_ALIGNMENT_INVALID');
   const L=await ensureMap();
-  buildLayer('MPASPOR_QUOTA',{markers:mapData},L);
+  buildLayer('MPASPOR_QUOTA',mapData,L);
   showLayer('MPASPOR_QUOTA');
 
   setHtml('ranking','');
@@ -244,6 +260,8 @@ async function activateQuotaMode(refreshOnly){
     setRuntimeState('REFRESHING','Memuat snapshot kuota M-Paspor Oktober 2026...');
     const q=await withTimeout(call('getPublicTvMpasporQuota'),TV_RUNTIME.requestTimeoutMs);
     if(!q||!q.totals||!Array.isArray(q.offices))throw new Error('MPASPOR_QUOTA_INVALID_RESPONSE');
+    const canonicalSnapshot=CACHE[SERVICES[0]]||BASE_CACHE[SERVICES[0]];
+    if(canonicalSnapshot)await ensureSnapshotMap(SERVICES[0],canonicalSnapshot);
     currentService='MPASPOR_QUOTA';updateSwitch();await renderQuotaSnapshot(q);
     TV_STATE.lastGoodAt=Date.now();TV_STATE.consecutiveFailures=0;
     $('read').textContent='LAST READ · '+now()+' WIB';
@@ -418,6 +436,7 @@ async function refreshAllRuntimeData(){
     if(currentService==='MPASPOR_QUOTA'){
       const q=await withTimeout(call('getPublicTvMpasporQuota'),TV_RUNTIME.requestTimeoutMs);
       if(!q||!q.totals||!Array.isArray(q.offices))throw new Error('MPASPOR_QUOTA_INVALID_RESPONSE');
+      await ensureSnapshotMap(SERVICES[0],res);
       await renderQuotaSnapshot(q);
       TV_STATE.lastGoodAt=Date.now();TV_STATE.consecutiveFailures=0;
       $('read').textContent='LAST READ · '+now()+' WIB';
