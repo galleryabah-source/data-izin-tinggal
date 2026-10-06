@@ -374,8 +374,8 @@ async function fetchVerifiedSnapshot(key){
 }
 async function stageServiceSnapshot(key){return fetchVerifiedSnapshot(key);}
 function commitServiceSnapshot(key,snapshot,L){
-  CACHE[key]={dashboard:snapshot.dashboard,mapData:snapshot.mapData,loadedAt:snapshot.loadedAt,mapAvailable:snapshot.mapAvailable};
-  if(!TV_FILTERS.periode&&!TV_FILTERS.kantor_imigrasi&&TV_FILTERS.metric==='total')BASE_CACHE[key]={dashboard:snapshot.dashboard,mapData:snapshot.mapData,loadedAt:snapshot.loadedAt,mapAvailable:snapshot.mapAvailable};
+  CACHE[key]={dashboard:snapshot.dashboard,mapData:snapshot.mapData,mapPromise:snapshot.mapPromise||null,loadedAt:snapshot.loadedAt,mapAvailable:snapshot.mapAvailable};
+  if(!TV_FILTERS.periode&&!TV_FILTERS.kantor_imigrasi&&TV_FILTERS.metric==='total')BASE_CACHE[key]={dashboard:snapshot.dashboard,mapData:snapshot.mapData,mapPromise:snapshot.mapPromise||null,loadedAt:snapshot.loadedAt,mapAvailable:snapshot.mapAvailable};
   VIEW_CACHE[filterKey(key)]=snapshot;
   if(L&&snapshot.mapData)buildLayer(key,snapshot.mapData,L);
 }
@@ -386,6 +386,8 @@ async function ensureSnapshotMap(key,snapshot){
     if(!mapData&&snapshot.mapPromise)mapData=await snapshot.mapPromise;
     if(!validMapData(mapData))return false;
     snapshot.mapData=mapData;snapshot.mapAvailable=true;
+    if(CACHE[key]){CACHE[key].mapData=mapData;CACHE[key].mapAvailable=true;}
+    if(BASE_CACHE[key]){BASE_CACHE[key].mapData=mapData;BASE_CACHE[key].mapAvailable=true;}
     const L=await ensureMap();buildLayer(key,mapData,L);return true;
   }catch(e){return false;}
 }
