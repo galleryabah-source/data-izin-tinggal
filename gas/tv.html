@@ -381,6 +381,7 @@ async function refreshAllRuntimeData(){
     commitServiceSnapshot(SERVICES[0],res,null);
     commitServiceSnapshot(SERVICES[1],pass,null);
     await loadRunningTexts();
+    renderKpis();
     if(currentService==='MPASPOR_QUOTA'){
       const q=await withTimeout(call('getPublicTvMpasporQuota'),TV_RUNTIME.requestTimeoutMs);
       renderQuotaSnapshot(q);
@@ -389,7 +390,6 @@ async function refreshAllRuntimeData(){
       setRuntimeState('ONLINE','M-Paspor quota snapshot verified · Oktober 2026 · read-only');
       return;
     }
-    renderKpis();
     const active=currentService===SERVICES[0]?res:pass;
     renderRanking(active.dashboard.offices);renderTrend(trendRowsFor(currentService,active.dashboard.monthly),TV_FILTERS.periode);renderDistribution(active.dashboard.services,active.dashboard.grandTotal);renderServiceBars(active.dashboard.services);renderOfficeButtons(active.dashboard);
     await ensureSnapshotMap(currentService,active);
