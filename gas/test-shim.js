@@ -549,7 +549,7 @@ assert(yoyCode.includes('base2025') && yoyCode.includes('compare2026'), 'Passpor
 assert(yoyCode.includes('services={'), 'Passport YoY preserves year-specific service definitions');
 const governance2026=read('PassportGovernanceService.gs');
 assert(governance2026.includes('verifyPassportServiceMonthly2026Ytd'), 'Passport 2026 September YTD verification gate exists');
-assert(governance2026.includes("expectedLatest='2026-09'"), 'Passport 2026 gate requires September 2026 as latest period');
+assert(governance2026.includes("latestPeriod!=='2026-09'"), 'Passport 2026 gate requires September 2026 as latest period');
 assert(governance2026.includes('periods2026.length!==9'), 'Passport 2026 gate requires nine monthly periods');
 assert(governance2026.includes('offices.length!==10'), 'Passport 2026 gate requires ten offices');
 assert(governance2026.includes('GARUT'), 'Passport 2026 gate explicitly checks Garut');
