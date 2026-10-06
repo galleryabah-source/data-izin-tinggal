@@ -427,8 +427,17 @@ function renderMpasporQuota(r){
   document.getElementById('quotaSource').textContent='Sumber: '+r.sourceDocument+' · periode '+r.periodLabel+' · read-only snapshot';
 }
 async function refreshMpasporQuota(){
-  try{document.getElementById('quotaStatus').textContent='Memuat...';const r=await callWithTimeout('getMpasporQuotaDashboard',15000);renderMpasporQuota(r);document.getElementById('quotaStatus').innerHTML='<span class="ok">READY · '+esc(r.periodLabel)+'</span>';}
-  catch(e){document.getElementById('quotaStatus').innerHTML='<span class="error">ERROR</span>';document.getElementById('quotaRows').innerHTML='<tr><td colspan="6" class="error">'+esc(e.message||e)+'</td></tr>';}
+  try{
+    document.getElementById('quotaStatus').textContent='Memuat...';
+    const r=await callWithTimeout('getMpasporQuotaDashboard',15000);
+    if(!r||!r.totals||!Array.isArray(r.offices))throw new Error('MPASPOR_QUOTA_INVALID_RESPONSE');
+    renderMpasporQuota(r);
+    document.getElementById('quotaStatus').innerHTML='<span class="ok">READY · '+esc(r.periodLabel)+'</span>';
+  }catch(e){
+    const msg=String(e&&e.message||e);
+    document.getElementById('quotaStatus').innerHTML='<span class="error">ERROR · '+esc(msg)+'</span>';
+    document.getElementById('quotaRows').innerHTML='<tr><td colspan="6" class="error">Kuota M-Paspor gagal dimuat: '+esc(msg)+'</td></tr>';
+  }
 }
 function showBootStatus(message,isError){const el=document.getElementById('pipelineStatus');if(el){el.textContent=message;el.className=isError?'error':'';}const trend=document.getElementById('trend');if(isError&&trend)trend.innerHTML='<span class="error">'+esc(message)+'</span>';}
 
