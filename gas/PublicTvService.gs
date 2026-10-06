@@ -183,43 +183,34 @@ function getPublicTvPassportYoYContext(){
  * Read-only adapter over canonical 2025/2026 monthly datasets.
  * No write capability and no raw-row exposure.
  */
+/**
+ * Public Passport service intelligence guard.
+ *
+ * 2026 uses the canonical four-category Passport taxonomy.
+ * The 2025 historical dataset uses a different service-measure taxonomy
+ * (m_paspor/walk_in/prioritas/percepatan/eazy/inovasi/bap) and its measures
+ * are not a proven one-to-one mapping to the 2026 categories. Therefore
+ * service-level YoY is intentionally NOT comparable until a governed mapping
+ * contract is established. This endpoint exposes the current 2026 composition
+ * only and explicitly reports the comparability state.
+ */
 function getPublicTvPassportServiceYoYContext(){
-  const base=getServiceDashboard_('PASSPORT_SERVICE_MONTHLY_2025',['m_paspor','walk_in','prioritas','percepatan','eazy','inovasi','bap'],{},'total_permohonan');
   const compare=getServiceDashboard_('PASSPORT_SERVICE_MONTHLY',['biasa_24','biasa_48','elektronik_48','e_polikarbonat'],{},'total');
-  const labels={
-    elektronik_48:'Elektronik 48',
-    biasa_48:'Biasa 48',
-    e_polikarbonat:'E-Polikarbonat',
-    biasa_24:'Biasa 24',
-    m_paspor:'M-Paspor',
-    walk_in:'Walk-in',
-    prioritas:'Prioritas',
-    percepatan:'Percepatan',
-    eazy:'Eazy',
-    inovasi:'Inovasi',
-    bap:'BAP'
-  };
-  const b=Object.fromEntries((base.services||[]).map(x=>[String(x.key||''),Number(x.total||0)]));
-  const c=Object.fromEntries((compare.services||[]).map(x=>[String(x.key||''),Number(x.total||0)]));
-  const keys=Array.from(new Set([...(base.services||[]).map(x=>String(x.key||'')),...(compare.services||[]).map(x=>String(x.key||''))])).filter(Boolean);
-  const services=keys.map(key=>{
-    const base2025=Number(b[key]||0),compare2026=Number(c[key]||0),delta=compare2026-base2025;
-    return {key,label:String(labels[key]||key),base2025,compare2026,delta,growthPct:base2025===0?null:(delta/base2025)*100};
-  }).sort((a,b)=>Number(b.compare2026)-Number(a.compare2026));
-  const totalBase=services.reduce((n,x)=>n+x.base2025,0);
-  const totalCompare=services.reduce((n,x)=>n+x.compare2026,0);
-  const delta=totalCompare-totalBase;
+  const labels={elektronik_48:'Elektronik 48',biasa_48:'Biasa 48',e_polikarbonat:'E-Polikarbonat',biasa_24:'Biasa 24'};
+  const services=(compare.services||[]).map(x=>({
+    key:String(x.key||''),label:String(labels[x.key]||x.key||''),
+    base2025:null,compare2026:Number(x.total||0),delta:null,growthPct:null
+  })).filter(x=>x.key);
+  const totalCompare=Number(compare.grandTotal||0);
   return {
-    contract:'PASSPORT_SERVICE_YOY_V1',
+    contract:'PASSPORT_SERVICE_INTELLIGENCE_V1',
     readOnly:true,baseYear:'2025',compareYear:'2026',
-    base2025:totalBase,compare2026:totalCompare,delta,
-    growthPct:totalBase===0?null:(delta/totalBase)*100,
-    services:services.map(x=>({
-      key:x.key,label:x.label,base2025:x.base2025,compare2026:x.compare2026,delta:x.delta,
-      growthPct:x.growthPct===null?null:x.growthPct
-    }))
+    comparisonStatus:'NOT_COMPARABLE',
+    comparisonReason:'2025 service taxonomy differs from 2026 canonical service taxonomy; no governed one-to-one mapping has been established.',
+    base2025:null,compare2026:totalCompare,delta:null,growthPct:null,services
   };
 }
+
 
 function getPublicTvPassportOfficeYoYContext(filters){
   const f=filters||{},office=String(f.kantor_imigrasi||'').trim().slice(0,200);
