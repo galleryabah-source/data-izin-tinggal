@@ -293,6 +293,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
           <select id="importFileSheet" onchange="prepareImportFileSheet()" disabled style="display:block;width:100%;padding:9px;border:1px solid #d0d5dd;border-radius:8px;margin-top:4px;background:#fff"><option value="">Pilih sheet...</option></select>
         </label>
         <button class="btn" type="button" onclick="clearImportFile()">Hapus File</button>
+        <label id="importFileAllHistorical" style="display:none;align-items:center;gap:6px;font-size:11px;color:#475467;white-space:nowrap"><input type="checkbox" onchange="prepareImportFileSheet()"> Gabungkan seluruh sheet bulanan 2025</label>
       </div>
       <div id="fileSourceInfo" class="detail-meta" style="margin-top:8px">Excel/CSV dibaca lokal di browser. Sistem akan mencari baris header secara otomatis; hasil tetap masuk ke mapping + validation server-side.</div>
     </div>
