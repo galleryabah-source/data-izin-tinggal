@@ -161,3 +161,48 @@ function getPublicTvPassportYoYContext(){
     }))
   };
 }
+
+
+/**
+ * Read-only Passport YoY context for one office, used by the existing
+ * INTAL TV office detail modal. It reuses the verified semantic adapter and
+ * exposes no raw rows or write capability.
+ */
+function getPublicTvPassportOfficeYoYContext(filters){
+  const f=filters||{},office=String(f.kantor_imigrasi||'').trim().slice(0,200);
+  if(!office)throw new Error('PASSPORT_YOY_OFFICE_REQUIRED');
+  const requestedEnd=String(f.periodEnd||'').trim().slice(0,7);
+  const report=getPassportYearOverYearAnalytics_({baseYear:'2025',compareYear:'2026',periodEnd:requestedEnd});
+  const row=(report.offices?.rows||[]).find(x=>String(x.kantor_imigrasi||'')===office);
+  if(!row)throw new Error('PASSPORT_YOY_OFFICE_NOT_FOUND: '+office);
+  return {
+    contract:String(report.contract||''),
+    readOnly:true,
+    kantor_imigrasi:office,
+    baseYear:'2025',compareYear:'2026',
+    status:String(row.status||''),
+    monthCount:Number(report.period?.monthCount||0),
+    latestPeriod:String((report.period?.comparePeriodsAvailable||[]).slice(-1)[0]||''),
+    base2025:Number(row.base2025||0),compare2026:Number(row.compare2026||0),
+    delta:Number(row.delta||0),
+    growthPct:row.growthPct===null?null:Number(row.growthPct),
+    monthly:(report.monthly||[]).map(m=>({
+      periode2025:String(m.periode2025||''),periode2026:String(m.periode2026||''),
+      base2025:Number(m.base2025||0),compare2026:Number(m.compare2026||0),
+      delta:Number(m.delta||0),growthPct:m.growthPct===null?null:Number(m.growthPct)
+    })).map(m=>({
+      periode2025:m.periode2025,periode2026:m.periode2026,
+      base2025:officeRowMonthly_(report,office,m.periode2025),
+      compare2026:officeRowMonthly_(report,office,m.periode2026),
+      delta:officeRowMonthly_(report,office,m.periode2026)-officeRowMonthly_(report,office,m.periode2025),
+      growthPct:officeRowMonthly_(report,office,m.periode2025)===0?null:((officeRowMonthly_(report,office,m.periode2026)-officeRowMonthly_(report,office,m.periode2025))/officeRowMonthly_(report,office,m.periode2025))*100
+    }))
+  };
+}
+function officeRowMonthly_(report,office,periode){
+  // The semantic adapter's office rows are YTD totals; for monthly office
+  // detail we intentionally read the same canonical dashboard service through
+  // the public boundary, keeping this helper internal to the server adapter.
+  const d=getServiceDashboard_('PASSPORT_SERVICE_MONTHLY',['biasa_24','biasa_48','elektronik_48','e_polikarbonat'],{periode:String(periode||''),kantor_imigrasi:office,metric:'total'});
+  return Number(d.grandTotal||0);
+}
