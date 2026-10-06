@@ -528,6 +528,14 @@ assert(tvNew.includes('.office-dialog-title{font-size:22px'), 'INTAL TV office d
 assert(tvNew.includes('.office-detail-status{font-size:14px'), 'INTAL TV office detail status/content is readable');
 assert(tvNew.includes('.office-service-card span{font-size:15px'), 'INTAL TV office detail service labels are readable');
 assert(tvNew.includes('.office-service-card b{font-size:28px'), 'INTAL TV office detail service values are prominent');
+// Back Office multi-format import invariants
+assert(indexNew.includes('value="FILE"'), 'Back Office import exposes Excel/CSV file source');
+assert(indexNew.includes('accept=".xlsx,.xls,.csv,.tsv'), 'Back Office import accepts XLSX/XLS/CSV/TSV files');
+assert(indexNew.includes('function handleImportFile(file)'), 'Back Office import parses uploaded files before server validation');
+assert(indexNew.includes("XLSX.read(buffer,{type:'array',cellDates:true,raw:false})"), 'Back Office Excel import uses a workbook parser');
+assert(indexNew.includes("XLSX.utils.sheet_to_csv(ws,{FS:'\\t',RS:'\\n',blankrows:false})"), 'Back Office file import normalizes workbook data to the existing TSV validation seam');
+assert(indexNew.includes("importSourceMode==='FILE'?importFileText"), 'Back Office file import reuses the canonical preview and commit pipeline');
+assert(indexNew.includes('Pilih file sumber terlebih dahulu.'), 'Back Office file import blocks preview until a source file exists');
 // Phase 10.1 — Cross-Service Reporting Contract invariants
 const crossService=read('DashboardService.gs');
 assert(crossService.includes('function getCrossServiceReporting(filters)'), 'Phase 10.1 cross-service reporting adapter exists');
