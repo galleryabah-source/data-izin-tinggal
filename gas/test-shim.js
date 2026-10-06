@@ -314,6 +314,8 @@ assert(tvCharts.includes('function renderOfficeYoYPanel'), 'INTAL TV renders off
 assert(tvCharts.includes("call('getPublicTvPassportOfficeYoYContext'"), 'INTAL TV loads office YoY through the read-only public adapter');
 assert(tvCharts.includes('Perbandingan Kinerja Kantor') && tvCharts.includes('2025 YTD') && tvCharts.includes('2026 YTD'), 'Office YoY modal exposes YTD comparison KPIs');
 assert(tvCharts.includes('office-yoy-row') && tvCharts.includes('YoY'), 'Office YoY modal exposes matched monthly delta and growth rows');
+assert(tvCharts.includes('font-size:clamp(10px,.68vw,13px)') && tvCharts.includes('font-size:clamp(11px,.78vw,14px)'), 'Office YoY typography uses responsive readable font sizes');
+assert(tvCharts.includes('@media(max-width:620px)') && tvCharts.includes('min-width:440px'), 'Office YoY table remains horizontally usable on narrow screens');
 assert(tvCharts.includes('comparison.length&&currentService===SERVICES[1]'), 'INTAL TV enables historical comparison only for Passport');
 assert(tvCharts.includes('trend-yoy-base') && tvCharts.includes('trend-yoy-point'), 'INTAL TV renders a dedicated 2025 historical trend series');
 assert(tvCharts.includes('2026') && tvCharts.includes('2025'), 'INTAL TV labels the Passport comparison series by year');
