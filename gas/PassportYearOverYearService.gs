@@ -57,10 +57,10 @@ function getPassportYearOverYearAnalytics_(filters){
     const cp=compareYear+'-'+p.slice(5),b=baseAgg.periods[p]||{total:0,rows:0},c=compareAgg.periods[cp]||{total:0,rows:0};
     return {periode2025:p,periode2026:cp,base2025:b.total,compare2026:c.total,delta:c.total-b.total,growthPct:b.total===0?null:((c.total-b.total)/b.total)*100,baseRows:b.rows,compareRows:c.rows};
   });
-  const services=PASSPORT_YOY_V1.serviceMeasures.map(key=>{
-    const b=baseAgg.services[key]||0,c=compareAgg.services[key]||0;
-    return {key,base2025:b,compare2026:c,delta:c-b,growthPct:b===0?null:((c-b)/b)*100};
-  });
+  const services={
+    base2025:base.contract.measures.map(key=>({key,total:baseAgg.services[key]||0})),
+    compare2026:compare.contract.measures.map(key=>({key,total:compareAgg.services[key]||0}))
+  };
   const comparableBase=comparable.reduce((s,o)=>s+(baseAgg.offices[o]?.total||0),0),comparableCompare=comparable.reduce((s,o)=>s+(compareAgg.offices[o]?.total||0),0);
   const newOfficeContribution=compareOnly.reduce((s,o)=>s+(compareAgg.offices[o]?.total||0),0);
   return {
