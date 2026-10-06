@@ -518,6 +518,7 @@ assert(switchFn.indexOf('await ensureSnapshotMap(key,result)')>=0 && switchFn.in
 assert(switchFn.includes('const previous=currentService;') && switchFn.includes('currentService=previous;'), 'INTAL TV restores the previous service after a failed switch');
 assert(tvNew.includes("if(TV_STATE.refreshing||TV_STATE.switching)return;"), 'INTAL TV pauses periodic refresh while a manual switch is active');
 assert(tvNew.includes("if(TV_STATE.rotationBusy||TV_STATE.switching||currentService==='MPASPOR_QUOTA')return;"), 'INTAL TV pauses automatic rotation while a manual switch is active');
+assert(tvNew.includes('const activated=await activateService(next);') && tvNew.includes("TV_RUNTIME_ROTATION_ACTIVATION_FAILED"), 'INTAL TV routes automatic rotation through the same service activation seam as manual switching');
 assert(tvNew.includes('if(TV_STATE.switching)return currentService===\'MPASPOR_QUOTA\';'), 'INTAL TV serializes M-Paspor switching with the same runtime lock');
 
 // Phase 10.1 — Cross-Service Reporting Contract invariants
