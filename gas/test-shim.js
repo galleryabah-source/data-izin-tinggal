@@ -144,7 +144,7 @@ assert(dashboard.includes('metricValue'), 'GIS map exposes selected metric value
 assert(dashboard.includes("function getServiceMap_(datasetKey,filters,totalColumn)"), 'GIS metric runtime logic is in shared map seam');
 assert(dashboard.includes("function getResidencePermitMap(filters){\n  requirePermission_('map.read');\n  return getServiceMap_('RESIDENCE_PERMIT_SERVICE_MONTHLY',filters);\n}"), 'Residence map delegates to shared GIS map seam with RBAC protection');
 assert(!dashboard.match(/function exportResidencePermitMonthly\(filters\)\{[\s\S]*?d\.contract\.measures/), 'Residence export does not reference map-only metric contract');
-assert(dashboard.match(/function getServiceMap_\(datasetKey,filters\)\{[\s\S]*?const metricIndex=requestedMetric==='total'\?hi\.total:hi\[requestedMetric\];/), 'GIS map declares metric index inside map seam');
+assert(dashboard.match(/function getServiceMap_\(datasetKey,filters,totalColumn\)\{[\s\S]*?const metricIndex=requestedMetric==='total'\?hi\[totalKey\]:hi\[requestedMetric\];/), 'GIS map declares metric index inside map seam');
 assert(dashboard.includes('const readiness=getOfficeReferenceStatus_();'), 'map core enforces office reference readiness through the private seam');
 assert(dashboard.includes("status==='VERIFIED'"), 'map endpoint reads verified office references only');
 assert(dashboard.includes('OFFICE_REFERENCE_MISSING_FOR_DATASET'), 'map endpoint rejects missing office reference');
