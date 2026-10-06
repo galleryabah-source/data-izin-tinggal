@@ -107,6 +107,35 @@ function buildMpasporQuotaDashboard_(){
 
 function getPublicTvMpasporQuota(){
   const d=buildMpasporQuotaDashboard_();
+  const ss=getDb_(),ref=ss.getSheetByName('OFFICE_REFERENCE');
+  if(!ref)throw new Error('OFFICE_REFERENCE_NOT_READY');
+  const rv=ref.getDataRange().getValues(),rh=rv[0]||[],ri=Object.fromEntries(rh.map((x,n)=>[x,n]));
+  const byOffice={};
+  rv.slice(1).filter(r=>r.some(v=>String(v)!=='')).forEach(r=>{
+    const name=String(r[ri.kantor_imigrasi]||'').trim();
+    if(name&&String(r[ri.status]||'').trim().toUpperCase()==='VERIFIED'){
+      byOffice[name]={
+        office_key:String(r[ri.office_key]||''),
+        kantor_imigrasi:name,
+        address:String(r[ri.address]||''),
+        latitude:Number(r[ri.latitude]),
+        longitude:Number(r[ri.longitude]),
+        source_url:String(r[ri.source_url]||'')
+      };
+    }
+  });
+  const markers=d.offices.map((o,index)=>{
+    const ref=byOffice[o.kantor_imigrasi];
+    if(!ref||!Number.isFinite(ref.latitude)||!Number.isFinite(ref.longitude)){
+      throw new Error('OFFICE_REFERENCE_MISSING_FOR_QUOTA: '+o.kantor_imigrasi);
+    }
+    return Object.assign({},ref,{
+      quotaIndex:index,
+      total:Number(o.mpaspor||0),
+      metricValue:Number(o.mpaspor||0),
+      rows:1
+    });
+  });
   return {
     datasetKey:d.datasetKey,
     period:d.period,
@@ -119,6 +148,7 @@ function getPublicTvMpasporQuota(){
       mpaspor:o.mpaspor,
       overall:o.overall,
       ratio:o.ratio
-    }))
+    })),
+    markers
   };
 }
