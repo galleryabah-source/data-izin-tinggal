@@ -20,6 +20,12 @@ const DATASET_CONTRACTS = Object.freeze({
     columns:['periode','kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat','total'],
     required:['periode','kantor_imigrasi','biasa_24','biasa_48','elektronik_48','e_polikarbonat'],
     optional:['total'],ignored:['no'],businessKey:['periode','kantor_imigrasi'],measures:['biasa_24','biasa_48','elektronik_48','e_polikarbonat'],derived:['total']
+  }),
+  PASSPORT_SERVICE_MONTHLY_2025:Object.freeze({
+    datasetKey:'PASSPORT_SERVICE_MONTHLY_2025',version:'1',
+    columns:['periode','kantor_imigrasi','m_paspor','walk_in','prioritas','percepatan','eazy','inovasi','bap','total_permohonan','penerbitan'],
+    required:['periode','kantor_imigrasi','m_paspor','walk_in','prioritas','percepatan','eazy','inovasi','bap','penerbitan'],
+    optional:['total_permohonan'],ignored:['no'],businessKey:['periode','kantor_imigrasi'],measures:['m_paspor','walk_in','prioritas','percepatan','eazy','inovasi','bap'],derived:['total_permohonan']
   })
 });
 function getDb_(){const id=PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');if(!id)throw new Error('SPREADSHEET_ID belum dikonfigurasi. Jalankan setupApp().');return SpreadsheetApp.openById(id);}

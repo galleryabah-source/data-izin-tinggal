@@ -536,6 +536,21 @@ assert(uiCode.includes("XLSX.read(buffer,{type:'array',cellDates:true,raw:false}
 assert(uiCode.includes('XLSX.utils.sheet_to_csv') && uiCode.includes('XLSX.utils.aoa_to_sheet(rows)'), 'Back Office file import normalizes the selected workbook sheet to the existing TSV validation seam');
 assert(uiCode.includes("importSourceMode==='FILE'?importFileText"), 'Back Office file import reuses the canonical preview and commit pipeline');
 assert(uiCode.includes('Pilih file sumber terlebih dahulu.'), 'Back Office file import blocks preview until a source file exists');
+// Passport 2025 historical dataset invariants
+const configCode=read('Config.gs');
+assert(configCode.includes("datasetKey:'PASSPORT_SERVICE_MONTHLY_2025'"), 'Passport 2025 historical dataset contract exists');
+assert(configCode.includes("columns:['periode','kantor_imigrasi','m_paspor','walk_in','prioritas','percepatan','eazy','inovasi','bap','total_permohonan','penerbitan']"), 'Passport 2025 historical contract preserves source measures and publication output');
+assert(configCode.includes("businessKey:['periode','kantor_imigrasi']"), 'Passport 2025 historical contract uses period + office business key');
+assert(configCode.includes("derived:['total_permohonan']"), 'Passport 2025 historical contract derives total from source service measures');
+assert(!read('DashboardService.gs').includes("PASSPORT_SERVICE_MONTHLY_2025"), 'Passport 2025 historical dataset is isolated from the canonical 2026 dashboard service');
+assert(!read('BackupRecoveryService.gs').includes("PASSPORT_SERVICE_MONTHLY_2025"), 'Passport 2025 historical dataset does not alter canonical backup recovery paths');
+assert(uiCode.includes('function importMonthPeriodFromSheetName_'), 'Passport 2025 import infers period from monthly sheet name');
+assert(uiCode.includes('function isPassport2025HeaderPair_'), 'Passport 2025 import recognizes the two-row source header');
+assert(uiCode.includes('function normalizePassport2025Sheet_'), 'Passport 2025 import normalizes monthly source sheets');
+assert(uiCode.includes('importFileWorkbook.SheetNames.filter(name=>importMonthPeriodFromSheetName_(name))'), 'Passport 2025 import discovers all monthly sheets');
+assert(uiCode.includes('Gabungkan seluruh sheet bulanan 2025'), 'Passport 2025 import exposes explicit batch mode');
+assert(uiCode.includes('PASSPORT_2025_PERIOD_REQUIRED'), 'Passport 2025 import rejects the partial TOTAL REKAP sheet as a monthly source');
+assert(uiCode.includes('PASSPORT_2025_SCHEMA_DRIFT'), 'Passport 2025 batch import blocks cross-sheet schema drift');
 // Multi-sheet / header-row file import invariants
 assert(uiCode.includes('id="importFileSheet"'), 'Back Office file import exposes workbook sheet selection');
 assert(uiCode.includes('function detectImportFileHeaderRow_(ws)'), 'Back Office file import detects header rows beyond row 1');

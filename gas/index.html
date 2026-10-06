@@ -293,6 +293,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
           <select id="importFileSheet" onchange="prepareImportFileSheet()" disabled style="display:block;width:100%;padding:9px;border:1px solid #d0d5dd;border-radius:8px;margin-top:4px;background:#fff"><option value="">Pilih sheet...</option></select>
         </label>
         <button class="btn" type="button" onclick="clearImportFile()">Hapus File</button>
+        <label id="importFileAllHistorical" style="display:none;align-items:center;gap:6px;font-size:11px;color:#475467;white-space:nowrap"><input type="checkbox" onchange="prepareImportFileSheet()"> Gabungkan seluruh sheet bulanan 2025</label>
       </div>
       <div id="fileSourceInfo" class="detail-meta" style="margin-top:8px">Excel/CSV dibaca lokal di browser. Sistem akan mencari baris header secara otomatis; hasil tetap masuk ke mapping + validation server-side.</div>
     </div>
@@ -520,11 +521,110 @@ let importReady=false,importSourceMode='PASTE',googleSourceReady=false,importFil
 const GOOGLE_SOURCE_IDS={RESIDENCE_PERMIT_SERVICE_MONTHLY:'1JEGcYrfWRoCyWXXqN_TBGC4fLsF-Y10bOVZPUlkkB4',PASSPORT_SERVICE_MONTHLY:'1-eEQBLa_FK4S9uD05SGHDUnjJuN7rEEhOCE1MC3S-84'};
 function setImportSourceMode(){importSourceMode=document.getElementById('importSourceMode').value;const panel=document.getElementById('googleSourcePanel'),filePanel=document.getElementById('fileSourcePanel'),paste=document.getElementById('paste');const isGoogle=importSourceMode==='GOOGLE_SHEETS',isFile=importSourceMode==='FILE';panel.style.display=isGoogle?'block':'none';filePanel.style.display=isFile?'block':'none';paste.style.display=(isGoogle||isFile)?'none':'block';googleSourceReady=false;importReady=false;document.getElementById('commitBtn').disabled=true;if(isGoogle){document.getElementById('googleSourceId').value=GOOGLE_SOURCE_IDS[serviceKey]||'';document.getElementById('googleSourceSheet').innerHTML='<option value="">Pilih sheet...</option>';document.getElementById('googleSourceInfo').textContent='Sumber read-only · mapping header otomatis · tidak menulis ke spreadsheet sumber.';}if(isFile&&!importFileText){document.getElementById('fileSourceInfo').textContent='Pilih file .xlsx, .xls, .csv, atau .tsv. File dibaca lokal; commit tetap melalui validation server-side.';}}
 function normalizeImportFileHeader_(value){return String(value||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');}
-function scoreImportFileHeaderRow_(row){const keys=row.map(normalizeImportFileHeader_);const terms=['PERIODE','PERIOD','BULAN','KANTOR_IMIGRASI','KANTOR','UPT_IMIGRASI','ITAS','ITAP','ITK','BVK','VOA','ITKT','ALI_STATUS_ITK_KE_ITAS','ABG','EPO','IMK','SKIM','BIASA_24','BIASA_48','ELEKTRONIK_48','E_POLIKARBONAT','PASPOR_BIASA_24','PASPOR_ELEKTRONIK_48'];return keys.reduce((n,k)=>n+(terms.includes(k)?1:0),0)+(keys.includes('KANTOR_IMIGRASI')?3:0)+(keys.includes('PERIODE')?2:0);}
-function detectImportFileHeaderRow_(ws){const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,blankrows:false});let best={index:0,score:0};rows.slice(0,40).forEach((row,i)=>{const score=scoreImportFileHeaderRow_(row);if(score>best.score)best={index:i,score};});if(best.score<2)throw new Error('FILE_HEADER_NOT_DETECTED: header canonical tidak ditemukan pada 40 baris pertama. Pastikan tabel memiliki kolom Periode/Kantor/Layanan.');return {rows,index:best.index};}
-function prepareImportFileSheet(){if(!importFileWorkbook)return;const select=document.getElementById('importFileSheet');importFileSheetIndex=Math.max(0,Number(select.value)||0);try{const ws=importFileWorkbook.Sheets[importFileWorkbook.SheetNames[importFileSheetIndex]],detected=detectImportFileHeaderRow_(ws),rows=detected.rows.slice(detected.index),tsv=XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet(rows),{FS:'\t',RS:'\n',blankrows:false});if(!tsv.trim())throw new Error('FILE_EMPTY_DATA');importFileText=tsv;document.getElementById('fileSourceInfo').innerHTML='<span class="ok">Sheet '+esc(importFileWorkbook.SheetNames[importFileSheetIndex])+' · header baris '+(detected.index+1)+' · '+(rows.length-1)+' baris data · siap dipreview.</span>';document.getElementById('importStatus').textContent='File siap · Preview diperlukan';importReady=false;document.getElementById('commitBtn').disabled=true;}catch(e){importFileText='';document.getElementById('fileSourceInfo').innerHTML='<span class="error">'+esc(e.message||e)+'</span>';}}
-async function handleImportFile(file){importReady=false;document.getElementById('commitBtn').disabled=true;document.getElementById('importPreview').innerHTML='';document.getElementById('result').innerHTML='';if(!file){importFileText='';importFileName='';importFileWorkbook=null;return;}try{if(file.size>10*1024*1024)throw new Error('Ukuran file maksimum 10 MB.');const ext=(file.name.split('.').pop()||'').toLowerCase();if(!['xlsx','xls','csv','tsv'].includes(ext))throw new Error('Format file tidak didukung. Gunakan XLSX, XLS, CSV, atau TSV.');if(typeof XLSX==='undefined')throw new Error('FILE_PARSER_UNAVAILABLE: parser Excel/CSV belum tersedia.');document.getElementById('fileSourceInfo').textContent='Membaca '+file.name+'...';const buffer=await file.arrayBuffer();importFileWorkbook=XLSX.read(buffer,{type:'array',cellDates:true,raw:false});if(!importFileWorkbook.SheetNames.length)throw new Error('FILE_EMPTY_WORKBOOK');const select=document.getElementById('importFileSheet');select.innerHTML=importFileWorkbook.SheetNames.map((name,i)=>'<option value="'+i+'">'+esc(name)+'</option>').join('');select.disabled=importFileWorkbook.SheetNames.length<2;importFileSheetIndex=0;prepareImportFileSheet();importFileName=file.name;}catch(e){importFileText='';importFileName='';importFileWorkbook=null;document.getElementById('fileSourceInfo').innerHTML='<span class="error">'+esc(e.message||e)+'</span>';}}
-function clearImportFile(){importFileText='';importFileName='';importFileWorkbook=null;importFileSheetIndex=0;const el=document.getElementById('importFile');if(el)el.value='';const select=document.getElementById('importFileSheet');if(select){select.innerHTML='<option value="">Pilih sheet...</option>';select.disabled=true;}document.getElementById('fileSourceInfo').textContent='Excel/CSV dibaca lokal di browser. Sistem akan mencari baris header secara otomatis; hasil tetap masuk ke mapping + validation server-side.';}
+function importMonthPeriodFromSheetName_(name){
+  const n=String(name||'').trim().toUpperCase();
+  const map={JANUARI:'01',JAN:'01',FEBRUARI:'02',FEB:'02',MARET:'03',MAR:'03',APRIL:'04',APR:'04',MEI:'05',MAY:'05',JUNI:'06',JUN:'06',JULI:'07',JUL:'07',AGUSTUS:'08',AGUST:'08',AGU:'08',AGS:'08',SEPTEMBER:'09',SEPT:'09',SEP:'09',OKTOBER:'10',OKT:'10',NOVEMBER:'11',NOV:'11',DESEMBER:'12',DES:'12'};
+  const key=n.replace(/[^A-Z]/g,'');
+  return map[key]?'2025-'+map[key]:'';
+}
+function isPassport2025HeaderPair_(upper,lower){
+  const u=upper.map(normalizeImportFileHeader_),l=lower.map(normalizeImportFileHeader_);
+  const combined=u.map((x,i)=>l[i]||x);
+  const required=['KANIM','M_PASPOR','WALK_IN','PRIORITAS','PERCEPATAN','EAZY','INOVASI','BAP','JUMLAH','PENERBITAN'];
+  return required.filter(x=>combined.includes(x)).length>=8&&combined.includes('KANIM')&&combined.includes('M_PASPOR')&&combined.includes('PENERBITAN');
+}
+function scoreImportFileHeaderRow_(row){
+  const keys=row.map(normalizeImportFileHeader_);
+  const terms=['PERIODE','PERIOD','BULAN','KANTOR_IMIGRASI','KANTOR','UPT_IMIGRASI','ITAS','ITAP','ITK','BVK','VOA','ITKT','ALI_STATUS_ITK_KE_ITAS','ABG','EPO','IMK','SKIM','BIASA_24','BIASA_48','ELEKTRONIK_48','E_POLIKARBONAT','PASPOR_BIASA_24','PASPOR_ELEKTRONIK_48','KANIM','M_PASPOR','WALK_IN','PRIORITAS','PERCEPATAN','EAZY','INOVASI','BAP','PENERBITAN','JUMLAH'];
+  return keys.reduce((n,k)=>n+(terms.includes(k)?1:0),0)+(keys.includes('KANTOR_IMIGRASI')?3:0)+(keys.includes('PERIODE')?2:0);
+}
+function detectImportFileHeaderRow_(ws){
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,blankrows:false});
+  let best={index:0,score:0,headerRows:1,passport2025:false};
+  rows.slice(0,40).forEach((row,i)=>{
+    const score=scoreImportFileHeaderRow_(row);
+    if(score>best.score)best={index:i,score,headerRows:1,passport2025:false};
+    if(i<rows.length-1&&isPassport2025HeaderPair_(row,rows[i+1])){
+      const pairScore=score+scoreImportFileHeaderRow_(rows[i+1]);
+      if(pairScore>best.score)best={index:i,score:pairScore,headerRows:2,passport2025:true};
+    }
+  });
+  if(best.score<2)throw new Error('FILE_HEADER_NOT_DETECTED: header canonical tidak ditemukan pada 40 baris pertama. Pastikan tabel memiliki kolom Periode/Kantor/Layanan.');
+  return {rows,index:best.index,headerRows:best.headerRows,passport2025:best.passport2025};
+}
+function normalizePassport2025Sheet_(ws,sheetName){
+  const detected=detectImportFileHeaderRow_(ws);
+  if(!detected.passport2025)throw new Error('PASSPORT_2025_HEADER_NOT_DETECTED: struktur sheet bukan laporan Paspor 2025 yang diharapkan.');
+  const period=importMonthPeriodFromSheetName_(sheetName);
+  if(!period)throw new Error('PASSPORT_2025_PERIOD_REQUIRED: pilih sheet bulanan JANUARI-DESEMBER 2025, bukan TOTAL REKAP 2025.');
+  const upper=detected.rows[detected.index]||[],lower=detected.rows[detected.index+1]||[];
+  const header=['PERIODE'].concat(upper.map((x,i)=>lower[i]||x));
+  const data=detected.rows.slice(detected.index+detected.headerRows).filter(row=>String(row[2]||'').trim()&&String(row[2]||'').trim().toUpperCase()!=='JUMLAH');
+  return {period,header,rows:data.map(row=>[period].concat(row)),headerRow:detected.index+1,dataRows:data.length};
+}
+function prepareImportFileSheet(){
+  if(!importFileWorkbook)return;
+  const select=document.getElementById('importFileSheet');
+  importFileSheetIndex=Math.max(0,Number(select.value)||0);
+  try{
+    const selectedName=importFileWorkbook.SheetNames[importFileSheetIndex];
+    const allToggle=document.getElementById('importFileAllHistorical');
+    const monthSheets=importFileWorkbook.SheetNames.filter(name=>importMonthPeriodFromSheetName_(name));
+    const allHistorical=Boolean(allToggle&&allToggle.checked&&monthSheets.length>=2);
+    if(allHistorical){
+      const parts=monthSheets.map(name=>normalizePassport2025Sheet_(importFileWorkbook.Sheets[name],name));
+      const header=parts[0].header;
+      if(parts.some(p=>JSON.stringify(p.header)!==JSON.stringify(header)))throw new Error('PASSPORT_2025_SCHEMA_DRIFT: struktur header antar-sheet bulanan berbeda.');
+      const rows=parts.flatMap(p=>p.rows);
+      importFileText=XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet([header].concat(rows)),{FS:'\t',RS:'\n',blankrows:false});
+      if(!rows.length)throw new Error('PASSPORT_2025_NO_DATA');
+      document.getElementById('fileSourceInfo').innerHTML='<span class="ok">Mode batch 2025 · '+monthSheets.length+' sheet bulanan · '+rows.length+' baris data · periode 2025-01 → 2025-12 · siap dipreview.</span>';
+    }else{
+      const ws=importFileWorkbook.Sheets[selectedName],detected=detectImportFileHeaderRow_(ws);
+      if(detected.passport2025){
+        const normalized=normalizePassport2025Sheet_(ws,selectedName);
+        importFileText=XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet([normalized.header].concat(normalized.rows)),{FS:'\t',RS:'\n',blankrows:false});
+        document.getElementById('fileSourceInfo').innerHTML='<span class="ok">Sheet '+esc(selectedName)+' · header baris '+normalized.headerRow+'–'+(normalized.headerRow+1)+' · '+normalized.dataRows+' baris data · periode '+normalized.period+' · siap dipreview.</span>';
+      }else{
+        const rows=detected.rows.slice(detected.index),tsv=XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet(rows),{FS:'\t',RS:'\n',blankrows:false});
+        if(!tsv.trim())throw new Error('FILE_EMPTY_DATA');
+        importFileText=tsv;
+        document.getElementById('fileSourceInfo').innerHTML='<span class="ok">Sheet '+esc(selectedName)+' · header baris '+(detected.index+1)+' · '+(rows.length-1)+' baris data · siap dipreview.</span>';
+      }
+    }
+    if(!importFileText||!importFileText.trim())throw new Error('FILE_EMPTY_DATA');
+    document.getElementById('importStatus').textContent='File siap · Preview diperlukan';
+    importReady=false;document.getElementById('commitBtn').disabled=true;
+  }catch(e){importFileText='';document.getElementById('fileSourceInfo').innerHTML='<span class="error">'+esc(e.message||e)+'</span>';}
+}
+async function handleImportFile(file){
+  importReady=false;document.getElementById('commitBtn').disabled=true;document.getElementById('importPreview').innerHTML='';document.getElementById('result').innerHTML='';
+  if(!file){importFileText='';importFileName='';importFileWorkbook=null;return;}
+  try{
+    if(file.size>10*1024*1024)throw new Error('Ukuran file maksimum 10 MB.');
+    const ext=(file.name.split('.').pop()||'').toLowerCase();
+    if(!['xlsx','xls','csv','tsv'].includes(ext))throw new Error('Format file tidak didukung. Gunakan XLSX, XLS, CSV, atau TSV.');
+    if(typeof XLSX==='undefined')throw new Error('FILE_PARSER_UNAVAILABLE: parser Excel/CSV belum tersedia.');
+    document.getElementById('fileSourceInfo').textContent='Membaca '+file.name+'...';
+    const buffer=await file.arrayBuffer();
+    importFileWorkbook=XLSX.read(buffer,{type:'array',cellDates:true,raw:false});
+    if(!importFileWorkbook.SheetNames.length)throw new Error('FILE_EMPTY_WORKBOOK');
+    const select=document.getElementById('importFileSheet');
+    select.innerHTML=importFileWorkbook.SheetNames.map((name,i)=>'<option value="'+i+'">'+esc(name)+'</option>').join('');
+    select.disabled=importFileWorkbook.SheetNames.length<2;
+    const monthSheets=importFileWorkbook.SheetNames.filter(name=>importMonthPeriodFromSheetName_(name));
+    const allToggle=document.getElementById('importFileAllHistorical');
+    if(allToggle){allToggle.style.display=monthSheets.length>=2?'inline-flex':'none';allToggle.checked=monthSheets.length>=2;}
+    importFileSheetIndex=0;prepareImportFileSheet();importFileName=file.name;
+  }catch(e){importFileText='';importFileName='';importFileWorkbook=null;document.getElementById('fileSourceInfo').innerHTML='<span class="error">'+esc(e.message||e)+'</span>';}
+}
+function clearImportFile(){
+  importFileText='';importFileName='';importFileWorkbook=null;importFileSheetIndex=0;
+  const el=document.getElementById('importFile');if(el)el.value='';
+  const select=document.getElementById('importFileSheet');if(select){select.innerHTML='<option value="">Pilih sheet...</option>';select.disabled=true;}
+  const allToggle=document.getElementById('importFileAllHistorical');if(allToggle){allToggle.checked=false;allToggle.style.display='none';}
+  document.getElementById('fileSourceInfo').textContent='Excel/CSV dibaca lokal di browser. Sistem akan mencari baris header secara otomatis; laporan Paspor 2025 dapat digabung dari seluruh sheet bulanan tanpa menyentuh dataset Passport 2026.';
+}
 async function loadGoogleSourceSheets(){try{const id=document.getElementById('googleSourceId').value,info=document.getElementById('googleSourceInfo');info.textContent='Membaca daftar sheet...';const r=await callWithTimeout('listGoogleSourceSheets',15000,{datasetKey:serviceKey,spreadsheetId:id});const el=document.getElementById('googleSourceSheet');el.innerHTML='<option value="">Pilih sheet...</option>'+(r.sheets||[]).map(s=>'<option value="'+esc(s.name)+'">'+esc(s.name)+' · '+s.rows+'×'+s.columns+'</option>').join('');info.innerHTML='<span class="ok">Terhubung: '+esc(r.spreadsheetName)+' · '+(r.sheets||[]).length+' sheet · read-only</span>';}catch(e){document.getElementById('googleSourceInfo').innerHTML='<span class="error">'+esc(e.message||e)+'</span>';}}
 function renderImportMapping(r){const rows=(r.mapping||[]).map(x=>'<tr><td>'+esc(x.source)+'</td><td>→</td><td><b>'+esc(x.canonical)+'</b></td></tr>').join('');return rows?'<div class="detail-wrap" style="max-height:260px"><table><thead><tr><th>Sumber</th><th></th><th>Canonical</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'';}
 function renderImportPreview(r){const schema=r.schema||{};const rows=r.preview||[];const head=(schema.columns||[]).map(x=>'<th>'+esc(x)+'</th>').join('');const body=rows.slice(0,10).map(row=>'<tr>'+row.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('');return (r.source?'<div class="detail-meta" style="margin:8px 0">Source · '+esc(r.source.spreadsheetName)+' · '+esc(r.source.sheetName)+'</div>'+renderImportMapping(r):'')+'<div class="import-summary"><div class="import-stat"><span class="muted">Valid</span><b>'+r.validRows+'</b></div><div class="import-stat"><span class="muted">Rejected</span><b>'+r.rejectedRows+'</b></div><div class="import-stat"><span class="muted">Duplicates</span><b>'+r.duplicates+'</b></div><div class="import-stat"><span class="muted">Dataset</span><b style="font-size:12px">'+esc(r.dataset.datasetKey)+'</b></div></div>'+(r.errors&&r.errors.length?'<div class="error" style="margin:10px 0">Validation errors: '+esc(r.errors.map(x=>x.error).join('; '))+'</div>':'')+'<div class="detail-meta" style="margin:10px 0">Schema '+esc(schema.contractKey||schema.datasetKey||'unknown')+' · '+esc(schema.contractVersion||'1')+' · sample '+rows.length+' rows</div>'+(rows.length?'<div class="detail-wrap"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div>':'');}
