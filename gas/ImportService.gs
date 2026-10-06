@@ -67,7 +67,7 @@ function validateRows_(schema,rows){
           return normalizeInteger_(raw,key);
         });
         if(!out[contract.columns.indexOf('kantor_imigrasi')])throw new Error('kantor_imigrasi wajib diisi.');
-        const derivedTotalKey=contract.derived.find(k=>k==='total'),measureKeys=contract.measures||contract.columns.filter(k=>!contract.businessKey.includes(k)&&!contract.derived.includes(k));
+        const derivedTotalKey=contract.derived.find(k=>k==='total'||k==='total_permohonan'||k==='total_layanan')||'',measureKeys=contract.measures||contract.columns.filter(k=>!contract.businessKey.includes(k)&&!contract.derived.includes(k));
         const total=measureKeys.reduce((sum,key)=>sum+Number(out[contract.columns.indexOf(key)]||0),0);
         if(derivedTotalKey){
           const totalPosition=positions[derivedTotalKey],provided=totalPosition===undefined||String(r[totalPosition]||'').trim()===''?null:normalizeInteger_(r[totalPosition],derivedTotalKey);

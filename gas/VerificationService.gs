@@ -8,6 +8,7 @@ function verifyDatasetIntegrityV1(datasetKey){
   const rows=values.slice(1).filter(r=>r.some(v=>String(v)!==''));
   const seen={},periods={},offices={};
   let duplicateKeys=0,blankKeys=0,invalidPeriods=0,invalidMeasures=0,totalMismatches=0,observedTotal=0;
+  const totalKey=contract.derived.find(k=>k==='total'||k==='total_permohonan'||k==='total_layanan')||'total';
   rows.forEach(r=>{
     const period=normalizePeriodCell_(r[hi.periode]),office=String(r[hi.kantor_imigrasi]||'').trim();
     if(!period||!office)blankKeys++;
@@ -23,7 +24,7 @@ function verifyDatasetIntegrityV1(datasetKey){
       if(!Number.isInteger(n)||n<0)invalidMeasures++;
       computed+=Number.isFinite(n)?n:0;
     });
-    const total=Number(r[hi.total]);
+    const total=Number(r[hi[totalKey]]);
     if(!Number.isInteger(total)||total<0||total!==computed)totalMismatches++;
     observedTotal+=Number.isFinite(total)?total:0;
   });
