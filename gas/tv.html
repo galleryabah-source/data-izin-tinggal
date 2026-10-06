@@ -217,13 +217,22 @@ function openQuotaOfficeDetail(i){
 }
 async function activateQuotaMode(refreshOnly){
   try{
-    setLive('LIVE SYSTEM · LOADING QUOTA');
+    setRuntimeState('REFRESHING','Memuat snapshot kuota M-Paspor Oktober 2026...');
     const q=await withTimeout(call('getPublicTvMpasporQuota'),TV_RUNTIME.requestTimeoutMs);
+    if(!q||!q.totals||!Array.isArray(q.offices))throw new Error('MPASPOR_QUOTA_INVALID_RESPONSE');
     currentService='MPASPOR_QUOTA';updateSwitch();renderQuotaSnapshot(q);
+    TV_STATE.lastGoodAt=Date.now();TV_STATE.consecutiveFailures=0;
     $('read').textContent='LAST READ · '+now()+' WIB';
-    setLive('LIVE SYSTEM · ONLINE');
+    setRuntimeState('ONLINE','M-Paspor quota snapshot verified · Oktober 2026 · read-only');
     return true;
-  }catch(e){setLive('LIVE SYSTEM · ATTENTION',true);$('ranking').innerHTML='<span class="attention">'+esc(e.message||String(e))+'</span>';return false;}
+  }catch(e){
+    TV_STATE.consecutiveFailures++;
+    const msg='Kuota M-Paspor gagal dimuat: '+String(e&&e.message||e);
+    setRuntimeState('DEGRADED',msg);
+    $('ranking').innerHTML='<span class="attention">'+esc(msg)+'</span>';
+    $('rankMeta').textContent='ERROR';
+    return false;
+  }
 }
 function restoreServiceChrome(){
   document.querySelector('.left-stack .metric-panel:nth-child(1) h3').textContent='IZIN TINGGAL';

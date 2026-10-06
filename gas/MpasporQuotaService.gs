@@ -75,7 +75,7 @@ const MPASPOR_QUOTA_SNAPSHOT = Object.freeze({
 });
 
 function getMpasporQuotaDashboard(){
-  requirePermission_('dashboard.read');
+  requireBackOfficeAccess_();
   return buildMpasporQuotaDashboard_();
 }
 
