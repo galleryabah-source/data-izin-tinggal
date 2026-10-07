@@ -747,3 +747,14 @@ assert(forensicGov.includes('officeDelta'), 'Passport YoY forensic closure recon
 assert(forensicGov.includes('contribution'), 'Passport YoY forensic closure reconciles comparable plus new-office contribution');
 const forensicUi=read('index.html');
 assert(forensicUi.includes('runPassportYoyForensic'), 'Back Office exposes Passport YoY forensic closure control');
+
+const gisTv=read('tv.html');
+assert(gisTv.includes('JABAR_BOUNDARY_TOPO'),'INTAL TV embeds lightweight West Java boundary dataset');
+assert(gisTv.includes('buildJabarBoundaryGeoJSON'),'INTAL TV converts boundary TopoJSON without adding topojson-client runtime');
+assert(gisTv.includes("id="gisBoundaryStatus""),'INTAL TV exposes GIS boundary status indicator');
+assert(gisTv.includes("color:'#ffffff',weight:0.8,opacity:0.46"),'GIS boundary uses thin low-opacity white lines');
+assert(gisTv.includes("fillOpacity:0.018"),'GIS boundary default fill remains nearly transparent');
+assert(gisTv.includes('requestIdleCallback||function(fn){return setTimeout(fn,0)}'),'GIS boundary initialization is deferred until idle');
+assert(gisTv.includes("String(g.id||'')!=='32-88'"),'GIS boundary excludes non-administrative Waduk Cira geometry');
+assert(gisTv.includes('Batas kab/kota · ringan'),'GIS boundary reports lightweight runtime state');
+assert(gisTv.includes('layer.bindTooltip(name'), 'GIS boundary exposes district/city name on hover');
