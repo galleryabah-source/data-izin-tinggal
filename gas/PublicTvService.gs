@@ -242,11 +242,42 @@ function getPublicTvPassportOfficeYoYContext(filters){
 
 /** Read-only GIS reference layer for service points. */
 function getPublicTvServicePoints(){
-  return {contract:'SERVICE_POINT_REFERENCE_V1',readOnly:true,points:[{
-    pointId:'DEP-SAWANGAN-001',parentOffice:'KANIM KELAS I NON TPI DEPOK',pointType:'BRANCH_SERVICE_POINT',pointTypeLabel:'Cabang layanan / Beranda Imigrasi',
-    name:'Beranda Imigrasi Sawangan',location:'Jl. Raya Parung, Bojongsari Lama, Kec. Bojongsari, Kota Depok, Jawa Barat 16516',
-    latitude:-6.4048279,longitude:106.7414554,
-    mapsUrl:'https://maps.app.goo.gl/sxyHQwNwzs3i75fY8',hours:'Senin–Kamis 08.00–15.00 · Jumat 08.00–15.30',
-    status:'REFERENCE',statusLabel:'REFERENCE · PILOT',coordinateStatus:'REFERENCE_NEAR_PUBLIC_ADDRESS',coordinateStatusLabel:'Reference point dari area alamat publik; final pin tetap mengikuti tautan Google Maps yang diberikan'
-  }]};
+  return {contract:'SERVICE_POINT_REFERENCE_V1',readOnly:true,points:[
+    {
+      pointId:'DEP-DETOS-001',parentOffice:'KANIM KELAS I NON TPI DEPOK',pointType:'ULP',
+      pointTypeLabel:'Unit Layanan Paspor (ULP)',name:'Unit Layanan Paspor Depok Town Square',
+      location:'Depok Town Square, Jl. Margonda Raya No.1, Kemiri Muka, Kec. Beji, Kota Depok, Jawa Barat 16424',
+      latitude:-6.3725749,longitude:106.8316653,dailyCapacity:45,boothCount:2,
+      mapsUrl:'https://maps.app.goo.gl/MXeBHcF6H6r5kMsP9',hours:'—',
+      status:'REFERENCE',statusLabel:'REFERENCE · ACTIVE SERVICE POINT',
+      coordinateStatus:'VERIFIED_LOCATION',coordinateStatusLabel:'Koordinat lokasi service point terverifikasi; navigasi tetap menggunakan tautan Google Maps'
+    },
+    {
+      pointId:'DEP-PESONA-001',parentOffice:'KANIM KELAS I NON TPI DEPOK',pointType:'IMMIGRATION_LOUNGE',
+      pointTypeLabel:'Immigration Lounge / Beranda Imigrasi',name:'Beranda Imigrasi Pesona Square',
+      location:'Pesona Square, Lt. 3, Jl. Ir. H. Juanda No.22A, Baktijaya, Kec. Sukmajaya, Kota Depok, Jawa Barat 16418',
+      latitude:-6.38023,longitude:106.84431,dailyCapacity:100,boothCount:3,
+      mapsUrl:'https://maps.app.goo.gl/iKXGvTAXDnKfovGV8',hours:'10.00–15.30 · jadwal mengikuti layanan',
+      status:'REFERENCE',statusLabel:'REFERENCE · ACTIVE SERVICE POINT',
+      coordinateStatus:'VERIFIED_LOCATION',coordinateStatusLabel:'Koordinat lokasi service point terverifikasi; navigasi tetap menggunakan tautan Google Maps'
+    },
+    {
+      pointId:'DEP-MPP-001',parentOffice:'KANIM KELAS I NON TPI DEPOK',pointType:'MPP',
+      pointTypeLabel:'Mal Pelayanan Publik (MPP)',name:'MPP Kota Depok',
+      location:'Gedung Dibaleka / MPP Kota Depok, Kec. Pancoran Mas, Kota Depok, Jawa Barat',
+      latitude:-6.394781,longitude:106.820994,dailyCapacity:20,boothCount:1,
+      mapsUrl:'https://maps.app.goo.gl/c7cex3475R4AgdRw9',hours:'—',
+      status:'REFERENCE',statusLabel:'REFERENCE · ACTIVE SERVICE POINT',
+      coordinateStatus:'VERIFIED_LOCATION',coordinateStatusLabel:'Koordinat lokasi service point terverifikasi; navigasi tetap menggunakan tautan Google Maps'
+    },
+    {
+      pointId:'DEP-SAWANGAN-001',parentOffice:'KANIM KELAS I NON TPI DEPOK',pointType:'BRANCH_SERVICE_POINT',
+      pointTypeLabel:'Cabang layanan / Beranda Imigrasi',name:'Beranda Imigrasi Sawangan',
+      location:'Jl. Raya Parung, Bojongsari Lama, Kec. Bojongsari, Kota Depok, Jawa Barat 16516',
+      latitude:-6.4048279,longitude:106.7414554,dailyCapacity:120,boothCount:2,
+      mapsUrl:'https://maps.app.goo.gl/sxyHQwNwzs3i75fY8',hours:'Senin–Kamis 08.00–15.00 · Jumat 08.00–15.30',
+      status:'REFERENCE',statusLabel:'REFERENCE · PILOT',coordinateStatus:'REFERENCE_NEAR_PUBLIC_ADDRESS',
+      coordinateStatusLabel:'Reference point dari area alamat publik; final pin tetap mengikuti tautan Google Maps yang diberikan'
+    }
+  ]};
 }
