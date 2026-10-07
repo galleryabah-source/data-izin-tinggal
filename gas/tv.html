@@ -573,6 +573,12 @@ async function loadServicePoints(L){
     return servicePointLayer;
   }catch(e){return null;}
 }
+
+function closeServicePointDetail(){
+  const modal=$('servicePointModal');
+  if(modal)modal.classList.add('hidden');
+  if(map)window.setTimeout(()=>map.invalidateSize({pan:false}),0);
+}
 function openServicePointDetail(point){
   if(!point)return;
   $('servicePointTitle').textContent=String(point.name||'Titik Layanan');
@@ -830,6 +836,7 @@ function bindStaticInteractions(){
       'office':closeOfficeDetail,
       'gis-office':closeGisOfficeDetail,
       'service-breakdown':closeServiceBreakdown,
+      'service-point':closeServicePointDetail,
       'executive-insight':closeExecutiveInsight
     }[name];
     if(close)el.addEventListener('click',close);
@@ -857,6 +864,7 @@ function scheduleRuntimeStart(){
   else window.setTimeout(startRuntime,0);
 }
 scheduleRuntimeStart();
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('servicePointModal').classList.contains('hidden'))closeServicePointDetail();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-TV_STATE.lastAttemptAt>10000)refreshAllRuntimeData();});
 </script>
 </body>
