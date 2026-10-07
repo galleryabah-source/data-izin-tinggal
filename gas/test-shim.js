@@ -794,3 +794,5 @@ assert(gisTv.includes("String(g.id||'')!=='32-88'"),'GIS boundary excludes non-a
 assert(gisTv.includes("'Batas kab/kota · '+layers.length+' wilayah · aktif'"),'GIS boundary reports active rendered region state');
 assert(gisTv.includes('layer.bindTooltip(name'), 'GIS boundary exposes district/city name on hover');
 assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary hover state becomes clearly readable');
+
+// Service-point GIS registry: pending coordinates are intentionally excluded from plotted orbit.\n
