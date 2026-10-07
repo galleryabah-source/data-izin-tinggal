@@ -252,6 +252,12 @@ assert(publicTv.includes('base2025') && publicTv.includes('compare2026') && publ
 assert(publicTv.includes('function getPublicTvServicePoints'), 'Public TV exposes read-only service point reference layer');
 assert(publicTv.includes('DEP-SAWANGAN-001') && publicTv.includes('BRANCH_SERVICE_POINT'), 'Depok Sawangan service point contract exists');
 assert(publicTv.includes('SERVICE_POINT_REFERENCE_V1') && publicTv.includes('readOnly:true'), 'Service point layer is explicitly read-only');
+assert(tvUi.includes('function showServicePointsForOffice'), 'GIS has an explicit service point focus/orbit handler');
+assert(tvUi.includes('hideServicePointFocus') && tvUi.includes("map.on('click'"), 'Map click clears the service point orbit');
+assert(tvUi.includes('servicePointConnectorLayer') && tvUi.includes('L.polyline'), 'Service point orbit uses non-blocking connector lines');
+assert(tvUi.includes('servicePointFocusOffice') && tvUi.includes('KANIM KELAS I NON TPI DEPOK'), 'Service point orbit is scoped to the Depok parent office');
+assert(tvUi.includes('display:none;position:absolute') && tvUi.includes('.service-point-marker:hover .service-point-label'), 'Service point labels remain hidden until hover');
+assert(tvUi.includes('zIndexOffset:850'), 'Service point marker remains visually subordinate to the Kanim marker');
 assert(tvUi.includes('function closeServicePointDetail'), 'Service point modal has an explicit close handler');
 assert(tvUi.includes("'service-point':closeServicePointDetail"), 'Service point close button is wired into modal close routing');
 assert(tvUi.includes("e.key==='Escape'") && tvUi.includes('closeServicePointDetail()'), 'Escape closes the service point modal');
@@ -411,7 +417,7 @@ assert(tvCharts.includes('Promise.allSettled([call(serviceFn(SERVICES[0]),filter
 assert(tvCharts.includes('gisOfficeResidenceBody') && tvCharts.includes('gisOfficePassportBody'), 'INTAL TV GIS office detail renders separate Residence and Passport sections');
 assert(tvCharts.includes('Total Gabungan'), 'INTAL TV GIS office detail exposes combined office total');
 assert(tvCharts.includes('GIS_OFFICE_DETAIL_CACHE'), 'INTAL TV GIS office detail uses bounded client cache');
-assert(tvCharts.includes(".on('click',()=>openGisOfficeDetail(office))"), 'INTAL TV GIS markers open detail on marker/label click');
+assert(tvCharts.includes('openGisOfficeDetail(office)') && tvCharts.includes('showServicePointsForOffice(office'), 'INTAL TV GIS markers open office detail and service-point orbit');
 assert(!tvCharts.includes(".bindPopup('<b>'+esc(m.kantor_imigrasi)"), 'INTAL TV GIS markers no longer use separate total-only popup');
 assert(tvCharts.includes('function closeGisOfficeDetail()'), 'INTAL TV GIS office combined modal has explicit close handler');
 assert(tvCharts.includes("if(!$('gisOfficeModal').classList.contains('hidden'))closeGisOfficeDetail()"), 'INTAL TV GIS office combined modal closes with Escape');
