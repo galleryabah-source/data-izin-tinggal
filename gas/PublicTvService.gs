@@ -244,7 +244,7 @@ function getPublicTvPassportOfficeYoYContext(filters){
 function getPublicTvServicePoints(){
   return {contract:'SERVICE_POINT_REFERENCE_V1',readOnly:true,points:[{
     pointId:'DEP-SAWANGAN-001',parentOffice:'KANIM KELAS I NON TPI DEPOK',pointType:'BRANCH_SERVICE_POINT',pointTypeLabel:'Cabang layanan / Beranda Imigrasi',
-    name:'Beranda Imigrasi Sawangan',address:'Jl. Raya Parung, Bojongsari Lama, Kec. Bojongsari, Kota Depok, Jawa Barat 16516',
+    name:'Beranda Imigrasi Sawangan',location:'Jl. Raya Parung, Bojongsari Lama, Kec. Bojongsari, Kota Depok, Jawa Barat 16516',
     latitude:-6.4048279,longitude:106.7414554,
     mapsUrl:'https://maps.app.goo.gl/sxyHQwNwzs3i75fY8',hours:'Senin–Kamis 08.00–15.00 · Jumat 08.00–15.30',
     status:'REFERENCE',statusLabel:'REFERENCE · PILOT',coordinateStatus:'REFERENCE_NEAR_PUBLIC_ADDRESS',coordinateStatusLabel:'Reference point dari area alamat publik; final pin tetap mengikuti tautan Google Maps yang diberikan'
