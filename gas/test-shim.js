@@ -439,6 +439,7 @@ assert(codeSource.includes("if(startAt&&!Number.isFinite(startMs))throw new Erro
 assert(codeSource.includes("if(endAt&&!Number.isFinite(endMs))throw new Error('Waktu selesai tidak valid.')"), 'Running text validates end date');
 
 assert(!tvCharts.includes('tickerIndex'), 'INTAL TV running text no longer rotates by timed index');
+assert(tvCharts.includes("Math.max(100,Math.min(360,chars*.64+items.length*8))+'s'"), 'INTAL TV running text speed is reduced to half of the previous rate');
 
 // Service distribution readability regression
 assert(tvCharts.includes('font-size:clamp(8.5px,.68vw,10px)'), 'INTAL TV service labels scale for readability');
