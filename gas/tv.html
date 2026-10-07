@@ -593,7 +593,9 @@ async function showServicePointsForOffice(office,origin){
   if(!children.length)return;
   const lines=[];
   children.forEach(point=>{
-    lines.push(L.polyline([[Number(origin[0]),Number(origin[1])],[Number(point.latitude),Number(point.longitude)]],{color:'#48dfff',weight:1,opacity:.34,dashArray:'4 6',interactive:false}));
+    const lat=Number(point.latitude),lng=Number(point.longitude);
+    if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
+    lines.push(L.polyline([[Number(origin[0]),Number(origin[1])],[lat,lng]],{color:'#48dfff',weight:1,opacity:.34,dashArray:'4 6',interactive:false}));
   });
   lines.forEach(line=>line.addTo(servicePointConnectorLayer));
   servicePointConnectorLayer.addTo(map);
