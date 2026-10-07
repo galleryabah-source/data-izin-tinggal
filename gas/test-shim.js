@@ -262,7 +262,7 @@ assert(publicTv.includes('SERVICE_POINT_REFERENCE_V1') && publicTv.includes('rea
 assert(tvUi.includes('function showServicePointsForOffice'), 'GIS has an explicit service point focus/orbit handler');
 assert(tvUi.includes('hideServicePointFocus') && tvUi.includes("map.on('click'"), 'Map click clears the service point orbit');
 assert(tvUi.includes('servicePointConnectorLayer') && tvUi.includes('L.polyline'), 'Service point orbit uses non-blocking connector lines');
-assert(tvUi.includes('servicePointFocusOffice') && tvUi.includes('KANIM KELAS I NON TPI DEPOK'), 'Service point orbit is scoped to the Depok parent office');
+assert(tvUi.includes('servicePointFocusOffice') && tvUi.includes('children=servicePoints.filter(point=>String(point.parentOffice||\'\').trim()===parent)'), 'Service point orbit is scoped dynamically to the clicked office parent');
 assert(tvUi.includes('display:none;position:absolute') && tvUi.includes('.service-point-marker:hover .service-point-label'), 'Service point labels remain hidden until hover');
 assert(tvUi.includes('zIndexOffset:850'), 'Service point marker remains visually subordinate to the Kanim marker');
 assert(tvUi.includes('function closeServicePointDetail'), 'Service point modal has an explicit close handler');
