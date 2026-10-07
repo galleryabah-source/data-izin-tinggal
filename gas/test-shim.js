@@ -762,6 +762,6 @@ assert(gisTv.includes("querySelectorAll('path').length"),'GIS boundary exposes r
 assert(gisTv.includes("fillOpacity:0.008"),'GIS boundary default fill remains nearly transparent');
 assert(gisTv.includes('requestIdleCallback||function(fn){return setTimeout(fn,0)}'),'GIS boundary initialization is deferred until idle');
 assert(gisTv.includes("String(g.id||'')!=='32-88'"),'GIS boundary excludes non-administrative Waduk Cira geometry');
-assert(gisTv.includes('Batas kab/kota · ringan'),'GIS boundary reports lightweight runtime state');
+assert(gisTv.includes("'Batas kab/kota · '+layers.length+' wilayah · '+paths+' path"),'GIS boundary reports deterministic rendered region/path state');
 assert(gisTv.includes('layer.bindTooltip(name'), 'GIS boundary exposes district/city name on hover');
 assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary hover state becomes clearly readable');
