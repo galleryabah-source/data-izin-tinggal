@@ -751,6 +751,8 @@ assert(forensicUi.includes('runPassportYoyForensic'), 'Back Office exposes Passp
 const gisTv=read('tv.html');
 assert(gisTv.includes('JABAR_BOUNDARY_TOPO'),'INTAL TV embeds lightweight West Java boundary dataset');
 assert(gisTv.includes('buildJabarBoundaryGeoJSON'),'INTAL TV converts boundary TopoJSON without adding topojson-client runtime');
+assert(gisTv.includes("if(g.type==='Polygon')return {type:'Polygon',coordinates:arcs.map(ring=>topoRing(topo,ring))}"),'GIS boundary converts Polygon TopoJSON rings correctly');
+assert(gisTv.includes("if(g.type==='MultiPolygon')return {type:'MultiPolygon',coordinates:arcs.map(poly=>poly.map(ring=>topoRing(topo,ring)))}"),'GIS boundary conversion retains MultiPolygon support');
 assert(gisTv.includes('id="gisBoundaryStatus"'),'INTAL TV exposes GIS boundary status indicator');
 assert(gisTv.includes("color:'#ffffff',weight:1.35,opacity:0.72"),'GIS boundary uses readable white administrative lines');
 assert(gisTv.includes("pane:'overlayPane',renderer:L.svg()"),'GIS boundary is explicitly rendered above imagery in the overlay pane');
