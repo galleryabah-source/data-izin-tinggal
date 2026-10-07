@@ -417,7 +417,7 @@ assert(tvCharts.includes('Promise.allSettled([call(serviceFn(SERVICES[0]),filter
 assert(tvCharts.includes('gisOfficeResidenceBody') && tvCharts.includes('gisOfficePassportBody'), 'INTAL TV GIS office detail renders separate Residence and Passport sections');
 assert(tvCharts.includes('Total Gabungan'), 'INTAL TV GIS office detail exposes combined office total');
 assert(tvCharts.includes('GIS_OFFICE_DETAIL_CACHE'), 'INTAL TV GIS office detail uses bounded client cache');
-assert(tvCharts.includes(".on('click',()=>openGisOfficeDetail(office))"), 'INTAL TV GIS markers open detail on marker/label click');
+assert(tvCharts.includes('openGisOfficeDetail(office)') && tvCharts.includes('showServicePointsForOffice(office'), 'INTAL TV GIS markers open office detail and service-point orbit');
 assert(!tvCharts.includes(".bindPopup('<b>'+esc(m.kantor_imigrasi)"), 'INTAL TV GIS markers no longer use separate total-only popup');
 assert(tvCharts.includes('function closeGisOfficeDetail()'), 'INTAL TV GIS office combined modal has explicit close handler');
 assert(tvCharts.includes("if(!$('gisOfficeModal').classList.contains('hidden'))closeGisOfficeDetail()"), 'INTAL TV GIS office combined modal closes with Escape');
