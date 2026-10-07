@@ -267,6 +267,8 @@ assert(tvUi.includes('point.dailyCapacity') && tvUi.includes('point.boothCount')
 assert(publicTv.includes('SERVICE_POINT_REFERENCE_V1') && publicTv.includes('readOnly:true'), 'Service point layer is explicitly read-only');
 assert(tvUi.includes('function showServicePointsForOffice'), 'GIS has an explicit service point focus/orbit handler');
 assert(tvUi.includes('hideServicePointFocus') && tvUi.includes("map.on('click'"), 'Map click clears the service point orbit');
+assert(tvUi.includes('function showLayer') && tvUi.includes('function showLayer(key){if(!map||!layers[key])return;hideServicePointFocus();'), 'Service point layer is cleared whenever the primary GIS layer is shown');
+assert(tvUi.includes("if(!map)return;\n  hideServicePointFocus();\n  const L=await ensureMap();"), 'Service point orbit is cleared before loading a new office focus');
 assert(tvUi.includes('servicePointConnectorLayer') && tvUi.includes('L.polyline'), 'Service point orbit uses non-blocking connector lines');
 assert(tvUi.includes('servicePointFocusOffice') && tvUi.includes('children=servicePoints.filter(point=>String(point.parentOffice||\'\').trim()===parent)'), 'Service point orbit is scoped dynamically to the clicked office parent');
 assert(tvUi.includes('display:none;position:absolute') && tvUi.includes('.service-point-marker:hover .service-point-label'), 'Service point labels remain hidden until hover');
