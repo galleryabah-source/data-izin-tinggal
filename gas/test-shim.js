@@ -249,6 +249,12 @@ assert(publicTv.includes("getServiceDashboard_('PASSPORT_SERVICE_MONTHLY_2025'")
 assert(publicTv.includes('status:String(row.status||\'\')') && publicTv.includes('monthly'), 'Office YoY adapter exposes office status and matched monthly comparison');
 assert(publicTv.includes("getPassportYearOverYearAnalytics_({baseYear:'2025',compareYear:'2026'})"), 'Passport historical TV context reuses the verified YoY semantic adapter');
 assert(publicTv.includes('base2025') && publicTv.includes('compare2026') && publicTv.includes('growthPct'), 'Passport historical TV context exposes only aggregate year-over-year metrics');
+assert(publicTv.includes('function getPublicTvServicePoints'), 'Public TV exposes read-only service point reference layer');
+assert(publicTv.includes('DEP-SAWANGAN-001') && publicTv.includes('BRANCH_SERVICE_POINT'), 'Depok Sawangan service point contract exists');
+assert(publicTv.includes('SERVICE_POINT_REFERENCE_V1') && publicTv.includes('readOnly:true'), 'Service point layer is explicitly read-only');
+assert(tvUi.includes('getPublicTvServicePoints') && tvUi.includes('openServicePointDetail'), 'INTAL TV renders service point reference marker');
+assert(tvUi.includes('service-point-marker') && tvUi.includes('Kanim Depok'), 'Service point marker has distinct visual identity');
+assert(tvUi.includes('maps.app.goo.gl/sxyHQwNwzs3i75fY8'), 'Depok service point preserves supplied Google Maps source');
 assert(publicTv.includes('function getPublicTvResidenceDashboard') && publicTv.includes('function getPublicTvPassportDashboard'), 'Public TV dashboard adapters exist');
 assert(publicTv.includes('function getPublicTvResidenceMap') && publicTv.includes('function getPublicTvPassportMap'), 'Public TV GIS adapters exist');
 assert(publicTv.includes('function getPublicTvRunningTexts') && publicTv.includes('getActiveRunningTexts_()'), 'Public TV running text uses non-mutating core');
