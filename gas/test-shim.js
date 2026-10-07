@@ -252,6 +252,8 @@ assert(publicTv.includes('base2025') && publicTv.includes('compare2026') && publ
 assert(publicTv.includes('function getPublicTvServicePoints'), 'Public TV exposes read-only service point reference layer');
 assert(publicTv.includes('DEP-SAWANGAN-001') && publicTv.includes('BRANCH_SERVICE_POINT'), 'Depok Sawangan service point contract exists');
 assert(publicTv.includes('DEP-DETOS-001') && publicTv.includes('DEP-PESONA-001') && publicTv.includes('DEP-MPP-001'), 'Depok service point reference layer includes Detos, Pesona Square, and MPP');
+assert(publicTv.includes('BEK-CIBUBUR-001') && publicTv.includes('BEK-GRANDMETRO-001') && publicTv.includes('BDG-MIKO-001'), 'Jabar service point reference layer includes verified Bekasi and Bandung service points');
+assert(publicTv.includes("parentOffice:'KANIM KELAS I NON TPI BEKASI'") && publicTv.includes("parentOffice:'KANIM KELAS I TPI BANDUNG'"), 'Service point reference layer preserves office parent identity');
 assert(publicTv.includes('dailyCapacity:45') && publicTv.includes('dailyCapacity:100') && publicTv.includes('dailyCapacity:20') && publicTv.includes('dailyCapacity:120'), 'Depok service point capacities are represented as reference metadata');
 assert(publicTv.includes('boothCount:2') && publicTv.includes('boothCount:3') && publicTv.includes('boothCount:1'), 'Depok service point booth counts are represented as reference metadata');
 assert(tvUi.includes('point.dailyCapacity') && tvUi.includes('point.boothCount'), 'Service point detail exposes capacity and booth metadata');
