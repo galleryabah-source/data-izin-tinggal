@@ -325,6 +325,10 @@ assert(tvCharts.includes('EXECUTIVE INSIGHT · APA YANG BERUBAH?'), 'INTAL TV ex
 assert(tvCharts.includes('Pendorong utama') && tvCharts.includes('Penahan pertumbuhan'), 'Executive Insight separates verified positive and negative Passport office contributors');
 assert(tvCharts.includes('passportYoyContext') && tvCharts.includes('getPublicTvPassportYoYContext'), 'Executive Insight derives Passport insight from verified YoY adapter');
 assert(tvCharts.includes('executiveInsight') && tvCharts.includes('canonical'), 'Executive Insight is embedded in the canonical TV presentation surface');
+assert(tvCharts.includes('id="executiveInsightModal"') && tvCharts.includes('80vw') && tvCharts.includes('80vh'), 'Executive Insight opens in an 80% viewport modal');
+assert(tvCharts.includes('data-executive-insight') && tvCharts.includes('openExecutiveInsight'), 'Total Layanan panel opens Executive Insight');
+assert(tvCharts.includes('Total layanan keseluruhan') && tvCharts.includes('Izin Tinggal') && tvCharts.includes('Paspor'), 'Executive Insight modal includes overall total and both service totals');
+assert(!tvCharts.includes('id="executiveInsight" class="executive-insight"'), 'Executive Insight is not rendered as a permanent left-column panel');
 assert(tvCharts.includes('passport-service-yoy-row') && tvCharts.includes('Rekonsiliasi service'), 'Passport service intelligence renders comparison rows and reconciliation status');
 assert(tvCharts.includes("call('getPublicTvPassportServiceYoYContext')"), 'INTAL TV loads service YoY through the read-only public adapter');
 assert(tvCharts.includes('comparableOfficeDelta') && tvCharts.includes('newOfficeContribution2026'), 'Passport performance insight reconciles comparable and NEW 2026 contribution');
