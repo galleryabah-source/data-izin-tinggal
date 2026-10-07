@@ -253,6 +253,12 @@ assert(publicTv.includes('function getPublicTvServicePoints'), 'Public TV expose
 assert(publicTv.includes('DEP-SAWANGAN-001') && publicTv.includes('BRANCH_SERVICE_POINT'), 'Depok Sawangan service point contract exists');
 assert(publicTv.includes('DEP-DETOS-001') && publicTv.includes('DEP-PESONA-001') && publicTv.includes('DEP-MPP-001'), 'Depok service point reference layer includes Detos, Pesona Square, and MPP');
 assert(publicTv.includes('BEK-CIBUBUR-001') && publicTv.includes('BEK-GRANDMETRO-001') && publicTv.includes('BDG-MIKO-001'), 'Jabar service point reference layer includes verified Bekasi and Bandung service points');
+assert(publicTv.includes('BDG-MPP-KOTA-001') && publicTv.includes('BDG-MPP-KAB-001') && publicTv.includes('BDG-MPP-KBB-001') && publicTv.includes('BDG-MPP-CIMAHI-001'), 'Bandung MPP service points are represented');
+assert(publicTv.includes('CRB-IRON-001') && publicTv.includes('CRB-MAJALENGKA-001') && publicTv.includes('CRB-INDA-001'), 'Cirebon service points are represented');
+assert(publicTv.includes('BOG-MPP-KOTA-001') && publicTv.includes('BOG-MPP-KAB-001'), 'Bogor service points are represented');
+assert(publicTv.includes('KRG-MPP-001') && publicTv.includes('KRG-LTSP-001'), 'Karawang service points are represented');
+assert(publicTv.includes('SKB-MPP-001') && publicTv.includes('GAR-MPP-SMD-001') && publicTv.includes('GAR-UNPAD-001'), 'Sukabumi and Garut service points are represented');
+assert(publicTv.includes('coordinateStatus:\'PENDING_COORDINATE\''), 'Unverified GIS points are explicitly held as pending coordinate rather than plotted');
 assert(publicTv.includes("parentOffice:'KANIM KELAS I NON TPI BEKASI'") && publicTv.includes("parentOffice:'KANIM KELAS I TPI BANDUNG'"), 'Service point reference layer preserves office parent identity');
 assert(publicTv.includes('dailyCapacity:45') && publicTv.includes('dailyCapacity:100') && publicTv.includes('dailyCapacity:20') && publicTv.includes('dailyCapacity:120'), 'Depok service point capacities are represented as reference metadata');
 assert(publicTv.includes('boothCount:2') && publicTv.includes('boothCount:3') && publicTv.includes('boothCount:1'), 'Depok service point booth counts are represented as reference metadata');
