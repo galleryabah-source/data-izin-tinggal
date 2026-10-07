@@ -755,7 +755,10 @@ assert(gisTv.includes("if(g.type==='Polygon')return {type:'Polygon',coordinates:
 assert(gisTv.includes("if(g.type==='MultiPolygon')return {type:'MultiPolygon',coordinates:arcs.map(poly=>poly.map(ring=>topoRing(topo,ring)))}"),'GIS boundary conversion retains MultiPolygon support');
 assert(gisTv.includes('id="gisBoundaryStatus"'),'INTAL TV exposes GIS boundary status indicator');
 assert(gisTv.includes("color:'#ffffff',weight:1.35,opacity:0.72"),'GIS boundary uses readable white administrative lines');
-assert(gisTv.includes("pane:'overlayPane',renderer:L.svg()"),'GIS boundary is explicitly rendered above imagery in the overlay pane');
+assert(gisTv.includes("map.createPane('gisBoundaryPane')"),'GIS boundary uses a dedicated Leaflet pane');
+assert(gisTv.includes("pane.style.zIndex='450'"),'GIS boundary pane sits above satellite tiles and below markers');
+assert(gisTv.includes("L.polygon(rings,{pane:'gisBoundaryPane',renderer:L.svg()"),'GIS boundary renders each administrative polygon deterministically');
+assert(gisTv.includes("querySelectorAll('path').length"),'GIS boundary exposes rendered SVG path count for runtime verification');
 assert(gisTv.includes("fillOpacity:0.008"),'GIS boundary default fill remains nearly transparent');
 assert(gisTv.includes('requestIdleCallback||function(fn){return setTimeout(fn,0)}'),'GIS boundary initialization is deferred until idle');
 assert(gisTv.includes("String(g.id||'')!=='32-88'"),'GIS boundary excludes non-administrative Waduk Cira geometry');
