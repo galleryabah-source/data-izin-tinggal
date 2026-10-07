@@ -307,4 +307,4 @@ function getPublicTvServicePoints(){
       coordinateStatus:'VERIFIED_LOCATION',coordinateStatusLabel:'Koordinat lokasi service point terverifikasi dari referensi lokasi publik'
     }
   ]};
-}\n
+}
