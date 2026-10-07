@@ -266,4 +266,4 @@ function getPublicTvServicePoints(){
     {pointId:'GAR-MPP-SMD-001',parentOffice:'KANIM KELAS II NON TPI GARUT',pointType:'MPP',pointTypeLabel:'Mal Pelayanan Publik (MPP)',name:'MPP Sumedang',location:'Jl. Prabu Geusan Ulun No.36, Regol Wetan, Kec. Sumedang Selatan, Kabupaten Sumedang, Jawa Barat',latitude:null,longitude:null,dailyCapacity:30,boothCount:0,mapsUrl:'',hours:'—',status:'REFERENCE',statusLabel:'REFERENCE · COORDINATE PENDING',coordinateStatus:'PENDING_COORDINATE',coordinateStatusLabel:'Lokasi layanan teridentifikasi dari sumber resmi; koordinat GIS final menunggu verifikasi titik peta'},
     {pointId:'GAR-UNPAD-001',parentOffice:'KANIM KELAS II NON TPI GARUT',pointType:'SERVICE_POINT',pointTypeLabel:'Titik layanan',name:'UNPAD',location:'Universitas Padjadjaran, Jawa Barat',latitude:null,longitude:null,dailyCapacity:null,boothCount:null,mapsUrl:'',hours:'—',status:'REFERENCE',statusLabel:'REFERENCE · COORDINATE PENDING',coordinateStatus:'PENDING_COORDINATE',coordinateStatusLabel:'Titik layanan tercantum pada data operasional; lokasi dan koordinat GIS final menunggu verifikasi'}
   ]};
-}\n
+}
