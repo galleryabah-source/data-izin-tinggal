@@ -567,7 +567,7 @@ async function loadServicePoints(L){
     servicePointLayer=L.layerGroup();
     servicePointConnectorLayer=L.layerGroup();
     servicePoints.forEach(point=>{
-      const icon=L.divIcon({className:'',html:'<div class="service-point-marker" tabindex="0"><div class="service-point-core"></div><div class="service-point-label"><b>'+esc(point.name)+'</b><span>Cabang layanan · Kanim Depok</span></div></div>',iconSize:[34,34],iconAnchor:[17,17]});
+      const icon=L.divIcon({className:'',html:'<div class="service-point-marker" tabindex="0"><div class="service-point-core"></div><div class="service-point-label"><b>'+esc(point.name)+'</b><span>'+esc(point.pointTypeLabel||'Service Point')+'</span></div></div>',iconSize:[34,34],iconAnchor:[17,17]});
       const marker=L.marker([Number(point.latitude),Number(point.longitude)],{icon,zIndexOffset:850});
       marker.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);openServicePointDetail(point);});
       marker.addTo(servicePointLayer);
@@ -584,7 +584,7 @@ function hideServicePointFocus(){
 }
 async function showServicePointsForOffice(office,origin){
   const parent=String(office||'').trim();
-  if(!map||parent!=='KANIM KELAS I NON TPI DEPOK')return;
+  if(!map)return;
   const L=await ensureMap();
   await loadServicePoints(L);
   if(!servicePointLayer||!servicePointConnectorLayer)return;
@@ -612,7 +612,10 @@ function openServicePointDetail(point){
   if(!point)return;
   $('servicePointTitle').textContent=String(point.name||'Titik Layanan');
   $('servicePointSub').textContent='SERVICE POINT · '+String(point.statusLabel||'REFERENCE');
-  $('servicePointBody').innerHTML='<div class="service-point-grid"><div class="service-point-card"><span>Kantor Induk</span><b>'+esc(point.parentOffice)+'</b></div><div class="service-point-card"><span>Jenis</span><b>'+esc(point.pointTypeLabel)+'</b></div><div class="service-point-card"><span>Kapasitas</span><b>'+fmt(point.dailyCapacity||0)+'/hari · '+fmt(point.boothCount||0)+' booth</b></div><div class="service-point-card"><span>Alamat</span><b>'+esc(point.location)+'</b></div><div class="service-point-card"><span>Jam Layanan</span><b>'+esc(point.hours||'—')+'</b></div></div><div class="service-point-note"><b>Posisi GIS:</b> '+esc(point.coordinateStatusLabel||'Reference')+'. Titik ini adalah layer referensi layanan dan tidak mengubah dataset transaksi, ranking kantor, atau KPI canonical.</div><div class="service-point-actions"><a href="'+esc(point.mapsUrl)+'" target="_blank" rel="noopener">BUKA GOOGLE MAPS ↗</a></div>';
+  const capacity=Number.isFinite(Number(point.dailyCapacity))&&Number(point.dailyCapacity)>0?fmt(point.dailyCapacity)+'/hari':'—';
+  const booths=Number.isFinite(Number(point.boothCount))&&Number(point.boothCount)>0?fmt(point.boothCount)+' booth':'—';
+  const mapsAction=point.mapsUrl?'<a href="'+esc(point.mapsUrl)+'" target="_blank" rel="noopener">BUKA GOOGLE MAPS ↗</a>':'';
+  $('servicePointBody').innerHTML='<div class="service-point-grid"><div class="service-point-card"><span>Kantor Induk</span><b>'+esc(point.parentOffice)+'</b></div><div class="service-point-card"><span>Jenis</span><b>'+esc(point.pointTypeLabel)+'</b></div><div class="service-point-card"><span>Kapasitas</span><b>'+capacity+' · '+booths+'</b></div><div class="service-point-card"><span>Alamat</span><b>'+esc(point.location)+'</b></div><div class="service-point-card"><span>Jam Layanan</span><b>'+esc(point.hours||'—')+'</b></div></div><div class="service-point-note"><b>Posisi GIS:</b> '+esc(point.coordinateStatusLabel||'Reference')+'. Titik ini adalah layer referensi layanan dan tidak mengubah dataset transaksi, ranking kantor, atau KPI canonical.</div><div class="service-point-actions">'+mapsAction+'</div>';
   $('servicePointModal').classList.remove('hidden');
 }
 function buildLayer(key,data,L){if(layers[key])layers[key].clearLayers();else layers[key]=L.layerGroup();const b=[];(data.markers||[]).forEach((m,i)=>{const color=markerColor(i),office=String(m.kantor_imigrasi||''),value=Number(m.total||0),lat=Number(m.latitude),lng=Number(m.longitude),icon=L.divIcon({className:'',html:'<div class="marker-wrap" style="color:'+color+'"><div class="marker-core"></div><div class="marker-label"><b>'+esc(office)+'</b><span>'+fmt(value)+'</span></div></div>',iconSize:[34,34],iconAnchor:[17,17]});const marker=L.marker([lat,lng],{icon});if(key==='MPASPOR_QUOTA')marker.on('click',()=>openQuotaOfficeDetail(Number(m.quotaIndex)));else marker.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);openGisOfficeDetail(office);showServicePointsForOffice(office,[lat,lng]);});marker.addTo(layers[key]);b.push([lat,lng]);});bounds[key]=b;}
