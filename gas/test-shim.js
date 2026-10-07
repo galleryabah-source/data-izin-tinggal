@@ -252,6 +252,14 @@ assert(publicTv.includes('base2025') && publicTv.includes('compare2026') && publ
 assert(publicTv.includes('function getPublicTvServicePoints'), 'Public TV exposes read-only service point reference layer');
 assert(publicTv.includes('DEP-SAWANGAN-001') && publicTv.includes('BRANCH_SERVICE_POINT'), 'Depok Sawangan service point contract exists');
 assert(publicTv.includes('DEP-DETOS-001') && publicTv.includes('DEP-PESONA-001') && publicTv.includes('DEP-MPP-001'), 'Depok service point reference layer includes Detos, Pesona Square, and MPP');
+assert(publicTv.includes('BEK-CIBUBUR-001') && publicTv.includes('BEK-GRANDMETRO-001') && publicTv.includes('BDG-MIKO-001'), 'Jabar service point reference layer includes verified Bekasi and Bandung service points');
+assert(publicTv.includes('BDG-MPP-KOTA-001') && publicTv.includes('BDG-MPP-KAB-001') && publicTv.includes('BDG-MPP-KBB-001') && publicTv.includes('BDG-MPP-CIMAHI-001'), 'Bandung MPP service points are represented');
+assert(publicTv.includes('CRB-IRON-001') && publicTv.includes('CRB-MAJALENGKA-001') && publicTv.includes('CRB-INDA-001'), 'Cirebon service points are represented');
+assert(publicTv.includes('BOG-MPP-KOTA-001') && publicTv.includes('BOG-MPP-KAB-001'), 'Bogor service points are represented');
+assert(publicTv.includes('KRG-MPP-001') && publicTv.includes('KRG-LTSP-001'), 'Karawang service points are represented');
+assert(publicTv.includes('SKB-MPP-001') && publicTv.includes('GAR-MPP-SMD-001') && publicTv.includes('GAR-UNPAD-001'), 'Sukabumi and Garut service points are represented');
+assert(publicTv.includes('coordinateStatus:\'PENDING_COORDINATE\''), 'Unverified GIS points are explicitly held as pending coordinate rather than plotted');
+assert(publicTv.includes("parentOffice:'KANIM KELAS I NON TPI BEKASI'") && publicTv.includes("parentOffice:'KANIM KELAS I TPI BANDUNG'"), 'Service point reference layer preserves office parent identity');
 assert(publicTv.includes('dailyCapacity:45') && publicTv.includes('dailyCapacity:100') && publicTv.includes('dailyCapacity:20') && publicTv.includes('dailyCapacity:120'), 'Depok service point capacities are represented as reference metadata');
 assert(publicTv.includes('boothCount:2') && publicTv.includes('boothCount:3') && publicTv.includes('boothCount:1'), 'Depok service point booth counts are represented as reference metadata');
 assert(tvUi.includes('point.dailyCapacity') && tvUi.includes('point.boothCount'), 'Service point detail exposes capacity and booth metadata');
@@ -260,14 +268,14 @@ assert(publicTv.includes('SERVICE_POINT_REFERENCE_V1') && publicTv.includes('rea
 assert(tvUi.includes('function showServicePointsForOffice'), 'GIS has an explicit service point focus/orbit handler');
 assert(tvUi.includes('hideServicePointFocus') && tvUi.includes("map.on('click'"), 'Map click clears the service point orbit');
 assert(tvUi.includes('servicePointConnectorLayer') && tvUi.includes('L.polyline'), 'Service point orbit uses non-blocking connector lines');
-assert(tvUi.includes('servicePointFocusOffice') && tvUi.includes('KANIM KELAS I NON TPI DEPOK'), 'Service point orbit is scoped to the Depok parent office');
+assert(tvUi.includes('servicePointFocusOffice') && tvUi.includes('children=servicePoints.filter(point=>String(point.parentOffice||\'\').trim()===parent)'), 'Service point orbit is scoped dynamically to the clicked office parent');
 assert(tvUi.includes('display:none;position:absolute') && tvUi.includes('.service-point-marker:hover .service-point-label'), 'Service point labels remain hidden until hover');
 assert(tvUi.includes('zIndexOffset:850'), 'Service point marker remains visually subordinate to the Kanim marker');
 assert(tvUi.includes('function closeServicePointDetail'), 'Service point modal has an explicit close handler');
 assert(tvUi.includes("'service-point':closeServicePointDetail"), 'Service point close button is wired into modal close routing');
 assert(tvUi.includes("e.key==='Escape'") && tvUi.includes('closeServicePointDetail()'), 'Escape closes the service point modal');
 assert(tvUi.includes('getPublicTvServicePoints') && tvUi.includes('openServicePointDetail'), 'INTAL TV renders service point reference marker');
-assert(tvUi.includes('service-point-marker') && tvUi.includes('Kanim Depok'), 'Service point marker has distinct visual identity');
+assert(tvUi.includes('service-point-marker') && tvUi.includes('point.pointTypeLabel'), 'Service point marker has distinct visual identity');
 assert(publicTv.includes('maps.app.goo.gl/sxyHQwNwzs3i75fY8'), 'Depok service point preserves supplied Google Maps source');
 assert(publicTv.includes('function getPublicTvResidenceDashboard') && publicTv.includes('function getPublicTvPassportDashboard'), 'Public TV dashboard adapters exist');
 assert(publicTv.includes('function getPublicTvResidenceMap') && publicTv.includes('function getPublicTvPassportMap'), 'Public TV GIS adapters exist');
@@ -786,3 +794,5 @@ assert(gisTv.includes("String(g.id||'')!=='32-88'"),'GIS boundary excludes non-a
 assert(gisTv.includes("'Batas kab/kota · '+layers.length+' wilayah · aktif'"),'GIS boundary reports active rendered region state');
 assert(gisTv.includes('layer.bindTooltip(name'), 'GIS boundary exposes district/city name on hover');
 assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary hover state becomes clearly readable');
+
+// Service-point GIS registry: pending coordinates are intentionally excluded from plotted orbit.\n
