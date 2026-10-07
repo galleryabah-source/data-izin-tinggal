@@ -278,6 +278,33 @@ function getPublicTvServicePoints(){
       mapsUrl:'https://maps.app.goo.gl/sxyHQwNwzs3i75fY8',hours:'Senin–Kamis 08.00–15.00 · Jumat 08.00–15.30',
       status:'REFERENCE',statusLabel:'REFERENCE · PILOT',coordinateStatus:'REFERENCE_NEAR_PUBLIC_ADDRESS',
       coordinateStatusLabel:'Reference point dari area alamat publik; final pin tetap mengikuti tautan Google Maps yang diberikan'
+    },
+    {
+      pointId:'BEK-CIBUBUR-001',parentOffice:'KANIM KELAS I NON TPI BEKASI',pointType:'ULP',
+      pointTypeLabel:'Unit Layanan Paspor (ULP)',name:'ULP Plaza Cibubur',
+      location:'Plaza Cibubur, Jl. Transyogi, Jatikarya, Kec. Jatisampurna, Kota Bekasi, Jawa Barat 17435',
+      latitude:-6.37623,longitude:106.91528,dailyCapacity:50,boothCount:null,
+      hours:'Senin–Sabtu · layanan mengikuti jadwal unit',
+      status:'REFERENCE',statusLabel:'REFERENCE · ACTIVE SERVICE POINT',
+      coordinateStatus:'VERIFIED_LOCATION',coordinateStatusLabel:'Koordinat lokasi service point terverifikasi dari referensi lokasi publik'
+    },
+    {
+      pointId:'BEK-GRANDMETRO-001',parentOffice:'KANIM KELAS I NON TPI BEKASI',pointType:'IMMIGRATION_LOUNGE',
+      pointTypeLabel:'Immigration Lounge',name:'Immigration Lounge Grand Metropolitan Mall',
+      location:'Grand Metropolitan Mall, Jl. KH. Noer Ali, Pekayon Jaya, Kec. Bekasi Selatan, Kota Bekasi, Jawa Barat 17148',
+      latitude:-6.249356,longitude:106.984499,dailyCapacity:null,boothCount:null,
+      hours:'Senin–Sabtu · jadwal mengikuti layanan',
+      status:'REFERENCE',statusLabel:'REFERENCE · ACTIVE SERVICE POINT',
+      coordinateStatus:'VERIFIED_LOCATION',coordinateStatusLabel:'Koordinat lokasi service point terverifikasi dari referensi lokasi publik'
+    },
+    {
+      pointId:'BDG-MIKO-001',parentOffice:'KANIM KELAS I TPI BANDUNG',pointType:'ULP',
+      pointTypeLabel:'Unit Layanan Paspor (ULP)',name:'ULP Miko Mall',
+      location:'Miko Mall, Jl. Raya Kopo No.599, Cirangrang, Kec. Babakan Ciparay, Kota Bandung, Jawa Barat 40227',
+      latitude:-6.9600702,longitude:107.5808048,dailyCapacity:35,boothCount:null,
+      hours:'Sabtu · Pasporia by Maung Lembur',
+      status:'REFERENCE',statusLabel:'REFERENCE · ACTIVE SERVICE POINT',
+      coordinateStatus:'VERIFIED_LOCATION',coordinateStatusLabel:'Koordinat lokasi service point terverifikasi dari referensi lokasi publik'
     }
   ]};
-}
+}\n
