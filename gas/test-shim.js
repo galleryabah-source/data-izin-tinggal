@@ -275,7 +275,7 @@ assert(tvUi.includes('function closeServicePointDetail'), 'Service point modal h
 assert(tvUi.includes("'service-point':closeServicePointDetail"), 'Service point close button is wired into modal close routing');
 assert(tvUi.includes("e.key==='Escape'") && tvUi.includes('closeServicePointDetail()'), 'Escape closes the service point modal');
 assert(tvUi.includes('getPublicTvServicePoints') && tvUi.includes('openServicePointDetail'), 'INTAL TV renders service point reference marker');
-assert(tvUi.includes('service-point-marker') && tvUi.includes('Kanim Depok'), 'Service point marker has distinct visual identity');
+assert(tvUi.includes('service-point-marker') && tvUi.includes('point.pointTypeLabel'), 'Service point marker has distinct visual identity');
 assert(publicTv.includes('maps.app.goo.gl/sxyHQwNwzs3i75fY8'), 'Depok service point preserves supplied Google Maps source');
 assert(publicTv.includes('function getPublicTvResidenceDashboard') && publicTv.includes('function getPublicTvPassportDashboard'), 'Public TV dashboard adapters exist');
 assert(publicTv.includes('function getPublicTvResidenceMap') && publicTv.includes('function getPublicTvPassportMap'), 'Public TV GIS adapters exist');
