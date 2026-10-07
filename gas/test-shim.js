@@ -252,6 +252,9 @@ assert(publicTv.includes('base2025') && publicTv.includes('compare2026') && publ
 assert(publicTv.includes('function getPublicTvServicePoints'), 'Public TV exposes read-only service point reference layer');
 assert(publicTv.includes('DEP-SAWANGAN-001') && publicTv.includes('BRANCH_SERVICE_POINT'), 'Depok Sawangan service point contract exists');
 assert(publicTv.includes('SERVICE_POINT_REFERENCE_V1') && publicTv.includes('readOnly:true'), 'Service point layer is explicitly read-only');
+assert(tvUi.includes('function closeServicePointDetail'), 'Service point modal has an explicit close handler');
+assert(tvUi.includes("'service-point':closeServicePointDetail"), 'Service point close button is wired into modal close routing');
+assert(tvUi.includes("e.key==='Escape'") && tvUi.includes('closeServicePointDetail()'), 'Escape closes the service point modal');
 assert(tvUi.includes('getPublicTvServicePoints') && tvUi.includes('openServicePointDetail'), 'INTAL TV renders service point reference marker');
 assert(tvUi.includes('service-point-marker') && tvUi.includes('Kanim Depok'), 'Service point marker has distinct visual identity');
 assert(publicTv.includes('maps.app.goo.gl/sxyHQwNwzs3i75fY8'), 'Depok service point preserves supplied Google Maps source');
