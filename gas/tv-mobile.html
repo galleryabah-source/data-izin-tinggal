@@ -113,6 +113,26 @@ body[data-screen="map"] .shell{padding-bottom:0}
  .bottom-nav{max-width:none}
 }
 
+
+/* Home app shell: clear hierarchy and purposeful quick actions */
+.top{padding-top:calc(8px + env(safe-area-inset-top));padding-bottom:12px}
+.brand{gap:10px}.logo{flex:0 0 42px}.brand small{font-size:clamp(9px,2.5vw,11px);letter-spacing:.045em;line-height:1.3}.brand strong{font-size:clamp(15px,4vw,18px)}
+.clock{font-size:12px}
+.home-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:14px 0 4px}
+.home-action{display:grid;grid-template-columns:38px minmax(0,1fr) 12px;align-items:center;gap:9px;min-height:76px;padding:12px 10px;border:1px solid #25455f;border-radius:16px;background:linear-gradient(145deg,#132c43,#0c1e31);color:var(--text);text-align:left;touch-action:manipulation}
+.home-action:active{background:#183a56;transform:scale(.985)}
+.home-action-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#123c59;color:#7ce8fa;font-size:22px;font-weight:800}
+.home-action b{display:block;font-size:clamp(12px,3.2vw,14px);line-height:1.25}
+.home-action small{display:block;margin-top:4px;color:#a5b9cc;font-size:clamp(10px,2.7vw,11px);line-height:1.3}
+.home-action-arrow{color:#72dff4;font-size:23px;text-align:center}
+body:not([data-screen="home"]) #homeActions{display:none}
+#trendSection .section-head h2{font-size:14px;letter-spacing:0}
+.bar-row{grid-template-columns:minmax(42px,58px) minmax(0,1fr) auto;gap:8px;font-size:11px}
+.bar-track{height:8px}
+.bottom-nav button{min-height:54px;font-size:11px}
+@media(max-width:359px){.home-actions{gap:7px}.home-action{grid-template-columns:32px minmax(0,1fr) 8px;gap:7px;padding:10px 8px;min-height:70px}.home-action-icon{width:32px;height:32px;font-size:19px}.home-action b{font-size:11px}.home-action small{font-size:9px}}
+@media(min-width:600px){.home-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 /* Viewport audit hardening: prevent narrow intrinsic sizing and browser-chrome overlap */
 html,body{width:100%;min-width:0;max-width:100%;margin:0}
 body{overflow-x:hidden}
@@ -162,6 +182,12 @@ input,button{max-width:100%}
 <section class="kpi res"><label>Jumlah kantor</label><strong id="officesCount">—</strong><span>Dalam dataset aktif</span></section>
 <section class="kpi pass"><label>Jumlah baris</label><strong id="rowsCount">—</strong><span>Record pada snapshot</span></section>
 </div>
+<section class="home-actions" id="homeActions" aria-label="Akses cepat">
+ <button type="button" class="home-action" data-jump="map"><span class="home-action-icon">⌖</span><span><b>Peta Interaktif</b><small>Sebaran kantor</small></span><span class="home-action-arrow">›</span></button>
+ <button type="button" class="home-action" data-jump="offices"><span class="home-action-icon">▤</span><span><b>Daftar Kantor</b><small>Peringkat dan detail</small></span><span class="home-action-arrow">›</span></button>
+ <button type="button" class="home-action" data-jump="services"><span class="home-action-icon">◉</span><span><b>Distribusi Layanan</b><small>Komposisi layanan</small></span><span class="home-action-arrow">›</span></button>
+ <button type="button" class="home-action" data-jump="points"><span class="home-action-icon">⌁</span><span><b>Titik Layanan</b><small>Lokasi layanan cabang</small></span><span class="home-action-arrow">›</span></button>
+</section>
 <div id="error" class="error hidden" role="status"></div>
 <section class="section screen-hidden" id="mapSection"><div class="screen-title">Peta kantor</div><div class="screen-caption">Pilih marker untuk melihat ringkasan kantor.</div><div class="section-head"><h2>SEBARAN KANTOR · GIS</h2><small id="mapState">GIS opsional</small></div><div class="map-wrap"><div id="map" class="map"></div><div class="map-note">Peta kantor · pilih marker untuk menyorot kantor</div></div></section>
 <section class="section screen-hidden" id="officesSection"><div class="screen-title">Kantor imigrasi</div><div class="screen-caption">Cari kantor dan buka detail tanpa memenuhi beranda.</div><div class="section-head"><h2>PERINGKAT KANTOR</h2><small id="officeCountLabel">—</small></div><div style="padding:0 10px 10px"><input id="search" class="search" type="search" placeholder="Cari nama kantor…" autocomplete="off" aria-label="Cari kantor imigrasi"></div><div id="offices" class="office-list"><div class="empty">Memuat data kantor…</div></div></section>
