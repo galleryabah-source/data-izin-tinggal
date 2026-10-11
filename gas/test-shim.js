@@ -813,6 +813,12 @@ assert(forensicGov.includes('contribution'), 'Passport YoY forensic closure reco
 const forensicUi=read('index.html');
 assert(forensicUi.includes('runPassportYoyForensic'), 'Back Office exposes Passport YoY forensic closure control');
 
+
+const mobileAppShell=read('tv-mobile.html');
+assert(mobileAppShell.includes('id="homeActions"')&&mobileAppShell.includes('data-jump="map"')&&mobileAppShell.includes('data-jump="offices"')&&mobileAppShell.includes('data-jump="services"')&&mobileAppShell.includes('data-jump="points"'),'Mobile home exposes dedicated quick actions for each primary screen');
+assert(mobileAppShell.includes('body:not([data-screen="home"]) #homeActions{display:none}'),'Home quick actions are isolated to the home screen');
+assert(mobileAppShell.includes('grid-template-columns:repeat(2,minmax(0,1fr))')&&mobileAppShell.includes('@media(max-width:359px){.home-actions{gap:7px}'),'Quick action grid adapts to narrow smartphone widths');
+
 const gisTv=read('tv.html');
 assert(gisTv.includes('JABAR_BOUNDARY_TOPO'),'INTAL TV embeds lightweight West Java boundary dataset');
 assert(gisTv.includes('buildJabarBoundaryGeoJSON'),'INTAL TV converts boundary TopoJSON without adding topojson-client runtime');
