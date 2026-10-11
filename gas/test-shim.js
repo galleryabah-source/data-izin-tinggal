@@ -319,7 +319,7 @@ assert(publicTv.includes('kantor_imigrasi') && publicTv.includes('latitude') && 
 assert(!publicTv.includes('source_url') && !publicTv.includes('office_key') && !publicTv.includes('address'), 'Public TV GIS does not expose office reference metadata');
 assert(codeGs.includes("readCacheKey_('running-text-active')") && codeGs.includes('readCachePut_(cacheKey,result,10)'), 'TV running text read path uses bounded cache');
 assert(codeGs.includes("const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':'index'"), 'doGet preserves the dedicated TV template and adds a separate mobile template');
-assert(codeGs.includes("if(view!=='tv')requireBackOfficeAccess_()"), 'Main workspace is server-gated while TV is public');
+assert(codeGs.includes("if(view!=='tv'&&view!=='tv-mobile')requireBackOfficeAccess_()"), 'Main workspace remains server-gated while TV and mobile TV use the existing public view path');
 assert(codeGs.includes('function getBootstrap(){const u=requireBackOfficeAccess_();'), 'Back-office bootstrap is server-gated');
 const authSource=read('Auth.gs');
 assert(authSource.includes("const BACKOFFICE_ROLES_ = Object.freeze(['ADMIN','SUPERVISOR'])"), 'Back-office roles map to Owner/Editor without USERS migration');
