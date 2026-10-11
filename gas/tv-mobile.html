@@ -266,6 +266,7 @@ function ensureMap(){
   document.head.appendChild(script);
   function init(){try{map=L.map('map',{zoomControl:true,scrollWheelZoom:false}).setView([-6.9,107.6],8);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);markers=L.layerGroup().addTo(map);resolve(map);setTimeout(()=>map&&map.invalidateSize(),100);}catch(e){reject(e);}}
  });
+ mapPromise=mapPromise.catch(e=>{mapPromise=null;throw e;});
  return mapPromise;
 }
 async function renderMap(d){
@@ -275,7 +276,7 @@ async function renderMap(d){
   await ensureMap();if(request!==mapRenderRequest||activeScreen!=='map')return;markers.clearLayers();officeMarkerByName.clear();const bounds=[];
   m.markers.forEach((p,i)=>{const lat=Number(p.latitude),lng=Number(p.longitude);if(!Number.isFinite(lat)||!Number.isFinite(lng))return;const name=String(p.kantor_imigrasi||'Kantor Imigrasi');const marker=L.circleMarker([lat,lng],{radius:7,weight:2,color:'#8ceaff',fillColor:'#168cff',fillOpacity:.9}).bindPopup('<b>'+esc(name)+'</b><br>Total: '+fmt(p.total));marker.on('click',()=>openOfficeDetail(name));marker.addTo(markers);officeMarkerByName.set(name,marker);bounds.push([lat,lng]);});
   if(bounds.length)map.fitBounds(bounds,{padding:[20,20],maxZoom:10});$('mapState').textContent=bounds.length+' titik kantor';setTimeout(()=>map.invalidateSize(),50);
- }catch(e){$('mapState').textContent='Peta tidak tersedia';if(!mapPromise)$('map').innerHTML='<div class="empty">Peta gagal dimuat. KPI dan daftar kantor tetap tersedia.</div>';}
+ }catch(e){if(request!==mapRenderRequest||activeScreen!=='map')return;$('mapState').textContent='Peta belum tersedia · ketuk Peta untuk mencoba lagi';if(!map){$('map').textContent='Peta gagal dimuat. Periksa koneksi lalu buka kembali layar Peta. KPI dan daftar kantor tetap tersedia.';$('map').classList.add('empty');}}
 }
 async function refresh(force){
  if(refreshing)return;refreshing=true;clearError();setStatus('Memvalidasi snapshot kanonis…',false);
