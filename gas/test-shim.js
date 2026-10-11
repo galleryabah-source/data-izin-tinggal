@@ -5,12 +5,29 @@ const files=fs.readdirSync(__dirname).filter(x=>/\.(gs|js)$/.test(x));
 for(const name of files){new Function(fs.readFileSync(path.join(__dirname,name),'utf8'));}
 
 const assert=(condition,message)=>{if(!condition)throw new Error('TEST FAILED: '+message);};
+const read=(name)=>fs.readFileSync(path.join(__dirname,name),'utf8');
+const mobileHtml=fs.readFileSync(path.join(__dirname,'tv-mobile.html'),'utf8');
+assert(mobileHtml.includes('INTAL TV MOBILE'),'Dedicated INTAL TV Mobile page exists');
+assert(mobileHtml.includes('getPublicTvResidenceDashboard')&&mobileHtml.includes('getPublicTvPassportDashboard'),'Mobile uses canonical read-only dashboard services');
+assert(mobileHtml.includes('getPublicTvResidenceMap')&&mobileHtml.includes('getPublicTvPassportMap'),'Mobile uses existing canonical GIS services');
+assert(mobileHtml.includes('viewport-fit=cover')&&mobileHtml.includes('@media(min-width:600px)'),'Mobile layout supports safe areas and larger screens');
+assert(mobileHtml.includes('setInterval(()=>refresh(true),300000)'),'Mobile refresh cadence is bounded to five minutes');
+const mobileScriptStart=mobileHtml.indexOf('<script>')+'<script>'.length;
+const mobileScriptEnd=mobileHtml.indexOf('</script>',mobileScriptStart);
+const mobileScriptMatch=mobileScriptStart>='<script>'.length&&mobileScriptEnd>mobileScriptStart?{1:mobileHtml.slice(mobileScriptStart,mobileScriptEnd)}:null;
+assert(!!mobileScriptMatch,'INTAL TV Mobile contains a script block');
+try{new Function(mobileScriptMatch[1]);}catch(e){throw new Error('TEST FAILED: INTAL TV Mobile script syntax: '+e.message);}
+const routeCode=read('Code.gs');
+assert(routeCode.includes("view!=='tv'&&view!=='tv-mobile'"),'INTAL TV Mobile remains in the same public read-only view access path');
+assert(routeCode.includes("view==='tv-mobile'?'tv-mobile'"),'doGet routes tv-mobile to its separate template');
+assert(mobileHtml.includes('data-nav="menu"')&&mobileHtml.includes('data-nav="services"'),'Mobile has persistent bottom navigation');
+assert(mobileHtml.includes('function renderDistribution')&&mobileHtml.includes('function renderServicePoints'),'Mobile includes service distribution and service-point views');
+const workspaceHtml=read('index.html');
+assert(workspaceHtml.includes('INTAL TV Smartphone')&&workspaceHtml.includes("WEB_APP_URL+'?view=tv-mobile'"),'Workspace provides a dedicated INTAL TV Smartphone menu entry');
 const tvHtml=fs.readFileSync(path.join(__dirname,'tv.html'),'utf8');
 const tvScriptMatch=tvHtml.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
 assert(!!tvScriptMatch,'INTAL TV HTML contains a script block');
 try{new Function(tvScriptMatch[1]);}catch(e){throw new Error('TEST FAILED: INTAL TV script syntax: '+e.message);}
-const read=(name)=>fs.readFileSync(path.join(__dirname,name),'utf8');
-
 const authCode=read('Auth.gs');
 const SHEETS={USERS:'USERS',PERMISSIONS:'PERMISSIONS'};
 const makeSheet=(values)=>({getDataRange:()=>({getValues:()=>values})});
@@ -301,8 +318,8 @@ assert(!publicTv.includes('requirePermission_('), 'Public TV adapter contains no
 assert(publicTv.includes('kantor_imigrasi') && publicTv.includes('latitude') && publicTv.includes('longitude'), 'Public TV GIS exposes only presentation marker fields');
 assert(!publicTv.includes('source_url') && !publicTv.includes('office_key') && !publicTv.includes('address'), 'Public TV GIS does not expose office reference metadata');
 assert(codeGs.includes("readCacheKey_('running-text-active')") && codeGs.includes('readCachePut_(cacheKey,result,10)'), 'TV running text read path uses bounded cache');
-assert(codeGs.includes("view==='tv'?'tv':'index'"), 'doGet routes TV to dedicated tv.html entry');
-assert(codeGs.includes("if(view!=='tv')requireBackOfficeAccess_()"), 'Main workspace is server-gated while TV is public');
+assert(codeGs.includes("const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':'index'"), 'doGet preserves the dedicated TV template and adds a separate mobile template');
+assert(codeGs.includes("if(view!=='tv'&&view!=='tv-mobile')requireBackOfficeAccess_()"), 'Main workspace remains server-gated while TV and mobile TV use the existing public view path');
 assert(codeGs.includes('function getBootstrap(){const u=requireBackOfficeAccess_();'), 'Back-office bootstrap is server-gated');
 const authSource=read('Auth.gs');
 assert(authSource.includes("const BACKOFFICE_ROLES_ = Object.freeze(['ADMIN','SUPERVISOR'])"), 'Back-office roles map to Owner/Editor without USERS migration');

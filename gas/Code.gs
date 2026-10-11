@@ -1,4 +1,4 @@
-function doGet(e){const view=e&&e.parameter&&String(e.parameter.view||'').toLowerCase();if(view!=='tv')requireBackOfficeAccess_();const file=view==='tv'?'tv':'index';return HtmlService.createTemplateFromFile(file).evaluate().setTitle(view==='tv'?'INTAL TV · Command Display':APP.NAME).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
+function doGet(e){const view=e&&e.parameter&&String(e.parameter.view||'').toLowerCase();if(view!=='tv'&&view!=='tv-mobile')requireBackOfficeAccess_();const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':'index';const title=view==='tv'?'INTAL TV · Command Display':view==='tv-mobile'?'INTAL TV Mobile · Command Display':APP.NAME;return HtmlService.createTemplateFromFile(file).evaluate().setTitle(title).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
 function setupApp(){
   const props=PropertiesService.getScriptProperties();
   const id=String(props.getProperty('SPREADSHEET_ID')||'').trim();
