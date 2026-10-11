@@ -5,6 +5,18 @@ const files=fs.readdirSync(__dirname).filter(x=>/\.(gs|js)$/.test(x));
 for(const name of files){new Function(fs.readFileSync(path.join(__dirname,name),'utf8'));}
 
 const assert=(condition,message)=>{if(!condition)throw new Error('TEST FAILED: '+message);};
+const mobileHtml=fs.readFileSync(path.join(__dirname,'tv-mobile.html'),'utf8');
+assert(mobileHtml.includes('INTAL TV MOBILE'),'Dedicated INTAL TV Mobile page exists');
+assert(mobileHtml.includes('getPublicTvResidenceDashboard')&&mobileHtml.includes('getPublicTvPassportDashboard'),'Mobile uses canonical read-only dashboard services');
+assert(mobileHtml.includes('getPublicTvResidenceMap')&&mobileHtml.includes('getPublicTvPassportMap'),'Mobile uses existing canonical GIS services');
+assert(mobileHtml.includes('viewport-fit=cover')&&mobileHtml.includes('@media(min-width:600px)'),'Mobile layout supports safe areas and larger screens');
+assert(mobileHtml.includes('setInterval(()=>refresh(true),300000)'),'Mobile refresh cadence is bounded to five minutes');
+const mobileScriptMatch=mobileHtml.match(/<script>([\\s\\S]*?)<\\/script>/i);
+assert(!!mobileScriptMatch,'INTAL TV Mobile contains a script block');
+try{new Function(mobileScriptMatch[1]);}catch(e){throw new Error('TEST FAILED: INTAL TV Mobile script syntax: '+e.message);}
+const routeCode=read('Code.gs');
+assert(routeCode.includes("view!=='tv'&&view!=='tv-mobile'"),'INTAL TV Mobile remains in the same public read-only view access path');
+assert(routeCode.includes("view==='tv-mobile'?'tv-mobile'"),'doGet routes tv-mobile to its separate template');
 const tvHtml=fs.readFileSync(path.join(__dirname,'tv.html'),'utf8');
 const tvScriptMatch=tvHtml.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
 assert(!!tvScriptMatch,'INTAL TV HTML contains a script block');
