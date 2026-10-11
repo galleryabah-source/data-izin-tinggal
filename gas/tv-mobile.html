@@ -119,6 +119,7 @@ function openOfficeDetail(name){const d=snapshots[active];const o=(d?.offices||[
 function selectOffice(name){document.querySelectorAll('.office').forEach(b=>b.classList.toggle('selected',b.dataset.office===name));const marker=officeMarkerByName.get(name);if(marker&&map){map.setView(marker.getLatLng(),Math.max(map.getZoom(),10),{animate:false});marker.openPopup();}openOfficeDetail(name);}
 document.querySelectorAll('[data-service]').forEach(b=>b.addEventListener('click',()=>{if(active===b.dataset.service)return;active=b.dataset.service;document.querySelectorAll('[data-service]').forEach(x=>x.classList.toggle('active',x===b));if(snapshots[active])render(snapshots[active]);else refresh(false);}));
 $('search').addEventListener('input',()=>{const q=$('search').value.trim().toLocaleLowerCase('id');document.querySelectorAll('#offices .office').forEach(b=>b.classList.toggle('hidden',!b.dataset.office.toLocaleLowerCase('id').includes(q)));});
+$('offices').addEventListener('click',e=>{const b=e.target.closest('[data-office]');if(b)selectOffice(b.dataset.office);});
 $('refresh').addEventListener('click',()=>refresh(true));
 function tick(){const d=new Date();$('clock').textContent=d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});$('date').textContent=d.toLocaleDateString('id-ID',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}
 document.querySelectorAll('[data-nav]').forEach(b=>b.addEventListener('click',()=>jump(b.dataset.nav)));
