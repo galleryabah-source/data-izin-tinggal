@@ -11,7 +11,9 @@ assert(mobileHtml.includes('getPublicTvResidenceDashboard')&&mobileHtml.includes
 assert(mobileHtml.includes('getPublicTvResidenceMap')&&mobileHtml.includes('getPublicTvPassportMap'),'Mobile uses existing canonical GIS services');
 assert(mobileHtml.includes('viewport-fit=cover')&&mobileHtml.includes('@media(min-width:600px)'),'Mobile layout supports safe areas and larger screens');
 assert(mobileHtml.includes('setInterval(()=>refresh(true),300000)'),'Mobile refresh cadence is bounded to five minutes');
-const mobileScriptMatch=mobileHtml.match(/<script>([\\s\\S]*?)<\\/script>/i);
+const mobileScriptStart=mobileHtml.indexOf('<script>')+'<script>'.length;
+const mobileScriptEnd=mobileHtml.indexOf('</script>',mobileScriptStart);
+const mobileScriptMatch=mobileScriptStart>='<script>'.length&&mobileScriptEnd>mobileScriptStart?{1:mobileHtml.slice(mobileScriptStart,mobileScriptEnd)}:null;
 assert(!!mobileScriptMatch,'INTAL TV Mobile contains a script block');
 try{new Function(mobileScriptMatch[1]);}catch(e){throw new Error('TEST FAILED: INTAL TV Mobile script syntax: '+e.message);}
 const routeCode=read('Code.gs');
