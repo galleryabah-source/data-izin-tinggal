@@ -23,6 +23,11 @@ assert(routeCode.includes("view==='tv-mobile'?'tv-mobile'"),'doGet routes tv-mob
 assert(mobileHtml.includes('data-nav="menu"')&&mobileHtml.includes('data-nav="services"'),'Mobile has persistent bottom navigation');
 assert(mobileHtml.includes('body[data-screen="home"] .status')&&mobileHtml.includes("document.body.dataset.screen='home';"),'Mobile initializes and scopes app chrome by active screen');
 assert(mobileHtml.includes('max-width:560px')&&mobileHtml.includes('min-height:70px')&&mobileHtml.includes('safe-area-inset-top'),'Mobile uses app-like viewport, touch targets, and safe-area layout');
+assert(mobileHtml.includes('html,body{width:100%;min-width:0;max-width:100%;margin:0}')&&mobileHtml.includes('.shell{display:block;width:100%;max-width:560px;min-width:0;margin-inline:auto}'),'Mobile shell explicitly fills available viewport without intrinsic narrow sizing');
+assert(mobileHtml.includes('.bottom-nav{width:100%;max-width:560px;left:0;right:0;margin-inline:auto;')&&mobileHtml.includes('env(safe-area-inset-left)'),'Bottom navigation spans the app viewport and respects horizontal safe areas');
+assert(mobileHtml.includes('@media(max-width:359px)')&&mobileHtml.includes('@media(orientation:landscape) and (max-height:500px)'),'Mobile supports narrow portrait and short landscape viewports');
+assert(mobileHtml.includes('body[data-screen="map"] #mapSection .map-wrap{height:calc(100dvh - 176px);min-height:280px}'),'Map height adapts to dynamic viewport and compact app chrome');
+
 assert(mobileHtml.includes('body:not([data-screen="home"]) .kpis{display:none}'),'Global dashboard KPIs do not persist on every app screen');
 assert(mobileHtml.includes('function renderDistribution')&&mobileHtml.includes('function renderServicePoints'),'Mobile includes service distribution and service-point views');
 assert(mobileHtml.includes('id="mapSection"')&&mobileHtml.includes('id="officesSection"')&&mobileHtml.includes('id="trendSection"'),'Mobile content is separated into dedicated app screens');

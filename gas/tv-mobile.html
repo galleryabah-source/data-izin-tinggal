@@ -98,6 +98,43 @@ body[data-screen="map"] .shell{padding-bottom:0}
 @media(min-width:600px){.shell{padding-bottom:90px}.top{padding-left:20px;padding-right:20px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi.total{grid-column:1/-1}.section{margin-left:16px;margin-right:16px}}
 @media(prefers-reduced-motion:no-preference){.section,.kpi,.office,.point{transition:background .16s ease,border-color .16s ease,transform .16s ease}.office:active,.point:active{transform:scale(.99)}}
 
+
+/* Viewport audit hardening: prevent narrow intrinsic sizing and browser-chrome overlap */
+html,body{width:100%;min-width:0;max-width:100%;margin:0}
+body{overflow-x:hidden}
+.shell{display:block;width:100%;max-width:560px;min-width:0;margin-inline:auto}
+.shell>*{min-width:0}
+.top,.section,.kpis,.switches,.screen-title,.screen-caption{max-width:100%}
+.bottom-nav{width:100%;max-width:560px;left:0;right:0;margin-inline:auto;padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right))}
+.bottom-nav button{min-width:0;white-space:normal;overflow-wrap:anywhere}
+.map-wrap,.map{width:100%;min-width:0}
+img,svg,canvas,iframe{max-width:100%}
+input,button{max-width:100%}
+@supports(height:100dvh){
+  .shell{min-height:100dvh}
+  body[data-screen="map"] #mapSection .map-wrap{height:calc(100dvh - 176px);min-height:280px}
+}
+@media(max-width:359px){
+  .top{padding-left:12px;padding-right:12px;gap:8px}
+  .brand small{font-size:8px}
+  .brand strong{font-size:12px}
+  .clock{font-size:10px}
+  .kpis{padding-left:10px;padding-right:10px;gap:7px}
+  .kpi{padding:12px;border-radius:16px}
+  .kpi strong{font-size:clamp(22px,7vw,30px)}
+  .kpi.total strong{font-size:clamp(30px,9vw,38px)}
+  .section{margin-left:8px;margin-right:8px}
+  .screen-title{font-size:22px}
+  .bottom-nav{gap:0;padding-left:4px;padding-right:4px}
+  .bottom-nav button{font-size:9px}
+}
+@media(orientation:landscape) and (max-height:500px){
+  body{padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+  .top{position:relative;min-height:52px;padding-top:calc(5px + env(safe-area-inset-top));padding-bottom:6px}
+  body[data-screen="map"] #mapSection .map-wrap{height:calc(100dvh - 105px);min-height:180px}
+  .bottom-nav button{min-height:48px}
+}
+
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 </head>
