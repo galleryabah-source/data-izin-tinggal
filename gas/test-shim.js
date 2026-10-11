@@ -25,6 +25,9 @@ assert(mobileHtml.includes('function renderDistribution')&&mobileHtml.includes('
 assert(mobileHtml.includes('id="mapSection"')&&mobileHtml.includes('id="officesSection"')&&mobileHtml.includes('id="trendSection"'),'Mobile content is separated into dedicated app screens');
 assert(mobileHtml.includes("activeScreen=nav")&&mobileHtml.includes("window.scrollTo({top:0,behavior:'smooth'})"),'Bottom navigation switches screens instead of scrolling through a long page');
 assert(mobileHtml.includes('serviceTabDistribution')&&mobileHtml.includes('serviceTabPoints'),'Service distribution and service points have separate subviews');
+assert(mobileHtml.includes("if(nav==='points'){serviceSubscreen='points';nav='services';}"),'Menu deep link opens the service-points subview');
+assert(mobileHtml.includes("$('offices').addEventListener('click'"),'Office selection retains a delegated click handler');
+assert(mobileHtml.includes('.app-map .map-wrap{height:calc(100dvh - 265px)'),'Map screen expands to the available mobile viewport');
 const workspaceHtml=read('index.html');
 assert(workspaceHtml.includes('INTAL TV Smartphone')&&workspaceHtml.includes("WEB_APP_URL+'?view=tv-mobile'"),'Workspace provides a dedicated INTAL TV Smartphone menu entry');
 const tvHtml=fs.readFileSync(path.join(__dirname,'tv.html'),'utf8');
