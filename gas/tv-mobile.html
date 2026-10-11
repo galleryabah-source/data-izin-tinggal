@@ -152,6 +152,8 @@ function renderDistribution(d){const colors=['#25c9ff','#398aff','#8a7dff','#50e
 async function renderServicePoints(){try{const d=await call('getPublicTvServicePoints');servicePoints=Array.isArray(d?.points)?d.points.filter(p=>Number.isFinite(Number(p.latitude))&&Number.isFinite(Number(p.longitude))):[];$('pointMeta').textContent=fmt(servicePoints.length)+' titik referensi';$('points').innerHTML=servicePoints.length?servicePoints.map((p,i)=>'<button class="point" data-point="'+i+'"><b>'+esc(p.name||'Titik layanan')+'</b><small>'+esc(p.parentOffice||'Kantor induk belum ditentukan')+' · '+esc(p.pointTypeLabel||'Service Point')+'</small></button>').join(''):'<div class="empty">Tidak ada titik layanan yang tersedia.</div>';}catch(e){$('pointMeta').textContent='Referensi tidak tersedia';$('points').innerHTML='<div class="empty">Data titik layanan tidak dapat dimuat; dashboard tetap tersedia.</div>';}}
 function openDetail(title,sub,body){$('modalTitle').textContent=title;$('modalSub').textContent=sub;$('modalBody').innerHTML=body;$('officeModal').classList.remove('hidden');}
 let activeScreen='home',serviceSubscreen='distribution';
+document.body.dataset.screen='home';
+document.body.dataset.subscreen='distribution';
 function jump(nav){
  if(nav==='menu'){$('menuModal').classList.remove('hidden');return;}
  if(nav==='points'){serviceSubscreen='points';nav='services';}
