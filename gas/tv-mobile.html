@@ -206,7 +206,7 @@ input,button{max-width:100%}
 'use strict';
 const $=id=>document.getElementById(id),fmt=n=>Number(n||0).toLocaleString('id-ID'),esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const services={residence:{fn:'getPublicTvResidenceDashboard',map:'getPublicTvResidenceMap',label:'Izin Tinggal'},passport:{fn:'getPublicTvPassportDashboard',map:'getPublicTvPassportMap',label:'Paspor'}};
-let active='residence',snapshots={},map=null,markers=null,mapPromise=null,refreshing=false,servicePoints=[],officeMarkerByName=new Map();
+let active='residence',snapshots={},map=null,markers=null,mapPromise=null,refreshing=false,servicePoints=[],officeMarkerByName=new Map(),mapRenderRequest=0;
 function call(fn,...args){return new Promise((resolve,reject)=>{if(!google||!google.script||!google.script.run){reject(new Error('Google Apps Script runtime tidak tersedia'));return;}google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);});}
 function setStatus(text,online){$('status').textContent=text;$('dot').classList.toggle('online',!!online);}
 function valid(d){return !!d&&Number.isFinite(Number(d.grandTotal))&&Array.isArray(d.offices)&&Array.isArray(d.monthly)&&Array.isArray(d.services)&&Number.isFinite(Number(d.rowCount));}
@@ -222,7 +222,7 @@ function render(d){
  $('trend').innerHTML=rows.length?rows.map(x=>'<div class="bar-row"><span class="bar-label">'+esc(x.periode)+'</span><div class="bar-track"><div class="bar" style="width:'+Math.max(1,Number(x.total||0)/max*100)+'%"></div></div><span class="bar-value">'+fmt(x.total)+'</span></div>').join(''):'<div class="empty">Data tren belum tersedia.</div>';
  $('updated').textContent='Diperbarui '+new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
  document.querySelectorAll('[data-service]').forEach(b=>b.classList.toggle('active',b.dataset.service===active));
- renderMap(d);
+ if(activeScreen==='map')renderMap(d);
  renderDistribution(d);
 }
 function renderDistribution(d){const colors=['#25c9ff','#398aff','#8a7dff','#50e0a4','#ffd166','#ff8c9b'];const items=(d.services||[]).slice().sort((a,b)=>Number(b.total||0)-Number(a.total||0));const total=items.reduce((n,x)=>n+Number(x.total||0),0);let cursor=0;const stops=items.map((x,i)=>{const start=cursor;cursor+=total?Number(x.total||0)/total*100:0;return colors[i%colors.length]+' '+start+'% '+cursor+'%'});$('donut').style.background=stops.length?'conic-gradient('+stops.join(',')+')':'#17334c';$('donutTotal').textContent=fmt(total)+' layanan';$('serviceLegend').innerHTML=items.length?items.map((x,i)=>'<div class="legend-row"><i class="legend-dot" style="background:'+colors[i%colors.length]+'"></i><span>'+esc(x.key)+'</span><b>'+fmt(x.total)+'</b></div>').join(''):'<div class="empty">Distribusi belum tersedia.</div>';}
@@ -246,7 +246,7 @@ function jump(nav){
  $('appFooter').classList.toggle('screen-hidden',!home);
  document.querySelector('.kpis').classList.toggle('screen-hidden',!home);
  document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('active',b.dataset.nav===nav));
- if(nav==='map'&&map)setTimeout(()=>map.invalidateSize(),80);
+ if(nav==='map'){if(snapshots[active])renderMap(snapshots[active]);if(map)setTimeout(()=>map.invalidateSize(),80);}else mapRenderRequest++;
  window.scrollTo({top:0,behavior:'smooth'});
 }
 function setServiceSubscreen(which){
@@ -269,9 +269,10 @@ function ensureMap(){
  return mapPromise;
 }
 async function renderMap(d){
+ const request=++mapRenderRequest;
  try{
-  const m=await call(services[active].map,{});if(!m||!Array.isArray(m.markers))throw new Error('Data GIS tidak valid');
-  await ensureMap();markers.clearLayers();officeMarkerByName.clear();const bounds=[];
+  const m=await call(services[active].map,{});if(request!==mapRenderRequest||activeScreen!=='map')return;if(!m||!Array.isArray(m.markers))throw new Error('Data GIS tidak valid');
+  await ensureMap();if(request!==mapRenderRequest||activeScreen!=='map')return;markers.clearLayers();officeMarkerByName.clear();const bounds=[];
   m.markers.forEach((p,i)=>{const lat=Number(p.latitude),lng=Number(p.longitude);if(!Number.isFinite(lat)||!Number.isFinite(lng))return;const name=String(p.kantor_imigrasi||'Kantor Imigrasi');const marker=L.circleMarker([lat,lng],{radius:7,weight:2,color:'#8ceaff',fillColor:'#168cff',fillOpacity:.9}).bindPopup('<b>'+esc(name)+'</b><br>Total: '+fmt(p.total));marker.on('click',()=>openOfficeDetail(name));marker.addTo(markers);officeMarkerByName.set(name,marker);bounds.push([lat,lng]);});
   if(bounds.length)map.fitBounds(bounds,{padding:[20,20],maxZoom:10});$('mapState').textContent=bounds.length+' titik kantor';setTimeout(()=>map.invalidateSize(),50);
  }catch(e){$('mapState').textContent='Peta tidak tersedia';if(!mapPromise)$('map').innerHTML='<div class="empty">Peta gagal dimuat. KPI dan daftar kantor tetap tersedia.</div>';}
