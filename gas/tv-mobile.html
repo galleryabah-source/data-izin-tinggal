@@ -99,6 +99,20 @@ body[data-screen="map"] .shell{padding-bottom:0}
 @media(prefers-reduced-motion:no-preference){.section,.kpi,.office,.point{transition:background .16s ease,border-color .16s ease,transform .16s ease}.office:active,.point:active{transform:scale(.99)}}
 
 
+
+/* Apps Script HtmlService can expose a wider iframe layout viewport than the visible mobile area.
+   Keep the mobile experience edge-to-edge instead of centering a desktop-width shell. */
+.shell{width:100%;max-width:none;min-width:0;margin:0;padding-left:clamp(12px,3.5vw,20px);padding-right:clamp(12px,3.5vw,20px)}
+.bottom-nav{width:100%;max-width:none;left:0;right:0;margin:0}
+@media(min-width:600px){
+ .shell{max-width:none;padding-left:clamp(12px,3.5vw,20px);padding-right:clamp(12px,3.5vw,20px)}
+ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .kpi.total{grid-column:1/-1}
+ .section{margin-left:0;margin-right:0}
+ .office-list{grid-template-columns:1fr}
+ .bottom-nav{max-width:none}
+}
+
 /* Viewport audit hardening: prevent narrow intrinsic sizing and browser-chrome overlap */
 html,body{width:100%;min-width:0;max-width:100%;margin:0}
 body{overflow-x:hidden}
