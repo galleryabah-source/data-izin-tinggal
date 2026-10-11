@@ -89,10 +89,8 @@ async function refresh(force){
  }catch(e){setStatus('Data belum dapat diverifikasi',false);showError(String(e&&e.message||e));}
  finally{refreshing=false;}
 }
-function selectOffice(name){
- document.querySelectorAll('.office').forEach(b=>b.classList.toggle('selected',b.dataset.office===name));
- if(!map||!markers)return;markers.eachLayer(m=>{const text=String(m.getPopup()?.getContent()||'');if(text.includes(esc(name)))map.setView(m.getLatLng(),Math.max(map.getZoom(),10),{animate:false});});
-}
+function openOfficeDetail(name){const d=snapshots[active];const o=(d?.offices||[]).find(x=>x.kantor_imigrasi===name);if(!o)return;const sorted=d.offices.slice().sort((a,b)=>Number(b.total||0)-Number(a.total||0));const rank=sorted.findIndex(x=>x.kantor_imigrasi===name)+1;const points=servicePoints.filter(p=>String(p.parentOffice||'').trim()===name);openDetail(name,services[active].label+' · detail read-only','<div class="detail-card"><small>Total layanan</small><strong>'+fmt(o.total)+'</strong></div><div class="detail-card"><small>Jumlah record</small><strong>'+fmt(o.rows)+'</strong></div><div class="detail-card"><small>Peringkat</small><strong>#'+rank+'</strong></div><div class="detail-card"><small>Titik layanan terhubung</small><strong>'+fmt(points.length)+'</strong></div>'+points.map(p=>'<div class="detail-card" style="grid-column:1/-1"><small>'+esc(p.pointTypeLabel||'Titik layanan')+'</small><strong>'+esc(p.name||'Titik layanan')+'</strong><small>'+esc(p.location||'')+'</small></div>').join(''));}
+function selectOffice(name){document.querySelectorAll('.office').forEach(b=>b.classList.toggle('selected',b.dataset.office===name));const marker=officeMarkerByName.get(name);if(marker&&map){map.setView(marker.getLatLng(),Math.max(map.getZoom(),10),{animate:false});marker.openPopup();}openOfficeDetail(name);}
 document.querySelectorAll('[data-service]').forEach(b=>b.addEventListener('click',()=>{if(active===b.dataset.service)return;active=b.dataset.service;document.querySelectorAll('[data-service]').forEach(x=>x.classList.toggle('active',x===b));if(snapshots[active])render(snapshots[active]);else refresh(false);}));
 $('offices').addEventListener('click',e=>{const b=e.target.closest('[data-office]');if(b)selectOffice(b.dataset.office);});
 $('search').addEventListener('input',()=>{const q=$('search').value.trim().toLocaleLowerCase('id');document.querySelectorAll('#offices .office').forEach(b=>b.classList.toggle('hidden',!b.dataset.office.toLocaleLowerCase('id').includes(q)));});
