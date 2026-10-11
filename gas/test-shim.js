@@ -22,6 +22,9 @@ assert(routeCode.includes("view!=='tv'&&view!=='tv-mobile'"),'INTAL TV Mobile re
 assert(routeCode.includes("view==='tv-mobile'?'tv-mobile'"),'doGet routes tv-mobile to its separate template');
 assert(mobileHtml.includes('data-nav="menu"')&&mobileHtml.includes('data-nav="services"'),'Mobile has persistent bottom navigation');
 assert(mobileHtml.includes('function renderDistribution')&&mobileHtml.includes('function renderServicePoints'),'Mobile includes service distribution and service-point views');
+assert(mobileHtml.includes('id="mapSection"')&&mobileHtml.includes('id="officesSection"')&&mobileHtml.includes('id="trendSection"'),'Mobile content is separated into dedicated app screens');
+assert(mobileHtml.includes("activeScreen=nav")&&mobileHtml.includes("window.scrollTo({top:0,behavior:'smooth'})"),'Bottom navigation switches screens instead of scrolling through a long page');
+assert(mobileHtml.includes('serviceTabDistribution')&&mobileHtml.includes('serviceTabPoints'),'Service distribution and service points have separate subviews');
 const workspaceHtml=read('index.html');
 assert(workspaceHtml.includes('INTAL TV Smartphone')&&workspaceHtml.includes("WEB_APP_URL+'?view=tv-mobile'"),'Workspace provides a dedicated INTAL TV Smartphone menu entry');
 const tvHtml=fs.readFileSync(path.join(__dirname,'tv.html'),'utf8');
