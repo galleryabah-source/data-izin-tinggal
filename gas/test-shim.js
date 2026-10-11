@@ -821,6 +821,8 @@ assert(mobileAppShell.includes('grid-template-columns:repeat(2,minmax(0,1fr))')&
 assert(mobileAppShell.includes("if(activeScreen==='map')renderMap(d)"),'Mobile dashboard requests GIS data only when the map screen is active');
 assert(mobileAppShell.includes("if(nav==='map'){if(snapshots[active])renderMap(snapshots[active]);")&&mobileAppShell.includes("else mapRenderRequest++;"),'Mobile map data loads on entry and stale map renders are invalidated on navigation');
 assert(mobileAppShell.includes("if(request!==mapRenderRequest||activeScreen!=='map')return"),'Mobile GIS async results cannot repaint a screen after the user navigates away');
+assert(mobileAppShell.includes('mapPromise=mapPromise.catch(e=>{mapPromise=null;throw e;})'),'Mobile GIS library load failure clears cached rejected promise so retry can work');
+assert(mobileAppShell.includes('ketuk Peta untuk mencoba lagi')&&mobileAppShell.includes("$('map').textContent='Peta gagal dimuat."),'Mobile GIS failure provides visible retry guidance without injecting HTML');
 
 const gisTv=read('tv.html');
 assert(gisTv.includes('JABAR_BOUNDARY_TOPO'),'INTAL TV embeds lightweight West Java boundary dataset');
