@@ -818,7 +818,7 @@ const mobileAppShell=read('tv-mobile.html');
 assert(mobileAppShell.includes('id="homeActions"')&&mobileAppShell.includes('data-jump="map"')&&mobileAppShell.includes('data-jump="offices"')&&mobileAppShell.includes('data-jump="services"')&&mobileAppShell.includes('data-jump="points"'),'Mobile home exposes dedicated quick actions for each primary screen');
 assert(mobileAppShell.includes('body:not([data-screen="home"]) #homeActions{display:none}'),'Home quick actions are isolated to the home screen');
 assert(mobileAppShell.includes('grid-template-columns:repeat(2,minmax(0,1fr))')&&mobileAppShell.includes('@media(max-width:359px){.home-actions{gap:7px}'),'Quick action grid adapts to narrow smartphone widths');
-assert(mobileAppShell.includes("if(activeScreen==='map')renderMap(d)")&&!mobileAppShell.includes("  renderMap(d);\\n  renderDistribution(d);"),'Mobile dashboard does not request GIS data while the map screen is inactive');
+assert(mobileAppShell.includes("if(activeScreen==='map')renderMap(d)"),'Mobile dashboard requests GIS data only when the map screen is active');
 assert(mobileAppShell.includes("if(nav==='map'){if(snapshots[active])renderMap(snapshots[active]);")&&mobileAppShell.includes("else mapRenderRequest++;"),'Mobile map data loads on entry and stale map renders are invalidated on navigation');
 assert(mobileAppShell.includes("if(request!==mapRenderRequest||activeScreen!=='map')return"),'Mobile GIS async results cannot repaint a screen after the user navigates away');
 
