@@ -158,6 +158,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
   <div class="nav-label">Analisis</div>
   <a class="nav-item active" href="#dashboard" data-target="dashboard" onclick="navigateTo(event,'dashboard')">Dashboard</a>
   <a class="nav-item" href="#" onclick="openTv(event)">INTAL TV</a>
+  <a class="nav-item" href="#" onclick="openTvMobile(event)">INTAL TV Smartphone <span style="font-size:10px;color:#42cfff;font-weight:800">MOBILE</span></a>
   <a class="nav-item" href="#mapSection" data-target="mapSection" onclick="navigateTo(event,'mapSection')">Peta Sebaran</a>
   <a class="nav-item" href="#drilldownSection" data-target="drilldownSection" onclick="navigateTo(event,'drilldownSection')">Data Explorer</a>
   <a class="nav-item" href="#analytics" data-target="analytics" onclick="navigateTo(event,'analytics')">Laporan & Statistik</a>
@@ -191,6 +192,7 @@ html.mobile-runtime .admin-grid{grid-template-columns:1fr}
     <a class="mobile-menu-link" href="#annualAnalyticsSection" data-target="annualAnalyticsSection" onclick="mobileNavigate(event,'annualAnalyticsSection');refreshPassportYoy()"><span class="menu-icon">↕</span><span>Analisis Antar Tahun</span></a>
     <a class="mobile-menu-link" href="#mpasporQuotaSection" data-target="mpasporQuotaSection" onclick="mobileNavigate(event,'mpasporQuotaSection')"><span class="menu-icon">◈</span><span>Kuota M-Paspor</span></a>
     <a class="mobile-menu-link" href="#" onclick="openTv(event);closeMobileNav()"><span class="menu-icon">▣</span><span>INTAL TV</span><span class="menu-chevron">›</span></a>
+    <a class="mobile-menu-link" href="#" onclick="openTvMobile(event);closeMobileNav()"><span class="menu-icon">▣</span><span>INTAL TV Smartphone</span><span class="menu-chevron">›</span></a>
   </div>
 
   <div class="mobile-menu-section">
@@ -387,6 +389,7 @@ async function tvRefresh(){const serviceKey=TV_SERVICES[tvServiceIndex];const fn
 function tvStartClock(){const tick=()=>{const el=document.getElementById('tvClock');if(el)el.textContent=tvNow();};tick();setInterval(tick,1000);}
 const WEB_APP_URL='<?= ScriptApp.getService().getUrl() ?>';
 function openTv(event){if(event)event.preventDefault();window.top.location.href=WEB_APP_URL+'?view=tv';}
+function openTvMobile(event){if(event)event.preventDefault();window.top.location.href=WEB_APP_URL+'?view=tv-mobile';}
 function exitTv(){window.location.href=window.location.pathname;}
 function tvStart(){const app=document.querySelector('.app'),tv=document.getElementById('tvView');if(!tv)return;if(app)app.classList.add('hidden');tv.classList.remove('hidden');document.body.classList.add('tv-kiosk');try{tvStartClock();tvRefresh();tvRefreshTimer=setInterval(tvRefresh,60000);tvRotationTimer=setInterval(()=>{tvServiceIndex=(tvServiceIndex+1)%TV_SERVICES.length;tvRefresh();},30000);}catch(e){tvSetStatus(false,'LIVE SYSTEM · ATTENTION','LAST READ · bootstrap failed');const ticker=document.getElementById('tvTicker');if(ticker)ticker.innerHTML='<span class="tv-error">INTAL TV BOOT ERROR · '+esc(e.message||String(e))+'</span>';}}
 function call(fn,...args){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(e))[fn](...args));}
