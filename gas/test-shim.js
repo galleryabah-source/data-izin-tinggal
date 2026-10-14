@@ -799,6 +799,7 @@ assert(periodClosing.includes('PERIOD_EMPTY'), 'Empty periods cannot be closed')
 assert(periodClosing.includes('status'), 'Period closure state is explicit');
 
 const importService=read('ImportService.gs');
+assert(importService.includes("if(/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(s))return s;"), 'Import period normalization rejects impossible calendar months');
 assert(importService.includes('assertPeriodsOpenForImport_(schema.contractKey,check.valid)'), 'Canonical import enforces period closing guard');
 assert(periodClosing.includes('PERIOD_CLOSED'), 'Closed-period rejection is explicit in governance seam');
 
