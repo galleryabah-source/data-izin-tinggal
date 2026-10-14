@@ -230,3 +230,102 @@ No direct production deployment from an unreviewed branch. A green CI run alone 
 ## 12. Definition of done
 
 The feature is not complete until both service contracts are tested, duplicate/retry behavior is proven, revisions are auditable, unauthorized operations are denied, approved aggregates are reproducible, export/backup verification passes, monthly baselines remain unchanged, and production browser UAT is evidenced against the canonical deployment.
+
+## 13. Alignment with the approved GIS First product design
+
+The daily-input workspace belongs inside the existing INTAL WEB APP shell; it is not a separate application and must not become a new dashboard.
+
+- Reuse the approved GIS First shell: dark-navy application header, official identity, global service selector, authenticated user/role menu, permission-aware navigation, typography, spacing, status colors, and shared responsive components.
+- Add a dedicated **Input Harian** route/workspace within the existing navigation. Do not put a map, charts, or KPI tiles above the form; the entry task must be fast, focused, and usable on a narrow Android viewport.
+- The global service selector and the form's service-family selection must stay synchronized. Changing service family clears incompatible unsaved field state only after a confirmation if data has been entered.
+- Use a short, guided workflow: **Konteks laporan → Angka layanan → Validasi → Simpan/Kirim**. On desktop, use a two-column form only where it improves scanability; on mobile, use a single column with large numeric inputs and no horizontal scrolling.
+- Reuse the verified Office Reference and stable office identity; display its canonical office name. Do not permit free-text office names or invent branch locations.
+- Use the existing design language for status chips, inline validation, confirmation dialogs, toasts, loading states, empty states, and error recovery. Color is never the sole signal; labels and icons must also communicate state.
+- Provide a review queue as a separate permission-gated view, not mixed into the operator's entry form. The review queue may later link to approved reporting; it must not alter GIS dashboard behavior before Gate 9.5.
+- The form is online-first in v1. On network timeout, retain the same submission UUID and offer safe retry/status recovery; do not silently create a new request. Offline queuing, browser storage of drafts, and background synchronization are excluded until their privacy and conflict behavior are separately reviewed.
+- Meet WCAG 2.2 AA-oriented requirements where applicable: semantic labels, keyboard operation, visible focus, sufficient contrast, announced validation summaries, target sizes appropriate for touch, and reduced-motion respect. Verify in current desktop Chrome and Android Chrome.
+
+Reference: `docs/UI-REFERENCE-GIS-FIRST.md`. The UI reference governs shell and visual consistency; it does not authorize changes to canonical data contracts or production release gates.
+
+## 14. Advanced but runtime-compatible technical architecture
+
+Use a **modular, contract-first architecture** inside the existing Apps Script project. “Modern” means explicit boundaries, reproducible behavior, security, observability, and testable delivery—not adding frameworks or infrastructure that the current runtime cannot support.
+
+### Logical modules
+
+| Module | Responsibility | Prohibited coupling |
+|---|---|---|
+| DailyInputController | Route/API boundary, request parsing, response envelope | No direct sheet mutation from HTML/controller |
+| DailyContractRegistry | Versioned Residence/Passport field definitions, labels, requiredness and measure lists | No inferred contract from client payload |
+| DailyValidationService | Normalize and validate date, office, measures, totals, status and contract version | No client-only validation |
+| DailyAuthorizationPolicy | Capability checks for every operation | No role/permission trust from browser input |
+| DailyCommandService | Draft, submit, approve, return, correct, void and period commands | No writes into monthly importer/registry seam |
+| DailyRepository | Batched persistence behind one repository interface | No direct spreadsheet calls from UI |
+| DailyIdempotencyService | Submission UUID and repeat-request result | No new UUID on a retry of the same intent |
+| DailyRevisionService | Immutable submitted/approved history and correction links | No in-place mutation of approved evidence |
+| DailyAuditAdapter | Existing audit pattern, correlation IDs and event outcomes | No silent audit failures |
+| DailyProjectionService | Read-only aggregates from latest approved, non-void revisions | No automatic monthly baseline overwrite |
+| DailyIntegrityVerifier | Detect orphaned writes, duplicate active revisions, invalid transitions and missing audit | No repair without recorded evidence |
+| DailyUi | Accessible form shell and state rendering | No authority over permissions, totals or status |
+
+These are logical boundaries, not a mandate to create one file per module if the repository's Apps Script layout or current test shim makes that unsafe. Follow the existing GAS naming, include and test conventions after inspecting them.
+
+### Contract-as-code and API envelope
+
+- Define a versioned server-owned contract per family. The UI receives display metadata from the server; it must not submit arbitrary field names that the server accepts without registry validation.
+- Every command request carries `requestId` (UUID), `contractVersion`, `serviceFamily`, and the expected record/revision version when editing. The server returns a stable envelope: `ok`, `requestId`, `code`, `message`, `fieldErrors`, and `data`.
+- Use deterministic error codes for validation, authorization, period-closed, duplicate, stale-revision, retryable failure, and internal failure. Never send stack traces, spreadsheet identifiers, or secrets to the browser.
+- Use optimistic revision checks plus a short `LockService` critical section for idempotency and identity conflict detection. Keep locks narrow; perform validation and non-mutating reference reads before entering the critical section where safe.
+- Use batched range reads/writes and a write-ahead command/intent marker where the current storage pattern can support it. Treat partial multi-sheet writes as a recoverable consistency incident, not as an atomic transaction.
+- Make commands idempotent and reads side-effect-free. A repeated request with the same request ID returns the recorded outcome; a request with a stale expected revision returns a conflict and never overwrites newer work.
+- Use an explicit feature flag/config gate to keep daily write routes disabled until contract approval, authorization, staging readiness, and smoke tests pass. A hidden menu item is not a security control.
+
+### Reliability, observability, and security
+
+- Add a correlation ID from browser request through command result and audit record; record event name, family, record/revision ID, actor, duration, outcome, and sanitized error category.
+- Do not log full submitted payloads. Aggregate counts may still be operationally sensitive; logs should contain IDs and diagnostics, not unnecessary row contents.
+- Use bounded retries only for retryable failures, with backoff and the same request ID. Never blindly retry a command after an ambiguous write; query the idempotency ledger and run consistency verification.
+- Apply deny-by-default RBAC on every server command, including detail reads, draft reads, exports, approvals, correction, void, close and reopen. Test both allowed and denied paths.
+- Escape output and render user-facing text as text, not HTML. Validate dates against the canonical Asia/Jakarta business date and reject malformed or out-of-range input.
+- Do not add external JavaScript/CDN dependencies, a second database, or a new runtime without a reviewed ADR, security assessment, version pinning, and measurable justification. The current GAS + Sheets boundary remains the v1 delivery target.
+
+### Test pyramid and quality gates
+
+1. **Contract tests:** exact required fields, measure allowlists, contract version, total derivation, zero/missing semantics, and deterministic error codes for both families.
+2. **Pure unit tests:** date/period normalization, integer validation, derived totals, status transitions, permissions, revision checks, and projection calculations.
+3. **Repository/adapter tests:** sheet headers/schema signatures, batch writes, lock conflict behavior, idempotency ledger, partial-write recovery and audit coverage using the existing test shim.
+4. **Negative/security tests:** unauthenticated request, missing capability, spoofed role, unknown/inactive office, injected field name, stale revision, closed period, replayed request and unauthorized export.
+5. **Regression tests:** existing import, canonical monthly dataset identity, dashboard, GIS, office reference, export, backup/snapshot and production smoke remain unchanged.
+6. **Browser UAT:** 1440px/1920px desktop and Android mobile widths, keyboard-only entry, long office names, slow network, duplicate tap, reload after timeout, and clear validation recovery.
+
+The existing `npm test`/GitHub Actions path remains the first required CI gate. Expand it with deterministic contract and lifecycle tests before adding browser automation. Browser automation may be introduced as a separately reviewed test dependency; it must not be added to the deployed GAS runtime.
+
+## 15. Gate 9.1 — exact stop conditions
+
+The prior source audit found no existing daily spreadsheet/export or approved SOP that proves operational daily semantics. Introducing the in-app form establishes a **new prospective capture source**, but it does not automatically prove that the proposed daily fields mean the same thing as the monthly fields.
+
+Before enabling writes, the contract owner must approve and attach evidence for each family:
+
+- what one report represents (candidate: one operational date × one verified immigration office × one service family);
+- whether a date with no service is a valid zero report, a missing report, or not reportable;
+- whether every listed measure is daily-reportable and what each measure counts;
+- whether a report can be split across units/shifts and how those reports combine;
+- reporting cutoff, late submission, duplicate detection, corrections, and period close/reopen;
+- required roles and separation of operator, reviewer, approver, and auditor;
+- a normal fixture and a correction fixture, signed off by the responsible operational owner.
+
+Until those semantics and owners are approved, the contracts in this document remain **candidate v1 contracts**, not production-authorized schemas. No historical daily backfill may be synthesized from monthly totals. New prospective entries must begin only from an explicitly approved effective date; monthly historical data remains authoritative and unchanged.
+
+## 16. Explicit implementation order
+
+1. Freeze and approve Gate 9.1 contract decisions and fixtures.
+2. Add server-owned contract registry, validators, capability checks, repository seam, idempotency ledger and audit integration.
+3. Add staging/revision storage behind a feature flag; prove integrity and recovery tests.
+4. Implement the GIS First-aligned responsive input workspace.
+5. Implement review/correction/period governance.
+6. Implement read-only approved projections and baseline reconciliation.
+7. Complete export, backup/snapshot, recovery, production smoke and browser UAT evidence.
+8. Only then consider enabling daily reporting to operational users.
+
+No phase may be skipped because the UI looks complete or CI is green.
+
