@@ -46,6 +46,7 @@ const tvScriptMatch=tvHtml.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
 assert(!!tvScriptMatch,'INTAL TV HTML contains a script block');
 try{new Function(tvScriptMatch[1]);}catch(e){throw new Error('TEST FAILED: INTAL TV script syntax: '+e.message);}
 const authCode=read('Auth.gs');
+assert(authCode.includes('function bootstrapAdmin_(')&&!authCode.includes('function bootstrapAdmin('),'bootstrap admin bootstrap is private to Apps Script editor and not callable from google.script.run');
 const SHEETS={USERS:'USERS',PERMISSIONS:'PERMISSIONS'};
 const makeSheet=(values)=>({getDataRange:()=>({getValues:()=>values})});
 const makeDb=(users,permissions)=>({getSheetByName:(name)=>name==='USERS'?makeSheet(users):makeSheet(permissions)});
