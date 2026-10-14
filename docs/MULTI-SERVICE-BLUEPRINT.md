@@ -114,7 +114,7 @@ Monthly and yearly summaries should preferably be **derived aggregates**, not ma
 
 The existing monthly production contracts remain authoritative for the historical baseline unless and until an explicit migration plan is approved. Daily data must be entered through the INTAL WEB APP's governed input workspace, held in service-specific staging, reviewed, and approved before it appears in approved daily projections. WhatsApp integration is on HOLD and is not a prerequisite.
 
-## Passport dataset design — future
+## Passport dataset contract — current monthly reference
 
 A future passport contract should define, at minimum:
 
@@ -192,22 +192,13 @@ Documentation/design only:
 
 No production data changes.
 
-### Phase C — Introduce passport contract
+### Phase C — Passport monthly contract
 
-- design `PASSPORT_SERVICE_MONTHLY` or an explicitly approved daily contract;
-- build source fixtures;
-- validate schema and business keys;
-- test importer and verification logic;
-- deploy only after the contract is reviewed.
+**Status: completed for the current canonical monthly baseline.** The Passport monthly contract, fixture/import validation, business-key checks, and integrity verification are existing capabilities. Any daily contract is separate and must pass the new Phase E gates.
 
-### Phase D — Integrate passport into the application
+### Phase D — Passport monthly application integration
 
-- register the dataset;
-- add service-scoped dashboard filtering;
-- add service-aware exports;
-- add audit coverage;
-- add backup/snapshot coverage;
-- extend smoke tests without weakening existing residence-permit checks.
+**Status: completed for the current canonical monthly baseline.** Dataset registration, service-scoped dashboard filtering, export/backup coverage, audit coverage, and production smoke checks are part of the existing application. The daily input feature must extend these controls without changing the monthly contract.
 
 ### Phase E — Daily operational input and governance
 

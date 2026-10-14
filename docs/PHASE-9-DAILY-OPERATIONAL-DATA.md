@@ -67,7 +67,7 @@ Daily records must be revision-aware. Corrections must not overwrite historical 
 
 Logical report identity is `tanggal + kantor_imigrasi + service_family`; stable `record_id` links revisions, while `submission_id` makes retries idempotent.
 
-``
+```
 record_id
    +-- revision 1 (immutable after submission/approval)
    +-- revision 2 (controlled correction)
@@ -76,7 +76,7 @@ record_id
 
 Report lifecycle:
 
-``
+```
 DRAFT -> SUBMITTED -> APPROVED
              |           |
              v           +--> later correction creates a new revision
