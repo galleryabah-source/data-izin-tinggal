@@ -302,3 +302,20 @@ Phase 10.3 is now closed. The next controlled capability is the presentation-onl
 - [ ] INTAL TV Design No. 6 — presentation-only command display
 
 **Implementation rule:** future phases remain gated. No future service is enabled merely because it is documented. A new dataset family must pass contract, validation, deployment, integrity, export, backup, and runtime evidence gates without weakening the existing production baseline.
+
+## Phase 9 — Daily operational input (controlled, not yet production-authorized)
+
+**Status:** planning / Gate 9.1 contract freeze required; implementation and production writes are not certified.
+
+- [ ] Gate 9.1: approve source-of-truth semantics, daily grain, measure definitions, zero vs missing, reporting cutoff, role separation, correction/close workflow, and representative fixtures for Residence Permit and Passport.
+- [ ] Gate 9.2: versioned server-owned contracts, isolated service-specific staging/revisions, idempotency ledger, RBAC, audit, lock-guarded repository and consistency verifier.
+- [ ] Gate 9.3: one responsive **Input Harian** workspace in the existing GIS First shell; shared service selector with separate contract-driven Residence/Passport fields; accessible desktop/Android behavior.
+- [ ] Gate 9.4: review queue, append-only correction, void, and explicit period review/close/reopen governance.
+- [ ] Gate 9.5: read-only projections from latest approved revisions and reconciliation against monthly baselines.
+- [ ] Gate 9.6: governed export, backup/snapshot/checksum and recovery evidence, security-negative tests and smoke checks.
+- [ ] Gate 9.7: production deployment evidence, browser UAT, monthly regression and roadmap reconciliation.
+
+**Non-negotiable:** no synthetic daily backfill from monthly aggregates; no daily writes into either canonical monthly dataset; no WhatsApp dependency; no production writes until Gate 9.1 is approved. Use the existing Apps Script + Google Sheets runtime first, with contract-first modules, server-side authorization, idempotency, append-only revisions and explicit recovery. Any move to a transactional database requires a separate ADR based on measured limits.
+
+Design/implementation detail: `docs/DAILY-INPUT-BLUEPRINT.md`; visual shell reference: `docs/UI-REFERENCE-GIS-FIRST.md`.
+
