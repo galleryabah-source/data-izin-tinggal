@@ -244,7 +244,7 @@ The following are **not** part of the immediate implementation gate:
 
 - replacing the current residence-permit dataset;
 - merging residence and passport source tables;
-- building the passport UI now;
+- building a separate Passport-only application UI; daily input uses one shared form shell with service-specific fields;
 - changing the existing production business key;
 - redesigning the dashboard before the current runtime gate is closed;
 - adding new features merely to demonstrate extensibility.

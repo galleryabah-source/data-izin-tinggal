@@ -176,7 +176,8 @@ Purpose: establish explicit monthly data finality before downstream analytics, e
 
 **Status: APPROVED PLANNING BASELINE — implementation not started.**  
 **Capture channel:** INTAL WEB APP form with one service selector. **WhatsApp integration: HOLD.**  
-**Runtime decision:** extend the existing Apps Script + Google Sheets application first; do not introduce Node.js/PostgreSQL solely for this form.
+**Runtime decision:** extend the existing Apps Script + Google Sheets application first; do not introduce Node.js/PostgreSQL solely for this form.  
+**Sequencing:** Gate 9.1 (contract/workflow freeze) may proceed as planning. Before write-path implementation, reconcile the design with the in-delivery monthly Period Closing & Controlled Correction v1 gate so both changes use one governed lifecycle and do not create competing write seams.
 
 ### Scope and contract boundary
 

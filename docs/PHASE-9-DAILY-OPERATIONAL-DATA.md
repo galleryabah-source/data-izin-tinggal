@@ -49,7 +49,6 @@ Initial candidate measures come from the existing service contracts: the 13 Resi
 | service measures | INTEGER | Required per service contract; non-negative |
 | `total` | INTEGER | Derived from contract measures |
 | `record_id` | TEXT | Stable canonical identity |
-| `revision` | INTEGER | Starts at 1; increments on correction |
 | `revision` | INTEGER | Monotonic revision number for a stable `record_id` |
 | `status` | ENUM | `DRAFT`, `SUBMITTED`, `NEEDS_CORRECTION`, `APPROVED`, `VOID` |
 | `submission_id` | TEXT | UUID idempotency key for a submission request |
