@@ -1,6 +1,6 @@
 # Daily Input Implementation Blueprint
 
-**Status:** design candidate — Gate 9.1 NOT PASSED; implementation not started  
+**Status:** contract/validator foundation implemented in PR #228 — Gate 9.1 NOT PASSED; daily writes and UI not implemented  
 **Scope:** one in-app input form for daily Residence Permit and Passport service reports  
 **Capture channel:** INTAL WEB APP form; WhatsApp integration is **HOLD** and is not a dependency  
 **Runtime baseline:** Google Apps Script Web App + Google Sheets, consistent with the current canonical application
