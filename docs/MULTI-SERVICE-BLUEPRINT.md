@@ -12,10 +12,12 @@ The blueprint is intentionally architectural. It does **not** authorize immediat
 
 The user experience remains one application while source datasets remain logically separated by their own contracts, schemas, business keys, validation rules, and lifecycle.
 
-Initial families:
+Current canonical monthly families:
 
 - `RESIDENCE_PERMIT_SERVICE_MONTHLY` — existing production dataset.
-- `PASSPORT_SERVICE_MONTHLY` — future dataset family; design only for now.
+- `PASSPORT_SERVICE_MONTHLY` — existing production dataset.
+
+Daily operational input is a separate, planned family for each service. It does not replace or mutate either monthly family.
 
 Future families may include other approved immigration service datasets, but no family is added until its data contract and governance requirements are defined.
 
@@ -110,7 +112,7 @@ Daily operational records
 
 Monthly and yearly summaries should preferably be **derived aggregates**, not manually maintained duplicate sources.
 
-The existing monthly production contract remains authoritative for the historical baseline unless and until an explicit migration plan is approved.
+The existing monthly production contracts remain authoritative for the historical baseline unless and until an explicit migration plan is approved. Daily data must be entered through the INTAL WEB APP's governed input workspace, held in service-specific staging, reviewed, and approved before it appears in approved daily projections. WhatsApp integration is on HOLD and is not a prerequisite.
 
 ## Passport dataset design — future
 
@@ -207,14 +209,19 @@ No production data changes.
 - add backup/snapshot coverage;
 - extend smoke tests without weakening existing residence-permit checks.
 
-### Phase E — Daily operational model
+### Phase E — Daily operational input and governance
 
-Only after the multi-service contract is stable:
+**Status: approved planning baseline; implementation not started.** The initial capture channel is a single in-app form, with a service selector for Izin Tinggal or Paspor. WhatsApp remains on HOLD.
 
-- introduce daily operational data where operationally required;
-- derive monthly/yearly aggregates;
-- define period closing and correction workflow;
-- preserve historical traceability.
+- freeze separate daily contracts for Residence Permit and Passport using their own service measures;
+- implement separate staging/revision stores, one form shell, and server-side validation;
+- use idempotent submission IDs, lock-guarded writes, append-only approved revisions, and audit events;
+- implement review, correction, void, and explicit period close/reopen lifecycle;
+- derive read-only daily/monthly/yearly views only from latest approved revisions;
+- reconcile daily-derived monthly figures with historical monthly baselines without overwriting them;
+- pass CI, forensic diff, canonical deployment, production smoke, export/backup verification, and live UAT before production certification.
+
+See `docs/DAILY-INPUT-BLUEPRINT.md` and `docs/PHASE-9-DAILY-OPERATIONAL-DATA.md` for the implementation plan.
 
 ### Phase F — Advanced analytics
 
@@ -226,6 +233,10 @@ Only after the data model is stable:
 - geographic analytics;
 - document/knowledge integration;
 - alerting and automation.
+
+## Technology and reliability decision
+
+Extend the existing Apps Script + Google Sheets application first. Do not introduce a second runtime or database solely for the input form. Use versioned service contracts, server-side RBAC, request idempotency, lock-guarded writes, append-only revisions, explicit state machines, batch I/O, consistency verification, and governed release evidence. Google Sheets does not provide relational ACID transactions; write design and recovery tests must acknowledge this limitation. Revisit PostgreSQL or another transactional store only through a separate architecture decision based on measured concurrency, data volume, quotas, and SLO requirements.
 
 ## Non-goals for the current phase
 
@@ -242,6 +253,4 @@ The following are **not** part of the immediate implementation gate:
 
 The application is intentionally being designed as a **single multi-service platform with isolated dataset contracts**.
 
-The first additional service family under consideration is **Passport Services**.
-
-Implementation remains deferred and must follow the phased roadmap. The current production residence-permit pipeline remains the canonical baseline and must stay green throughout future expansion.
+The current production platform has two isolated canonical monthly service families: Residence Permit and Passport. The next planned input capability is daily reporting for both through one service-selector form and separate service-specific contracts. This blueprint records a plan, not a deployed feature. The current monthly production datasets remain authoritative and must stay green throughout future expansion. WhatsApp integration remains on HOLD.
