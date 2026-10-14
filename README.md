@@ -54,7 +54,7 @@ Phase 10.2 certification is closed. New features may now enter the controlled de
 2. Create a bound Apps Script project or Apps Script project connected to the repository source.
 3. Push the `gas/` directory with clasp.
 4. In Apps Script, run `setupApp()` once.
-5. Run `bootstrapAdmin("email@domain", "Administrator")` once while the USERS sheet is empty.
+5. Run `bootstrapAdmin_("email@domain", "Administrator")` once while the USERS sheet is empty.
 6. Deploy as Web App and use the Google account registered in USERS.
 7. Prepare the normalized Data Contract v1 table and paste it into Import Center.
 8. Preview, verify 80 rows, then commit once.
@@ -75,7 +75,7 @@ Before building complex dashboard/statistics/map features, the project must pass
    - `CLASPRC_JSON`.
 6. Deploy from `main` after the contract branch is reviewed/merged.
 7. Run `setupApp()` once against the real database spreadsheet.
-8. Run `bootstrapAdmin()` once while `USERS` is empty.
+8. Run `bootstrapAdmin_()` once while `USERS` is empty.
 9. Preview/import the normalized 80-row contract.
 10. Verify dataset row count, duplicate count, rejected rows, and derived totals.
 11. Only after that contract is stable, implement the production dashboard, statistics, filters, and map layers.
