@@ -258,3 +258,8 @@ Technical modules should be separated logically into contract registry, validati
 
 **Gate 9.1 remains a real approval gate.** The earlier source audit found no existing authoritative daily source. The proposed in-app form becomes a new prospective source, but its semantics still need sign-off: daily grain, measure meanings, zero versus missing, reporting cutoff, late entry, role separation, correction, and close/reopen. Candidate fields are not production-authorized until the operational owner approves representative normal and correction fixtures. Never synthesize daily rows from monthly totals.
 
+
+
+## 16. Period governance integration dependency
+
+Before implementing daily write commands, compare the daily state machine, period keys, correction reason handling, close/reopen permissions, and audit events with the existing monthly **Period Closing & Controlled Correction v1** implementation. Reuse compatible policy patterns and evidence semantics, but keep daily and monthly storage/write paths isolated. Gate 9.2 must not introduce a second or conflicting period lifecycle. This reconciliation is a prerequisite, not an optional cleanup.
