@@ -1,5 +1,6 @@
 const fs=require('fs');
 const path=require('path');
+const vm=require('vm');
 
 const files=fs.readdirSync(__dirname).filter(x=>/\.(gs|js)$/.test(x));
 for(const name of files){new Function(fs.readFileSync(path.join(__dirname,name),'utf8'));}
@@ -851,3 +852,50 @@ assert(gisTv.includes('layer.bindTooltip(name'), 'GIS boundary exposes district/
 assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary hover state becomes clearly readable');
 
 // Service-point GIS registry: pending coordinates are intentionally excluded from plotted orbit.\n
+
+/* Phase 9 daily-input contract validator: pure tests only; no Apps Script writes. */
+const dailyService=read('DailyInputService.gs');
+assert(dailyService.includes('const DAILY_INPUT_GUARD_V1 = Object.freeze({\n  enabled: false'), 'Daily input contract remains disabled by default');
+assert(dailyService.includes('function getDailyInputPolicyV1()'), 'Daily input exposes a policy read endpoint');
+assert(dailyService.includes('function getDailyServiceContractV1(serviceFamily)'), 'Daily input fields are server-contract-owned');
+assert(!dailyService.includes('appendRow(') && !dailyService.includes('setValues('), 'Daily input contract foundation performs no spreadsheet writes');
+assert(dailyService.includes('DAILY_SERVICE_CONTRACTS_V1') && !read('Config.gs').includes('DAILY_SERVICE_CONTRACTS_V1'), 'Daily contracts remain isolated from the monthly importer registry');
+const dailyContext={};
+vm.runInNewContext(dailyService+';this.validateDailyInputPayloadV1=validateDailyInputPayloadV1;',dailyContext);
+const passportDailyMeasures={biasa_24:0,biasa_48:'0',elektronik_48:3,e_polikarbonat:2};
+const validDailyResult=dailyContext.validateDailyInputPayloadV1({
+  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(validDailyResult.ok && validDailyResult.normalized.total===5, 'Daily passport validator accepts explicit zeros and derives the total');
+const missingDailyResult=dailyContext.validateDailyInputPayloadV1({
+  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{biasa_24:0,biasa_48:0,elektronik_48:0}
+});
+assert(!missingDailyResult.ok && missingDailyResult.errors['measures.e_polikarbonat'], 'Daily validator distinguishes a missing value from zero');
+const injectedDailyResult=dailyContext.validateDailyInputPayloadV1({
+  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{...passportDailyMeasures,total:999}
+});
+assert(!injectedDailyResult.ok && injectedDailyResult.errors['measures.total'], 'Daily validator rejects uncontracted or client-supplied total fields');
+const invalidDailyDate=dailyContext.validateDailyInputPayloadV1({
+  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-02-30',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!invalidDailyDate.ok && invalidDailyDate.errors.operationalDate, 'Daily validator rejects impossible calendar dates');
