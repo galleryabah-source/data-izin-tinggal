@@ -845,7 +845,7 @@ assert(gisTv.includes("map.createPane('gisBoundaryPane')"),'GIS boundary uses a 
 assert(gisTv.includes("pane.style.zIndex='450'"),'GIS boundary pane sits above satellite tiles and below markers');
 assert(gisTv.includes("L.polygon(rings,{pane:'gisBoundaryPane',renderer:L.svg()"),'GIS boundary renders each administrative polygon deterministically');
 assert(gisTv.includes("fillOpacity:0.008"),'GIS boundary default fill remains nearly transparent');
-assert(gisTv.includes('submissionIdleCallback||function(fn){return setTimeout(fn,0)}'),'GIS boundary initialization is deferred until idle');
+assert(gisTv.includes('requestIdleCallback||function(fn){return setTimeout(fn,0)}'),'GIS boundary initialization is deferred until idle');
 assert(gisTv.includes("String(g.id||'')!=='32-88'"),'GIS boundary excludes non-administrative Waduk Cira geometry');
 assert(gisTv.includes("'Batas kab/kota · '+layers.length+' wilayah · aktif'"),'GIS boundary reports active rendered region state');
 assert(gisTv.includes('layer.bindTooltip(name'), 'GIS boundary exposes district/city name on hover');
