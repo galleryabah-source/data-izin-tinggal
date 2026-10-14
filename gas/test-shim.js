@@ -64,6 +64,10 @@ try{authViewer.requirePermission_('admin.config');}catch(e){forbiddenRejected=St
 assert(forbiddenRejected,'RBAC rejects unauthorized permission');
 assert(authViewer.requirePermission_('dataset.read').role==='VIEWER','RBAC permits assigned permission');
 
+const periodClosingCode=read('PeriodClosingService.gs');
+assert(periodClosingCode.includes('if(!/^\\\\d{4}-\\\\d{2}$/.test(period))'),'Period closing accepts canonical YYYY-MM periods');
+assert(periodClosingCode.includes('function closePeriod(datasetKey,periode,reason)')&&periodClosingCode.includes('function reopenPeriod(datasetKey,periode,reason)'),'Period close/reopen public entrypoints remain available');
+assert(periodClosingCode.includes('LockService.getScriptLock()')&&periodClosingCode.includes('function closePeriodLocked_')&&periodClosingCode.includes('function reopenPeriodLocked_'),'Period close/reopen serialize with canonical import lock');
 const sourceConnector=read('SourceConnectorService.gs');
 const sourcePure=new Function('canonicalizeHeaders_',sourceConnector+'\nreturn {normalizeGoogleSpreadsheetId_,normalizeSourceHeader_,canonicalizeSourceHeaders_,canonicalizeHeaders_};')((headers)=>headers.map(h=>normalizeSourceHeaderForTest_(h)));
 function normalizeSourceHeaderForTest_(value){return String(value||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toLowerCase();}
