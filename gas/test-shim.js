@@ -65,7 +65,7 @@ assert(forbiddenRejected,'RBAC rejects unauthorized permission');
 assert(authViewer.requirePermission_('dataset.read').role==='VIEWER','RBAC permits assigned permission');
 
 const periodClosingCode=read('PeriodClosingService.gs');
-assert(periodClosingCode.includes('if(!/^\\d{4}-\\d{2}$/.test(period))'),'Period closing accepts canonical YYYY-MM periods');
+assert(periodClosingCode.includes('if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(period))'),'Period closing accepts only valid YYYY-MM calendar months');
 assert(periodClosingCode.includes('function closePeriod(datasetKey,periode,reason)')&&periodClosingCode.includes('function reopenPeriod(datasetKey,periode,reason)'),'Period close/reopen public entrypoints remain available');
 assert(periodClosingCode.includes('LockService.getScriptLock()')&&periodClosingCode.includes('function closePeriodLocked_')&&periodClosingCode.includes('function reopenPeriodLocked_'),'Period close/reopen serialize with canonical import lock');
 const sourceConnector=read('SourceConnectorService.gs');
