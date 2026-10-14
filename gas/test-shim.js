@@ -845,7 +845,7 @@ assert(gisTv.includes("map.createPane('gisBoundaryPane')"),'GIS boundary uses a 
 assert(gisTv.includes("pane.style.zIndex='450'"),'GIS boundary pane sits above satellite tiles and below markers');
 assert(gisTv.includes("L.polygon(rings,{pane:'gisBoundaryPane',renderer:L.svg()"),'GIS boundary renders each administrative polygon deterministically');
 assert(gisTv.includes("fillOpacity:0.008"),'GIS boundary default fill remains nearly transparent');
-assert(gisTv.includes('requestIdleCallback||function(fn){return setTimeout(fn,0)}'),'GIS boundary initialization is deferred until idle');
+assert(gisTv.includes('submissionIdleCallback||function(fn){return setTimeout(fn,0)}'),'GIS boundary initialization is deferred until idle');
 assert(gisTv.includes("String(g.id||'')!=='32-88'"),'GIS boundary excludes non-administrative Waduk Cira geometry');
 assert(gisTv.includes("'Batas kab/kota · '+layers.length+' wilayah · aktif'"),'GIS boundary reports active rendered region state');
 assert(gisTv.includes('layer.bindTooltip(name'), 'GIS boundary exposes district/city name on hover');
@@ -864,7 +864,7 @@ const dailyContext={};
 vm.runInNewContext(dailyService+';this.validateDailyInputPayloadV1=validateDailyInputPayloadV1;',dailyContext);
 const passportDailyMeasures={biasa_24:0,biasa_48:'0',elektronik_48:3,e_polikarbonat:2};
 const validDailyResult=dailyContext.validateDailyInputPayloadV1({
-  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
   officeKey:'KANIM-TEST',
@@ -873,7 +873,7 @@ const validDailyResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(validDailyResult.ok && validDailyResult.normalized.total===5, 'Daily passport validator accepts explicit zeros and derives the total');
 const missingDailyResult=dailyContext.validateDailyInputPayloadV1({
-  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
   officeKey:'KANIM-TEST',
@@ -882,7 +882,7 @@ const missingDailyResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!missingDailyResult.ok && missingDailyResult.errors['measures.e_polikarbonat'], 'Daily validator distinguishes a missing value from zero');
 const injectedDailyResult=dailyContext.validateDailyInputPayloadV1({
-  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
   officeKey:'KANIM-TEST',
@@ -891,7 +891,7 @@ const injectedDailyResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!injectedDailyResult.ok && injectedDailyResult.errors['measures.total'], 'Daily validator rejects uncontracted or client-supplied total fields');
 const invalidDailyDate=dailyContext.validateDailyInputPayloadV1({
-  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-02-30',
   officeKey:'KANIM-TEST',
@@ -905,7 +905,7 @@ const residenceDailyMeasures={
   alih_status_itk_ke_itas:8,alih_status_itas_ke_itap:9,abg:10,epo:11,imk:12,skim:13
 };
 const validResidenceDailyResult=dailyContext.validateDailyInputPayloadV1({
-  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'RESIDENCE_PERMIT',
   operationalDate:'2026-10-14',
   officeKey:'KANIM-TEST',
@@ -914,7 +914,7 @@ const validResidenceDailyResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(validResidenceDailyResult.ok && validResidenceDailyResult.normalized.total===91, 'Residence Permit daily validator accepts all candidate measures and derives total');
 const negativeDailyResult=dailyContext.validateDailyInputPayloadV1({
-  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
   officeKey:'KANIM-TEST',
@@ -923,7 +923,7 @@ const negativeDailyResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!negativeDailyResult.ok && negativeDailyResult.errors['measures.biasa_24'], 'Daily validator rejects negative service counts');
 const decimalDailyResult=dailyContext.validateDailyInputPayloadV1({
-  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
   officeKey:'KANIM-TEST',
