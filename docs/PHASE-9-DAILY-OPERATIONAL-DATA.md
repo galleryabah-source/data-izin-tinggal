@@ -249,3 +249,12 @@ This design does not authorize:
 Use the existing Apps Script + Google Sheets runtime for the first release. Its limitations around multi-sheet atomicity must be addressed through idempotency, lock-guarded writes, append-only revisions, consistency verification, and recovery tests; do not describe it as a full ACID transaction system.
 
 Until the delivery gates pass, the existing monthly production baseline remains unchanged and authoritative. See `docs/DAILY-INPUT-BLUEPRINT.md` for the full technical plan.
+
+## 15. UI/technical reinforcement aligned with existing product architecture
+
+The entry workspace must reuse the approved GIS First global shell and design tokens, but the form itself is task-first: no map or analytics distractions above the entry fields. Implement one responsive Input Harian route with synchronized Izin Tinggal/Paspor selection, verified Office Reference, server-provided field metadata, keyboard/touch accessibility, inline errors and explicit retry/conflict states. Desktop and Android mobile must be tested.
+
+Technical modules should be separated logically into contract registry, validation, authorization policy, command service, repository adapter, idempotency, revision handling, audit adapter, read-only projection, and consistency verifier. Keep them compatible with the existing Apps Script codebase and test shim; do not introduce a new runtime/framework or database merely for novelty. Use versioned server-owned contracts, request/correlation UUIDs, stable error codes, batch I/O, bounded retries, revision conflict detection and recovery tests.
+
+**Gate 9.1 remains a real approval gate.** The earlier source audit found no existing authoritative daily source. The proposed in-app form becomes a new prospective source, but its semantics still need sign-off: daily grain, measure meanings, zero versus missing, reporting cutoff, late entry, role separation, correction, and close/reopen. Candidate fields are not production-authorized until the operational owner approves representative normal and correction fixtures. Never synthesize daily rows from monthly totals.
+
