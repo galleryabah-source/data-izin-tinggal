@@ -135,7 +135,7 @@ The Phase 10.2 figures remain locked as historical certification evidence. The c
 
 The production baseline is now verified end-to-end for both the existing Residence Permit dataset and the Passport dataset. Map v1, Export Verification v1, Backup Snapshot Verification v1, Automated Production Smoke Test v1, Passport governance/runtime regression gates, and the GIS First production UI baseline have passed their verification gates.
 
-The current canonical source model remains monthly. The next new capability is governed daily input for Residence Permit and Passport through one in-app service-selector form, with separate daily contracts and staging. This is a planning decision only; implementation has not started and no daily production writes are authorized yet. WhatsApp integration is HOLD and is not a dependency. The canonical monthly pipeline remains protected and must stay green.
+The current canonical source model remains monthly. Phase 9 has a contract/validator foundation in PR #228 for governed daily input for Residence Permit and Passport through one in-app service-selector form. Gate 9.1 is BLOCKED pending owner approval of measure definitions and operational workflow. The feature remains hard-disabled: no daily writes, staging-sheet creation, or daily UI are authorized yet. See [Gate 9.1 Decision Register](PHASE-9-GATE-9.1-DECISION-REGISTER.md). WhatsApp integration is HOLD and is not a dependency. The canonical monthly pipeline remains protected and must stay green.
 
 The deployment identity evidence chain remains part of the gate: Git commit SHA -> GitHub Actions run -> Apps Script immutable version -> canonical deployment ID -> production smoke -> AUDIT_LOG -> backup snapshot.
 
