@@ -1,6 +1,6 @@
 # Daily Input Implementation Blueprint
 
-**Status:** approved planning baseline — implementation not started  
+**Status:** design candidate — Gate 9.1 NOT PASSED; implementation not started  
 **Scope:** one in-app input form for daily Residence Permit and Passport service reports  
 **Capture channel:** INTAL WEB APP form; WhatsApp integration is **HOLD** and is not a dependency  
 **Runtime baseline:** Google Apps Script Web App + Google Sheets, consistent with the current canonical application
@@ -304,7 +304,7 @@ The existing `npm test`/GitHub Actions path remains the first required CI gate. 
 
 The prior source audit found no existing daily spreadsheet/export or approved SOP that proves operational daily semantics. Introducing the in-app form establishes a **new prospective capture source**, but it does not automatically prove that the proposed daily fields mean the same thing as the monthly fields.
 
-Before enabling writes, the contract owner must approve and attach evidence for each family:
+Before enabling writes, the contract owner must approve and attach evidence for each family. In addition, the daily lifecycle must be reconciled with the existing monthly **Period Closing & Controlled Correction v1** implementation so period-state semantics, correction reasons, audit vocabulary, and authorization boundaries do not diverge or create competing write seams:
 
 - what one report represents (candidate: one operational date × one verified immigration office × one service family);
 - whether a date with no service is a valid zero report, a missing report, or not reportable;
@@ -319,13 +319,14 @@ Until those semantics and owners are approved, the contracts in this document re
 ## 16. Explicit implementation order
 
 1. Freeze and approve Gate 9.1 contract decisions and fixtures.
-2. Add server-owned contract registry, validators, capability checks, repository seam, idempotency ledger and audit integration.
-3. Add staging/revision storage behind a feature flag; prove integrity and recovery tests.
-4. Implement the GIS First-aligned responsive input workspace.
-5. Implement review/correction/period governance.
-6. Implement read-only approved projections and baseline reconciliation.
-7. Complete export, backup/snapshot, recovery, production smoke and browser UAT evidence.
-8. Only then consider enabling daily reporting to operational users.
+2. Reconcile the daily period/revision model with the existing monthly Period Closing & Controlled Correction v1 gate; reuse compatible policy/audit patterns without sharing incompatible dataset writes.
+3. Add server-owned contract registry, validators, capability checks, repository seam, idempotency ledger and audit integration.
+4. Add staging/revision storage behind a feature flag; prove integrity and recovery tests.
+5. Implement the GIS First-aligned responsive input workspace.
+6. Implement review/correction/period governance.
+7. Implement read-only approved projections and baseline reconciliation.
+8. Complete export, backup/snapshot, recovery, production smoke and browser UAT evidence.
+9. Only then consider enabling daily reporting to operational users.
 
 No phase may be skipped because the UI looks complete or CI is green.
 
