@@ -121,7 +121,7 @@ function validateDailyInputPayloadV1(payload) {
   if (!contract) addError('serviceFamily', 'Pilih keluarga layanan yang valid.');
 
   const operationalDate = String(input.operationalDate || '').trim();
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(operationalDate)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(operationalDate)) {
     addError('operationalDate', 'Tanggal harus berformat YYYY-MM-DD.');
   } else {
     const parsedDate = new Date(operationalDate + 'T00:00:00.000Z');
@@ -163,7 +163,7 @@ function validateDailyInputPayloadV1(payload) {
         return;
       }
       if (!(typeof value === 'number' || typeof value === 'string') ||
-          !/^\\d+$/.test(String(value).trim())) {
+          !/^\d+$/.test(String(value).trim())) {
         addError('measures.' + key, 'Nilai harus bilangan bulat non-negatif.');
         return;
       }
