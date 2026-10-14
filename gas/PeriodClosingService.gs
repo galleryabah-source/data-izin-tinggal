@@ -1,9 +1,13 @@
 function ensurePeriodClosureSheet_(){
   const ss=getDb_();
   let sh=ss.getSheetByName(SHEETS.PERIOD_CLOSURES);
-  const headers=['closure_id','dataset_key','periode','status','closed_by','closed_at','reason','reopened_by','reopened_at'];
+  const headers=['closure_id','dataset_key','periode','status','closed_by','closed_at','reason','reopened_by','reopened_at','reopen_reason'];
   if(!sh)sh=ss.insertSheet(SHEETS.PERIOD_CLOSURES);
   if(sh.getLastRow()===0)sh.getRange(1,1,1,headers.length).setValues([headers]);
+  else {
+    const current=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(x=>String(x||'').trim());
+    if(!current.includes('reopen_reason'))sh.getRange(1,sh.getLastColumn()+1).setValue('reopen_reason');
+  }
   sh.setFrozenRows(1);
   return sh;
 }
@@ -20,6 +24,7 @@ function getPeriodClosureRows_(){
     closedBy:String(r[i.closed_by]||''),
     closedAt:String(r[i.closed_at]||''),
     reason:String(r[i.reason]||''),
+    reopenReason:i.reopen_reason===undefined?'':String(r[i.reopen_reason]||''),
     reopenedBy:String(r[i.reopened_by]||''),
     reopenedAt:String(r[i.reopened_at]||'')
   }));
@@ -93,7 +98,8 @@ function reopenPeriodLocked_(datasetKey,periode,reason){
   if(current!=='CLOSED')throw new Error('PERIOD_NOT_CLOSED: '+key+' '+period);
   const now=nowIso_();
   sh.getRange(rowIndex,i.status+1,1,3).setValues([['OPEN',String(v[rowIndex-1][i.closed_by]||''),String(v[rowIndex-1][i.closed_at]||'')]]);
-  sh.getRange(rowIndex,i.reason+1).setValue(why);
+  if(i.reopen_reason===undefined)throw new Error('PERIOD_CLOSURE_SCHEMA_MISSING: reopen_reason');
+  sh.getRange(rowIndex,i.reopen_reason+1).setValue(why);
   sh.getRange(rowIndex,i.reopened_by+1,1,2).setValues([[user.email,now]]);
   appendAudit_('PERIOD_REOPEN',key,String(v[rowIndex-1][i.closure_id]||''),0,'SUCCESS',JSON.stringify({periode:period,reason:why,correction:true}));
   return {ok:true,datasetKey:key,periode:period,status:'OPEN',correctionRequired:true};
