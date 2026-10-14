@@ -136,9 +136,9 @@ function validateDailyInputPayloadV1(payload) {
     addError('officeKey', 'Kantor imigrasi harus dipilih dari referensi kantor.');
   }
 
-  const requestId = String(input.requestId || '').trim();
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) {
-    addError('requestId', 'requestId harus UUID valid untuk idempotensi.');
+  const submissionId = String(input.submissionId || '').trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(submissionId)) {
+    addError('submissionId', 'submissionId harus UUID valid untuk idempotensi.');
   }
 
   if (contract && String(input.contractVersion || '').trim() !== contract.version) {
@@ -193,7 +193,7 @@ function validateDailyInputPayloadV1(payload) {
     code: valid ? 'DAILY_INPUT_VALIDATION_OK' : 'DAILY_INPUT_VALIDATION_FAILED',
     errors,
     normalized: valid ? {
-      requestId,
+      submissionId,
       serviceFamily: family,
       operationalDate,
       officeKey,
