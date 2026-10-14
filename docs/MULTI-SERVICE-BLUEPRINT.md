@@ -245,3 +245,12 @@ The following are **not** part of the immediate implementation gate:
 The application is intentionally being designed as a **single multi-service platform with isolated dataset contracts**.
 
 The current production platform has two isolated canonical monthly service families: Residence Permit and Passport. The next planned input capability is daily reporting for both through one service-selector form and separate service-specific contracts. This blueprint records a plan, not a deployed feature. The current monthly production datasets remain authoritative and must stay green throughout future expansion. WhatsApp integration remains on HOLD.
+
+## Daily input UX and technology reinforcement
+
+Daily input must follow the approved `docs/UI-REFERENCE-GIS-FIRST.md` visual system and reuse the current application shell. Add one task-focused **Input Harian** workspace—not a separate app or a new dashboard—with a synchronized service selector and server-defined fields for each family. The map remains the focal point of analytics, not of data entry; the form must optimize quick, accurate entry on desktop and Android mobile.
+
+Implement the capability through logical contract-first modules (contract registry, validation, authorization policy, command service, repository, idempotency, revision, audit, projection and integrity verification). Preserve the current Apps Script + Google Sheets runtime until measured limits justify a separately approved architecture decision. Version contracts, use server-side RBAC, request IDs, append-only corrections, deterministic errors, batch I/O and recovery checks. The Sheets adapter must explicitly acknowledge that multi-sheet operations are not ACID.
+
+Gate 9.1 remains unpassed until daily reporting semantics and owners approve the proposed grain, measure definitions, zero/missing behavior, reporting cutoff, correction/period workflow and representative fixtures. No synthetic daily history from monthly totals, no writes to canonical monthly datasets, and no WhatsApp integration in this phase. See `docs/DAILY-INPUT-BLUEPRINT.md`.
+
