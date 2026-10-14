@@ -254,3 +254,8 @@ Implement the capability through logical contract-first modules (contract regist
 
 Gate 9.1 remains unpassed until daily reporting semantics and owners approve the proposed grain, measure definitions, zero/missing behavior, reporting cutoff, correction/period workflow and representative fixtures. No synthetic daily history from monthly totals, no writes to canonical monthly datasets, and no WhatsApp integration in this phase. See `docs/DAILY-INPUT-BLUEPRINT.md`.
 
+
+
+## Period-governance integration gate
+
+Before daily write-path implementation, reconcile the proposed daily state machine and period-close/correction semantics with the existing monthly Period Closing & Controlled Correction v1 gate. Reuse compatible authorization, reason capture and audit conventions; preserve service-family isolation and do not create competing write seams. This is part of Gate 9.1/9.2 and must be evidenced before enabling daily writes.
