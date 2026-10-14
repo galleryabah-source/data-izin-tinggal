@@ -899,3 +899,35 @@ const invalidDailyDate=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(!invalidDailyDate.ok && invalidDailyDate.errors.operationalDate, 'Daily validator rejects impossible calendar dates');
+
+const residenceDailyMeasures={
+  bvk:1,voa:2,itk:3,itk_peralihan:4,itas:5,itap:6,itkt:7,
+  alih_status_itk_ke_itas:8,alih_status_itas_ke_itap:9,abg:10,epo:11,imk:12,skim:13
+};
+const validResidenceDailyResult=dailyContext.validateDailyInputPayloadV1({
+  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'RESIDENCE_PERMIT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:residenceDailyMeasures
+});
+assert(validResidenceDailyResult.ok && validResidenceDailyResult.normalized.total===91, 'Residence Permit daily validator accepts all candidate measures and derives total');
+const negativeDailyResult=dailyContext.validateDailyInputPayloadV1({
+  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{...passportDailyMeasures,biasa_24:-1}
+});
+assert(!negativeDailyResult.ok && negativeDailyResult.errors['measures.biasa_24'], 'Daily validator rejects negative service counts');
+const decimalDailyResult=dailyContext.validateDailyInputPayloadV1({
+  requestId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{...passportDailyMeasures,biasa_24:1.5}
+});
+assert(!decimalDailyResult.ok && decimalDailyResult.errors['measures.biasa_24'], 'Daily validator rejects fractional service counts');
