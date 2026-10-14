@@ -43,10 +43,17 @@ function listPeriodClosures(){
 }
 
 function closePeriod(datasetKey,periode,reason){
+  requirePermission_('admin.config');
+  const lock=LockService.getScriptLock();
+  lock.waitLock(30000);
+  try{return closePeriodLocked_(datasetKey,periode,reason);}finally{lock.releaseLock();}
+}
+
+function closePeriodLocked_(datasetKey,periode,reason){
   const user=requirePermission_('admin.config');
   const key=String(datasetKey||'').trim(),period=String(periode||'').trim(),why=String(reason||'').trim();
   if(!DATASET_CONTRACTS[key])throw new Error('DATASET_CONTRACT_NOT_FOUND: '+key);
-  if(!/^\\d{4}-\\d{2}$/.test(period))throw new Error('Periode harus YYYY-MM.');
+  if(!/^\d{4}-\d{2}$/.test(period))throw new Error('Periode harus YYYY-MM.');
   if(!why)throw new Error('Alasan closing wajib diisi.');
   const existing=getPeriodClosureRows_().find(x=>x.datasetKey===key&&x.periode===period);
   if(existing&&existing.status==='CLOSED')return {ok:true,alreadyClosed:true,closureId:existing.closureId,datasetKey:key,periode:period};
@@ -67,10 +74,17 @@ function closePeriod(datasetKey,periode,reason){
 }
 
 function reopenPeriod(datasetKey,periode,reason){
+  requirePermission_('admin.config');
+  const lock=LockService.getScriptLock();
+  lock.waitLock(30000);
+  try{return reopenPeriodLocked_(datasetKey,periode,reason);}finally{lock.releaseLock();}
+}
+
+function reopenPeriodLocked_(datasetKey,periode,reason){
   const user=requirePermission_('admin.config');
   const key=String(datasetKey||'').trim(),period=String(periode||'').trim(),why=String(reason||'').trim();
   if(!DATASET_CONTRACTS[key])throw new Error('DATASET_CONTRACT_NOT_FOUND: '+key);
-  if(!/^\\d{4}-\\d{2}$/.test(period))throw new Error('Periode harus YYYY-MM.');
+  if(!/^\d{4}-\d{2}$/.test(period))throw new Error('Periode harus YYYY-MM.');
   if(!why)throw new Error('Alasan controlled correction wajib diisi.');
   const sh=ensurePeriodClosureSheet_(),v=sh.getDataRange().getValues(),h=v[0],i=Object.fromEntries(h.map((x,n)=>[x,n]));
   const rowIndex=v.findIndex(r=>String(r[i.dataset_key]||'')===key&&String(r[i.periode]||'')===period)+1;
