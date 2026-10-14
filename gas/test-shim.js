@@ -795,6 +795,8 @@ assert(periodClosing.includes('function reopenPeriod(datasetKey,periode,reason)'
 assert(periodClosing.includes("appendAudit_('PERIOD_CLOSE'"), 'Period close writes audit evidence');
 assert(periodClosing.includes("appendAudit_('PERIOD_REOPEN'"), 'Controlled correction reopen writes audit evidence');
 assert(periodClosing.includes("correction:true"), 'Controlled correction is explicitly marked');
+assert(periodClosing.includes("reopenReason:i.reopen_reason===undefined?'':String(r[i.reopen_reason]||'')"), 'Reopen reason is exposed separately from the original closing reason');
+assert(periodClosing.includes("sh.getRange(rowIndex,i.reopen_reason+1).setValue(why)"), 'Controlled correction preserves the original closing reason');
 assert(periodClosing.includes('PERIOD_EMPTY'), 'Empty periods cannot be closed');
 assert(periodClosing.includes('status'), 'Period closure state is explicit');
 
@@ -807,7 +809,7 @@ const periodConfig=read('Config.gs');
 assert(periodConfig.includes("PERIOD_CLOSURES:'PERIOD_CLOSURES'"), 'Period closure sheet identity is explicit');
 
 const code=read('Code.gs');
-assert(code.includes("PERIOD_CLOSURES:['closure_id','dataset_key','periode','status','closed_by','closed_at','reason','reopened_by','reopened_at']"), 'Period closure schema is initialized');
+assert(code.includes("PERIOD_CLOSURES:['closure_id','dataset_key','periode','status','closed_by','closed_at','reason','reopened_by','reopened_at','reopen_reason']"), 'Period closure schema is initialized');
 
 // Passport YoY forensic closure invariants
 const forensicGov=read('PassportGovernanceService.gs');
