@@ -1,9 +1,11 @@
 # Phase 9 — Daily Operational Data Design v1
 
-**Status:** approved planning baseline — implementation not started  
+**Status:** contract/validator foundation in PR #228; Gate 9.1 BLOCKED pending operational sign-off  
 **Scope:** in-app daily input for both Residence Permit and Passport, staging, review, correction/revision, period closing, monthly/yearly derivation, historical traceability.
 
 **Capture channel:** one INTAL WEB APP form with a service selector. **WhatsApp integration: HOLD.** Runtime remains Apps Script + Google Sheets for the initial delivery.
+
+**Current implementation boundary:** PR #228 adds candidate contracts and a pure validator only. The feature is hard-disabled; there are no daily writes, staging-sheet creation, or daily UI. Gate 9.1 remains BLOCKED until the operational definitions and workflow rules are approved. See [Gate 9.1 Decision Register](PHASE-9-GATE-9.1-DECISION-REGISTER.md).
 
 ## 1. Decision
 
