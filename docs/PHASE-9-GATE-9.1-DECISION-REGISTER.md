@@ -1,6 +1,6 @@
 # Phase 9 — Gate 9.1 Operational Contract Decision Register
 
-**Status: BLOCKED — operational contract not yet signed off**  
+**Status: IN PROGRESS — owner decisions recorded for counting basis and late entry; remaining Gate 9.1 items still block implementation**  
 **Applies to:** one INTAL WEB APP daily-input form for Izin Tinggal and Paspor  
 **Implementation boundary:** contract/validator foundation only; no daily writes, staging-sheet creation, UI, or production deployment is authorized by this register.
 
@@ -12,12 +12,12 @@ Gate 9.1 freezes the meaning and reporting rules of daily operational measures b
 
 | Decision | Safe proposed default | Gate evidence required |
 |---|---|---|
-| Daily measure meaning | Approve a written definition for every measure in each service family. Do not infer meaning from key names or monthly labels alone. | Signed-off data dictionary with definition, unit, inclusion/exclusion rules, and examples. |
+| Daily measure meaning | **Owner decision recorded 2026-10-15:** count services completed or documents issued on the operational date. Apply this basis to all 17 candidate indicators; do not count intake/receipt alone. Per-indicator inclusion/exclusion rules still need explicit examples. | Signed-off data dictionary with exact event/unit, inclusion/exclusion, boundary examples and per-measure decision. |
 | Requiredness | Proposed technical default: every measure in the approved contract is required at final submit; drafts may be incomplete. Not operationally approved yet. | Per-measure required/optional decision; if optional, define the semantic difference between omitted and zero. |
 | Zero vs. missing | Explicit 0 means the reporter confirms zero activity. Blank/null means not reported and must not silently become zero. Proposed invariant pending owner sign-off. | Approved rule for each measure; validator fixtures for zero, blank, and null. |
 | Daily total | Server derives total from the exact approved measure set. Client-supplied total is never authoritative. | Formula and expected totals for representative fixtures. |
-| Operational date and timezone | Proposed date-only business key in Asia/Jakarta, stored separately from audit timestamps; exact cutover and late-entry rules remain pending. | Confirmation of date cutover, late-entry policy, and timestamp convention. |
-| Reporting cutoff | No cutoff is assumed by the current validator. | Per-service cutoff, timezone, due time, and late-submission rule. |
+| Operational date and timezone | Business date is the original operational date in Asia/Jakarta, separate from audit timestamps. **Owner decision recorded 2026-10-15:** late entry is allowed when the original operational date is retained and the reason plus audit evidence are recorded. No backdating to submission time. Exact event-time cutover and timestamp convention remain to be specified. | Deterministic date-boundary/timestamp rules and tests; late-entry reason and audit fields must be mandatory. |
+| Reporting cutoff | Late reporting is not rejected solely because the day has ended; preserve original operational date and require reason + audit. A reporting deadline/late label may be used operationally but must not rewrite business date. | Confirm due-time/late-label policy and test that late arrival cannot alter operational date or bypass audit. |
 | Office identity | Accept only stable office_key resolved server-side to exactly one OFFICE_REFERENCE record with status=VERIFIED. Reject missing/duplicate/unknown/non-verified keys. Display names are labels, never identifiers. | Confirm office key uniqueness and inactive-office behavior; add negative tests for missing, duplicate, unknown, PENDING, and other statuses. |
 | Duplicate logical report | Uniqueness candidate: operational date + canonical office key + service family. A conflict must use a governed revision path, never silent overwrite. Pending owner confirmation. | Approve conflict behavior and fixture for a second report for the same logical key. |
 | Retry/idempotency | Same submissionId + same canonicalized payload returns the original recorded outcome; a reused ID with different payload is rejected as an idempotency conflict. Enforce under a lock/atomic ledger operation. | Concurrency/retry test cases, payload-hash policy, and approved conflict response. |
@@ -116,3 +116,15 @@ The project requester explicitly authorized proceeding and accelerating the Phas
 6. Test retries, concurrent submissions, logical duplicates, unauthorized actors, stale revisions, post-close corrections, audit failures, staging isolation, and unchanged monthly baselines.
 7. Only after these tests pass, build the single responsive form with service selector.
 8. Release: CI green → forensic diff PASS → explicit merge decision → canonical deployment evidence → production smoke → browser UAT → regression/integrity evidence.
+
+
+## Owner decisions recorded — 2026-10-15
+
+The project owner explicitly decided:
+
+1. **Counting basis for all 17 candidate indicators:** count services completed or documents issued. Intake/receipt alone is not the daily count. Engineering must still define the precise completion/issuance event, unit, inclusion/exclusion, cancellations/reprints/transitions, and examples separately for each indicator before the measure dictionary is complete.
+2. **Late entry:** allowed. Retain the original operational date in Asia/Jakarta and capture a reason plus an auditable record of the late submission (actor and audit timestamp at minimum). Submission time must not silently replace operational date; late entry must not overwrite an existing submitted/approved revision.
+
+These decisions are accepted for Gate 9.1 contract and test design. They do **not** approve the still-pending per-measure edge cases, required/optional and zero/missing rules, Office Reference identity behavior, authorization matrix, idempotency/concurrency behavior, correction/void/period-close rules, total formulas, retention policy, or staging controls.
+
+**Gate result remains BLOCKED** until the complete acceptance checklist passes. No persistence, user-facing daily input, merge, or production deployment is authorized by this record.
