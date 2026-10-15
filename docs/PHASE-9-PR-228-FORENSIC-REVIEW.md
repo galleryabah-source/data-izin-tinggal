@@ -76,3 +76,20 @@ The owner worksheet still marks all 17 per-measure definitions as `Pending`, and
 **Decision: NO MERGE / NO DEPLOY.** Keep `DAILY_INPUT_GUARD_V1.enabled = false`. No persistence, staging writes, or usable daily-entry form may be introduced before Gate 9.1 is explicitly passed. The canonical monthly data/importer/registry/period-close/historical baseline/dashboards remain outside scope; WhatsApp remains HOLD.
 
 **Review qualification:** this document remains an engineering self-review. An independent reviewer must still examine the exact current PR diff before the gate can be considered complete.
+
+
+## 7. Latest PR-head verification — 2026-10-15
+
+This checkpoint supersedes earlier statements about which head has current CI evidence. It is still an engineering self-review, not an independent approval.
+
+- **Exact PR head inspected:** `6c7daadc7c4a104adb558ea9d9d50c8dda754d85`.
+- **CI:** [Run #756](https://github.com/galleryabah-source/data-izin-tinggal/actions/runs/38716980333) completed successfully for this head. The `validate` job and `npm test` passed; `deploy` was skipped.
+- **PR boundary:** 15 changed files; comparison with base `a48123533edfe2bd772b1295b6543f4433944e77` shows 82 commits ahead and no protected monthly importer/contract/registry/period-close/dashboard implementation file among the changed files. The change set is broader than the original historical 11-file inventory.
+- **Code boundary reviewed:** `gas/DailyInputService.gs` remains a candidate-only contract and pure validator; the feature guard is hard-coded false, and the file contains no spreadsheet mutation API or lifecycle write endpoints. Regression tests cover the disabled guard, own-property/unknown-field checks, calendar dates, integer bounds, explicit zero versus omitted/null, derived totals, and source-report normalization fixtures.
+- **Limit:** static diff review and passing tests do not prove deployment/runtime integration or replace an independent reviewer. The office key is syntactically checked only at this foundation layer; authoritative exact-one `VERIFIED` Office Reference resolution belongs to a future gated write path and must be tested before Gate 9.2 is accepted.
+
+### Gate disposition at this checkpoint
+
+The Gate 9.1 owner worksheet still leaves all 17 measure definitions pending, and all accountable owner sign-off areas remain OPEN. Exact per-measure semantics, role/action authorization, idempotency/concurrency, correction/void/period-close behavior, retention, and independent review are not complete.
+
+**CI: PASS for head `6c7daad`. Gate 9.1: BLOCKED. Release: NO MERGE / NO DEPLOY.** Keep `DAILY_INPUT_GUARD_V1.enabled = false`; no persistence, staging writes, or usable daily-entry form. Do not modify canonical monthly data, importer, registry identity, historical baseline, period-close logic, or dashboards. WhatsApp remains HOLD.
