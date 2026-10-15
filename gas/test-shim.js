@@ -1080,3 +1080,52 @@ const explicitZeroResult=dailyContext.validateDailyInputPayloadV1({
   measures:{biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0}
 });
 assert(explicitZeroResult.ok && explicitZeroResult.normalized.total===0, 'Daily validator preserves explicit zero values and derives a zero total');
+
+
+/* Phase 9 malformed envelope and identity-shape regression cases. */
+const invalidFamilyPayloadResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'OTHER_SERVICE',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!invalidFamilyPayloadResult.ok && invalidFamilyPayloadResult.errors.serviceFamily, 'Pure validator rejects uncontracted service families');
+
+const malformedDateFormatResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'14-10-2026',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!malformedDateFormatResult.ok && malformedDateFormatResult.errors.operationalDate, 'Pure validator rejects non-ISO operational date formats');
+
+const blankOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'   ',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!blankOfficeKeyResult.ok && blankOfficeKeyResult.errors.officeKey, 'Pure validator rejects blank office identity keys');
+
+const overlongOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'K'.repeat(129),
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!overlongOfficeKeyResult.ok && overlongOfficeKeyResult.errors.officeKey, 'Pure validator rejects office keys exceeding the contract boundary');
+
+const arrayEnvelopeResult=dailyContext.validateDailyInputPayloadV1([
+  '123e4567-e89b-42d3-a456-426614174000',
+  'PASSPORT',
+  '2026-10-14'
+]);
+assert(!arrayEnvelopeResult.ok && arrayEnvelopeResult.errors.serviceFamily && arrayEnvelopeResult.errors.submissionId, 'Pure validator rejects an array-shaped top-level payload');
