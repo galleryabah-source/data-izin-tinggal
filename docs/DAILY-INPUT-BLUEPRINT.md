@@ -42,7 +42,7 @@ Use the existing Passport contract's four service measures as the initial candid
 
 `biasa_24`, `biasa_48`, `elektronik_48`, `e_polikarbonat`.
 
-**Owner decision (2026-10-15):** all 17 candidate indicators count services completed or documents issued on the original operational date; intake/receipt alone is not counted. Exact per-indicator event/unit and inclusion/exclusion rules still require completion. Whether zero is valid and how blank differs from zero must also be explicitly frozen per measure. Do not infer daily data by dividing or reconstructing monthly aggregates.
+**Owner decisions (2026-10-15):** all 17 candidate indicators count services completed or documents issued on the original operational date; intake/receipt alone is not counted. Exact per-indicator event/unit and inclusion/exclusion rules still require completion. For supplied narrative daily reports, a blank/no-number field is normalized to explicit `0`, with the original report retained as source evidence. This transcription convention does not change the future app payload contract: omitted/null fields are not silently coerced, and requiredness/missing-value behavior per measure remains pending Gate 9.1 approval. Do not infer daily data by dividing or reconstructing monthly aggregates.
 
 ## 3. Data boundary and proposed storage
 
