@@ -1151,3 +1151,14 @@ assert(!arrayEnvelopeResult.ok && arrayEnvelopeResult.errors.serviceFamily && ar
   assert(!result.ok && result.errors['measures.biasa_24'],
     'Daily validator rejects ambiguous or non-count numeric representation: '+caseName);
 });
+
+
+/* Phase 9 read-only boundary: prohibit spreadsheet mutation APIs in the foundation. */
+assert(
+  !/\.(?:appendRow|setValue|setValues|insertSheet|deleteSheet|deleteRow|clearContent|clearFormat|clear|copyTo)\s*\(/.test(dailyService),
+  'Daily input contract foundation must not call spreadsheet mutation APIs'
+);
+assert(
+  !/\b(?:LockService|PropertiesService)\s*\./.test(dailyService),
+  'Read-only contract foundation must not introduce persistence coordination or mutable property state'
+);
