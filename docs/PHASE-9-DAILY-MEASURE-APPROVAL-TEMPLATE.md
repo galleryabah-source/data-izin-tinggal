@@ -1,6 +1,6 @@
 # Phase 9 — Daily Measure Approval Worksheet
 
-**Status:** OWNER AUTHORITY CONFIRMED IN CHAT — operational decisions still require explicit values below; this is not blanket approval of candidate semantics.  
+**Status:** OWNER AUTHORITY CONFIRMED — counting basis and late-entry policy approved on 2026-10-15; remaining measure semantics and workflow controls are pending.  
 **Owner authority record:** On 2026-10-15, the project owner confirmed authority to decide Gate 9.1. This records decision authority and the two decisions below, not blanket approval of all measure definitions or workflow policies.  
 **Related gate:** Gate 9.1  
 **Contract version:** candidate-v1; final version freezes only after remaining Gate 9.1 decisions  
