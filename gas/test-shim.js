@@ -999,6 +999,25 @@ let invalidDailyFamilyRejected=false;
 try{dailyPolicyContext.getDailyServiceContractV1('UNKNOWN');}catch(e){invalidDailyFamilyRejected=String(e&&e.message||e)==='DAILY_SERVICE_FAMILY_INVALID';}
 assert(invalidDailyFamilyRejected,'Daily contract endpoint rejects unknown service families');
 
+/* Phase 9 read endpoint negative authorization tests: deny before touching configuration. */
+let dailyDeniedDbReads=0;
+const dailyDeniedContext={
+  SHEETS:{CONFIG:'CONFIG'},
+  requirePermission_:(permission)=>{throw new Error('FORBIDDEN: '+permission);},
+  getDb_:()=>{dailyDeniedDbReads++;throw new Error('DB_ACCESS_BEFORE_AUTH');}
+};
+vm.runInNewContext(dailyService,dailyDeniedContext);
+[
+  ['getDailyInputPolicyV1',()=>dailyDeniedContext.getDailyInputPolicyV1()],
+  ['getDailyServiceContractV1',()=>dailyDeniedContext.getDailyServiceContractV1('PASSPORT')]
+].forEach(([endpoint,invoke])=>{
+  let denied=false;
+  try{invoke();}catch(e){denied=String(e&&e.message||e)==='FORBIDDEN: dashboard.read';}
+  assert(denied,'Daily read endpoint denies unauthorized access: '+endpoint);
+});
+assert(dailyDeniedDbReads===0,'Daily read endpoints enforce permission before reading configuration or database state');
+
+
 
 /* Phase 9 validator boundary matrix: overflow, malformed containers, and contract drift. */
 const unsafeMeasureResult=dailyContext.validateDailyInputPayloadV1({
