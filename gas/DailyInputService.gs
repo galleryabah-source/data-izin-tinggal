@@ -34,7 +34,9 @@ const DAILY_SERVICE_CONTRACTS_V1 = Object.freeze({
 const DAILY_INPUT_GUARD_V1 = Object.freeze({
   enabled: false,
   timezone: 'Asia/Jakarta',
-  featureFlagKey: 'DAILY_INPUT_ENABLED'
+  featureFlagKey: 'DAILY_INPUT_ENABLED',
+  countingBasis: 'SERVICE_COMPLETED_OR_DOCUMENT_ISSUED',
+  lateEntryPolicy: 'ALLOW_WITH_ORIGINAL_OPERATIONAL_DATE_REASON_AND_AUDIT'
 });
 
 function getDailyInputPolicyV1() {
@@ -49,6 +51,8 @@ function getDailyInputPolicyV1() {
     contract: 'DAILY_INPUT_POLICY_V1',
     enabled: DAILY_INPUT_GUARD_V1.enabled && flag === 'true',
     timezone: DAILY_INPUT_GUARD_V1.timezone,
+    countingBasis: DAILY_INPUT_GUARD_V1.countingBasis,
+    lateEntryPolicy: DAILY_INPUT_GUARD_V1.lateEntryPolicy,
     serviceFamilies: Object.keys(DAILY_SERVICE_CONTRACTS_V1).map(key => {
       const contract = DAILY_SERVICE_CONTRACTS_V1[key];
       return {
@@ -75,6 +79,8 @@ function getDailyServiceContractV1(serviceFamily) {
     datasetKey: contract.datasetKey,
     version: contract.version,
     timezone: DAILY_INPUT_GUARD_V1.timezone,
+    countingBasis: DAILY_INPUT_GUARD_V1.countingBasis,
+    lateEntryPolicy: DAILY_INPUT_GUARD_V1.lateEntryPolicy,
     enabled: DAILY_INPUT_GUARD_V1.enabled,
     measures: contract.measures.map(measureKey => ({
       key: measureKey,
