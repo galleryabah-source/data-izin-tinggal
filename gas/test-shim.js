@@ -1226,17 +1226,35 @@ assert(
 );
 
 
-/* Phase 9 payload envelope: required fields cannot be inherited from a prototype. */
-const inheritedEnvelopePayload = {
-  submissionId:'123e4567-e89b-42d3-a456-426614174000',
-  operationalDate:'2026-10-14',
-  officeKey:'KANIM-TEST',
-  contractVersion:'candidate-v1',
-  measures:passportDailyMeasures
-};
-Object.setPrototypeOf(inheritedEnvelopePayload, {serviceFamily:'PASSPORT'});
-const inheritedEnvelopeResult = dailyContext.validateDailyInputPayloadV1(inheritedEnvelopePayload);
-assert(
-  !inheritedEnvelopeResult.ok && inheritedEnvelopeResult.errors.serviceFamily,
-  'Daily validator rejects a required serviceFamily inherited from the payload prototype'
-);
+/* Phase 9 payload envelope: every required field must be an own property. */
+const inheritedEnvelopeCases = [
+  ['submissionId', '123e4567-e89b-42d3-a456-426614174000'],
+  ['serviceFamily', 'PASSPORT'],
+  ['operationalDate', '2026-10-14'],
+  ['officeKey', 'KANIM-TEST'],
+  ['contractVersion', 'candidate-v1'],
+  ['measures', passportDailyMeasures]
+];
+inheritedEnvelopeCases.forEach(([field, inheritedValue]) => {
+  const payload = {
+    submissionId:'123e4567-e89b-42d3-a456-426614174000',
+    serviceFamily:'PASSPORT',
+    operationalDate:'2026-10-14',
+    officeKey:'KANIM-TEST',
+    contractVersion:'candidate-v1',
+    measures:passportDailyMeasures
+  };
+  delete payload[field];
+  const prototype = {};
+  Object.defineProperty(prototype, field, {
+    value: inheritedValue,
+    enumerable: true,
+    configurable: true
+  });
+  Object.setPrototypeOf(payload, prototype);
+  const result = dailyContext.validateDailyInputPayloadV1(payload);
+  assert(
+    !result.ok && Object.prototype.hasOwnProperty.call(result.errors, field),
+    'Daily validator rejects inherited required envelope field: '+field
+  );
+});
