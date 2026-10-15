@@ -139,23 +139,27 @@ The current canonical source model remains monthly. Phase 9 has a contract/valid
 
 The deployment identity evidence chain remains part of the gate: Git commit SHA -> GitHub Actions run -> Apps Script immutable version -> canonical deployment ID -> production smoke -> AUDIT_LOG -> backup snapshot.
 
-## Next controlled capability — Period Closing & Controlled Correction v1
+## Period Closing & Controlled Correction v1
 
-**Status: IN DELIVERY — not yet production-certified.**
+**Status: IMPLEMENTED + DEPLOYED — production certification pending authenticated runtime UAT.**
 
 Purpose: establish explicit monthly data finality before downstream analytics, exports, and operational automation depend on a period.
 
-- [ ] Period closure registry (PERIOD_CLOSURES) with dataset + YYYY-MM grain
-- [ ] Closed periods reject canonical monthly imports at the single commitImport() write seam
-- [ ] Owner-controlled close/reopen actions with mandatory reason
-- [ ] Controlled correction requires explicit reopen before correction
-- [ ] PERIOD_CLOSE / PERIOD_REOPEN audit evidence
-- [ ] Preserve Residence/Passport contracts, registry identity, importer normalization, and historical data lifecycle
-- [ ] CI regression gate
-- [ ] Forensic diff
-- [ ] Canonical deployment
-- [ ] Live UAT: close → import denied → reopen → correction allowed → close again
-- [ ] Production evidence and roadmap reconciliation
+Evidence: PR #229 merged as `bcc359ad6ac83288e062c14b876a8aecc99c8bb2`; CI/deployment workflow Run #760 passed; Apps Script version 218 deployed to the canonical deployment ID. The PR fixes a reclose-state defect by clearing all reopen metadata when a previously reopened period is closed again. See [PR #229](https://github.com/galleryabah-source/data-izin-tinggal/pull/229) and [workflow Run #760](https://github.com/galleryabah-source/data-izin-tinggal/actions/runs/38722508768).
+
+- [x] Period closure registry (PERIOD_CLOSURES) with dataset + YYYY-MM grain
+- [x] Closed periods reject canonical monthly imports at the single commitImport() write seam
+- [x] Permission-gated close/reopen actions require a reason
+- [x] Controlled correction requires explicit reopen before correction
+- [x] PERIOD_CLOSE / PERIOD_REOPEN audit evidence
+- [x] Preserve Residence/Passport contracts, registry identity, importer normalization, and historical data lifecycle
+- [x] CI regression gate on the exact PR head
+- [x] Forensic diff reviewed; only period-closure state reset and its regression assertion changed
+- [x] Canonical deployment: Run #760 / Apps Script version 218
+- [ ] Authenticated live UAT: close → import denied → reopen → correction allowed → close again
+- [ ] Production runtime evidence and final certification
+
+**Important:** workflow success and deployment prove delivery, not authenticated business-flow UAT. Do not mark this gate production-certified until the full live sequence and audit evidence are verified.
 
 **Boundary:** governance state only. No new service dataset, no schema mutation of Residence/Passport monthly contracts, no daily reconstruction, and no second import path.
 
