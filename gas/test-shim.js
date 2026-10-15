@@ -1029,7 +1029,7 @@ const dailyGatePassContext={
   ]})}:null})
 };
 vm.runInNewContext(dailyService,dailyGatePassContext);
-assert(dailyGatePassContext.getDailyInputPolicyV1().enabled===true,'Daily input enables only when both feature flag and Gate 9.1 PASS are present');
+assert(dailyGatePassContext.getDailyInputPolicyV1().enabled===false,'Daily input remains hard-disabled even if mutable CONFIG flags are both set until the code-level release gate is deliberately changed');
 const blockedWriteContext={
   SHEETS:{CONFIG:'CONFIG'},
   requirePermission_:(permission)=>({role:'TEST',email:'test@example.com',permissions:['daily.draft','daily.read']}),
