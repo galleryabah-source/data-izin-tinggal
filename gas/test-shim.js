@@ -69,6 +69,7 @@ const periodClosingCode=read('PeriodClosingService.gs');
 assert(periodClosingCode.includes('if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(period))'),'Period closing accepts only valid YYYY-MM calendar months');
 assert(periodClosingCode.includes('function closePeriod(datasetKey,periode,reason)')&&periodClosingCode.includes('function reopenPeriod(datasetKey,periode,reason)'),'Period close/reopen public entrypoints remain available');
 assert(periodClosingCode.includes('LockService.getScriptLock()')&&periodClosingCode.includes('function closePeriodLocked_')&&periodClosingCode.includes('function reopenPeriodLocked_'),'Period close/reopen serialize with canonical import lock');
+assert(periodClosingCode.includes("sh.getRange(row,i.status+1,1,7).setValues([['CLOSED',user.email,now,why,'','','']])"), 'Reclosing a reopened period clears all three reopen metadata fields and resets the full closure state');
 const sourceConnector=read('SourceConnectorService.gs');
 const sourcePure=new Function('canonicalizeHeaders_',sourceConnector+'\nreturn {normalizeGoogleSpreadsheetId_,normalizeSourceHeader_,canonicalizeSourceHeaders_,canonicalizeHeaders_};')((headers)=>headers.map(h=>normalizeSourceHeaderForTest_(h)));
 function normalizeSourceHeaderForTest_(value){return String(value||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toLowerCase();}
