@@ -1,6 +1,6 @@
 # Daily Input Implementation Blueprint
 
-**Status:** contract/validator foundation implemented in PR #228 — Gate 9.1 NOT PASSED; daily writes and UI not implemented  
+**Status:** contract/validator foundation implemented in PR #228 — partial owner decisions recorded; Gate 9.1 NOT PASSED; daily writes and UI not implemented  
 **Scope:** one in-app input form for daily Residence Permit and Passport service reports  
 **Capture channel:** INTAL WEB APP form; WhatsApp integration is **HOLD** and is not a dependency  
 **Runtime baseline:** Google Apps Script Web App + Google Sheets, consistent with the current canonical application
@@ -42,7 +42,7 @@ Use the existing Passport contract's four service measures as the initial candid
 
 `biasa_24`, `biasa_48`, `elektronik_48`, `e_polikarbonat`.
 
-The daily contracts must explicitly approve whether each existing monthly measure has the same daily meaning and whether zero is a valid reported count. Do not infer daily data by dividing or reconstructing monthly aggregates.
+**Owner decision (2026-10-15):** all 17 candidate indicators count services completed or documents issued on the original operational date; intake/receipt alone is not counted. Exact per-indicator event/unit and inclusion/exclusion rules still require completion. Whether zero is valid and how blank differs from zero must also be explicitly frozen per measure. Do not infer daily data by dividing or reconstructing monthly aggregates.
 
 ## 3. Data boundary and proposed storage
 
@@ -107,6 +107,7 @@ Server-side validation is mandatory:
 - authenticated actor and required permission;
 - service-family contract and version;
 - valid date in the `Asia/Jakarta` operational timezone;
+- late entry is allowed; preserve the original operational date and require a non-empty late-entry reason; server-generated audit evidence must include authenticated actor and audit timestamp; never substitute submission date for operational date;
 - server resolves the exact `office_key` to exactly one `OFFICE_REFERENCE` row with `status === 'VERIFIED'`; reject missing, duplicate, `PENDING`, or any other status, and derive the canonical office name server-side;
 - every required measure is present and a finite integer >= 0;
 - reject locale-formatted ambiguity, NaN, Infinity, decimal values, and negative counts;
@@ -141,7 +142,7 @@ Google Sheets is not a relational transactional database. Locking and idempotenc
 - Keep write/approval/close operations separate from read-only dashboard queries.
 - Do not collect personal/foreign-national information; this is aggregate operational service reporting.
 - Avoid exposing Spreadsheet IDs, privileged configuration, raw exceptions, or internal audit payloads to unauthorized users.
-- Audit logs record actor, event, dataset family, record/revision IDs, outcome, timestamp, reason, and correlation/submission ID.
+- Audit logs record actor, event, dataset family, record/revision IDs, outcome, timestamp, reason, and correlation/submission ID. For late entry, audit evidence must also make the original operational date and late-entry reason explicit.
 - Governed export and backup/snapshot verification must be included before production certification.
 
 ## 8. Aggregation and canonical monthly protection
