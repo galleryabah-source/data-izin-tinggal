@@ -1224,3 +1224,19 @@ assert(
   !/\b(?:LockService|PropertiesService)\s*\./.test(dailyService),
   'Read-only contract foundation must not introduce persistence coordination or mutable property state'
 );
+
+
+/* Phase 9 payload envelope: required fields cannot be inherited from a prototype. */
+const inheritedEnvelopePayload = {
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+};
+Object.setPrototypeOf(inheritedEnvelopePayload, {serviceFamily:'PASSPORT'});
+const inheritedEnvelopeResult = dailyContext.validateDailyInputPayloadV1(inheritedEnvelopePayload);
+assert(
+  !inheritedEnvelopeResult.ok && inheritedEnvelopeResult.errors.serviceFamily,
+  'Daily validator rejects a required serviceFamily inherited from the payload prototype'
+);
