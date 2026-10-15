@@ -1132,6 +1132,18 @@ const invalidFamilyPayloadResult=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(!invalidFamilyPayloadResult.ok && invalidFamilyPayloadResult.errors.serviceFamily, 'Pure validator rejects uncontracted service families');
+['constructor','toString','__proto__'].forEach(family=>{
+  const result=dailyContext.validateDailyInputPayloadV1({
+    submissionId:'123e4567-e89b-42d3-a456-426614174000',
+    serviceFamily:family,
+    operationalDate:'2026-10-14',
+    officeKey:'KANIM-TEST',
+    contractVersion:'candidate-v1',
+    measures:passportDailyMeasures
+  });
+  assert(!result.ok && result.errors.serviceFamily,
+    'Daily validator rejects inherited-name service family: '+family);
+});
 
 const malformedDateFormatResult=dailyContext.validateDailyInputPayloadV1({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
