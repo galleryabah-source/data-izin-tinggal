@@ -1,0 +1,392 @@
+{
+  "schemaVersion": "narrative-daily-report-normalization-fixture-v1",
+  "rule": "For supplied narrative daily reports, blank/no-number service fields are normalized to explicit integer zero. Preserve original source report separately. Do not infer mappings to the 17 candidate app measures from similar labels.",
+  "fixtures": [
+    {
+      "id": "karawang-2026-10-14",
+      "office": "Kantor Imigrasi Kelas I Non TPI Karawang",
+      "operationalDate": "2026-10-14",
+      "sourceIndicatorCount": 33,
+      "expectedNonZeroIndicators": 7,
+      "expectedArithmeticSum": 32,
+      "measures": [
+        {
+          "label": "Perpanjangan ITK",
+          "count": 20
+        },
+        {
+          "label": "Perpanjangan ITAS I sd III",
+          "count": 6
+        },
+        {
+          "label": "Perpanjangan ITAS IV",
+          "count": 1
+        },
+        {
+          "label": "Perpanjangan ITAS V",
+          "count": 1
+        },
+        {
+          "label": "Perpanjangan ITAP",
+          "count": 0
+        },
+        {
+          "label": "Alih Status ITK-ITAS",
+          "count": 0
+        },
+        {
+          "label": "Alih Status ITAS-ITAP",
+          "count": 0
+        },
+        {
+          "label": "ITAS Baru",
+          "count": 0
+        },
+        {
+          "label": "Sertifikat ABG",
+          "count": 0
+        },
+        {
+          "label": "Perpanjangan VOA",
+          "count": 1
+        },
+        {
+          "label": "MERP",
+          "count": 0
+        },
+        {
+          "label": "Affidavit",
+          "count": 0
+        },
+        {
+          "label": "Mutasi Paspor",
+          "count": 0
+        },
+        {
+          "label": "EPO",
+          "count": 0
+        },
+        {
+          "label": "Mutasi Alamat",
+          "count": 1
+        },
+        {
+          "label": "ERP Tidak Kembali",
+          "count": 0
+        },
+        {
+          "label": "Lapor Lahir",
+          "count": 0
+        },
+        {
+          "label": "SKIM",
+          "count": 0
+        },
+        {
+          "label": "Pelaporan ITAP",
+          "count": 0
+        },
+        {
+          "label": "Alih jabatan",
+          "count": 0
+        },
+        {
+          "label": "Pencabutan Dokim jadi WNI",
+          "count": 0
+        },
+        {
+          "label": "Alih sponsor/penjamin",
+          "count": 0
+        },
+        {
+          "label": "Alih penjamin ITAP",
+          "count": 0
+        },
+        {
+          "label": "Perpanjangan ITKT",
+          "count": 0
+        },
+        {
+          "label": "Penolakan dan alasannya",
+          "count": 0
+        },
+        {
+          "label": "Kendala",
+          "count": 0
+        },
+        {
+          "label": "Pemberian ITAP",
+          "count": 0
+        },
+        {
+          "label": "Laporan Kematian",
+          "count": 0
+        },
+        {
+          "label": "Change data profile",
+          "count": 0
+        },
+        {
+          "label": "Pemberian ITAS",
+          "count": 0
+        },
+        {
+          "label": "Change Data Activity",
+          "count": 0
+        },
+        {
+          "label": "Bridging VOA ke ITK",
+          "count": 0
+        },
+        {
+          "label": "Bridging ITAS ke ITK",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "bandung-2026-10-12",
+      "office": "Kantor Imigrasi Kelas I TPI Bandung",
+      "operationalDate": "2026-10-12",
+      "sourceIndicatorCount": 28,
+      "expectedNonZeroIndicators": 7,
+      "expectedArithmeticSum": 31,
+      "measures": [
+        {
+          "label": "Sertifikat ABG",
+          "count": 0
+        },
+        {
+          "label": "Affidavit",
+          "count": 0
+        },
+        {
+          "label": "Mutasi paspor",
+          "count": 1
+        },
+        {
+          "label": "EPO",
+          "count": 0
+        },
+        {
+          "label": "Mutasi Alamat",
+          "count": 1
+        },
+        {
+          "label": "ERP Tidak Kembali",
+          "count": 1
+        },
+        {
+          "label": "Pencabutan Dokumen",
+          "count": 0
+        },
+        {
+          "label": "Lapor kematian",
+          "count": 0
+        },
+        {
+          "label": "SKIM",
+          "count": 0
+        },
+        {
+          "label": "Alih Jabatan",
+          "count": 0
+        },
+        {
+          "label": "Perpanjangan ITK Molina",
+          "count": 9
+        },
+        {
+          "label": "Perpanjangan VoA Molina",
+          "count": 0
+        },
+        {
+          "label": "Altus ITK-ITAS Molina",
+          "count": 2
+        },
+        {
+          "label": "Perpanjangan ITAP",
+          "count": 0
+        },
+        {
+          "label": "Perpanjangan ITAS Molina",
+          "count": 16
+        },
+        {
+          "label": "Perubahan lain kanim",
+          "count": 0
+        },
+        {
+          "label": "Alih Status Bridging",
+          "count": 0
+        },
+        {
+          "label": "Duplikat ITAP",
+          "count": 0
+        },
+        {
+          "label": "Altus ITAS - ITAP Molina",
+          "count": 1
+        },
+        {
+          "label": "Alih Penjamin",
+          "count": 0
+        },
+        {
+          "label": "Perpanjangan MREP",
+          "count": 0
+        },
+        {
+          "label": "Lapor Lahir",
+          "count": 0
+        },
+        {
+          "label": "Rangkap Jabatan",
+          "count": 0
+        },
+        {
+          "label": "Penolakan & Alasannya",
+          "count": 0
+        },
+        {
+          "label": "Lapor ITAP",
+          "count": 0
+        },
+        {
+          "label": "Kendala",
+          "count": 0
+        },
+        {
+          "label": "Itap Baru",
+          "count": 0
+        },
+        {
+          "label": "Perubahan Identitas",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "bandung-2026-10-14",
+      "office": "Kantor Imigrasi Kelas I TPI Bandung",
+      "operationalDate": "2026-10-14",
+      "sourceIndicatorCount": 28,
+      "expectedNonZeroIndicators": 9,
+      "expectedArithmeticSum": 49,
+      "measures": [
+        {
+          "label": "Sertifikat ABG",
+          "count": 0
+        },
+        {
+          "label": "Affidavit",
+          "count": 0
+        },
+        {
+          "label": "Mutasi paspor",
+          "count": 4
+        },
+        {
+          "label": "EPO",
+          "count": 0
+        },
+        {
+          "label": "Mutasi Alamat",
+          "count": 0
+        },
+        {
+          "label": "ERP Tidak Kembali",
+          "count": 3
+        },
+        {
+          "label": "Pencabutan Dokumen",
+          "count": 0
+        },
+        {
+          "label": "Lapor kematian",
+          "count": 0
+        },
+        {
+          "label": "SKIM",
+          "count": 0
+        },
+        {
+          "label": "Alih Jabatan",
+          "count": 0
+        },
+        {
+          "label": "Perpanjangan ITK Molina",
+          "count": 11
+        },
+        {
+          "label": "Perpanjangan VoA Molina",
+          "count": 6
+        },
+        {
+          "label": "Altus ITK-ITAS Molina",
+          "count": 3
+        },
+        {
+          "label": "Perpanjangan ITAP",
+          "count": 0
+        },
+        {
+          "label": "Perpanjangan ITAS Molina",
+          "count": 17
+        },
+        {
+          "label": "Perubahan lain kanim",
+          "count": 0
+        },
+        {
+          "label": "Alih Status Bridging",
+          "count": 3
+        },
+        {
+          "label": "Duplikat ITAP",
+          "count": 0
+        },
+        {
+          "label": "Altus ITAS - ITAP Molina",
+          "count": 1
+        },
+        {
+          "label": "Alih Penjamin",
+          "count": 0
+        },
+        {
+          "label": "Perpanjangan MREP",
+          "count": 0
+        },
+        {
+          "label": "Lapor Lahir",
+          "count": 0
+        },
+        {
+          "label": "Rangkap Jabatan",
+          "count": 0
+        },
+        {
+          "label": "Penolakan & Alasannya",
+          "count": 0
+        },
+        {
+          "label": "Lapor ITAP",
+          "count": 1
+        },
+        {
+          "label": "Kendala",
+          "count": 0
+        },
+        {
+          "label": "Itap Baru",
+          "count": 0
+        },
+        {
+          "label": "Perubahan Identitas",
+          "count": 0
+        }
+      ]
+    }
+  ]
+}
