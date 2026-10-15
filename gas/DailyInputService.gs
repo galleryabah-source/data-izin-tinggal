@@ -117,9 +117,11 @@ function validateDailyInputPayloadV1(payload) {
   ];
   const family = String(input.serviceFamily || '').trim().toUpperCase();
   const contract = DAILY_SERVICE_CONTRACTS_V1[family];
-  const errors = {};
+  // A null-prototype map prevents inherited names such as constructor,
+  // toString, and __proto__ from bypassing unknown-field validation.
+  const errors = Object.create(null);
   const addError = (key, message) => {
-    if (!errors[key]) errors[key] = message;
+    if (!Object.prototype.hasOwnProperty.call(errors, key)) errors[key] = message;
   };
 
   Object.keys(input).forEach(key => {
