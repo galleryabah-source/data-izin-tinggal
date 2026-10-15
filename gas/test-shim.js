@@ -1129,3 +1129,25 @@ const arrayEnvelopeResult=dailyContext.validateDailyInputPayloadV1([
   '2026-10-14'
 ]);
 assert(!arrayEnvelopeResult.ok && arrayEnvelopeResult.errors.serviceFamily && arrayEnvelopeResult.errors.submissionId, 'Pure validator rejects an array-shaped top-level payload');
+
+
+/* Phase 9 numeric representation matrix: reject ambiguous and non-count inputs. */
+[
+  ['scientific-notation-string', '1e3'],
+  ['locale-separated-string', '1,000'],
+  ['boolean-value', true],
+  ['positive-infinity', Infinity],
+  ['not-a-number', NaN],
+  ['whitespace-string', '   ']
+].forEach(([caseName, value]) => {
+  const result = dailyContext.validateDailyInputPayloadV1({
+    submissionId:'123e4567-e89b-42d3-a456-426614174000',
+    serviceFamily:'PASSPORT',
+    operationalDate:'2026-10-14',
+    officeKey:'KANIM-TEST',
+    contractVersion:'candidate-v1',
+    measures:{...passportDailyMeasures,biasa_24:value}
+  });
+  assert(!result.ok && result.errors['measures.biasa_24'],
+    'Daily validator rejects ambiguous or non-count numeric representation: '+caseName);
+});
