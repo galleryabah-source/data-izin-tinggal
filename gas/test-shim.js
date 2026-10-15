@@ -910,6 +910,22 @@ const injectedTopLevelFieldResult=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(!injectedTopLevelFieldResult.ok && injectedTopLevelFieldResult.errors.clientOfficeName, 'Daily validator rejects uncontracted top-level client fields');
+
+const inheritedTopLevelFieldKeys=['constructor','toString','__proto__'];
+inheritedTopLevelFieldKeys.forEach(key=>{
+  const payload={
+    submissionId:'123e4567-e89b-42d3-a456-426614174000',
+    serviceFamily:'PASSPORT',
+    operationalDate:'2026-10-14',
+    officeKey:'KANIM-TEST',
+    contractVersion:'candidate-v1',
+    measures:passportDailyMeasures
+  };
+  Object.defineProperty(payload,key,{value:'injected',enumerable:true,configurable:true});
+  const result=dailyContext.validateDailyInputPayloadV1(payload);
+  assert(!result.ok && Object.prototype.hasOwnProperty.call(result.errors,key),
+    'Daily validator rejects inherited-name top-level field: '+key);
+});
 const inheritedMeasurePayload={
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
