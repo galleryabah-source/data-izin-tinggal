@@ -26,7 +26,7 @@ const DAILY_INPUT_HEADERS_V1 = Object.freeze([
   'contract_version','revision','status','measures_json','total','source_record_id',
   'source_submission_id','created_by','created_at','updated_by','updated_at',
   'submitted_by','submitted_at','reviewed_by','reviewed_at','decision_reason',
-  'correction_reason','payload_hash'
+  'correction_reason','payload_hash','late_entry_reason'
 ]);
 function dailyConfig_(){
   const sh=getDb_().getSheetByName(SHEETS.CONFIG), rows=sh?sh.getDataRange().getValues().slice(1):[];
@@ -69,7 +69,7 @@ function dailyMeasureLabelV1_(key){
 }
 function validateDailyInputPayloadV1(payload){
   const input=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
-  const allowed=['submissionId','serviceFamily','operationalDate','officeKey','contractVersion','measures'];
+  const allowed=['submissionId','serviceFamily','operationalDate','officeKey','contractVersion','measures','lateEntryReason'];
   const family=String(input.serviceFamily||'').trim().toUpperCase(),contract=Object.prototype.hasOwnProperty.call(DAILY_SERVICE_CONTRACTS_V1,family)?DAILY_SERVICE_CONTRACTS_V1[family]:null;
   const errors=Object.create(null),add=(k,m)=>{if(!Object.prototype.hasOwnProperty.call(errors,k))errors[k]=m;};
   Object.keys(input).forEach(k=>{if(!allowed.includes(k))add(k,'Field tidak diizinkan pada kontrak input harian ini.');});
@@ -96,7 +96,7 @@ function validateDailyInputPayloadV1(payload){
   let total=null;if(contract&&contract.measures.every(k=>Object.prototype.hasOwnProperty.call(normalized,k))){total=contract.measures.reduce((s,k)=>s+normalized[k],0);if(!Number.isSafeInteger(total)){add('measures','Total melampaui batas integer aman.');total=null;}}
   const ok=Object.keys(errors).length===0;
   return {ok,code:ok?'DAILY_INPUT_VALIDATION_OK':'DAILY_INPUT_VALIDATION_FAILED',errors,
-    normalized:ok?{submissionId,serviceFamily:family,operationalDate:date,officeKey,contractVersion:contract.version,measures:normalized,total}:null};
+    normalized:ok?{submissionId,serviceFamily:family,operationalDate:date,officeKey,contractVersion:contract.version,measures:normalized,total,lateEntryReason:String(input.lateEntryReason||'').trim()}:null};
 }
 function ensureDailyInputSheet_(){
   assertDailyInputEnabled_();
@@ -118,7 +118,7 @@ function dailyRows_(sh){
     createdBy:String(r[i.created_by]||''),createdAt:String(r[i.created_at]||''),updatedBy:String(r[i.updated_by]||''),
     updatedAt:String(r[i.updated_at]||''),submittedBy:String(r[i.submitted_by]||''),submittedAt:String(r[i.submitted_at]||''),
     reviewedBy:String(r[i.reviewed_by]||''),reviewedAt:String(r[i.reviewed_at]||''),decisionReason:String(r[i.decision_reason]||''),
-    correctionReason:String(r[i.correction_reason]||''),payloadHash:String(r[i.payload_hash]||'')}));
+    correctionReason:String(r[i.correction_reason]||''),payloadHash:String(r[i.payload_hash]||''),lateEntryReason:String(r[i.late_entry_reason]||'')}));
 }
 function dailyOffice_(officeKey){
   const sh=getDb_().getSheetByName('OFFICE_REFERENCE');if(!sh||sh.getLastRow()<2)throw new Error('OFFICE_REFERENCE_NOT_READY');
@@ -140,14 +140,14 @@ function listDailyInputOffices(){
 }
 function dailyPayloadHash_(p){
   const canonical={serviceFamily:p.serviceFamily,operationalDate:p.operationalDate,officeKey:p.officeKey,contractVersion:p.contractVersion,
-    measures:Object.keys(p.measures||{}).sort().reduce((o,k)=>(o[k]=p.measures[k],o),{})};
+    measures:Object.keys(p.measures||{}).sort().reduce((o,k)=>(o[k]=p.measures[k],o),{}),lateEntryReason:String(p.lateEntryReason||'').trim()};
   const bytes=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,JSON.stringify(canonical),Utilities.Charset.UTF_8);
   return bytes.map(b=>(b<0?b+256:b).toString(16).padStart(2,'0')).join('');
 }
 function dailyRowArray_(p,office,status,revision,source,reason,user,now,hash){
   return [Utilities.getUuid(),p.submissionId,p.serviceFamily,p.operationalDate,office.key,office.name,p.contractVersion,revision,status,
     JSON.stringify(p.measures),Number(p.total||0),source?source.recordId:'',source?source.submissionId:'',user.email,now,user.email,now,
-    status==='SUBMITTED'?user.email:'',status==='SUBMITTED'?now:'','','', '',reason||'',hash||dailyPayloadHash_(p)];
+    status==='SUBMITTED'?user.email:'',status==='SUBMITTED'?now:'','','', '',reason||'',hash||dailyPayloadHash_(p),String(p.lateEntryReason||'')];
 }
 function dailyLogicalKey_(r){return [r.serviceFamily,r.operationalDate,r.officeKey].join('|');}
 function dailyLatestLogical_(rows,key){return rows.filter(r=>dailyLogicalKey_(r)===key).sort((a,b)=>b.revision-a.revision)[0]||null;}
@@ -158,7 +158,7 @@ function dailyPublicRecord_(r){
     officeKey:r.officeKey,officeName:r.officeName,contractVersion:r.contractVersion,revision:r.revision,status:r.status,
     measures,total:r.total,sourceRecordId:r.sourceRecordId,sourceSubmissionId:r.sourceSubmissionId,createdBy:r.createdBy,
     createdAt:r.createdAt,submittedBy:r.submittedBy,submittedAt:r.submittedAt,reviewedBy:r.reviewedBy,reviewedAt:r.reviewedAt,
-    decisionReason:r.decisionReason,correctionReason:r.correctionReason};
+    decisionReason:r.decisionReason,correctionReason:r.correctionReason,lateEntryReason:r.lateEntryReason};
 }
 function listDailySubmissions(filters){
   const user=requirePermission_('daily.read');assertDailyInputEnabled_();
@@ -181,6 +181,11 @@ function dailyValidateDraft_(payload){
   Object.keys(measures).forEach(k=>{if(!c.measures.includes(k))throw new Error('DAILY_DRAFT_FIELD_INVALID: '+k);});
   const partial={};c.measures.forEach(k=>{const v=measures[k];if(v!==undefined&&v!==null&&String(v).trim()!==''){const n=Number(v);if(!Number.isSafeInteger(n)||n<0||!/^\d+$/.test(String(v).trim()))throw new Error('DAILY_DRAFT_MEASURE_INVALID: '+k);partial[k]=n;}});
   return {normalized:Object.assign({},result.normalized,{measures:partial,total:null}),contract:c};
+}
+function assertDailyOperationalDate_(p){
+  const today=Utilities.formatDate(new Date(),APP.TZ,'yyyy-MM-dd');
+  if(p.operationalDate>today)throw new Error('DAILY_FUTURE_DATE_NOT_ALLOWED');
+  if(p.operationalDate<today&&!String(p.lateEntryReason||'').trim())throw new Error('DAILY_LATE_ENTRY_REASON_REQUIRED');
 }
 function saveDailyDraft(payload){
   const user=requirePermission_('daily.draft');assertDailyInputEnabled_();
@@ -208,7 +213,7 @@ function saveDailyDraft(payload){
 function submitDailyInput(payload){
   const user=requirePermission_('daily.submit');assertDailyInputEnabled_();
   const result=validateDailyInputPayloadV1(payload);if(!result.ok)throw new Error('DAILY_INPUT_INVALID: '+JSON.stringify(result.errors));
-  const p=result.normalized,lock=LockService.getScriptLock();lock.waitLock(30000);
+  const p=result.normalized;assertDailyOperationalDate_(p);const lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
     const sh=ensureDailyInputSheet_(),office=dailyOffice_(p.officeKey),rows=dailyRows_(sh),hash=dailyPayloadHash_(p),existing=rows.find(r=>r.submissionId===p.submissionId),key=dailyLogicalKey_({serviceFamily:p.serviceFamily,operationalDate:p.operationalDate,officeKey:p.officeKey}),latest=dailyLatestLogical_(rows,key),now=nowIso_();
     if(existing&&existing.status!=='DRAFT'){if(existing.payloadHash===hash)return {ok:true,recordId:existing.recordId,status:existing.status,idempotent:true};throw new Error('DAILY_IDEMPOTENCY_CONFLICT');}
@@ -253,7 +258,7 @@ function correctDailySubmission(recordId,payload,reason){
   const user=requirePermission_('daily.correct');assertDailyInputEnabled_();
   const why=String(reason||'').trim();if(!why)throw new Error('DAILY_CORRECTION_REASON_REQUIRED');
   const result=validateDailyInputPayloadV1(payload);if(!result.ok)throw new Error('DAILY_INPUT_INVALID: '+JSON.stringify(result.errors));
-  const p=result.normalized,lock=LockService.getScriptLock();lock.waitLock(30000);
+  const p=result.normalized;assertDailyOperationalDate_(p);const lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
     const sh=ensureDailyInputSheet_(),rows=dailyRows_(sh),source=dailyFindByRecord_(rows,recordId);
     if(!source||source.status!=='APPROVED')throw new Error('DAILY_CORRECTION_REQUIRES_APPROVED_SOURCE');
@@ -261,7 +266,7 @@ function correctDailySubmission(recordId,payload,reason){
     if(rows.some(r=>r.submissionId===p.submissionId))throw new Error('DAILY_IDEMPOTENCY_CONFLICT');
     const latest=dailyLatestLogical_(rows,dailyLogicalKey_(source));if(!latest||latest.recordId!==source.recordId)throw new Error('DAILY_CORRECTION_SOURCE_NOT_LATEST');
     const office=dailyOffice_(p.officeKey),now=nowIso_(),revision=source.revision+1,rec=dailyRowArray_(p,office,'SUBMITTED',revision,source,why,user,now,dailyPayloadHash_(p));
-    rec[21]=why;sh.appendRow(rec);
+    rec[22]=why;sh.appendRow(rec);
     try{appendAudit_('DAILY_CORRECTION_SUBMIT',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({sourceRecordId:source.recordId,revision,reason:why,total:p.total}));}
     catch(e){sh.deleteRow(sh.getLastRow());throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
     return {ok:true,recordId:rec[0],sourceRecordId:source.recordId,revision,status:'SUBMITTED'};
