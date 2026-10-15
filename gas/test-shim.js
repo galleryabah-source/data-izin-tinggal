@@ -970,3 +970,31 @@ const decimalDailyResult=dailyContext.validateDailyInputPayloadV1({
   measures:{...passportDailyMeasures,biasa_24:1.5}
 });
 assert(!decimalDailyResult.ok && decimalDailyResult.errors['measures.biasa_24'], 'Daily validator rejects fractional service counts');
+
+
+/* Phase 9 policy/read-endpoint guard tests: hard-disabled even if config is true. */
+const dailyPolicyPermissions=[];
+const dailyPolicyContext={
+  SHEETS:{CONFIG:'CONFIG'},
+  requirePermission_:(permission)=>{dailyPolicyPermissions.push(permission);return {role:'TEST'};},
+  getDb_:()=>({
+    getSheetByName:(name)=>name==='CONFIG'?{
+      getDataRange:()=>({getValues:()=>[
+        ['key','value'],
+        ['DAILY_INPUT_ENABLED','true']
+      ]})
+    }:null
+  })
+};
+vm.runInNewContext(dailyService,dailyPolicyContext);
+const dailyPolicy=dailyPolicyContext.getDailyInputPolicyV1();
+assert(dailyPolicy.enabled===false,'Daily input remains disabled even when the configuration feature flag is true');
+assert(dailyPolicy.timezone==='Asia/Jakarta','Daily input policy declares the approved application timezone');
+assert(dailyPolicy.serviceFamilies.length===2,'Daily policy advertises only the two candidate service families');
+assert(dailyPolicyPermissions[0]==='dashboard.read','Daily input policy read endpoint requires dashboard.read');
+const passportPolicy=dailyPolicyContext.getDailyServiceContractV1('PASSPORT');
+assert(passportPolicy.enabled===false&&passportPolicy.measures.length===4,'Passport contract read endpoint stays disabled and returns its four candidate fields');
+assert(dailyPolicyPermissions[1]==='dashboard.read','Daily contract read endpoint requires dashboard.read');
+let invalidDailyFamilyRejected=false;
+try{dailyPolicyContext.getDailyServiceContractV1('UNKNOWN');}catch(e){invalidDailyFamilyRejected=String(e&&e.message||e)==='DAILY_SERVICE_FAMILY_INVALID';}
+assert(invalidDailyFamilyRejected,'Daily contract endpoint rejects unknown service families');
