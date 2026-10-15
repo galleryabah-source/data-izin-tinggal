@@ -131,9 +131,15 @@ function validateDailyInputPayloadV1(payload) {
     }
   }
 
-  const officeKey = String(input.officeKey || '').trim();
+  const officeKey = typeof input.officeKey === 'string' ? input.officeKey.trim() : '';
   if (!officeKey) {
     addError('officeKey', 'Kantor imigrasi harus dipilih dari referensi kantor.');
+  } else if (officeKey.length > 128) {
+    addError('officeKey', 'Kunci kantor tidak valid.');
+  }
+
+  if (Object.prototype.hasOwnProperty.call(input, 'total')) {
+    addError('total', 'Total dihitung oleh server dan tidak boleh dikirim oleh klien.');
   }
 
   const submissionId = String(input.submissionId || '').trim();
