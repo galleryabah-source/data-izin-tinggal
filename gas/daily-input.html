@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Input Harian · INTAL</title>
+<style>
+:root{--navy:#071b35;--blue:#1769e0;--bg:#f3f6fb;--line:#e3e9f2;--text:#152238;--muted:#667085;--green:#087443;--red:#b42318;--amber:#a15c00}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif}.top{background:var(--navy);color:#fff;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{font-size:17px;font-weight:850}.brand small{display:block;color:#b8c9df;font-size:11px;font-weight:500;margin-top:3px}.top a{color:#fff;text-decoration:none;font-size:12px}.shell{max-width:1240px;margin:22px auto;padding:0 16px}.head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:16px}.eyebrow{color:var(--blue);font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}.title{font-size:26px;font-weight:850;margin:4px 0}.desc{color:var(--muted);font-size:13px;line-height:1.5}.pill{white-space:nowrap;border-radius:999px;background:#fff;border:1px solid var(--line);padding:7px 11px;font-size:11px;font-weight:800}.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.85fr);gap:16px}.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 5px 20px rgba(7,27,53,.035);margin-bottom:16px}.card h2{font-size:15px;margin:0 0 4px}.sub{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.45}.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field label{display:block;font-size:11px;color:#475467;font-weight:800;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid #cfd8e5;border-radius:8px;padding:10px;background:#fff;color:var(--text);min-height:40px}.field textarea{min-height:76px;resize:vertical}.full{grid-column:1/-1}.measures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:8px}.measure{border:1px solid var(--line);border-radius:9px;padding:10px}.measure label{display:block;font-size:11px;font-weight:750;color:#475467;margin-bottom:7px}.measure input{width:100%;border:1px solid #cfd8e5;border-radius:7px;padding:9px;min-height:39px;font-variant-numeric:tabular-nums}.total{display:flex;justify-content:space-between;align-items:center;border-radius:10px;background:#eff5ff;padding:13px;margin-top:14px}.total span{font-size:12px;color:#34516f;font-weight:700}.total strong{font-size:22px;color:var(--navy);font-variant-numeric:tabular-nums}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.btn{border:1px solid #cfd8e5;border-radius:8px;background:#fff;color:#344054;padding:9px 12px;font-size:12px;font-weight:800}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.danger{color:var(--red)}.btn:disabled{opacity:.5;cursor:not-allowed}.notice{display:none;border-radius:9px;padding:11px 12px;margin:0 0 14px;font-size:12px;line-height:1.5}.notice.show{display:block}.notice.error{background:#fff1f0;border:1px solid #fecdca;color:#912018}.notice.ok{background:#ecfdf3;border:1px solid #abefc6;color:#05603a}.notice.warn{background:#fffaeb;border:1px solid #fedf89;color:#93370d}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}.metric{background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:11px}.metric b{display:block;font-size:19px}.metric span{font-size:10px;color:var(--muted)}.table-wrap{overflow:auto}.records{width:100%;border-collapse:collapse;min-width:620px}.records th,.records td{border-bottom:1px solid var(--line);padding:10px 8px;text-align:left;font-size:11px;vertical-align:top}.records th{color:#667085;background:#f8fafc}.status{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f6;font-size:9px;font-weight:900}.status.APPROVED{background:#dcfae6;color:#05603a}.status.SUBMITTED{background:#eaf2ff;color:#1849a9}.status.RETURNED{background:#fffaeb;color:#93370d}.status.VOID,.status.SUPERSEDED{background:#f2f4f7;color:#667085}.row-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.row-actions .btn{padding:5px 7px;font-size:10px}.empty{color:var(--muted);font-size:12px;padding:22px;text-align:center}.hint{font-size:11px;color:var(--muted);line-height:1.5;margin-top:10px}.foot{color:#98a2b3;font-size:10px;text-align:center;padding:6px 0 25px}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.shell{margin:14px auto}.card{padding:14px}.title{font-size:22px}.head{display:block}.pill{display:inline-block;margin-top:10px}}@media(max-width:480px){.fields,.measures{grid-template-columns:1fr}.full{grid-column:auto}.top{padding:13px 15px}.shell{padding:0 10px}.summary{grid-template-columns:repeat(3,1fr)}.metric{padding:9px}.metric b{font-size:16px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="brand">INTAL · Input Harian<small>Data Izin Tinggal dan Paspor · Asia/Jakarta</small></div><a href="<?= ScriptApp.getService().getUrl() ?>">← Kembali ke Back Office</a></header>
+<main class="shell">
+<div class="head"><div><div class="eyebrow">Phase 9 · Daily Operations</div><h1 class="title">Input Layanan Harian</h1><div class="desc">Catat layanan yang selesai atau dokumen yang terbit pada tanggal operasional. Pengajuan dan persetujuan tercatat terpisah; koreksi membuat revisi baru dan tidak mengubah dataset bulanan kanonis.</div></div><div id="featurePill" class="pill">MEMUAT KEBIJAKAN…</div></div>
+<div id="notice" class="notice"></div>
+<div class="grid">
+<section class="card">
+<h2 id="formTitle">Laporan harian baru</h2><div class="sub">Semua indikator harus diisi. Masukkan angka 0 jika benar-benar nihil; nilai kosong tidak dianggap nol.</div>
+<div class="fields">
+<div class="field"><label for="family">KELUARGA LAYANAN</label><select id="family"><option value="RESIDENCE_PERMIT">Izin Tinggal</option><option value="PASSPORT">Paspor</option></select></div>
+<div class="field"><label for="date">TANGGAL OPERASIONAL</label><input id="date" type="date" required></div>
+<div class="field full"><label for="office">KANTOR IMIGRASI (REFERENSI TERVERIFIKASI)</label><select id="office" required><option value="">Memuat referensi kantor…</option></select></div>
+</div>
+<div id="measures" class="measures"></div>
+<div class="total"><span>TOTAL DIHITUNG SERVER<br><small>Preview lokal hanya estimasi</small></span><strong id="total">0</strong></div>
+<div class="field" style="margin-top:13px"><label for="lateReason">ALASAN INPUT TERLAMBAT (WAJIB UNTUK TANGGAL LAMPAU)</label><textarea id="lateReason" placeholder="Jelaskan alasan keterlambatan; tanggal operasional tidak akan diubah."></textarea></div>
+<div class="field" style="margin-top:12px"><label for="correctionReason">ALASAN KOREKSI (HANYA UNTUK REVISI)</label><textarea id="correctionReason" placeholder="Wajib jika memperbaiki laporan yang sudah diajukan/disetujui."></textarea></div>
+<div class="actions"><button id="draftBtn" class="btn" onclick="saveDraft()">Simpan draf</button><button id="submitBtn" class="btn primary" onclick="submitForm()">Ajukan laporan</button><button id="cancelEditBtn" class="btn" style="display:none" onclick="resetForm()">Batal koreksi</button></div>
+<div class="hint">Pengajuan tidak otomatis menjadi data disetujui. Persetujuan harus dilakukan oleh pengguna berwenang yang berbeda dari pengaju. Koreksi memerlukan alasan dan menghasilkan revisi baru.</div>
+</section>
+<section>
+<div class="card">
+<h2>Daftar laporan harian</h2><div class="sub">Pantau draf, pengajuan, hasil persetujuan, pengembalian, dan revisi. Data ini terpisah dari rekap bulanan kanonis.</div>
+<div class="fields">
+<div class="field"><label for="filterFamily">LAYANAN</label><select id="filterFamily" onchange="refreshRecords()"><option value="">Semua</option><option value="RESIDENCE_PERMIT">Izin Tinggal</option><option value="PASSPORT">Paspor</option></select></div>
+<div class="field"><label for="filterStatus">STATUS</label><select id="filterStatus" onchange="refreshRecords()"><option value="">Semua status</option><option>DRAFT</option><option>SUBMITTED</option><option>APPROVED</option><option>RETURNED</option><option>SUPERSEDED</option><option>VOID</option></select></div>
+</div>
+<div class="summary"><div class="metric"><b id="countSubmitted">0</b><span>Menunggu review</span></div><div class="metric"><b id="countApproved">0</b><span>Disetujui</span></div><div class="metric"><b id="countReturned">0</b><span>Dikembalikan</span></div></div>
+<div id="records" class="table-wrap"><div class="empty">Memuat laporan…</div></div>
+</div>
+<div class="card"><h2>Aturan pencatatan</h2><div class="sub">Kontrol integritas yang diterapkan oleh server.</div>
+<ul style="font-size:12px;line-height:1.7;padding-left:18px;margin:0;color:#475467"><li>Tanggal operasional disimpan terpisah dari timestamp audit server.</li><li>Kantor harus cocok dengan satu kunci OFFICE_REFERENCE berstatus VERIFIED.</li><li>Pengajuan ganda ditolak; retry identik aman dan payload berbeda dengan ID sama ditolak.</li><li>Pengaju tidak dapat menyetujui laporannya sendiri.</li><li>Revisi dan pembatalan membutuhkan alasan; riwayat audit disimpan.</li><li>Tidak ada penulisan otomatis ke dataset bulanan, registry, atau dashboard bulanan.</li></ul>
+</div>
+</section>
+</div><div class="foot">INTAL WEB APP · Daily Input V1 · Server audit timezone Asia/Jakarta</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let policy=null,contracts={},offices=[],draftId=null,correctionTarget=null,loadedRecords=[];
+const labels={RESIDENCE_PERMIT:'Izin Tinggal',PASSPORT:'Paspor'};
+function call(fn,...args){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(new Error(e&&e.message||String(e))))[fn](...args));}
+function showNotice(message,type='ok'){const el=$('notice');el.textContent=message;el.className='notice show '+type;el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+function hideNotice(){$('notice').className='notice';}
+function fmt(n){return Number(n||0).toLocaleString('id-ID');}
+function todayLocal(){const d=new Date();return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);}
+function newId(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16);});}
+function currentMeasures(){const out={};document.querySelectorAll('[data-measure]').forEach(el=>{out[el.dataset.measure]=el.value;});return out;}
+function renderMeasures(){
+ const family=$('family').value,contract=contracts[family];$('measures').innerHTML='';
+ if(!contract){$('measures').innerHTML='<div class="empty">Kontrak indikator belum tersedia.</div>';return;}
+ contract.measures.forEach(m=>{const box=document.createElement('div');box.className='measure';const label=document.createElement('label');label.textContent=m.label.toUpperCase();label.htmlFor='m_'+m.key;const input=document.createElement('input');input.id='m_'+m.key;input.dataset.measure=m.key;input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.required=true;input.placeholder='0';input.value='';input.addEventListener('input',updateTotal);box.append(label,input);$('measures').append(box);});
+ updateTotal();
+}
+function updateTotal(){const values=currentMeasures();const sum=Object.values(values).reduce((a,v)=>a+(v.trim()!==''&&/^\d+$/.test(v)?Number(v):0),0);$('total').textContent=fmt(sum);}
+function setBusy(b){['draftBtn','submitBtn'].forEach(id=>$(id).disabled=b);}
+function formPayload(){const family=$('family').value,contract=contracts[family];return {submissionId:draftId||newId(),serviceFamily:family,operationalDate:$('date').value,officeKey:$('office').value,contractVersion:contract&&contract.version,measures:currentMeasures()};}
+async function init(){
+ $('date').value=todayLocal();$('family').addEventListener('change',()=>{draftId=null;renderMeasures();hideNotice();});renderMeasures();
+ try{
+   policy=await call('getDailyInputPolicyV1');$('featurePill').textContent=policy.enabled?'INPUT AKTIF · TERKENDALI':'INPUT NONAKTIF';$('featurePill').style.color=policy.enabled?'#087443':'#a15c00';
+   if(!policy.enabled){showNotice('Fitur input harian sedang dinonaktifkan oleh kebijakan server. Tidak ada data yang dapat disimpan.','warn');$('draftBtn').disabled=true;$('submitBtn').disabled=true;}
+   for(const family of ['RESIDENCE_PERMIT','PASSPORT'])contracts[family]=await call('getDailyServiceContractV1',family);
+   offices=await call('listDailyInputOfficesV1');$('office').innerHTML='<option value="">Pilih kantor imigrasi…</option>'+offices.map(o=>'<option value="'+escapeAttr(o.officeKey)+'">'+escapeHtml(o.officeName)+'</option>').join('');
+   renderMeasures();await refreshRecords();
+ }catch(e){showNotice(e.message,'error');$('featurePill').textContent='GAGAL MEMUAT';}
+}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function escapeAttr(s){return escapeHtml(s);}
+function validateClient(p){if(!p.operationalDate)return 'Tanggal operasional wajib diisi.';if(!p.officeKey)return 'Pilih kantor yang terverifikasi.';for(const [k,v] of Object.entries(p.measures)){if(String(v).trim()===''||!/^\d+$/.test(String(v).trim()))return 'Isi semua indikator dengan bilangan bulat; gunakan 0 bila nihil ('+k+').';if(!Number.isSafeInteger(Number(v))||Number(v)<0)return 'Nilai indikator tidak valid ('+k+').';}if(p.operationalDate<todayLocal()&&!$('lateReason').value.trim())return 'Alasan input terlambat wajib diisi.';return '';}
+async function saveDraft(){hideNotice();const p=formPayload(),err=validateClient(p);if(err){showNotice(err,'error');return;}setBusy(true);try{const r=await call('saveDailyInputDraftV1',p,$('lateReason').value);draftId=p.submissionId;showNotice('Draf tersimpan. ID laporan: '+r.recordId,'ok');await refreshRecords();}catch(e){showNotice(e.message,'error');}finally{setBusy(false);}}
+async function submitForm(){hideNotice();const p=formPayload(),err=validateClient(p);if(err){showNotice(err,'error');return;}if(correctionTarget&&!$('correctionReason').value.trim()){showNotice('Alasan koreksi wajib diisi.','error');return;}setBusy(true);try{let r;if(correctionTarget){r=await call('correctDailyInputV1',correctionTarget,p,$('correctionReason').value,$('lateReason').value);showNotice('Revisi diajukan dan menunggu persetujuan. Revisi baru: '+r.recordId,'ok');}else{r=await call('submitDailyInputV1',p,$('lateReason').value);showNotice('Laporan berhasil diajukan. Status: '+r.status+'. ID: '+r.recordId,'ok');}resetForm(false);await refreshRecords();}catch(e){showNotice(e.message,'error');}finally{setBusy(false);}}
+function resetForm(clearNotice=true){draftId=null;correctionTarget=null;$('formTitle').textContent='Laporan harian baru';$('cancelEditBtn').style.display='none';$('correctionReason').value='';$('lateReason').value='';$('date').value=todayLocal();document.querySelectorAll('[data-measure]').forEach(el=>el.value='');updateTotal();if(clearNotice)hideNotice();}
+async function refreshRecords(){try{const records=await call('listDailyInputRecordsV1',{serviceFamily:$('filterFamily').value,status:$('filterStatus').value});loadedRecords=records;renderRecords(records);}catch(e){$('records').innerHTML='<div class="empty">'+escapeHtml(e.message)+'</div>';}}
+function renderRecords(records){
+ $('countSubmitted').textContent=fmt(records.filter(r=>r.status==='SUBMITTED').length);$('countApproved').textContent=fmt(records.filter(r=>r.status==='APPROVED').length);$('countReturned').textContent=fmt(records.filter(r=>r.status==='RETURNED').length);
+ if(!records.length){$('records').innerHTML='<div class="empty">Belum ada laporan pada filter ini.</div>';return;}
+ const rows=records.map(r=>{const family=labels[r.serviceFamily]||r.serviceFamily;let actions='';
+ if(r.status==='SUBMITTED')actions+='<button class="btn" onclick="reviewRecord(\''+r.recordId+'\',\'APPROVE\')">Setujui</button><button class="btn" onclick="reviewRecord(\''+r.recordId+'\',\'RETURN\')">Kembalikan</button>';
+ if(['APPROVED','SUBMITTED','RETURNED'].includes(r.status))actions+='<button class="btn" onclick="startCorrection(\''+r.recordId+'\')">Koreksi</button><button class="btn danger" onclick="voidRecord(\''+r.recordId+'\')">Batalkan</button>';
+ return '<tr><td><b>'+escapeHtml(family)+'</b><br>'+escapeHtml(r.operationalDate)+'<br>'+escapeHtml(r.officeKey)+'<br>Revisi '+r.revision+'</td><td><span class="status '+r.status+'">'+r.status+'</span><br><b>'+fmt(r.total)+'</b> layanan<br><small>'+escapeHtml(r.submittedBy||r.createdBy)+'</small></td><td>'+escapeHtml(r.updatedAt||r.createdAt)+'<div class="row-actions">'+actions+'</div></td></tr>';}).join('');
+ $('records').innerHTML='<table class="records"><thead><tr><th>Laporan</th><th>Status / Total</th><th>Audit / Aksi</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+async function reviewRecord(id,decision){let reason='';if(decision==='RETURN'){reason=prompt('Alasan mengembalikan laporan wajib diisi:')||'';if(!reason.trim())return;}else if(!confirm('Setujui laporan ini? Persetujuan tidak dapat dilakukan oleh pengaju sendiri.'))return;try{const r=await call('reviewDailyInputV1',id,decision,reason);showNotice('Status laporan diperbarui: '+r.status,'ok');await refreshRecords();}catch(e){showNotice(e.message,'error');}}
+function startCorrection(id){const r=loadedRecords.find(x=>x.recordId===id);if(!r)return;correctionTarget=id;draftId=null;$('family').value=r.serviceFamily;$('date').value=r.operationalDate;$('office').value=r.officeKey;$('correctionReason').value='';$('formTitle').textContent='Koreksi laporan · Revisi '+(r.revision+1);$('cancelEditBtn').style.display='';renderMeasures();Object.entries(r.measures).forEach(([k,v])=>{const el=document.querySelector('[data-measure="'+k+'"]');if(el)el.value=String(v);});draftId=newId();updateTotal();showNotice('Mode koreksi aktif. Ubah indikator seperlunya dan isi alasan koreksi.','warn');window.scrollTo({top:0,behavior:'smooth'});}
+async function voidRecord(id){const reason=prompt('Alasan pembatalan wajib diisi:')||'';if(!reason.trim())return;if(!confirm('Batalkan laporan ini? Bukti historis tetap tersimpan.'))return;try{const r=await call('voidDailyInputV1',id,reason);showNotice('Laporan dibatalkan dengan audit: '+r.recordId,'ok');await refreshRecords();}catch(e){showNotice(e.message,'error');}}
+$('cancelEditBtn').addEventListener('click',()=>resetForm());
+init();
+</script>
+</body></html>
