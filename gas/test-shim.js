@@ -1047,7 +1047,7 @@ vm.runInNewContext(dailyService,dailyDeniedContext);
   ['getDailyServiceContractV1',()=>dailyDeniedContext.getDailyServiceContractV1('PASSPORT')]
 ].forEach(([endpoint,invoke])=>{
   let denied=false;
-  try{invoke();}catch(e){denied=String(e&&e.message||e)==='FORBIDDEN: dashboard.read';}
+  try{invoke();}catch(e){denied=String(e&&e.message||e)==='FORBIDDEN: daily.read';}
   assert(denied,'Daily read endpoint denies unauthorized access: '+endpoint);
 });
 assert(dailyDeniedDbReads===0,'Daily read endpoints enforce permission before reading configuration or database state');
