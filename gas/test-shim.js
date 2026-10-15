@@ -1014,6 +1014,11 @@ assert(dailyPolicyPermissions[1]==='dashboard.read','Daily contract read endpoin
 let invalidDailyFamilyRejected=false;
 try{dailyPolicyContext.getDailyServiceContractV1('UNKNOWN');}catch(e){invalidDailyFamilyRejected=String(e&&e.message||e)==='DAILY_SERVICE_FAMILY_INVALID';}
 assert(invalidDailyFamilyRejected,'Daily contract endpoint rejects unknown service families');
+['CONSTRUCTOR','TOSTRING','__PROTO__'].forEach(family=>{
+  let rejected=false;
+  try{dailyPolicyContext.getDailyServiceContractV1(family);}catch(e){rejected=String(e&&e.message||e)==='DAILY_SERVICE_FAMILY_INVALID';}
+  assert(rejected,'Daily contract endpoint rejects inherited service-family name: '+family);
+});
 
 /* Phase 9 read endpoint negative authorization tests: deny before touching configuration. */
 let dailyDeniedDbReads=0;
