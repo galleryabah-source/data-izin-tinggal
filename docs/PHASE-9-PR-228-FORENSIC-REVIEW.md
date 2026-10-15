@@ -57,3 +57,22 @@ This document's original forensic review above is historical and applies to head
 - **Current review limitation:** the current-head CI pass is not an independent forensic diff approval. The changed-file boundary and exact current-head diff still require an independent reviewer.
 
 **Current decision remains: Gate 9.1 BLOCKED — NO MERGE / NO DEPLOY.** Keep `DAILY_INPUT_GUARD_V1.enabled = false`; do not add persistence, staging writes, or a usable daily-entry form. Do not alter canonical monthly datasets, importers, registry identity, historical baseline, period-close logic, or dashboards. WhatsApp remains HOLD.
+
+## 6. Exact-head CI verification update — 2026-10-15
+
+The prior addendum is superseded for CI status by this exact-head update.
+
+- **Exact PR head checked:** `183188e0d7ac405a2658109db22b2b8ae79114cc`.
+- **Workflow run:** [#755 — Deploy Google Apps Script](https://github.com/galleryabah-source/data-izin-tinggal/actions/runs/38716801173), triggered by `pull_request` for PR #228.
+- **Validation job:** `validate` completed `success`; its `npm test` step completed `success`.
+- **Deployment job:** `deploy` was `skipped`. The workflow condition permits deployment only for a `push` event to `refs/heads/main`; this pull-request run did not deploy Apps Script.
+- **Commit status API:** reported `pending` with zero legacy statuses; the authoritative evidence available here is the completed Actions run and its job summary, not a legacy status check.
+- **Scope:** this establishes test-suite success on the exact current PR head. It does not establish operational approval, independent forensic review, Gate 9.1 PASS, or authorization to merge/deploy.
+
+### Current gate disposition
+
+The owner worksheet still marks all 17 per-measure definitions as `Pending`, and operational/security/data-owner sign-offs remain `OPEN`. Therefore **Gate 9.1 remains BLOCKED** even though exact-head CI validation passed.
+
+**Decision: NO MERGE / NO DEPLOY.** Keep `DAILY_INPUT_GUARD_V1.enabled = false`. No persistence, staging writes, or usable daily-entry form may be introduced before Gate 9.1 is explicitly passed. The canonical monthly data/importer/registry/period-close/historical baseline/dashboards remain outside scope; WhatsApp remains HOLD.
+
+**Review qualification:** this document remains an engineering self-review. An independent reviewer must still examine the exact current PR diff before the gate can be considered complete.
