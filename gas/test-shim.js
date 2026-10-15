@@ -857,7 +857,7 @@ assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary ho
 
 /* Phase 9 daily-input contract validator: pure tests only; no Apps Script writes. */
 const dailyService=read('DailyInputService.gs');
-assert(dailyService.includes('enabled:true') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'"), 'Daily mutation endpoints are guarded by an explicit Gate 9.1 PASS plus feature flag');
+assert(dailyService.includes('enabled:false') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily mutation endpoints retain a code-level closed kill switch plus Gate 9.1 and feature-flag checks');
 assert(dailyService.includes('function getDailyInputPolicyV1()'), 'Daily input exposes a policy read endpoint');
 assert(dailyService.includes('function getDailyServiceContractV1(serviceFamily)'), 'Daily input fields are server-contract-owned');
 assert(dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')") && dailyService.includes('DAILY_INPUT_HEADERS_V1'), 'Daily writes are isolated to a dedicated ledger with a fixed schema');
