@@ -1383,6 +1383,9 @@ assert(!missingMeasureStillRejected.ok && missingMeasureStillRejected.errors['me
 const narrativeReportFixtures = JSON.parse(fs.readFileSync(
   path.join(__dirname,'test-fixtures','daily-report-normalization.json'),'utf8'
 ));
+const narrativeFixtureDocumentation = fs.readFileSync(
+  path.join(__dirname,'..','docs','PHASE-9-NARRATIVE-REPORT-NORMALIZATION-FIXTURES.md'),'utf8'
+);
 assert(narrativeReportFixtures.schemaVersion==='narrative-daily-report-normalization-fixture-v1' &&
        narrativeReportFixtures.fixtures.length===3,
   'Narrative normalization fixture set contains the three supplied reports');
@@ -1410,6 +1413,10 @@ assert(narrativeReportFixtures.fixtures.reduce(
 )===112, 'Combined arithmetic sum of the three narrative reports is 112 after blank-to-zero normalization');
 assert(narrativeReportFixtures.rule.includes('Do not infer mappings'),
   'Narrative report fixtures do not infer mappings to candidate application measures');
+assert(narrativeFixtureDocumentation.includes('not 30') &&
+       narrativeFixtureDocumentation.includes('not 111') &&
+       narrativeFixtureDocumentation.includes('Gate 9.1 remains BLOCKED'),
+  'Narrative fixture documentation records corrected arithmetic and preserves the release gate');
 
 /* Phase 9 candidate-contract inventory and no-lifecycle regression gate. */
 const dailyContractSource = read('DailyInputService.gs');
