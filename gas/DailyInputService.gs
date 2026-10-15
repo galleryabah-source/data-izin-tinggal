@@ -111,6 +111,10 @@ function dailyMeasureLabelV1_(key) {
 function validateDailyInputPayloadV1(payload) {
   const input = payload && typeof payload === 'object' && !Array.isArray(payload)
     ? payload : {};
+  const allowedTopLevelKeys = [
+    'submissionId', 'serviceFamily', 'operationalDate', 'officeKey',
+    'contractVersion', 'measures'
+  ];
   const family = String(input.serviceFamily || '').trim().toUpperCase();
   const contract = DAILY_SERVICE_CONTRACTS_V1[family];
   const errors = {};
@@ -118,6 +122,11 @@ function validateDailyInputPayloadV1(payload) {
     if (!errors[key]) errors[key] = message;
   };
 
+  Object.keys(input).forEach(key => {
+    if (!allowedTopLevelKeys.includes(key)) {
+      addError(key, 'Field tidak diizinkan pada kontrak input harian ini.');
+    }
+  });
   if (!contract) addError('serviceFamily', 'Pilih keluarga layanan yang valid.');
 
   const operationalDate = String(input.operationalDate || '').trim();
@@ -163,6 +172,10 @@ function validateDailyInputPayloadV1(payload) {
     });
 
     contract.measures.forEach(key => {
+      if (!Object.prototype.hasOwnProperty.call(measuresInput, key)) {
+        addError('measures.' + key, 'Nilai wajib diisi; masukkan 0 bila memang nihil.');
+        return;
+      }
       const value = measuresInput[key];
       if (value === null || value === undefined || String(value).trim() === '') {
         addError('measures.' + key, 'Nilai wajib diisi; masukkan 0 bila memang nihil.');
