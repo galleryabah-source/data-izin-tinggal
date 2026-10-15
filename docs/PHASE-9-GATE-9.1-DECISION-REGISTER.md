@@ -60,6 +60,17 @@ Do not mark Gate 9.1 PASS until all of the following are recorded in this file o
 **Approved contract version:** pending  
 **Gate result:** **NOT PASSED**
 
+## Authorization note — 2026-10-15
+
+The project requester explicitly authorized proceeding and accelerating the Phase 9 work in the conversation on 2026-10-15. This authorization is recorded as permission to continue the controlled preparation and approval workflow; the requester's organizational role and delegated authority for each operational/data/security owner role have not been independently established in this repository record.
+
+**Effect on gate:** this note does **not** mark Gate 9.1 PASS and does not replace the required approval of all 17 measure definitions, operational date/cutoff/late-entry rules, Office Reference identity policy, role/action matrix, correction/revision/period-close policy, total formulas, and audit/retention rules. Until those decisions are completed with named approvers and an approved contract version, keep the feature hard-disabled and do not implement staging persistence, write endpoints, or a usable daily-entry UI.
+
+**Requester authorization date:** 2026-10-15  
+**Requester identity/role recorded in this artifact:** not verified  
+**Operational owner sign-off:** pending  
+**Gate result:** **BLOCKED — NOT PASSED**
+
 ## Implementation stop conditions
 
 Until the sign-off record is complete:
