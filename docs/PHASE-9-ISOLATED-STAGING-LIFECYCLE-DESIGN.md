@@ -27,6 +27,14 @@ Do not reuse monthly dataset tabs, monthly registry rows, monthly importer funct
 
 ## 3. Proposed logical records
 
+### Owner-approved rules to carry into the schema
+
+- Count only services completed or documents issued, across all 17 candidate indicators; intake/receipt alone is not counted. Exact measure-specific event/unit and edge cases remain a Gate 9.1 blocker.
+- Late entry is allowed. Preserve `operational_date` as the original date and store a mandatory `late_entry_reason` when submission is late. Capture `actor_id` and server-generated `audit_timestamp` independently; never derive or overwrite operational date from submission time.
+- The current contract foundation is read-only; these are schema requirements for Gate 9.2 after Gate 9.1 passes, not authorization to create storage now.
+
+
+
 ### Submission ledger
 
 | Field | Purpose |
@@ -47,7 +55,9 @@ Do not reuse monthly dataset tabs, monthly registry rows, monthly importer funct
 | `revision_id` | Unique immutable revision identity |
 | `revision_number` | Monotonic revision number under serialized write |
 | `supersedes_revision_id` | Link to the prior revision, if any |
-| `operational_date` | Date-only business key, interpreted per approved Asia/Jakarta rule |
+| `operational_date` | Original date-only business key in Asia/Jakarta; unchanged for late entry |
+| `late_entry_reason` | Mandatory for late entry; explains why report arrived after operational day |
+| `submitted_at` / `actor_id` | Server-generated audit timestamp and authenticated actor, distinct from operational date |
 | `office_key` | Canonical office key resolved server-side |
 | `service_family`, `contract_version` | Approved service contract identity |
 | `measures_json`, `derived_total` | Normalized values and server-derived total |
