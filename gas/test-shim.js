@@ -1306,6 +1306,23 @@ const dailyBlueprint = fs.readFileSync(path.join(__dirname,'..','docs','DAILY-IN
 const dailyDesign = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-DAILY-OPERATIONAL-DATA.md'),'utf8');
 const stagingDesign = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-ISOLATED-STAGING-LIFECYCLE-DESIGN.md'),'utf8');
 const gate91TestMatrix = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-GATE-9.1-TEST-MATRIX.md'),'utf8');
+const gate91OwnerWorksheet = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-GATE-9.1-OWNER-DEFINITION-WORKSHEET.md'),'utf8');
+assert(gate91OwnerWorksheet.includes('Status:** OPEN') &&
+       gate91OwnerWorksheet.includes('not an approval record') &&
+       gate91OwnerWorksheet.includes('Gate 9.1 remains BLOCKED'),
+  'Gate 9.1 owner worksheet remains a pending decision aid, not an approval or gate pass');
+const requiredOwnerMeasureKeys = [
+  'bvk','voa','itk','itk_peralihan','itas','itap','itkt',
+  'alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim',
+  'biasa_24','biasa_48','elektronik_48','e_polikarbonat'
+];
+assert(requiredOwnerMeasureKeys.every(key => gate91OwnerWorksheet.includes('| '+key+' |')),
+  'Gate 9.1 owner worksheet enumerates all 17 candidate measures');
+assert(gate91OwnerWorksheet.includes('authoritative source') &&
+       gate91OwnerWorksheet.includes('Required?') &&
+       gate91OwnerWorksheet.includes('Zero vs missing/null') &&
+       gate91OwnerWorksheet.includes('Sign-off record'),
+  'Gate 9.1 owner worksheet requires source-backed event semantics, zero/missing rules, and accountable sign-off');
 assert(gate91Register.includes('count services completed or documents issued'),
   'Gate 9.1 register records owner-approved completed-service/document-issuance counting basis');
 assert(gate91Register.includes('late entry') && gate91Register.includes('original operational date'),
