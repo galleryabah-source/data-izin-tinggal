@@ -1296,3 +1296,31 @@ assert(!overflowDaily.ok && overflowDaily.errors.measures,
 const leapDayDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({operationalDate:'2024-02-29'}));
 assert(leapDayDaily.ok,
   'Daily validator accepts a real leap-day calendar date');
+
+/* Phase 9 candidate-contract inventory and no-lifecycle regression gate. */
+const dailyContractSource = read('DailyInputService.gs');
+const dailyContracts = dailyContext.DAILY_SERVICE_CONTRACTS_V1;
+assert(!!dailyContracts && Object.keys(dailyContracts).length===2,
+  'Daily candidate contract contains exactly two service families');
+assert(dailyContracts.RESIDENCE_PERMIT.measures.length===13,
+  'Residence Permit candidate contract contains exactly 13 measures');
+assert(dailyContracts.PASSPORT.measures.length===4,
+  'Passport candidate contract contains exactly 4 measures');
+const allDailyMeasureKeys = [
+  ...dailyContracts.RESIDENCE_PERMIT.measures,
+  ...dailyContracts.PASSPORT.measures
+];
+assert(allDailyMeasureKeys.length===17 && new Set(allDailyMeasureKeys).size===17,
+  'All 17 daily candidate measure keys are unique');
+assert(dailyContracts.RESIDENCE_PERMIT.datasetKey==='RESIDENCE_PERMIT_SERVICE_DAILY' &&
+       dailyContracts.PASSPORT.datasetKey==='PASSPORT_SERVICE_DAILY',
+  'Daily candidate dataset identifiers remain separate from canonical monthly identifiers');
+assert(dailyContracts.RESIDENCE_PERMIT.sourceContractKey==='RESIDENCE_PERMIT_SERVICE_MONTHLY' &&
+       dailyContracts.PASSPORT.sourceContractKey==='PASSPORT_SERVICE_MONTHLY',
+  'Daily candidates explicitly identify their monthly reference contracts without replacing them');
+assert(!/function\s+(?:submit|create|save|approve|correct|void|close|reopen)Daily\w*\s*\(/i.test(dailyContractSource),
+  'Daily contract foundation exposes no daily mutation/lifecycle endpoint');
+assert(!/\b(?:appendRow|setValue|setValues|insertSheet|deleteSheet|deleteRow|clearContent|clearFormat|clear|copyTo)\s*\(/.test(dailyContractSource),
+  'Daily candidate contract source contains no spreadsheet write API');
+assert(dailyContractSource.includes('enabled: false'),
+  'Daily input hard guard remains disabled in source');
