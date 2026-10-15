@@ -139,7 +139,8 @@ function validateDailyInputPayloadV1(payload) {
     addError('operationalDate', 'Tanggal harus berformat YYYY-MM-DD.');
   } else {
     const parsedDate = new Date(operationalDate + 'T00:00:00.000Z');
-    if (!Number.isFinite(parsedDate.getTime()) ||
+    if (Number(operationalDate.slice(0, 4)) < 1 ||
+        !Number.isFinite(parsedDate.getTime()) ||
         parsedDate.toISOString().slice(0, 10) !== operationalDate) {
       addError('operationalDate', 'Tanggal tidak valid.');
     }
