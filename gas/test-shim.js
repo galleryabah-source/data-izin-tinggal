@@ -998,3 +998,85 @@ assert(dailyPolicyPermissions[1]==='dashboard.read','Daily contract read endpoin
 let invalidDailyFamilyRejected=false;
 try{dailyPolicyContext.getDailyServiceContractV1('UNKNOWN');}catch(e){invalidDailyFamilyRejected=String(e&&e.message||e)==='DAILY_SERVICE_FAMILY_INVALID';}
 assert(invalidDailyFamilyRejected,'Daily contract endpoint rejects unknown service families');
+
+
+/* Phase 9 validator boundary matrix: overflow, malformed containers, and contract drift. */
+const unsafeMeasureResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{...passportDailyMeasures,biasa_24:Number.MAX_SAFE_INTEGER+1}
+});
+assert(!unsafeMeasureResult.ok && unsafeMeasureResult.errors['measures.biasa_24'], 'Daily validator rejects a single measure above the safe-integer boundary');
+
+const overflowTotalResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{biasa_24:Number.MAX_SAFE_INTEGER,biasa_48:1,elektronik_48:0,e_polikarbonat:0}
+});
+assert(!overflowTotalResult.ok && overflowTotalResult.errors.measures, 'Daily validator rejects a derived total above the safe-integer boundary');
+
+const malformedMeasuresArrayResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:[0,0,0,0]
+});
+assert(!malformedMeasuresArrayResult.ok && malformedMeasuresArrayResult.errors['measures.biasa_24'], 'Daily validator rejects array-shaped measures by treating required keys as missing');
+
+const nullMeasuresResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:null
+});
+assert(!nullMeasuresResult.ok && nullMeasuresResult.errors['measures.biasa_24'], 'Daily validator rejects null measures as incomplete input');
+
+const unknownMeasureResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{...passportDailyMeasures,not_in_contract:1}
+});
+assert(!unknownMeasureResult.ok && unknownMeasureResult.errors['measures.not_in_contract'], 'Daily validator rejects unknown nested measure keys');
+
+const malformedUuidResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'not-a-uuid',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!malformedUuidResult.ok && malformedUuidResult.errors.submissionId, 'Daily validator rejects malformed idempotency identifiers');
+
+const contractDriftResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v0',
+  measures:passportDailyMeasures
+});
+assert(!contractDriftResult.ok && contractDriftResult.errors.contractVersion, 'Daily validator rejects stale contract versions');
+
+const explicitZeroResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0}
+});
+assert(explicitZeroResult.ok && explicitZeroResult.normalized.total===0, 'Daily validator preserves explicit zero values and derives a zero total');
