@@ -114,7 +114,7 @@ function dailyRows_(sh){
   return v.slice(1).map((r,n)=>({row:n+2,recordId:String(r[i.record_id]||''),submissionId:String(r[i.submission_id]||''),
     serviceFamily:String(r[i.service_family]||''),operationalDate:String(r[i.operational_date]||''),officeKey:String(r[i.office_key]||''),
     officeName:String(r[i.office_name]||''),contractVersion:String(r[i.contract_version]||''),revision:Number(r[i.revision]||1),
-    status:String(r[i.status]||''),measuresJson:String(r[i.measures_json]||'{}'),total:Number(r[i.total]||0),
+    status:String(r[i.status]||''),measuresJson:String(r[i.measures_json]||'{}'),total:r[i.total]===undefined||r[i.total]===null||r[i.total]===''?null:Number(r[i.total]),
     sourceRecordId:String(r[i.source_record_id]||''),sourceSubmissionId:String(r[i.source_submission_id]||''),
     createdBy:String(r[i.created_by]||''),createdAt:String(r[i.created_at]||''),updatedBy:String(r[i.updated_by]||''),
     updatedAt:String(r[i.updated_at]||''),submittedBy:String(r[i.submitted_by]||''),submittedAt:String(r[i.submitted_at]||''),
@@ -147,7 +147,7 @@ function dailyPayloadHash_(p){
 }
 function dailyRowArray_(p,office,status,revision,source,reason,user,now,hash){
   return [Utilities.getUuid(),p.submissionId,p.serviceFamily,p.operationalDate,office.key,office.name,p.contractVersion,revision,status,
-    JSON.stringify(p.measures),Number(p.total||0),source?source.recordId:'',source?source.submissionId:'',user.email,now,user.email,now,
+    JSON.stringify(p.measures),status==='DRAFT'?'':Number(p.total),source?source.recordId:'',source?source.submissionId:'',user.email,now,user.email,now,
     status==='SUBMITTED'?user.email:'',status==='SUBMITTED'?now:'','','', '',reason||'',hash||dailyPayloadHash_(p),String(p.lateEntryReason||'')];
 }
 function dailyLogicalKey_(r){return [r.serviceFamily,r.operationalDate,r.officeKey].join('|');}
@@ -201,6 +201,7 @@ function saveDailyDraft(payload){
       const i=dailyHeaderIndex_(sh),oldRow=sh.getRange(existing.row,1,1,DAILY_INPUT_HEADERS_V1.length).getValues()[0];
       sh.getRange(existing.row,i.service_family+1,1,5).setValues([[p.serviceFamily,p.operationalDate,office.key,office.name,p.contractVersion]]);
       sh.getRange(existing.row,i.measures_json+1).setValue(JSON.stringify(p.measures));
+      sh.getRange(existing.row,i.total+1).clearContent();
       sh.getRange(existing.row,i.late_entry_reason+1).setValue(p.lateEntryReason||'');
       sh.getRange(existing.row,i.updated_by+1,1,2).setValues([[user.email,now]]);
       sh.getRange(existing.row,i.payload_hash+1).setValue(newHash);
