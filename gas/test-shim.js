@@ -890,6 +890,25 @@ const injectedDailyResult=dailyContext.validateDailyInputPayloadV1({
   measures:{...passportDailyMeasures,total:999}
 });
 assert(!injectedDailyResult.ok && injectedDailyResult.errors['measures.total'], 'Daily validator rejects uncontracted or client-supplied total fields');
+const injectedTopLevelTotalResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  total:999,
+  measures:passportDailyMeasures
+});
+assert(!injectedTopLevelTotalResult.ok && injectedTopLevelTotalResult.errors.total, 'Daily validator rejects a client-supplied top-level total');
+const malformedOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:{office_key:'KANIM-TEST'},
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!malformedOfficeKeyResult.ok && malformedOfficeKeyResult.errors.officeKey, 'Daily validator rejects non-string office keys');
 const invalidDailyDate=dailyContext.validateDailyInputPayloadV1({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
