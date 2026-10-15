@@ -1402,7 +1402,7 @@ assert(gate91TestMatrix.includes('bvk') && gate91TestMatrix.includes('e_polikarb
        gate91TestMatrix.includes('17 candidate keys'),
   'Gate 9.1 test matrix covers both ends of the 17-measure inventory');
 assert(gate91Register.includes('Gate result remains BLOCKED') &&
-       gate91Register.includes('No persistence') &&
+       gate91Register.includes('No daily sheet is created') &&
        dailyBlueprint.includes('Gate 9.1 NOT PASSED'),
   'Owner policy decisions do not accidentally open Gate 9.1 or authorize writes');
 
