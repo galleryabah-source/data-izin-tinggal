@@ -1258,3 +1258,41 @@ inheritedEnvelopeCases.forEach(([field, inheritedValue]) => {
     'Daily validator rejects inherited required envelope field: '+field
   );
 });
+
+
+/* Phase 9 validator boundary matrix: malformed envelopes and arithmetic overflow. */
+const dailyPayload = (overrides={}) => ({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0},
+  ...overrides
+});
+const allZeroDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload());
+assert(allZeroDaily.ok && allZeroDaily.normalized.total===0,
+  'Daily validator accepts explicit all-zero report and derives total zero');
+const arrayMeasuresDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({measures:[0,0,0,0]}));
+assert(!arrayMeasuresDaily.ok && arrayMeasuresDaily.errors['measures.biasa_24'],
+  'Daily validator rejects array-shaped measures rather than treating indexes as service measures');
+const nullMeasuresDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({measures:null}));
+assert(!nullMeasuresDaily.ok && nullMeasuresDaily.errors['measures.biasa_24'],
+  'Daily validator rejects null measures as missing required measures');
+const invalidUuidDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({submissionId:'not-a-uuid'}));
+assert(!invalidUuidDaily.ok && invalidUuidDaily.errors.submissionId,
+  'Daily validator rejects malformed idempotency UUID');
+const staleContractDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({contractVersion:'candidate-v0'}));
+assert(!staleContractDaily.ok && staleContractDaily.errors.contractVersion,
+  'Daily validator rejects stale contract versions');
+const invalidFamilyDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({serviceFamily:'constructor'}));
+assert(!invalidFamilyDaily.ok && invalidFamilyDaily.errors.serviceFamily,
+  'Daily validator rejects prototype property names as service families');
+const overflowDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({
+  measures:{biasa_24:Number.MAX_SAFE_INTEGER,biasa_48:1,elektronik_48:0,e_polikarbonat:0}
+}));
+assert(!overflowDaily.ok && overflowDaily.errors.measures,
+  'Daily validator rejects a derived total exceeding the safe integer range');
+const leapDayDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({operationalDate:'2024-02-29'}));
+assert(leapDayDaily.ok,
+  'Daily validator accepts a real leap-day calendar date');
