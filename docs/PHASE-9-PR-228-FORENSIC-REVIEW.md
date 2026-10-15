@@ -42,3 +42,17 @@ No monthly importer, canonical dataset contract, registry identity, historical m
 **Release decision: NO MERGE / NO DEPLOY.**
 
 Next required evidence: an independent review of the exact current PR head, completion of all owner-approved operational definitions and workflow controls, and a formally recorded Gate 9.1 PASS before any persistence implementation.
+
+
+## 5. Current-head status addendum — 2026-10-15
+
+This document's original forensic review above is historical and applies to head `e04ddb7f06bee48be7a2012be1e263beb10a5f34` only. It must not be presented as a review of the current PR head.
+
+- **Current candidate head verified for CI:** `686072adaeb8f630f84f02d12942430309c7820f`.
+- **CI evidence:** Run #753 (`38710315591`) completed successfully; validation and `npm test` passed; deploy was skipped.
+- **Current changed-file inventory:** 15 files, including narrative report normalization fixtures and arithmetic regression assertions. This is broader than the original 11-file scope recorded above.
+- **Corrected fixture arithmetic:** Karawang 2026-10-14 = 32; Bandung 2026-10-12 = 31; Bandung 2026-10-14 = 49; combined sum = 112.
+- **Normalization boundary:** blank/no-number fields become explicit integer zero only when transcribing the supplied narrative reports; app payload validation still rejects omitted/null measures.
+- **Current review limitation:** the current-head CI pass is not an independent forensic diff approval. The changed-file boundary and exact current-head diff still require an independent reviewer.
+
+**Current decision remains: Gate 9.1 BLOCKED — NO MERGE / NO DEPLOY.** Keep `DAILY_INPUT_GUARD_V1.enabled = false`; do not add persistence, staging writes, or a usable daily-entry form. Do not alter canonical monthly datasets, importers, registry identity, historical baseline, period-close logic, or dashboards. WhatsApp remains HOLD.
