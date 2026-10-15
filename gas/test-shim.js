@@ -1277,6 +1277,17 @@ assert(
   'Daily input has a code-level closed kill switch in addition to CONFIG flags while Gate 9.1 is blocked'
 );
 
+assert(
+  dailyService.includes("total:r[i.total]===undefined||r[i.total]===null||r[i.total]===''?null:Number(r[i.total])") &&
+  dailyService.includes("status==='DRAFT'?'':Number(p.total)") &&
+  dailyService.includes("sh.getRange(existing.row,i.total+1).clearContent()"),
+  'Incomplete daily drafts retain an empty total instead of being represented as zero'
+);
+assert(
+  read('index.html').includes("x.total===null?'—':Number(x.total).toLocaleString('id-ID')"),
+  'Daily review table distinguishes incomplete draft totals from a confirmed zero'
+);
+
 
 /* Phase 9 payload envelope: every required field must be an own property. */
 const inheritedEnvelopeCases = [
