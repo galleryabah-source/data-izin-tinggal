@@ -13,80 +13,106 @@ Gate 9.1 freezes the meaning and reporting rules of daily operational measures b
 | Decision | Safe proposed default | Gate evidence required |
 |---|---|---|
 | Daily measure meaning | Approve a written definition for every measure in each service family. Do not infer meaning from key names or monthly labels alone. | Signed-off data dictionary with definition, unit, inclusion/exclusion rules, and examples. |
-| Requiredness | Every measure in the approved contract is required at submission. Drafts may be incomplete. | Per-measure required/optional decision; if optional, define the semantic difference between omitted and zero. |
-| Zero vs. missing | Explicit 0 means the reporter confirms zero activity. Blank/null means not reported and must not silently become zero. | Approved rule for each measure; validator fixtures for zero, blank, and null. |
-| Daily total | Server derives the total from the exact approved measure set. Client-supplied total is never trusted as authoritative. | Formula and expected totals for representative fixtures. |
-| Operational date and timezone | Calendar date interpreted in Asia/Jakarta; store/compare the business date separately from audit timestamps. | Confirmation of date cutover, late-entry policy, and timestamp convention. |
-| Reporting cutoff | No cutoff is assumed by the current validator. Define when a daily report is due and whether late submission is allowed. | Per-service cutoff and late-submission rule. |
-| Office identity | Accept only a stable Office Reference key verified server-side; display names are labels, not identifiers. | Mapping from form options to canonical Office Reference keys, plus unknown/inactive-office negative tests. |
-| Duplicate and retry behavior | submissionId is an idempotency key. A retry returns the original result; a second report for the same date + office + service family follows a governed correction/revision path. | Concurrency/retry test cases and approved conflict response. |
-| Authorization | Deny by default. Separate permission to create/edit drafts, submit, review/approve, correct after approval, void, close, and reopen periods. dashboard.read does not grant write access. | Role-to-action matrix and negative authorization tests. |
-| Review and approval | Submitter cannot approve their own submission unless an explicit separation-of-duties exception is approved and audited. | Reviewer assignment, separation-of-duties rule, rejection/return reasons. |
-| Correction and void | Submitted/approved revisions are immutable; correction creates a linked revision. Void is explicit, authorized, reasoned, and audited. | Approved lifecycle transitions and test matrix. |
-| Period closing | No daily period is considered closed implicitly. Define open/review/closed states and authorized post-close correction/reopen procedure. | Close/reopen policy and period-level reconciliation checklist. |
-| Aggregation | Only the latest approved, non-void revision contributes to daily approved views and any future monthly/yearly projections. No automatic write-back into existing monthly datasets. | Reconciliation examples, treatment of late corrections, and separate approval for any future reporting adapter. |
-| Audit and retention | Record actor, timestamps, contract version, submission/idempotency identity, state transitions, and reason for governed changes. | Approved audit fields, retention/access policy, and evidence of audit failure behavior. |
+| Requiredness | Proposed technical default: every measure in the approved contract is required at final submit; drafts may be incomplete. Not operationally approved yet. | Per-measure required/optional decision; if optional, define the semantic difference between omitted and zero. |
+| Zero vs. missing | Explicit 0 means the reporter confirms zero activity. Blank/null means not reported and must not silently become zero. Proposed invariant pending owner sign-off. | Approved rule for each measure; validator fixtures for zero, blank, and null. |
+| Daily total | Server derives total from the exact approved measure set. Client-supplied total is never authoritative. | Formula and expected totals for representative fixtures. |
+| Operational date and timezone | Proposed date-only business key in Asia/Jakarta, stored separately from audit timestamps; exact cutover and late-entry rules remain pending. | Confirmation of date cutover, late-entry policy, and timestamp convention. |
+| Reporting cutoff | No cutoff is assumed by the current validator. | Per-service cutoff, timezone, due time, and late-submission rule. |
+| Office identity | Accept only stable office_key resolved server-side to exactly one OFFICE_REFERENCE record with status=VERIFIED. Reject missing/duplicate/unknown/non-verified keys. Display names are labels, never identifiers. | Confirm office key uniqueness and inactive-office behavior; add negative tests for missing, duplicate, unknown, PENDING, and other statuses. |
+| Duplicate logical report | Uniqueness candidate: operational date + canonical office key + service family. A conflict must use a governed revision path, never silent overwrite. Pending owner confirmation. | Approve conflict behavior and fixture for a second report for the same logical key. |
+| Retry/idempotency | Same submissionId + same canonicalized payload returns the original recorded outcome; a reused ID with different payload is rejected as an idempotency conflict. Enforce under a lock/atomic ledger operation. | Concurrency/retry test cases, payload-hash policy, and approved conflict response. |
+| Authorization | Deny by default. Distinct server-side permissions for draft, edit, submit, review, approve, correction, void, close, and reopen. dashboard.read grants no mutation authority. | Named role-to-action matrix and negative authorization tests. |
+| Review and approval | Proposed separation of duties: submitter cannot approve own report; exception must be explicit, narrowly scoped, and audited. | Reviewer assignment, separation-of-duties rule, rejection/return reasons. |
+| Revision and void | Submitted/approved revisions are immutable. Corrections create linked revisions with reason and actor. Void is a separate authorized, reasoned, audited transition; no physical deletion of approved evidence. | Approved lifecycle transitions and tests. |
+| Period closing | Explicit open → review → closed state; no implicit close. Reopen/post-close correction requires a dedicated permission, reason, and audit trail. Exact cutoffs and authority are pending. | Close/reopen policy and period-level reconciliation checklist. |
+| Aggregation | Only latest approved, non-void revision contributes to approved daily views and separately approved future projections. No automatic write-back into existing monthly datasets. | Reconciliation examples, late-correction treatment, and separate approval for any reporting adapter. |
+| Audit and retention | Record actor, ISO audit timestamps, business date and timezone, contract version, submission/idempotency identity, revision links, before/after state, reason, and outcome. Fail closed if required audit evidence cannot be persisted. | Approve retention/access policy, exact fields, and audit-failure tests. |
+| Staging isolation | No production data writes while Gate 9.1 is blocked. After sign-off, use a separately named and access-restricted staging store/ledger, with no aliases or fall-through to monthly dataset paths. | Staging schema/access review, explicit environment identity assertion, and tests proving monthly stores are untouched. |
 
 ## Candidate service measure inventory
 
-These are implementation candidates, not approved daily definitions.
+These are implementation candidates, not approved daily definitions. Names and labels below are not enough to establish business meaning.
 
 ### Izin Tinggal — 13 candidate keys
 
-bvk, voa, itk, itk_peralihan, itas, itap, itkt, alih_status_itk_ke_itas, alih_status_itas_ke_itap, abg, epo, imk, skim.
-
-For each key, the operational owner must specify: display label; exact service/product counted; unit; event counted (e.g. application, decision, document issued, or another defined event); inclusion/exclusion rules; whether zero is valid; whether the measure is required; and at least one positive, zero, and boundary example.
+| Candidate key | Candidate label | Operational event/unit | Inclusion/exclusion | Required? | Zero valid? | Examples | Decision |
+|---|---|---|---|---|---|---|---|
+| bvk | BVK | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| voa | VOA | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| itk | ITK | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| itk_peralihan | ITK Peralihan | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| itas | ITAS | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| itap | ITAP | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| itkt | ITKT | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| alih_status_itk_ke_itas | Alih Status ITK ke ITAS | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| alih_status_itas_ke_itap | Alih Status ITAS ke ITAP | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| abg | ABG | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| epo | EPO | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| imk | IMK | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| skim | SKIM | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
 
 ### Paspor — 4 candidate keys
 
-biasa_24, biasa_48, elektronik_48, e_polikarbonat.
+| Candidate key | Candidate label | Operational event/unit | Inclusion/exclusion (including replacement/reprint) | Required? | Zero valid? | Examples | Decision |
+|---|---|---|---|---|---|---|---|
+| biasa_24 | Paspor Biasa 24 | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| biasa_48 | Paspor Biasa 48 | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| elektronik_48 | Paspor Elektronik 48 | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| e_polikarbonat | Paspor Elektronik Polikarbonat | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
 
-For each key, the operational owner must specify: display label; exact passport service/product counted; unit and event counted; treatment of replacement/reprint/other exceptional cases if applicable; inclusion/exclusion rules; whether zero is valid; whether the measure is required; and positive, zero, and boundary examples.
+## Owner/authority record
 
-## Required sign-off record
+| Required approval | Named approver | Evidence / role verification | Status |
+|---|---|---|---|
+| Izin Tinggal owner — 13 definitions | Pending | Pending | Pending |
+| Paspor owner — 4 definitions | Pending | Pending | Pending |
+| Operations — date cutover, cutoff, late entry, corrections, closing | Pending | Pending | Pending |
+| Application/security — RBAC and separation of duties | Pending | Pending | Pending |
+| Data owner — totals and reconciliation | Pending | Pending | Pending |
+| Engineering — deterministic tests and isolated storage boundary | Pending | CI evidence required after approved semantics | Pending |
+| Independent reviewer — contract version/date | Pending | Pending | Pending |
 
-Do not mark Gate 9.1 PASS until all of the following are recorded in this file or a linked, versioned approval artifact:
+## Engineering acceptance checklist
 
-- [ ] Izin Tinggal data owner approves all 13 definitions and rules.
-- [ ] Paspor data owner approves all 4 definitions and rules.
-- [ ] Operations owner approves daily cutover, reporting cutoff, late-entry, and correction policy.
-- [ ] Application/security owner approves role-to-action matrix and separation of duties.
-- [ ] Data owner approves total formulas and sample reconciliation fixtures.
-- [ ] Engineering verifies that every approved rule has a deterministic test.
-- [ ] Reviewer confirms the contract version and approval date.
+- [ ] Each of the 17 measures has a complete, approved operational definition.
+- [ ] Required/optional and zero/missing behavior is explicit for every measure.
+- [ ] Representative valid, zero, missing, invalid, and boundary fixtures exist.
+- [ ] Date boundary, late-entry, duplicate, retry, revision, and period-close cases are tested.
+- [ ] Office key uniqueness and exactly-one-VERIFIED-record resolution are enforced server-side.
+- [ ] Role/action matrix and negative authorization tests are approved.
+- [ ] Totals reconcile from the approved measure list and safe-integer rules.
+- [ ] Contract version and named owner approval date are recorded.
+- [ ] Staging isolation, idempotency/concurrency, audit-failure and no-monthly-write protections pass.
+- [ ] Gate 9.1 review explicitly records PASS before Gate 9.2 persistence implementation starts.
 
-**Approvers:** pending  
-**Approval date:** pending  
-**Approved contract version:** pending  
-**Gate result:** **NOT PASSED**
+**Gate status: BLOCKED until completed and approved.** This register does not authorize writes, staging-sheet creation, UI activation, merge, or production deployment.
 
-## Authorization note — 2026-10-15
+## Requester authorization note — 2026-10-15
 
-The project requester explicitly authorized proceeding and accelerating the Phase 9 work in the conversation on 2026-10-15. This authorization is recorded as permission to continue the controlled preparation and approval workflow; the requester's organizational role and delegated authority for each operational/data/security owner role have not been independently established in this repository record.
+The project requester explicitly authorized proceeding and accelerating the Phase 9 work. This authorizes controlled preparation and approval workflow. The requester's organizational role and delegated authority for each operational/data/security owner role have not been independently established in this repository record.
 
-**Effect on gate:** this note does **not** mark Gate 9.1 PASS and does not replace the required approval of all 17 measure definitions, operational date/cutoff/late-entry rules, Office Reference identity policy, role/action matrix, correction/revision/period-close policy, total formulas, and audit/retention rules. Until those decisions are completed with named approvers and an approved contract version, keep the feature hard-disabled and do not implement staging persistence, write endpoints, or a usable daily-entry UI.
+**Effect on gate:** this note does not mark Gate 9.1 PASS and does not replace sign-off for all 17 measure definitions, operational date/cutoff/late-entry rules, Office Reference identity policy, role/action matrix, correction/revision/period-close policy, total formulas, and audit/retention rules.
 
 **Requester authorization date:** 2026-10-15  
 **Requester identity/role recorded in this artifact:** not verified  
 **Operational owner sign-off:** pending  
-**Gate result:** **BLOCKED — NOT PASSED**
+**Gate result:** BLOCKED — NOT PASSED
 
 ## Implementation stop conditions
 
-Until the sign-off record is complete:
-
 1. Keep DAILY_INPUT_GUARD_V1.enabled = false.
-2. Do not add persistence commands, create sheets, or expose a usable daily-entry form.
+2. Do not add persistence commands, create sheets, or expose a usable daily-entry form while Gate 9.1 is blocked.
 3. Do not change DATASET_CONTRACTS, monthly importers, monthly period-close logic, registry identity, historical monthly rows, or existing dashboards.
 4. Do not merge/deploy this foundation as a production release unless the full controlled release gate is intentionally run; merging to main triggers the existing Apps Script deployment workflow.
 5. Keep WhatsApp integration on HOLD.
 
 ## Post-approval engineering sequence
 
-1. Update the versioned service contracts and validator fixtures from the signed-off decisions.
-2. Implement isolated staging storage and an idempotent submission ledger with concurrency protection.
-3. Implement server-side Office Reference validation and dedicated RBAC checks for each lifecycle action.
-4. Implement draft → submitted → needs-correction/approved, revision, void, and period-close behavior with immutable audit evidence.
-5. Test retries, concurrent submissions, duplicate logical reports, unauthorized actors, stale revisions, post-close corrections, and audit failures.
-6. Only after those tests pass, build the single responsive form with the service selector.
-7. Release through CI green → forensic diff PASS → explicit merge decision → canonical deployment evidence → production smoke → browser UAT → regression/integrity evidence.
+1. Freeze the signed-off, versioned service dictionary and regenerate deterministic validator fixtures.
+2. Design and review an isolated staging schema plus idempotency ledger; prove environment separation and no path to monthly stores before enabling writes.
+3. Implement an atomic/lock-protected submission ledger: same ID/same payload returns original outcome, same ID/different payload rejects, concurrent requests cannot create duplicates.
+4. Implement exact-one verified Office Reference lookup and dedicated server-side RBAC per lifecycle action.
+5. Implement immutable revision linkage, draft → submitted → review/approved or returned, void, period close/reopen, and mandatory audit evidence.
+6. Test retries, concurrent submissions, logical duplicates, unauthorized actors, stale revisions, post-close corrections, audit failures, staging isolation, and unchanged monthly baselines.
+7. Only after these tests pass, build the single responsive form with service selector.
+8. Release: CI green → forensic diff PASS → explicit merge decision → canonical deployment evidence → production smoke → browser UAT → regression/integrity evidence.
