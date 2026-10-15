@@ -48,8 +48,9 @@ Next required evidence: an independent review of the exact current PR head, comp
 
 This document's original forensic review above is historical and applies to head `e04ddb7f06bee48be7a2012be1e263beb10a5f34` only. It must not be presented as a review of the current PR head.
 
-- **Current candidate head verified for CI:** `686072adaeb8f630f84f02d12942430309c7820f`.
-- **CI evidence:** Run #753 (`38710315591`) completed successfully; validation and `npm test` passed; deploy was skipped.
+- **Last feature/code head with verified CI:** `686072adaeb8f630f84f02d12942430309c7820f`.
+- **Current documentation follow-up commit:** `5a4a9fa5479a91d4983ccb472d9e3a3286ccb114`; the workflow lookup did not return a run for this commit, so CI on the current PR head is not verified by that lookup.
+- **Prior CI evidence only:** Run #753 (`38710315591`) completed successfully on the feature/code head above; validation and `npm test` passed; deploy was skipped. Do not treat it as CI evidence for the later documentation commit.
 - **Current changed-file inventory:** 15 files, including narrative report normalization fixtures and arithmetic regression assertions. This is broader than the original 11-file scope recorded above.
 - **Corrected fixture arithmetic:** Karawang 2026-10-14 = 32; Bandung 2026-10-12 = 31; Bandung 2026-10-14 = 49; combined sum = 112.
 - **Normalization boundary:** blank/no-number fields become explicit integer zero only when transcribing the supplied narrative reports; app payload validation still rejects omitted/null measures.
