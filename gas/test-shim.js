@@ -1246,14 +1246,35 @@ assert(!arrayEnvelopeResult.ok && arrayEnvelopeResult.errors.serviceFamily && ar
 });
 
 
-/* Phase 9 read-only boundary: prohibit spreadsheet mutation APIs in the foundation. */
+/* Phase 9 write boundary: every mutating endpoint must fail closed before storage access. */
+const dailyWriteGuards = [
+  ['saveDailyDraft', 'daily.draft'],
+  ['submitDailyInput', 'daily.submit'],
+  ['reviewDailySubmission', 'daily.review'],
+  ['correctDailySubmission', 'daily.correct'],
+  ['voidDailySubmission', 'daily.void']
+];
+dailyWriteGuards.forEach(([endpoint, permission]) => {
+  const start = dailyService.indexOf('function ' + endpoint + '(');
+  const next = dailyService.indexOf('\nfunction ', start + 1);
+  const body = start >= 0 ? dailyService.slice(start, next < 0 ? dailyService.length : next) : '';
+  const authAt = body.indexOf("requirePermission_('" + permission + "')");
+  const gateAt = body.indexOf('assertDailyInputEnabled_();');
+  const lockAt = body.indexOf('LockService.getScriptLock()');
+  assert(start >= 0 && authAt >= 0 && gateAt > authAt && lockAt > gateAt,
+    'Daily write endpoint authorizes, checks the hard gate, then acquires the lock: ' + endpoint);
+});
 assert(
-  !/\.(?:appendRow|setValue|setValues|insertSheet|deleteSheet|deleteRow|clearContent|clearFormat|clear|copyTo)\s*\(/.test(dailyService),
-  'Daily input contract foundation must not call spreadsheet mutation APIs'
+  dailyService.includes("getSheetByName('DAILY_INPUT_LEDGER')") &&
+  dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')") &&
+  dailyService.includes('function ensureDailyInputSheet_(){\n  assertDailyInputEnabled_();'),
+  'Daily persistence is confined to the named ledger and its creation is gate-protected'
 );
 assert(
-  !/\b(?:LockService|PropertiesService)\s*\./.test(dailyService),
-  'Read-only contract foundation must not introduce persistence coordination or mutable property state'
+  dailyService.includes('enabled:false') &&
+  dailyService.includes("DAILY_INPUT_GATE_9_1") &&
+  dailyService.includes("DAILY_INPUT_ENABLED"),
+  'Daily input has a code-level closed kill switch in addition to CONFIG flags while Gate 9.1 is blocked'
 );
 
 
