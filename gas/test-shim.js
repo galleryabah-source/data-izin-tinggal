@@ -1422,7 +1422,7 @@ assert(narrativeFixtureDocumentation.includes('not 30') &&
   'Narrative fixture documentation records corrected arithmetic and preserves the release gate');
 assert(historicalBandungEvidence.includes('Subsequent owner decision — 2026-10-15') &&
        historicalBandungEvidence.includes('blank or no-number service field is represented as explicit integer `0`') &&
-       historicalBandungEvidence.includes('does not authorize coercing omitted/null fields'),
+       historicalBandungEvidence.includes('does **not** authorize coercing omitted/null fields'),
   'Historical source evidence records the later normalization decision without changing app API semantics');
 
 /* Phase 9 candidate-contract inventory and no-lifecycle regression gate. */
