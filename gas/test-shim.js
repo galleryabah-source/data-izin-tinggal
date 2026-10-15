@@ -1299,6 +1299,33 @@ const leapDayDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({oper
 assert(leapDayDaily.ok,
   'Daily validator accepts a real leap-day calendar date');
 
+/* Phase 9 approved-policy documentation regression gate. */
+const gate91Register = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-GATE-9.1-DECISION-REGISTER.md'),'utf8');
+const gate91Worksheet = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-DAILY-MEASURE-APPROVAL-TEMPLATE.md'),'utf8');
+const dailyBlueprint = fs.readFileSync(path.join(__dirname,'..','docs','DAILY-INPUT-BLUEPRINT.md'),'utf8');
+const dailyDesign = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-DAILY-OPERATIONAL-DATA.md'),'utf8');
+const stagingDesign = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-ISOLATED-STAGING-LIFECYCLE-DESIGN.md'),'utf8');
+assert(gate91Register.includes('count services completed or documents issued'),
+  'Gate 9.1 register records owner-approved completed-service/document-issuance counting basis');
+assert(gate91Register.includes('late entry') && gate91Register.includes('original operational date'),
+  'Gate 9.1 register records late-entry permission and original operational date');
+assert(gate91Worksheet.includes('Owner-approved common counting basis (2026-10-15)') &&
+       gate91Worksheet.includes('late-entry rule (2026-10-15)'),
+  'Gate 9.1 worksheet records both explicit owner decisions');
+assert(dailyBlueprint.includes('intake/receipt alone is not counted') &&
+       dailyBlueprint.includes('late entry is allowed'),
+  'Daily input blueprint reflects approved counting and late-entry rules');
+assert(dailyDesign.includes('Late entry is allowed') &&
+       dailyDesign.includes('late_entry_reason'),
+  'Daily operational design specifies late-entry reason and immutable business date');
+assert(stagingDesign.includes('late_entry_reason') &&
+       stagingDesign.includes('Gate 9.1 passes'),
+  'Staging design carries late-entry audit requirements but keeps implementation gated');
+assert(gate91Register.includes('Gate result remains BLOCKED') &&
+       gate91Register.includes('No persistence') &&
+       dailyBlueprint.includes('Gate 9.1 NOT PASSED'),
+  'Owner policy decisions do not accidentally open Gate 9.1 or authorize writes');
+
 /* Phase 9 candidate-contract inventory and no-lifecycle regression gate. */
 const dailyContractSource = read('DailyInputService.gs');
 const dailyContracts = vm.runInNewContext('DAILY_SERVICE_CONTRACTS_V1', dailyContext);
