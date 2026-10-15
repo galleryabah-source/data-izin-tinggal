@@ -1016,6 +1016,8 @@ vm.runInNewContext(dailyService,dailyPolicyContext);
 const dailyPolicy=dailyPolicyContext.getDailyInputPolicyV1();
 assert(dailyPolicy.enabled===false,'Daily input remains disabled even when the configuration feature flag is true');
 assert(dailyPolicy.timezone==='Asia/Jakarta','Daily input policy declares the approved application timezone');
+assert(dailyPolicy.countingBasis==='SERVICE_COMPLETED_OR_DOCUMENT_ISSUED','Daily input policy exposes the owner-approved completed-service/document-issuance counting basis');
+assert(dailyPolicy.lateEntryPolicy==='ALLOW_WITH_ORIGINAL_OPERATIONAL_DATE_REASON_AND_AUDIT','Daily input policy exposes the owner-approved audited late-entry rule');
 assert(dailyPolicy.serviceFamilies.length===2,'Daily policy advertises only the two candidate service families');
 assert(dailyPolicyPermissions[0]==='dashboard.read','Daily input policy read endpoint requires dashboard.read');
 const passportPolicy=dailyPolicyContext.getDailyServiceContractV1('PASSPORT');
