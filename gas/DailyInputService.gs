@@ -73,6 +73,7 @@ function validateDailyInputPayloadV1(payload){
   const family=String(input.serviceFamily||'').trim().toUpperCase(),contract=Object.prototype.hasOwnProperty.call(DAILY_SERVICE_CONTRACTS_V1,family)?DAILY_SERVICE_CONTRACTS_V1[family]:null;
   const errors=Object.create(null),add=(k,m)=>{if(!Object.prototype.hasOwnProperty.call(errors,k))errors[k]=m;};
   Object.keys(input).forEach(k=>{if(!allowed.includes(k))add(k,'Field tidak diizinkan pada kontrak input harian ini.');});
+  allowed.forEach(k=>{if(k in input&&!Object.prototype.hasOwnProperty.call(input,k))add(k,'Field kontrak harus menjadi properti langsung payload.');});
   if(!contract)add('serviceFamily','Pilih keluarga layanan yang valid.');
   const date=String(input.operationalDate||'').trim();
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))add('operationalDate','Tanggal harus berformat YYYY-MM-DD.');
@@ -173,13 +174,13 @@ function dailyValidateDraft_(payload){
   const family=String(p.serviceFamily||'').trim().toUpperCase(),c=DAILY_SERVICE_CONTRACTS_V1[family];
   if(!c)throw new Error('DAILY_SERVICE_FAMILY_INVALID');
   const measures=p.measures&&typeof p.measures==='object'&&!Array.isArray(p.measures)?p.measures:{},filled={};
-  c.measures.forEach(k=>{const v=measures[k];filled[k]=(v===undefined||v===null||String(v).trim()==='')?0:v;});
+  c.measures.forEach(k=>{const v=Object.prototype.hasOwnProperty.call(measures,k)?measures[k]:undefined;filled[k]=(v===undefined||v===null||String(v).trim()==='')?0:v;});
   const candidate=Object.assign({},p,{serviceFamily:family,measures:filled});
   const result=validateDailyInputPayloadV1(candidate);
   const errors=Object.keys(result.errors).filter(k=>!k.startsWith('measures.'));
   if(errors.length)throw new Error('DAILY_DRAFT_INVALID: '+errors.map(k=>k+' '+result.errors[k]).join('; '));
   Object.keys(measures).forEach(k=>{if(!c.measures.includes(k))throw new Error('DAILY_DRAFT_FIELD_INVALID: '+k);});
-  const partial={};c.measures.forEach(k=>{const v=measures[k];if(v!==undefined&&v!==null&&String(v).trim()!==''){const n=Number(v);if(!Number.isSafeInteger(n)||n<0||!/^\d+$/.test(String(v).trim()))throw new Error('DAILY_DRAFT_MEASURE_INVALID: '+k);partial[k]=n;}});
+  const partial={};c.measures.forEach(k=>{const v=Object.prototype.hasOwnProperty.call(measures,k)?measures[k]:undefined;if(v!==undefined&&v!==null&&String(v).trim()!==''){const n=Number(v);if(!Number.isSafeInteger(n)||n<0||!/^\d+$/.test(String(v).trim()))throw new Error('DAILY_DRAFT_MEASURE_INVALID: '+k);partial[k]=n;}});
   return {normalized:Object.assign({},result.normalized,{measures:partial,total:null}),contract:c};
 }
 function assertDailyOperationalDate_(p){
@@ -286,7 +287,7 @@ function voidDailySubmission(recordId,reason){
     if(!source||!['APPROVED','SUBMITTED'].includes(source.status))throw new Error('DAILY_VOID_SOURCE_INVALID');
     const latest=dailyLatestLogical_(rows,dailyLogicalKey_(source));if(!latest||latest.recordId!==source.recordId)throw new Error('DAILY_VOID_SOURCE_NOT_LATEST');
     const userNow=nowIso_(),contract=DAILY_SERVICE_CONTRACTS_V1[source.serviceFamily],measures=JSON.parse(source.measuresJson||'{}');
-    const p={submissionId:Utilities.getUuid(),serviceFamily:source.serviceFamily,operationalDate:source.operationalDate,officeKey:source.officeKey,contractVersion:source.contractVersion,measures,total:source.total};
+    const p={submissionId:Utilities.getUuid(),serviceFamily:source.serviceFamily,operationalDate:source.operationalDate,officeKey:source.officeKey,contractVersion:source.contractVersion,measures,total:source.total,lateEntryReason:source.lateEntryReason};
     const office=dailyOffice_(p.officeKey),rec=dailyRowArray_(p,office,'VOID',source.revision+1,source,why,user,userNow,dailyPayloadHash_(p));
     rec[21]=why;sh.appendRow(rec);
     try{appendAudit_('DAILY_VOID',contract.datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({sourceRecordId:source.recordId,reason:why,revision:source.revision+1}));}
