@@ -1379,6 +1379,38 @@ const missingMeasureStillRejected = dailyContext.validateDailyInputPayloadV1(dai
 assert(!missingMeasureStillRejected.ok && missingMeasureStillRejected.errors['measures.e_polikarbonat'],
   'App payload validator still rejects an omitted measure rather than silently coercing it to zero');
 
+/* Phase 9 narrative daily-report fixtures: source blanks normalize to explicit zero. */
+const narrativeReportFixtures = JSON.parse(fs.readFileSync(
+  path.join(__dirname,'test-fixtures','daily-report-normalization.json'),'utf8'
+));
+assert(narrativeReportFixtures.schemaVersion==='narrative-daily-report-normalization-fixture-v1' &&
+       narrativeReportFixtures.fixtures.length===3,
+  'Narrative normalization fixture set contains the three supplied reports');
+const expectedNarrativeReports = {
+  'karawang-2026-10-14': {office:'Kantor Imigrasi Kelas I Non TPI Karawang',count:33,nonZero:7,total:32},
+  'bandung-2026-10-12': {office:'Kantor Imigrasi Kelas I TPI Bandung',count:28,nonZero:7,total:31},
+  'bandung-2026-10-14': {office:'Kantor Imigrasi Kelas I TPI Bandung',count:28,nonZero:9,total:49}
+};
+narrativeReportFixtures.fixtures.forEach(report => {
+  const expected = expectedNarrativeReports[report.id];
+  assert(!!expected, 'Narrative report fixture has a recognized report identity: '+report.id);
+  assert(report.office===expected.office && report.measures.length===expected.count &&
+         report.sourceIndicatorCount===expected.count,
+    'Narrative report preserves office and all source indicators: '+report.id);
+  assert(report.measures.every(measure => Number.isSafeInteger(measure.count) && measure.count>=0),
+    'Narrative report normalized counts are explicit non-negative integers: '+report.id);
+  assert(report.measures.filter(measure => measure.count>0).length===expected.nonZero &&
+         report.measures.reduce((sum,measure)=>sum+measure.count,0)===expected.total &&
+         report.expectedArithmeticSum===expected.total &&
+         report.expectedNonZeroIndicators===expected.nonZero,
+    'Narrative report non-zero indicator count and arithmetic sum reconcile: '+report.id);
+});
+assert(narrativeReportFixtures.fixtures.reduce(
+  (sum,report)=>sum+report.measures.reduce((subtotal,measure)=>subtotal+measure.count,0),0
+)===112, 'Combined arithmetic sum of the three narrative reports is 112 after blank-to-zero normalization');
+assert(narrativeReportFixtures.rule.includes('Do not infer mappings'),
+  'Narrative report fixtures do not infer mappings to candidate application measures');
+
 /* Phase 9 candidate-contract inventory and no-lifecycle regression gate. */
 const dailyContractSource = read('DailyInputService.gs');
 const dailyContracts = vm.runInNewContext('DAILY_SERVICE_CONTRACTS_V1', dailyContext);
