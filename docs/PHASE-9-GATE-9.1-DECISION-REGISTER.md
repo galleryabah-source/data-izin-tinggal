@@ -2,7 +2,7 @@
 
 **Status: BLOCKED — daily-input v1 lifecycle is implemented on a feature branch; activation and production release remain blocked by owner sign-off for Gate 9.1**  
 **Applies to:** one INTAL WEB APP daily-input form for Izin Tinggal and Paspor  
-**Implementation boundary:** v1 service + UI are being prepared in an isolated feature branch. Runtime writes require BOTH `CONFIG.DAILY_INPUT_ENABLED=true` and `CONFIG.DAILY_INPUT_GATE_9_1=PASS`. Neither flag is set by this change. No daily sheet is created and no daily data is written while the gate is blocked.
+**Implementation boundary:** v1 service + UI are being prepared in an isolated feature branch. Runtime writes require BOTH `CONFIG.DAILY_INPUT_ENABLED=true` and `CONFIG.DAILY_INPUT_GATE_9_1=PASS`, plus an explicit code release that changes `DAILY_INPUT_GUARD_V1.enabled` from `false`. The current branch keeps that code-level kill switch closed, so CONFIG values alone cannot activate writes. No daily sheet is created and no daily data is written while the gate is blocked.
 
 ## Purpose
 
@@ -100,7 +100,7 @@ The project requester explicitly authorized proceeding and accelerating the Phas
 
 ## Implementation stop conditions
 
-1. Keep the runtime gate closed until Gate 9.1 is explicitly approved. The service is fail-closed unless `DAILY_INPUT_ENABLED=true` AND `DAILY_INPUT_GATE_9_1=PASS`.
+1. Keep the runtime gate closed until Gate 9.1 is explicitly approved. The current branch must retain `DAILY_INPUT_GUARD_V1.enabled = false`; CONFIG flags alone must not activate persistence. Only after Gate 9.1 PASS and explicit release review may a code change open the kill switch.
 2. The UI may expose a blocked-state explanation, but must not show an enabled form or create `DAILY_INPUT_LEDGER` while Gate 9.1 is blocked.
 3. Do not change DATASET_CONTRACTS, monthly importers, monthly period-close logic, registry identity, historical monthly rows, or existing dashboards.
 4. Do not merge/deploy this foundation as a production release unless the full controlled release gate is intentionally run; merging to main triggers the existing Apps Script deployment workflow.
