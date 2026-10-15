@@ -64,8 +64,10 @@ function getDailyInputPolicyV1() {
 function getDailyServiceContractV1(serviceFamily) {
   requirePermission_('dashboard.read');
   const key = String(serviceFamily || '').trim().toUpperCase();
+  if (!Object.prototype.hasOwnProperty.call(DAILY_SERVICE_CONTRACTS_V1, key)) {
+    throw new Error('DAILY_SERVICE_FAMILY_INVALID');
+  }
   const contract = DAILY_SERVICE_CONTRACTS_V1[key];
-  if (!contract) throw new Error('DAILY_SERVICE_FAMILY_INVALID');
 
   return {
     contract: 'DAILY_SERVICE_CONTRACT_V1',
@@ -116,7 +118,8 @@ function validateDailyInputPayloadV1(payload) {
     'contractVersion', 'measures'
   ];
   const family = String(input.serviceFamily || '').trim().toUpperCase();
-  const contract = DAILY_SERVICE_CONTRACTS_V1[family];
+  const contract = Object.prototype.hasOwnProperty.call(DAILY_SERVICE_CONTRACTS_V1, family)
+    ? DAILY_SERVICE_CONTRACTS_V1[family] : null;
   // A null-prototype map prevents inherited names such as constructor,
   // toString, and __proto__ from bypassing unknown-field validation.
   const errors = Object.create(null);
