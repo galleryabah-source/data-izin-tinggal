@@ -1305,6 +1305,7 @@ const gate91Worksheet = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9
 const dailyBlueprint = fs.readFileSync(path.join(__dirname,'..','docs','DAILY-INPUT-BLUEPRINT.md'),'utf8');
 const dailyDesign = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-DAILY-OPERATIONAL-DATA.md'),'utf8');
 const stagingDesign = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-ISOLATED-STAGING-LIFECYCLE-DESIGN.md'),'utf8');
+const gate91TestMatrix = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-GATE-9.1-TEST-MATRIX.md'),'utf8');
 assert(gate91Register.includes('count services completed or documents issued'),
   'Gate 9.1 register records owner-approved completed-service/document-issuance counting basis');
 assert(gate91Register.includes('late entry') && gate91Register.includes('original operational date'),
@@ -1321,6 +1322,13 @@ assert(dailyDesign.includes('Late entry is allowed') &&
 assert(stagingDesign.includes('late_entry_reason') &&
        stagingDesign.includes('Gate 9.1 passes'),
   'Staging design carries late-entry audit requirements but keeps implementation gated');
+assert(gate91TestMatrix.includes('Receipt only') &&
+       gate91TestMatrix.includes('Missing reason') &&
+       gate91TestMatrix.includes('Audit failure'),
+  'Gate 9.1 test matrix covers non-counting receipt, mandatory late-entry reason, and fail-closed audit cases');
+assert(gate91TestMatrix.includes('bvk') && gate91TestMatrix.includes('e_polikarbonat') &&
+       gate91TestMatrix.includes('17 candidate keys'),
+  'Gate 9.1 test matrix covers both ends of the 17-measure inventory');
 assert(gate91Register.includes('Gate result remains BLOCKED') &&
        gate91Register.includes('No persistence') &&
        dailyBlueprint.includes('Gate 9.1 NOT PASSED'),
