@@ -3,7 +3,7 @@
 **Purpose:** collect explicit operational definitions needed to close Gate 9.1. This worksheet is a decision aid, not an approval record.
 **Status:** OPEN — no per-measure semantics are inferred or approved by this worksheet.
 **Owner-approved common rules (2026-10-15):** count a service when processing is complete or the relevant document is issued; intake/receipt alone is not counted. Late entry is allowed only while preserving the original operational date in Asia/Jakarta, recording a reason, and retaining server-generated audit evidence. For normalization of supplied narrative daily reports, a blank field or field with no number is interpreted as explicit `0`; retain the source report and emit a numeric zero in the normalized record. This source-transcription rule does not authorize the app API to coerce omitted/null measure fields to zero; API requiredness and missing/null semantics still require Gate 9.1 approval.
-**Safety boundary:** no persistence, staging store, daily-entry UI, merge, or deployment until the full Gate 9.1 exit checklist passes. Keep `DAILY_INPUT_GUARD_V1.enabled = false`; do not modify canonical monthly data or import paths.
+**Safety boundary:** a candidate daily lifecycle/UI implementation is being developed in a separate feature branch, but the runtime remains fail-closed until the full Gate 9.1 exit checklist passes. Activation requires both `CONFIG.DAILY_INPUT_ENABLED=true` and `CONFIG.DAILY_INPUT_GATE_9_1=PASS`. No daily ledger is created while blocked; canonical monthly data and import paths remain untouched.
 
 ## How to complete
 
