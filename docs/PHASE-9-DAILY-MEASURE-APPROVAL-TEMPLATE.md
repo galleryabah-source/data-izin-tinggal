@@ -1,6 +1,7 @@
 # Phase 9 — Daily Measure Approval Worksheet
 
-**Status:** OWNER REVIEW REQUIRED — candidate labels are prefilled for convenience; no operational measure or shared policy is approved by this worksheet.  
+**Status:** OWNER AUTHORITY CONFIRMED IN CHAT — operational decisions still require explicit values below; this is not blanket approval of candidate semantics.  
+**Owner authority record:** On 2026-10-15, the project owner stated: “Iya saya berwenang karena saya owner dan pemilik data.” This records authority to decide, not approval of unfilled measure definitions or workflow policies.  
 **Related gate:** Gate 9.1  
 **Contract version:** pending owner decision  
 **Approval date:** pending  
