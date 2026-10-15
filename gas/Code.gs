@@ -24,7 +24,10 @@ function seedSecurity_(){
   if(roles.getLastRow()===1)roles.getRange(2,1,5,3).setValues([
     ['ADMIN','Full system administration','ACTIVE'],['SUPERVISOR','Operational supervision','ACTIVE'],['OPERATOR','Data operations','ACTIVE'],['VIEWER','Read-only access','ACTIVE'],['AUDITOR','Audit/read-only evidence','ACTIVE']
   ]);
-  if(perms.getLastRow()===1){const rows=[];Object.keys(DEFAULT_ROLES).forEach(r=>DEFAULT_ROLES[r].forEach(p=>rows.push([r,p])));perms.getRange(2,1,rows.length,2).setValues(rows);}
+  const existingPermissions=new Set(perms.getDataRange().getValues().slice(1).map(r=>String(r[0]||'').toUpperCase()+'|'+String(r[1]||'')));
+  const missingPermissions=[];
+  Object.keys(DEFAULT_ROLES).forEach(r=>DEFAULT_ROLES[r].forEach(p=>{const key=r+'|'+p;if(!existingPermissions.has(key))missingPermissions.push([r,p]);}));
+  if(missingPermissions.length)perms.getRange(perms.getLastRow()+1,1,missingPermissions.length,2).setValues(missingPermissions);
 }
 function seedDictionary_(){
   const sh=getDb_().getSheetByName(SHEETS.DATA_DICTIONARY),headers=sh.getRange(1,1,1,12).getValues()[0],idx=Object.fromEntries(headers.map((x,n)=>[x,n]));
