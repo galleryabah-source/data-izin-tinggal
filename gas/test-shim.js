@@ -1021,6 +1021,33 @@ assert(dailyPolicy.timezone==='Asia/Jakarta','Daily input policy declares the ap
 assert(dailyPolicy.countingBasis==='SERVICE_COMPLETED_OR_DOCUMENT_ISSUED','Daily input policy exposes the owner-approved completed-service/document-issuance counting basis');
 assert(dailyPolicy.lateEntryPolicy==='ALLOW_WITH_ORIGINAL_OPERATIONAL_DATE_REASON_AND_AUDIT','Daily input policy exposes the owner-approved audited late-entry rule');
 assert(dailyPolicy.serviceFamilies.length===2,'Daily policy advertises only the two candidate service families');
+const dailyGatePassContext={
+  SHEETS:{CONFIG:'CONFIG'},
+  requirePermission_:(permission)=>({role:'TEST',email:'test@example.com',permissions:['daily.approve']}),
+  getDb_:()=>({getSheetByName:(name)=>name==='CONFIG'?{getDataRange:()=>({getValues:()=>[
+    ['key','value'],['DAILY_INPUT_ENABLED','true'],['DAILY_INPUT_GATE_9_1','PASS']
+  ]})}:null})
+};
+vm.runInNewContext(dailyService,dailyGatePassContext);
+assert(dailyGatePassContext.getDailyInputPolicyV1().enabled===true,'Daily input enables only when both feature flag and Gate 9.1 PASS are present');
+const blockedWriteContext={
+  SHEETS:{CONFIG:'CONFIG'},
+  requirePermission_:(permission)=>({role:'TEST',email:'test@example.com',permissions:['daily.draft','daily.read']}),
+  getDb_:()=>({getSheetByName:(name)=>name==='CONFIG'?{getDataRange:()=>({getValues:()=>[
+    ['key','value'],['DAILY_INPUT_ENABLED','true']
+  ]})}:null})
+};
+vm.runInNewContext(dailyService,blockedWriteContext);
+let blockedWrite=false;
+try{blockedWriteContext.saveDailyDraft({});}catch(e){blockedWrite=String(e&&e.message||e).includes('DAILY_INPUT_GATE_BLOCKED');}
+assert(blockedWrite,'Daily mutation fails closed before touching the ledger when Gate 9.1 is not PASS');
+const partialDraft=dailyContext.dailyValidateDraft_({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',officeKey:'KANIM-TEST',contractVersion:'candidate-v1',
+  measures:{biasa_24:0,biasa_48:2}
+});
+assert(partialDraft.normalized.total===null && Object.keys(partialDraft.normalized.measures).length===2,
+  'Draft validation preserves missing measures as missing instead of coercing them to zero');
 assert(dailyPolicyPermissions[0]==='daily.read','Daily input policy read endpoint requires daily.read');
 const passportPolicy=dailyPolicyContext.getDailyServiceContractV1('PASSPORT');
 assert(passportPolicy.enabled===false&&passportPolicy.measures.length===4,'Passport contract read endpoint stays disabled and returns its four candidate fields');
