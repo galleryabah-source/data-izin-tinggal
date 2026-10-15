@@ -900,6 +900,26 @@ const injectedTopLevelTotalResult=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(!injectedTopLevelTotalResult.ok && injectedTopLevelTotalResult.errors.total, 'Daily validator rejects a client-supplied top-level total');
+const injectedTopLevelFieldResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  clientOfficeName:'KANIM PALSU',
+  measures:passportDailyMeasures
+});
+assert(!injectedTopLevelFieldResult.ok && injectedTopLevelFieldResult.errors.clientOfficeName, 'Daily validator rejects uncontracted top-level client fields');
+const inheritedMeasurePayload={
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:Object.create({biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0})
+};
+const inheritedMeasureResult=dailyContext.validateDailyInputPayloadV1(inheritedMeasurePayload);
+assert(!inheritedMeasureResult.ok && inheritedMeasureResult.errors['measures.biasa_24'], 'Daily validator requires own properties for every contracted measure');
 const malformedOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
