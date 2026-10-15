@@ -1386,6 +1386,9 @@ const narrativeReportFixtures = JSON.parse(fs.readFileSync(
 const narrativeFixtureDocumentation = fs.readFileSync(
   path.join(__dirname,'..','docs','PHASE-9-NARRATIVE-REPORT-NORMALIZATION-FIXTURES.md'),'utf8'
 );
+const historicalBandungEvidence = fs.readFileSync(
+  path.join(__dirname,'..','docs','PHASE-9-SOURCE-EVIDENCE-2026-09-23-BANDUNG.md'),'utf8'
+);
 assert(narrativeReportFixtures.schemaVersion==='narrative-daily-report-normalization-fixture-v1' &&
        narrativeReportFixtures.fixtures.length===3,
   'Narrative normalization fixture set contains the three supplied reports');
@@ -1417,6 +1420,10 @@ assert(narrativeFixtureDocumentation.includes('not 30') &&
        narrativeFixtureDocumentation.includes('not 111') &&
        narrativeFixtureDocumentation.includes('Gate 9.1 remains BLOCKED'),
   'Narrative fixture documentation records corrected arithmetic and preserves the release gate');
+assert(historicalBandungEvidence.includes('Subsequent owner decision — 2026-10-15') &&
+       historicalBandungEvidence.includes('blank or no-number service field is represented as explicit integer `0`') &&
+       historicalBandungEvidence.includes('does not authorize coercing omitted/null fields'),
+  'Historical source evidence records the later normalization decision without changing app API semantics');
 
 /* Phase 9 candidate-contract inventory and no-lifecycle regression gate. */
 const dailyContractSource = read('DailyInputService.gs');
