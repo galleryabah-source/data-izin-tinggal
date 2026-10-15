@@ -150,7 +150,7 @@ function dailyRowArray_(p,office,status,revision,source,reason,user,now,hash){
     status==='SUBMITTED'?user.email:'',status==='SUBMITTED'?now:'','','', '',reason||'',hash||dailyPayloadHash_(p),String(p.lateEntryReason||'')];
 }
 function dailyLogicalKey_(r){return [r.serviceFamily,r.operationalDate,r.officeKey].join('|');}
-function dailyLatestLogical_(rows,key){return rows.filter(r=>dailyLogicalKey_(r)===key).sort((a,b)=>b.revision-a.revision)[0]||null;}
+function dailyLatestLogical_(rows,key){return rows.filter(r=>dailyLogicalKey_(r)===key).sort((a,b)=>b.revision-a.revision||String(b.createdAt).localeCompare(String(a.createdAt)))[0]||null;}
 function dailyFindByRecord_(rows,id){return rows.find(r=>r.recordId===String(id||''))||null;}
 function dailyPublicRecord_(r){
   let measures={};try{measures=JSON.parse(r.measuresJson||'{}');}catch(e){}
@@ -197,10 +197,14 @@ function saveDailyDraft(payload){
       if(existing.createdBy!==user.email||existing.status!=='DRAFT')throw new Error('DAILY_IDEMPOTENCY_CONFLICT');
       const oldHash=existing.payloadHash,newHash=dailyPayloadHash_(p);
       if(oldHash===newHash)return {ok:true,recordId:existing.recordId,status:existing.status,idempotent:true};
-      const i=dailyHeaderIndex_(sh);sh.getRange(existing.row,i.measures_json+1).setValue(JSON.stringify(p.measures));
+      const i=dailyHeaderIndex_(sh),oldRow=sh.getRange(existing.row,1,1,DAILY_INPUT_HEADERS_V1.length).getValues()[0];
+      sh.getRange(existing.row,i.service_family+1,1,5).setValues([[p.serviceFamily,p.operationalDate,office.key,office.name,p.contractVersion]]);
+      sh.getRange(existing.row,i.measures_json+1).setValue(JSON.stringify(p.measures));
+      sh.getRange(existing.row,i.late_entry_reason+1).setValue(p.lateEntryReason||'');
       sh.getRange(existing.row,i.updated_by+1,1,2).setValues([[user.email,now]]);
       sh.getRange(existing.row,i.payload_hash+1).setValue(newHash);
-      appendAudit_('DAILY_DRAFT_UPDATE',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,Object.keys(p.measures).length,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey}));
+      try{appendAudit_('DAILY_DRAFT_UPDATE',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,Object.keys(p.measures).length,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey}));}
+      catch(e){sh.getRange(existing.row,1,1,DAILY_INPUT_HEADERS_V1.length).setValues([oldRow]);throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
       return {ok:true,recordId:existing.recordId,status:'DRAFT',updated:true};
     }
     const rec=dailyRowArray_(p,office,'DRAFT',1,null,'',user,now,dailyPayloadHash_(p));
@@ -220,17 +224,18 @@ function submitDailyInput(payload){
     if(latest&&latest.status!=='VOID'&&latest.status!=='REJECTED'&&(!existing||latest.recordId!==existing.recordId))throw new Error('DAILY_LOGICAL_DUPLICATE: gunakan koreksi/revisi yang beralasan.');
     if(existing){
       if(existing.createdBy!==user.email)throw new Error('DAILY_DRAFT_NOT_OWNER');
-      const i=dailyHeaderIndex_(sh),oldStatus=existing.status;
+      const i=dailyHeaderIndex_(sh),oldStatus=existing.status,oldRow=sh.getRange(existing.row,1,1,DAILY_INPUT_HEADERS_V1.length).getValues()[0];
       sh.getRange(existing.row,i.service_family+1,1,8).setValues([[p.serviceFamily,p.operationalDate,office.key,office.name,p.contractVersion,existing.revision,'SUBMITTED',JSON.stringify(p.measures)]]);
       sh.getRange(existing.row,i.total+1).setValue(p.total);
       sh.getRange(existing.row,i.updated_by+1,1,2).setValues([[user.email,now]]);
       sh.getRange(existing.row,i.submitted_by+1,1,2).setValues([[user.email,now]]);
       sh.getRange(existing.row,i.payload_hash+1).setValue(hash);
       try{appendAudit_('DAILY_SUBMIT',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey,total:p.total,from:oldStatus}));}
-      catch(e){sh.getRange(existing.row,i.status+1).setValue(oldStatus);throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
+      catch(e){sh.getRange(existing.row,1,1,DAILY_INPUT_HEADERS_V1.length).setValues([oldRow]);throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
       return {ok:true,recordId:existing.recordId,status:'SUBMITTED'};
     }
-    const rec=dailyRowArray_(p,office,'SUBMITTED',1,null,'',user,now,hash);sh.appendRow(rec);
+    const nextRevision=latest?latest.revision+1:1,source=(latest&&(latest.status==='VOID'||latest.status==='REJECTED'))?latest:null;
+    const rec=dailyRowArray_(p,office,'SUBMITTED',nextRevision,source,'',user,now,hash);sh.appendRow(rec);
     try{appendAudit_('DAILY_SUBMIT',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey,total:p.total}));}
     catch(e){sh.deleteRow(sh.getLastRow());throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
     return {ok:true,recordId:rec[0],status:'SUBMITTED',total:p.total};
