@@ -857,10 +857,10 @@ assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary ho
 
 /* Phase 9 daily-input contract validator: pure tests only; no Apps Script writes. */
 const dailyService=read('DailyInputService.gs');
-assert(dailyService.includes('const DAILY_INPUT_GUARD_V1 = Object.freeze({\n  enabled: false'), 'Daily input contract remains disabled by default');
+assert(dailyService.includes('enabled:true') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'"), 'Daily mutation endpoints are guarded by an explicit Gate 9.1 PASS plus feature flag');
 assert(dailyService.includes('function getDailyInputPolicyV1()'), 'Daily input exposes a policy read endpoint');
 assert(dailyService.includes('function getDailyServiceContractV1(serviceFamily)'), 'Daily input fields are server-contract-owned');
-assert(!dailyService.includes('appendRow(') && !dailyService.includes('setValues('), 'Daily input contract foundation performs no spreadsheet writes');
+assert(dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')") && dailyService.includes('DAILY_INPUT_HEADERS_V1'), 'Daily writes are isolated to a dedicated ledger with a fixed schema');
 assert(dailyService.includes('DAILY_SERVICE_CONTRACTS_V1') && !read('Config.gs').includes('DAILY_SERVICE_CONTRACTS_V1'), 'Daily contracts remain isolated from the monthly importer registry');
 const dailyContext={};
 vm.runInNewContext(dailyService+';this.validateDailyInputPayloadV1=validateDailyInputPayloadV1;',dailyContext);
@@ -1000,7 +1000,7 @@ const decimalDailyResult=dailyContext.validateDailyInputPayloadV1({
 assert(!decimalDailyResult.ok && decimalDailyResult.errors['measures.biasa_24'], 'Daily validator rejects fractional service counts');
 
 
-/* Phase 9 policy/read-endpoint guard tests: hard-disabled even if config is true. */
+/* Phase 9 policy/read-endpoint guard tests: fail closed unless feature flag AND Gate 9.1 PASS. */
 const dailyPolicyPermissions=[];
 const dailyPolicyContext={
   SHEETS:{CONFIG:'CONFIG'},
@@ -1021,10 +1021,10 @@ assert(dailyPolicy.timezone==='Asia/Jakarta','Daily input policy declares the ap
 assert(dailyPolicy.countingBasis==='SERVICE_COMPLETED_OR_DOCUMENT_ISSUED','Daily input policy exposes the owner-approved completed-service/document-issuance counting basis');
 assert(dailyPolicy.lateEntryPolicy==='ALLOW_WITH_ORIGINAL_OPERATIONAL_DATE_REASON_AND_AUDIT','Daily input policy exposes the owner-approved audited late-entry rule');
 assert(dailyPolicy.serviceFamilies.length===2,'Daily policy advertises only the two candidate service families');
-assert(dailyPolicyPermissions[0]==='dashboard.read','Daily input policy read endpoint requires dashboard.read');
+assert(dailyPolicyPermissions[0]==='daily.read','Daily input policy read endpoint requires daily.read');
 const passportPolicy=dailyPolicyContext.getDailyServiceContractV1('PASSPORT');
 assert(passportPolicy.enabled===false&&passportPolicy.measures.length===4,'Passport contract read endpoint stays disabled and returns its four candidate fields');
-assert(dailyPolicyPermissions[1]==='dashboard.read','Daily contract read endpoint requires dashboard.read');
+assert(dailyPolicyPermissions[1]==='daily.read','Daily contract read endpoint requires daily.read');
 let invalidDailyFamilyRejected=false;
 try{dailyPolicyContext.getDailyServiceContractV1('UNKNOWN');}catch(e){invalidDailyFamilyRejected=String(e&&e.message||e)==='DAILY_SERVICE_FAMILY_INVALID';}
 assert(invalidDailyFamilyRejected,'Daily contract endpoint rejects unknown service families');
@@ -1427,7 +1427,7 @@ assert(historicalBandungEvidence.includes('Subsequent owner decision — 2026-10
        historicalBandungEvidence.includes('does **not** authorize coercing omitted/null fields'),
   'Historical source evidence records the later normalization decision without changing app API semantics');
 
-/* Phase 9 candidate-contract inventory and no-lifecycle regression gate. */
+/* Phase 9 daily contract inventory and controlled lifecycle regression gate. */
 const dailyContractSource = read('DailyInputService.gs');
 const dailyContracts = vm.runInNewContext('DAILY_SERVICE_CONTRACTS_V1', dailyContext);
 assert(!!dailyContracts && Object.keys(dailyContracts).length===2,
@@ -1448,9 +1448,9 @@ assert(dailyContracts.RESIDENCE_PERMIT.datasetKey==='RESIDENCE_PERMIT_SERVICE_DA
 assert(dailyContracts.RESIDENCE_PERMIT.sourceContractKey==='RESIDENCE_PERMIT_SERVICE_MONTHLY' &&
        dailyContracts.PASSPORT.sourceContractKey==='PASSPORT_SERVICE_MONTHLY',
   'Daily candidates explicitly identify their monthly reference contracts without replacing them');
-assert(!/function\s+(?:submit|create|save|approve|correct|void|close|reopen)Daily\w*\s*\(/i.test(dailyContractSource),
-  'Daily contract foundation exposes no daily mutation/lifecycle endpoint');
-assert(!/\b(?:appendRow|setValue|setValues|insertSheet|deleteSheet|deleteRow|clearContent|clearFormat|clear|copyTo)\s*\(/.test(dailyContractSource),
-  'Daily candidate contract source contains no spreadsheet write API');
-assert(dailyContractSource.includes('enabled: false'),
-  'Daily input hard guard remains disabled in source');
+assert(['saveDailyDraft','submitDailyInput','reviewDailySubmission','correctDailySubmission','voidDailySubmission'].every(name=>dailyContractSource.includes('function '+name+'(')),
+  'Daily lifecycle includes draft, submit, review, correction, and void endpoints');
+assert(dailyContractSource.includes("getSheetByName('DAILY_INPUT_LEDGER')") && !dailyContractSource.includes("getSheetByName('DATA_RESIDENCE_PERMIT_SERVICE_MONTHLY')") && !dailyContractSource.includes("getSheetByName('DATA_PASSPORT_SERVICE_MONTHLY')"),
+  'Daily ledger is isolated and never opens canonical monthly sheets for writes');
+assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSource.includes('DAILY_INPUT_ENABLED'),
+  'Daily lifecycle cannot activate without both gate and feature configuration');
