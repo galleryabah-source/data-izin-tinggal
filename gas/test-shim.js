@@ -954,6 +954,16 @@ const invalidDailyDate=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(!invalidDailyDate.ok && invalidDailyDate.errors.operationalDate, 'Daily validator rejects impossible calendar dates');
+const yearZeroDailyDate=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'0000-01-01',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!yearZeroDailyDate.ok && yearZeroDailyDate.errors.operationalDate,
+  'Daily validator rejects year zero as an operational date');
 
 const residenceDailyMeasures={
   bvk:1,voa:2,itk:3,itk_peralihan:4,itas:5,itap:6,itkt:7,
