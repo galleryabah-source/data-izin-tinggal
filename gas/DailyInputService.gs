@@ -17,7 +17,7 @@ const DAILY_SERVICE_CONTRACTS_V1 = Object.freeze({
   })
 });
 const DAILY_INPUT_GUARD_V1 = Object.freeze({
-  enabled:true,timezone:'Asia/Jakarta',featureFlagKey:'DAILY_INPUT_ENABLED',
+  enabled:false,timezone:'Asia/Jakarta',featureFlagKey:'DAILY_INPUT_ENABLED',
   gateKey:'DAILY_INPUT_GATE_9_1',countingBasis:'SERVICE_COMPLETED_OR_DOCUMENT_ISSUED',
   lateEntryPolicy:'ALLOW_WITH_ORIGINAL_OPERATIONAL_DATE_REASON_AND_AUDIT'
 });
