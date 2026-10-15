@@ -132,6 +132,11 @@ function validateDailyInputPayloadV1(payload) {
       addError(key, 'Field tidak diizinkan pada kontrak input harian ini.');
     }
   });
+  allowedTopLevelKeys.forEach(key => {
+    if (key in input && !Object.prototype.hasOwnProperty.call(input, key)) {
+      addError(key, 'Field kontrak harus menjadi properti langsung payload.');
+    }
+  });
   if (!contract) addError('serviceFamily', 'Pilih keluarga layanan yang valid.');
 
   const operationalDate = String(input.operationalDate || '').trim();
