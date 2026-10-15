@@ -107,7 +107,7 @@ Server-side validation is mandatory:
 - authenticated actor and required permission;
 - service-family contract and version;
 - valid date in the `Asia/Jakarta` operational timezone;
-- selected office exists and is active in Office Reference;
+- server resolves the exact `office_key` to exactly one `OFFICE_REFERENCE` row with `status === 'VERIFIED'`; reject missing, duplicate, `PENDING`, or any other status, and derive the canonical office name server-side;
 - every required measure is present and a finite integer >= 0;
 - reject locale-formatted ambiguity, NaN, Infinity, decimal values, and negative counts;
 - total derived from that service contract's measure list;
