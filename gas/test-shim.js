@@ -1356,6 +1356,29 @@ assert(gate91Register.includes('Gate result remains BLOCKED') &&
        dailyBlueprint.includes('Gate 9.1 NOT PASSED'),
   'Owner policy decisions do not accidentally open Gate 9.1 or authorize writes');
 
+/* Phase 9 source-report normalization rule: blank/no-number => explicit zero.
+ * This is limited to narrative report transcription; API payload validation still rejects missing/null required measures. */
+assert(gate91Register.includes('Narrative-report normalization') &&
+       gate91Register.includes('blank field or a field with no number') &&
+       gate91Register.includes('does not authorize silently coercing missing/null fields'),
+  'Gate 9.1 register records blank-to-zero only for source-report normalization and preserves API missing/null controls');
+assert(gate91OwnerWorksheet.includes('blank field or field with no number is interpreted as explicit `0`') &&
+       gate91OwnerWorksheet.includes('does not authorize the app API to coerce omitted/null measure fields'),
+  'Owner worksheet scopes blank-to-zero to narrative transcription, not app API coercion');
+assert(dailyBlueprint.includes('a blank/no-number field is normalized to explicit `0`') &&
+       dailyBlueprint.includes('omitted/null fields are not silently coerced'),
+  'Daily input blueprint separates source-report normalization from API payload validation');
+const blankToZeroReport = dailyContext.validateDailyInputPayloadV1(dailyPayload({
+  measures:{biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0}
+}));
+assert(blankToZeroReport.ok && blankToZeroReport.normalized.total===0,
+  'Normalized narrative report with blank source fields represented as explicit zeros is valid');
+const missingMeasureStillRejected = dailyContext.validateDailyInputPayloadV1(dailyPayload({
+  measures:{biasa_24:0,biasa_48:0,elektronik_48:0}
+}));
+assert(!missingMeasureStillRejected.ok && missingMeasureStillRejected.errors['measures.e_polikarbonat'],
+  'App payload validator still rejects an omitted measure rather than silently coercing it to zero');
+
 /* Phase 9 candidate-contract inventory and no-lifecycle regression gate. */
 const dailyContractSource = read('DailyInputService.gs');
 const dailyContracts = vm.runInNewContext('DAILY_SERVICE_CONTRACTS_V1', dailyContext);
