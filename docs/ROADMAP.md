@@ -135,7 +135,7 @@ The Phase 10.2 figures remain locked as historical certification evidence. The c
 
 The production baseline is now verified end-to-end for both the existing Residence Permit dataset and the Passport dataset. Map v1, Export Verification v1, Backup Snapshot Verification v1, Automated Production Smoke Test v1, Passport governance/runtime regression gates, and the GIS First production UI baseline have passed their verification gates.
 
-The current source model is monthly. The next work therefore remains controlled hardening and maintenance of the canonical monthly pipeline, followed by Phase 10 capabilities that operate on authoritative monthly data. Daily operational data is explicitly deferred until an authoritative daily source becomes available.
+The current canonical source model remains monthly. Phase 9 has a contract/validator foundation in PR #228 for governed daily input for Residence Permit and Passport through one in-app service-selector form. Gate 9.1 is BLOCKED pending owner approval of measure definitions and operational workflow. The feature remains hard-disabled: no daily writes, staging-sheet creation, or daily UI are authorized yet. See [Gate 9.1 Decision Register](PHASE-9-GATE-9.1-DECISION-REGISTER.md). WhatsApp integration is HOLD and is not a dependency. The canonical monthly pipeline remains protected and must stay green.
 
 The deployment identity evidence chain remains part of the gate: Git commit SHA -> GitHub Actions run -> Apps Script immutable version -> canonical deployment ID -> production smoke -> AUDIT_LOG -> backup snapshot.
 
@@ -172,7 +172,94 @@ Purpose: establish explicit monthly data finality before downstream analytics, e
 - [x] Integrate service-scoped export and backup
 - [x] Extend production smoke verification
 
-### Phase 10 — Authoritative monthly analytics and application workspaces
+### Phase 9 — Governed Daily Input (Residence Permit + Passport)
+
+**Status: APPROVED PLANNING BASELINE — implementation not started.**  
+**Capture channel:** INTAL WEB APP form with one service selector. **WhatsApp integration: HOLD.**  
+**Runtime decision:** extend the existing Apps Script + Google Sheets application first; do not introduce Node.js/PostgreSQL solely for this form.  
+**Sequencing:** Gate 9.1 (contract/workflow freeze) may proceed as planning. Before write-path implementation, reconcile the design with the in-delivery monthly Period Closing & Controlled Correction v1 gate so both changes use one governed lifecycle and do not create competing write seams.
+
+### Scope and contract boundary
+
+- [ ] Freeze separate daily contracts for `RESIDENCE_PERMIT_SERVICE_DAILY` and `PASSPORT_SERVICE_DAILY`.
+- [ ] Approve the daily meaning, requiredness, zero/missing semantics, reporting cutoff, and total calculation for each service measure.
+- [ ] Residence Permit candidate measures: the 13 existing monthly service measures.
+- [ ] Passport candidate measures: `biasa_24`, `biasa_48`, `elektronik_48`, `e_polikarbonat`.
+- [ ] Logical report identity: `tanggal + kantor_imigrasi + service_family`; revisions use stable `record_id + revision`.
+- [ ] Protect both canonical monthly contracts, their registry identities, existing importer seam, historical rows, and totals.
+
+### Gate 9.1 — Workflow and contract freeze
+
+- [ ] Approve operators/reviewers/approvers, correction and void authority, and period-close authority.
+- [ ] Freeze contract versions and fixture datasets for both services.
+- [ ] Define report cutoff/timezone (`Asia/Jakarta`), office-reference rules, and period states.
+- [ ] Confirm no personal/foreign-national fields are needed for aggregate service reporting.
+
+### Gate 9.2 — Staging and reliable write core
+
+- [ ] Add separate service-specific daily staging/revision stores; no universal table with mixed measures.
+- [ ] Add a UUID `submission_id` idempotency ledger; retry returns the original outcome.
+- [ ] Add lock-guarded identity/revision check + write seam using Apps Script `LockService`.
+- [ ] Add server-side contract validation, derived totals, duplicate/conflict detection, and batch sheet I/O.
+- [ ] Add audit correlation IDs and consistency checks for orphaned writes, missing audits, invalid transitions, and duplicate active revisions.
+- [ ] Document the Google Sheets multi-write atomicity limitation and prove recovery behavior; do not claim ACID guarantees.
+
+### Gate 9.3 — One responsive input workspace
+
+- [ ] Add service selector: Izin Tinggal / Paspor.
+- [ ] Render fields from the selected versioned contract.
+- [ ] Add draft, submit, validation summary, conflict/retry state, and clear save feedback.
+- [ ] Enforce active Office Reference selection, valid date, integer measures >= 0, and server-derived total.
+- [ ] Verify mobile/Android and desktop, keyboard navigation, accessible labels, and safe output escaping.
+
+### Gate 9.4 — Review and correction lifecycle
+
+- [ ] Implement `DRAFT -> SUBMITTED -> APPROVED` and `NEEDS_CORRECTION` / authorized `VOID`.
+- [ ] Keep submitted/approved revisions immutable; corrections create a new revision.
+- [ ] Implement explicit period `OPEN -> REVIEW -> CLOSED`; privileged reopen requires a reason and audit.
+- [ ] Enforce separate server-side permissions for read, write, submit, review, approve, correct, void, close, and reopen.
+- [ ] Test concurrent submissions and retry after a simulated timeout.
+
+### Gate 9.5 — Approved views and reconciliation
+
+- [ ] Build read-only daily views from the latest approved, non-void revision.
+- [ ] Derive monthly/yearly projections only from approved daily records.
+- [ ] Reconcile daily-derived months against canonical monthly data by office and measure.
+- [ ] Display deltas, missing/unexpected offices, unresolved corrections, and period status.
+- [ ] Never automatically overwrite/backfill `RESIDENCE_PERMIT_SERVICE_MONTHLY` or `PASSPORT_SERVICE_MONTHLY`.
+
+### Gate 9.6 — Governance, evidence, and recovery
+
+- [ ] Extend automated tests for both service contracts, schema versions, validation, totals, idempotency, audit, and state transitions.
+- [ ] Add RBAC negative tests and unchanged-monthly-baseline regression checks.
+- [ ] Verify governed export, backup manifest/checksum, snapshot equality, and recovery evidence.
+- [ ] Add production smoke checks for staging integrity and daily approval counts.
+- [ ] Record commit SHA, CI run, Apps Script immutable version, canonical deployment ID, smoke result, audit evidence, and backup verification.
+
+### Gate 9.7 — Controlled production UAT
+
+- [ ] Valid input for each service family.
+- [ ] Invalid date/office, blank/negative/decimal measures, derived-total correctness.
+- [ ] Duplicate click, same-key retry, concurrent submissions, and lost-response recovery.
+- [ ] Draft edit, review return, approval, correction revision, void, closed-period rejection, authorized reopen.
+- [ ] Unauthorized approval/correction/close denied server-side.
+- [ ] Audit trail completeness, export/backup verification, mobile/desktop browser UAT.
+- [ ] Confirm canonical monthly row counts, totals, keys, exports, and dashboards are unchanged.
+
+**Release gate:** contract freeze -> fixtures/tests -> CI PASS -> forensic diff PASS -> merge -> canonical Apps Script deployment -> production smoke -> browser UAT -> integrity/export/backup evidence -> roadmap reconciliation. A green CI run alone does not authorize production certification.
+
+Detailed specification: `docs/DAILY-INPUT-BLUEPRINT.md`. Phase design: `docs/PHASE-9-DAILY-OPERATIONAL-DATA.md`.
+
+
+### Gate 9.1 alignment and implementation guardrails
+
+The earlier source audit found no existing authoritative daily export or approved SOP. The in-app form is a prospective new source; it does not prove daily measure semantics by itself. Gate 9.1 remains **NOT PASSED** until the operational owner approves daily grain, meaning of each measure, zero-versus-missing behavior, reporting cutoff, late entries, role separation, correction/period workflow, and representative normal/correction fixtures.
+
+The UI must reuse `docs/UI-REFERENCE-GIS-FIRST.md` and the existing application shell, with a task-focused Input Harian route (no map/KPI distractions above the form), synchronized service selection, verified Office Reference, and accessible responsive desktop/Android layout. Use contract-first logical modules, server-owned versioned contracts, server-side RBAC, request/correlation IDs, idempotency, append-only revisions, batch I/O, deterministic errors, consistency verification, and recovery tests within the current Apps Script + Sheets runtime.
+
+No synthetic daily history from monthly totals; no direct writes into canonical monthly datasets; no WhatsApp dependency. Any database/runtime migration requires a separate ADR backed by measured limits. See `docs/DAILY-INPUT-BLUEPRINT.md`.
+
+## Phase 10 — Authoritative monthly analytics and application workspaces
 
 **Status:** Phase 10.1 runtime gate **CLOSED / PASS** as of 2026-09-30.
 

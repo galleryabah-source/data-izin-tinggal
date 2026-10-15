@@ -12,10 +12,12 @@ The blueprint is intentionally architectural. It does **not** authorize immediat
 
 The user experience remains one application while source datasets remain logically separated by their own contracts, schemas, business keys, validation rules, and lifecycle.
 
-Initial families:
+Current canonical monthly families:
 
 - `RESIDENCE_PERMIT_SERVICE_MONTHLY` — existing production dataset.
-- `PASSPORT_SERVICE_MONTHLY` — future dataset family; design only for now.
+- `PASSPORT_SERVICE_MONTHLY` — existing production dataset.
+
+Daily operational input is a separate, planned family for each service. It does not replace or mutate either monthly family.
 
 Future families may include other approved immigration service datasets, but no family is added until its data contract and governance requirements are defined.
 
@@ -110,9 +112,9 @@ Daily operational records
 
 Monthly and yearly summaries should preferably be **derived aggregates**, not manually maintained duplicate sources.
 
-The existing monthly production contract remains authoritative for the historical baseline unless and until an explicit migration plan is approved.
+The existing monthly production contracts remain authoritative for the historical baseline unless and until an explicit migration plan is approved. Daily data must be entered through the INTAL WEB APP's governed input workspace, held in service-specific staging, reviewed, and approved before it appears in approved daily projections. WhatsApp integration is on HOLD and is not a prerequisite.
 
-## Passport dataset design — future
+## Passport dataset contract — current monthly reference
 
 A future passport contract should define, at minimum:
 
@@ -190,31 +192,27 @@ Documentation/design only:
 
 No production data changes.
 
-### Phase C — Introduce passport contract
+### Phase C — Passport monthly contract
 
-- design `PASSPORT_SERVICE_MONTHLY` or an explicitly approved daily contract;
-- build source fixtures;
-- validate schema and business keys;
-- test importer and verification logic;
-- deploy only after the contract is reviewed.
+**Status: completed for the current canonical monthly baseline.** The Passport monthly contract, fixture/import validation, business-key checks, and integrity verification are existing capabilities. Any daily contract is separate and must pass the new Phase E gates.
 
-### Phase D — Integrate passport into the application
+### Phase D — Passport monthly application integration
 
-- register the dataset;
-- add service-scoped dashboard filtering;
-- add service-aware exports;
-- add audit coverage;
-- add backup/snapshot coverage;
-- extend smoke tests without weakening existing residence-permit checks.
+**Status: completed for the current canonical monthly baseline.** Dataset registration, service-scoped dashboard filtering, export/backup coverage, audit coverage, and production smoke checks are part of the existing application. The daily input feature must extend these controls without changing the monthly contract.
 
-### Phase E — Daily operational model
+### Phase E — Daily operational input and governance
 
-Only after the multi-service contract is stable:
+**Status: approved planning baseline; implementation not started.** The initial capture channel is a single in-app form, with a service selector for Izin Tinggal or Paspor. WhatsApp remains on HOLD.
 
-- introduce daily operational data where operationally required;
-- derive monthly/yearly aggregates;
-- define period closing and correction workflow;
-- preserve historical traceability.
+- freeze separate daily contracts for Residence Permit and Passport using their own service measures;
+- implement separate staging/revision stores, one form shell, and server-side validation;
+- use idempotent submission IDs, lock-guarded writes, append-only approved revisions, and audit events;
+- implement review, correction, void, and explicit period close/reopen lifecycle;
+- derive read-only daily/monthly/yearly views only from latest approved revisions;
+- reconcile daily-derived monthly figures with historical monthly baselines without overwriting them;
+- pass CI, forensic diff, canonical deployment, production smoke, export/backup verification, and live UAT before production certification.
+
+See `docs/DAILY-INPUT-BLUEPRINT.md` and `docs/PHASE-9-DAILY-OPERATIONAL-DATA.md` for the implementation plan.
 
 ### Phase F — Advanced analytics
 
@@ -227,13 +225,17 @@ Only after the data model is stable:
 - document/knowledge integration;
 - alerting and automation.
 
+## Technology and reliability decision
+
+Extend the existing Apps Script + Google Sheets application first. Do not introduce a second runtime or database solely for the input form. Use versioned service contracts, server-side RBAC, request idempotency, lock-guarded writes, append-only revisions, explicit state machines, batch I/O, consistency verification, and governed release evidence. Google Sheets does not provide relational ACID transactions; write design and recovery tests must acknowledge this limitation. Revisit PostgreSQL or another transactional store only through a separate architecture decision based on measured concurrency, data volume, quotas, and SLO requirements.
+
 ## Non-goals for the current phase
 
 The following are **not** part of the immediate implementation gate:
 
 - replacing the current residence-permit dataset;
 - merging residence and passport source tables;
-- building the passport UI now;
+- building a separate Passport-only application UI; daily input uses one shared form shell with service-specific fields;
 - changing the existing production business key;
 - redesigning the dashboard before the current runtime gate is closed;
 - adding new features merely to demonstrate extensibility.
@@ -242,6 +244,18 @@ The following are **not** part of the immediate implementation gate:
 
 The application is intentionally being designed as a **single multi-service platform with isolated dataset contracts**.
 
-The first additional service family under consideration is **Passport Services**.
+The current production platform has two isolated canonical monthly service families: Residence Permit and Passport. The next planned input capability is daily reporting for both through one service-selector form and separate service-specific contracts. This blueprint records a plan, not a deployed feature. The current monthly production datasets remain authoritative and must stay green throughout future expansion. WhatsApp integration remains on HOLD.
 
-Implementation remains deferred and must follow the phased roadmap. The current production residence-permit pipeline remains the canonical baseline and must stay green throughout future expansion.
+## Daily input UX and technology reinforcement
+
+Daily input must follow the approved `docs/UI-REFERENCE-GIS-FIRST.md` visual system and reuse the current application shell. Add one task-focused **Input Harian** workspace—not a separate app or a new dashboard—with a synchronized service selector and server-defined fields for each family. The map remains the focal point of analytics, not of data entry; the form must optimize quick, accurate entry on desktop and Android mobile.
+
+Implement the capability through logical contract-first modules (contract registry, validation, authorization policy, command service, repository, idempotency, revision, audit, projection and integrity verification). Preserve the current Apps Script + Google Sheets runtime until measured limits justify a separately approved architecture decision. Version contracts, use server-side RBAC, request IDs, append-only corrections, deterministic errors, batch I/O and recovery checks. The Sheets adapter must explicitly acknowledge that multi-sheet operations are not ACID.
+
+Gate 9.1 remains unpassed until daily reporting semantics and owners approve the proposed grain, measure definitions, zero/missing behavior, reporting cutoff, correction/period workflow and representative fixtures. No synthetic daily history from monthly totals, no writes to canonical monthly datasets, and no WhatsApp integration in this phase. See `docs/DAILY-INPUT-BLUEPRINT.md`.
+
+
+
+## Period-governance integration gate
+
+Before daily write-path implementation, reconcile the proposed daily state machine and period-close/correction semantics with the existing monthly Period Closing & Controlled Correction v1 gate. Reuse compatible authorization, reason capture and audit conventions; preserve service-family isolation and do not create competing write seams. This is part of Gate 9.1/9.2 and must be evidenced before enabling daily writes.

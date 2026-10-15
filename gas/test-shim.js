@@ -1,5 +1,6 @@
 const fs=require('fs');
 const path=require('path');
+const vm=require('vm');
 
 const files=fs.readdirSync(__dirname).filter(x=>/\.(gs|js)$/.test(x));
 for(const name of files){new Function(fs.readFileSync(path.join(__dirname,name),'utf8'));}
@@ -851,3 +852,603 @@ assert(gisTv.includes('layer.bindTooltip(name'), 'GIS boundary exposes district/
 assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary hover state becomes clearly readable');
 
 // Service-point GIS registry: pending coordinates are intentionally excluded from plotted orbit.\n
+
+/* Phase 9 daily-input contract validator: pure tests only; no Apps Script writes. */
+const dailyService=read('DailyInputService.gs');
+assert(dailyService.includes('const DAILY_INPUT_GUARD_V1 = Object.freeze({\n  enabled: false'), 'Daily input contract remains disabled by default');
+assert(dailyService.includes('function getDailyInputPolicyV1()'), 'Daily input exposes a policy read endpoint');
+assert(dailyService.includes('function getDailyServiceContractV1(serviceFamily)'), 'Daily input fields are server-contract-owned');
+assert(!dailyService.includes('appendRow(') && !dailyService.includes('setValues('), 'Daily input contract foundation performs no spreadsheet writes');
+assert(dailyService.includes('DAILY_SERVICE_CONTRACTS_V1') && !read('Config.gs').includes('DAILY_SERVICE_CONTRACTS_V1'), 'Daily contracts remain isolated from the monthly importer registry');
+const dailyContext={};
+vm.runInNewContext(dailyService+';this.validateDailyInputPayloadV1=validateDailyInputPayloadV1;',dailyContext);
+const passportDailyMeasures={biasa_24:0,biasa_48:'0',elektronik_48:3,e_polikarbonat:2};
+const validDailyResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(validDailyResult.ok && validDailyResult.normalized.total===5, 'Daily passport validator accepts explicit zeros and derives the total');
+const missingDailyResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{biasa_24:0,biasa_48:0,elektronik_48:0}
+});
+assert(!missingDailyResult.ok && missingDailyResult.errors['measures.e_polikarbonat'], 'Daily validator distinguishes a missing value from zero');
+const injectedDailyResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{...passportDailyMeasures,total:999}
+});
+assert(!injectedDailyResult.ok && injectedDailyResult.errors['measures.total'], 'Daily validator rejects uncontracted or client-supplied total fields');
+const injectedTopLevelTotalResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  total:999,
+  measures:passportDailyMeasures
+});
+assert(!injectedTopLevelTotalResult.ok && injectedTopLevelTotalResult.errors.total, 'Daily validator rejects a client-supplied top-level total');
+const injectedTopLevelFieldResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  clientOfficeName:'KANIM PALSU',
+  measures:passportDailyMeasures
+});
+assert(!injectedTopLevelFieldResult.ok && injectedTopLevelFieldResult.errors.clientOfficeName, 'Daily validator rejects uncontracted top-level client fields');
+
+const inheritedTopLevelFieldKeys=['constructor','toString','__proto__'];
+inheritedTopLevelFieldKeys.forEach(key=>{
+  const payload={
+    submissionId:'123e4567-e89b-42d3-a456-426614174000',
+    serviceFamily:'PASSPORT',
+    operationalDate:'2026-10-14',
+    officeKey:'KANIM-TEST',
+    contractVersion:'candidate-v1',
+    measures:passportDailyMeasures
+  };
+  Object.defineProperty(payload,key,{value:'injected',enumerable:true,configurable:true});
+  const result=dailyContext.validateDailyInputPayloadV1(payload);
+  assert(!result.ok && Object.prototype.hasOwnProperty.call(result.errors,key),
+    'Daily validator rejects inherited-name top-level field: '+key);
+});
+const inheritedMeasurePayload={
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:Object.create({biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0})
+};
+const inheritedMeasureResult=dailyContext.validateDailyInputPayloadV1(inheritedMeasurePayload);
+assert(!inheritedMeasureResult.ok && inheritedMeasureResult.errors['measures.biasa_24'], 'Daily validator requires own properties for every contracted measure');
+const malformedOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:{office_key:'KANIM-TEST'},
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!malformedOfficeKeyResult.ok && malformedOfficeKeyResult.errors.officeKey, 'Daily validator rejects non-string office keys');
+const invalidDailyDate=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-02-30',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!invalidDailyDate.ok && invalidDailyDate.errors.operationalDate, 'Daily validator rejects impossible calendar dates');
+const yearZeroDailyDate=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'0000-01-01',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!yearZeroDailyDate.ok && yearZeroDailyDate.errors.operationalDate,
+  'Daily validator rejects year zero as an operational date');
+
+const residenceDailyMeasures={
+  bvk:1,voa:2,itk:3,itk_peralihan:4,itas:5,itap:6,itkt:7,
+  alih_status_itk_ke_itas:8,alih_status_itas_ke_itap:9,abg:10,epo:11,imk:12,skim:13
+};
+const validResidenceDailyResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'RESIDENCE_PERMIT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:residenceDailyMeasures
+});
+assert(validResidenceDailyResult.ok && validResidenceDailyResult.normalized.total===91, 'Residence Permit daily validator accepts all candidate measures and derives total');
+const negativeDailyResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{...passportDailyMeasures,biasa_24:-1}
+});
+assert(!negativeDailyResult.ok && negativeDailyResult.errors['measures.biasa_24'], 'Daily validator rejects negative service counts');
+const decimalDailyResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{...passportDailyMeasures,biasa_24:1.5}
+});
+assert(!decimalDailyResult.ok && decimalDailyResult.errors['measures.biasa_24'], 'Daily validator rejects fractional service counts');
+
+
+/* Phase 9 policy/read-endpoint guard tests: hard-disabled even if config is true. */
+const dailyPolicyPermissions=[];
+const dailyPolicyContext={
+  SHEETS:{CONFIG:'CONFIG'},
+  requirePermission_:(permission)=>{dailyPolicyPermissions.push(permission);return {role:'TEST'};},
+  getDb_:()=>({
+    getSheetByName:(name)=>name==='CONFIG'?{
+      getDataRange:()=>({getValues:()=>[
+        ['key','value'],
+        ['DAILY_INPUT_ENABLED','true']
+      ]})
+    }:null
+  })
+};
+vm.runInNewContext(dailyService,dailyPolicyContext);
+const dailyPolicy=dailyPolicyContext.getDailyInputPolicyV1();
+assert(dailyPolicy.enabled===false,'Daily input remains disabled even when the configuration feature flag is true');
+assert(dailyPolicy.timezone==='Asia/Jakarta','Daily input policy declares the approved application timezone');
+assert(dailyPolicy.countingBasis==='SERVICE_COMPLETED_OR_DOCUMENT_ISSUED','Daily input policy exposes the owner-approved completed-service/document-issuance counting basis');
+assert(dailyPolicy.lateEntryPolicy==='ALLOW_WITH_ORIGINAL_OPERATIONAL_DATE_REASON_AND_AUDIT','Daily input policy exposes the owner-approved audited late-entry rule');
+assert(dailyPolicy.serviceFamilies.length===2,'Daily policy advertises only the two candidate service families');
+assert(dailyPolicyPermissions[0]==='dashboard.read','Daily input policy read endpoint requires dashboard.read');
+const passportPolicy=dailyPolicyContext.getDailyServiceContractV1('PASSPORT');
+assert(passportPolicy.enabled===false&&passportPolicy.measures.length===4,'Passport contract read endpoint stays disabled and returns its four candidate fields');
+assert(dailyPolicyPermissions[1]==='dashboard.read','Daily contract read endpoint requires dashboard.read');
+let invalidDailyFamilyRejected=false;
+try{dailyPolicyContext.getDailyServiceContractV1('UNKNOWN');}catch(e){invalidDailyFamilyRejected=String(e&&e.message||e)==='DAILY_SERVICE_FAMILY_INVALID';}
+assert(invalidDailyFamilyRejected,'Daily contract endpoint rejects unknown service families');
+['CONSTRUCTOR','TOSTRING','__PROTO__'].forEach(family=>{
+  let rejected=false;
+  try{dailyPolicyContext.getDailyServiceContractV1(family);}catch(e){rejected=String(e&&e.message||e)==='DAILY_SERVICE_FAMILY_INVALID';}
+  assert(rejected,'Daily contract endpoint rejects inherited service-family name: '+family);
+});
+
+/* Phase 9 read endpoint negative authorization tests: deny before touching configuration. */
+let dailyDeniedDbReads=0;
+const dailyDeniedContext={
+  SHEETS:{CONFIG:'CONFIG'},
+  requirePermission_:(permission)=>{throw new Error('FORBIDDEN: '+permission);},
+  getDb_:()=>{dailyDeniedDbReads++;throw new Error('DB_ACCESS_BEFORE_AUTH');}
+};
+vm.runInNewContext(dailyService,dailyDeniedContext);
+[
+  ['getDailyInputPolicyV1',()=>dailyDeniedContext.getDailyInputPolicyV1()],
+  ['getDailyServiceContractV1',()=>dailyDeniedContext.getDailyServiceContractV1('PASSPORT')]
+].forEach(([endpoint,invoke])=>{
+  let denied=false;
+  try{invoke();}catch(e){denied=String(e&&e.message||e)==='FORBIDDEN: dashboard.read';}
+  assert(denied,'Daily read endpoint denies unauthorized access: '+endpoint);
+});
+assert(dailyDeniedDbReads===0,'Daily read endpoints enforce permission before reading configuration or database state');
+
+
+
+/* Phase 9 validator boundary matrix: overflow, malformed containers, and contract drift. */
+const unsafeMeasureResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{...passportDailyMeasures,biasa_24:Number.MAX_SAFE_INTEGER+1}
+});
+assert(!unsafeMeasureResult.ok && unsafeMeasureResult.errors['measures.biasa_24'], 'Daily validator rejects a single measure above the safe-integer boundary');
+
+const overflowTotalResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{biasa_24:Number.MAX_SAFE_INTEGER,biasa_48:1,elektronik_48:0,e_polikarbonat:0}
+});
+assert(!overflowTotalResult.ok && overflowTotalResult.errors.measures, 'Daily validator rejects a derived total above the safe-integer boundary');
+
+const malformedMeasuresArrayResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:[0,0,0,0]
+});
+assert(!malformedMeasuresArrayResult.ok && malformedMeasuresArrayResult.errors['measures.biasa_24'], 'Daily validator rejects array-shaped measures by treating required keys as missing');
+
+const nullMeasuresResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:null
+});
+assert(!nullMeasuresResult.ok && nullMeasuresResult.errors['measures.biasa_24'], 'Daily validator rejects null measures as incomplete input');
+
+const unknownMeasureResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{...passportDailyMeasures,not_in_contract:1}
+});
+assert(!unknownMeasureResult.ok && unknownMeasureResult.errors['measures.not_in_contract'], 'Daily validator rejects unknown nested measure keys');
+
+const malformedUuidResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'not-a-uuid',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!malformedUuidResult.ok && malformedUuidResult.errors.submissionId, 'Daily validator rejects malformed idempotency identifiers');
+
+const contractDriftResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v0',
+  measures:passportDailyMeasures
+});
+assert(!contractDriftResult.ok && contractDriftResult.errors.contractVersion, 'Daily validator rejects stale contract versions');
+
+const explicitZeroResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0}
+});
+assert(explicitZeroResult.ok && explicitZeroResult.normalized.total===0, 'Daily validator preserves explicit zero values and derives a zero total');
+
+
+/* Phase 9 malformed envelope and identity-shape regression cases. */
+const invalidFamilyPayloadResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'OTHER_SERVICE',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!invalidFamilyPayloadResult.ok && invalidFamilyPayloadResult.errors.serviceFamily, 'Pure validator rejects uncontracted service families');
+['constructor','toString','__proto__'].forEach(family=>{
+  const result=dailyContext.validateDailyInputPayloadV1({
+    submissionId:'123e4567-e89b-42d3-a456-426614174000',
+    serviceFamily:family,
+    operationalDate:'2026-10-14',
+    officeKey:'KANIM-TEST',
+    contractVersion:'candidate-v1',
+    measures:passportDailyMeasures
+  });
+  assert(!result.ok && result.errors.serviceFamily,
+    'Daily validator rejects inherited-name service family: '+family);
+});
+
+const malformedDateFormatResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'14-10-2026',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!malformedDateFormatResult.ok && malformedDateFormatResult.errors.operationalDate, 'Pure validator rejects non-ISO operational date formats');
+
+const blankOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'   ',
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!blankOfficeKeyResult.ok && blankOfficeKeyResult.errors.officeKey, 'Pure validator rejects blank office identity keys');
+
+const overlongOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'K'.repeat(129),
+  contractVersion:'candidate-v1',
+  measures:passportDailyMeasures
+});
+assert(!overlongOfficeKeyResult.ok && overlongOfficeKeyResult.errors.officeKey, 'Pure validator rejects office keys exceeding the contract boundary');
+
+const arrayEnvelopeResult=dailyContext.validateDailyInputPayloadV1([
+  '123e4567-e89b-42d3-a456-426614174000',
+  'PASSPORT',
+  '2026-10-14'
+]);
+assert(!arrayEnvelopeResult.ok && arrayEnvelopeResult.errors.serviceFamily && arrayEnvelopeResult.errors.submissionId, 'Pure validator rejects an array-shaped top-level payload');
+
+
+/* Phase 9 numeric representation matrix: reject ambiguous and non-count inputs. */
+[
+  ['scientific-notation-string', '1e3'],
+  ['locale-separated-string', '1,000'],
+  ['boolean-value', true],
+  ['positive-infinity', Infinity],
+  ['not-a-number', NaN],
+  ['whitespace-string', '   ']
+].forEach(([caseName, value]) => {
+  const result = dailyContext.validateDailyInputPayloadV1({
+    submissionId:'123e4567-e89b-42d3-a456-426614174000',
+    serviceFamily:'PASSPORT',
+    operationalDate:'2026-10-14',
+    officeKey:'KANIM-TEST',
+    contractVersion:'candidate-v1',
+    measures:{...passportDailyMeasures,biasa_24:value}
+  });
+  assert(!result.ok && result.errors['measures.biasa_24'],
+    'Daily validator rejects ambiguous or non-count numeric representation: '+caseName);
+});
+
+
+/* Phase 9 read-only boundary: prohibit spreadsheet mutation APIs in the foundation. */
+assert(
+  !/\.(?:appendRow|setValue|setValues|insertSheet|deleteSheet|deleteRow|clearContent|clearFormat|clear|copyTo)\s*\(/.test(dailyService),
+  'Daily input contract foundation must not call spreadsheet mutation APIs'
+);
+assert(
+  !/\b(?:LockService|PropertiesService)\s*\./.test(dailyService),
+  'Read-only contract foundation must not introduce persistence coordination or mutable property state'
+);
+
+
+/* Phase 9 payload envelope: every required field must be an own property. */
+const inheritedEnvelopeCases = [
+  ['submissionId', '123e4567-e89b-42d3-a456-426614174000'],
+  ['serviceFamily', 'PASSPORT'],
+  ['operationalDate', '2026-10-14'],
+  ['officeKey', 'KANIM-TEST'],
+  ['contractVersion', 'candidate-v1'],
+  ['measures', passportDailyMeasures]
+];
+inheritedEnvelopeCases.forEach(([field, inheritedValue]) => {
+  const payload = {
+    submissionId:'123e4567-e89b-42d3-a456-426614174000',
+    serviceFamily:'PASSPORT',
+    operationalDate:'2026-10-14',
+    officeKey:'KANIM-TEST',
+    contractVersion:'candidate-v1',
+    measures:passportDailyMeasures
+  };
+  delete payload[field];
+  const prototype = {};
+  Object.defineProperty(prototype, field, {
+    value: inheritedValue,
+    enumerable: true,
+    configurable: true
+  });
+  Object.setPrototypeOf(payload, prototype);
+  const result = dailyContext.validateDailyInputPayloadV1(payload);
+  assert(
+    !result.ok && Object.prototype.hasOwnProperty.call(result.errors, field),
+    'Daily validator rejects inherited required envelope field: '+field
+  );
+});
+
+
+/* Phase 9 validator boundary matrix: malformed envelopes and arithmetic overflow. */
+const dailyPayload = (overrides={}) => ({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',
+  serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',
+  officeKey:'KANIM-TEST',
+  contractVersion:'candidate-v1',
+  measures:{biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0},
+  ...overrides
+});
+const allZeroDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload());
+assert(allZeroDaily.ok && allZeroDaily.normalized.total===0,
+  'Daily validator accepts explicit all-zero report and derives total zero');
+const arrayMeasuresDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({measures:[0,0,0,0]}));
+assert(!arrayMeasuresDaily.ok && arrayMeasuresDaily.errors['measures.biasa_24'],
+  'Daily validator rejects array-shaped measures rather than treating indexes as service measures');
+const nullMeasuresDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({measures:null}));
+assert(!nullMeasuresDaily.ok && nullMeasuresDaily.errors['measures.biasa_24'],
+  'Daily validator rejects null measures as missing required measures');
+const invalidUuidDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({submissionId:'not-a-uuid'}));
+assert(!invalidUuidDaily.ok && invalidUuidDaily.errors.submissionId,
+  'Daily validator rejects malformed idempotency UUID');
+const staleContractDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({contractVersion:'candidate-v0'}));
+assert(!staleContractDaily.ok && staleContractDaily.errors.contractVersion,
+  'Daily validator rejects stale contract versions');
+const invalidFamilyDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({serviceFamily:'constructor'}));
+assert(!invalidFamilyDaily.ok && invalidFamilyDaily.errors.serviceFamily,
+  'Daily validator rejects prototype property names as service families');
+const overflowDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({
+  measures:{biasa_24:Number.MAX_SAFE_INTEGER,biasa_48:1,elektronik_48:0,e_polikarbonat:0}
+}));
+assert(!overflowDaily.ok && overflowDaily.errors.measures,
+  'Daily validator rejects a derived total exceeding the safe integer range');
+const leapDayDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({operationalDate:'2024-02-29'}));
+assert(leapDayDaily.ok,
+  'Daily validator accepts a real leap-day calendar date');
+
+/* Phase 9 approved-policy documentation regression gate. */
+const gate91Register = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-GATE-9.1-DECISION-REGISTER.md'),'utf8');
+const gate91Worksheet = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-DAILY-MEASURE-APPROVAL-TEMPLATE.md'),'utf8');
+const dailyBlueprint = fs.readFileSync(path.join(__dirname,'..','docs','DAILY-INPUT-BLUEPRINT.md'),'utf8');
+const dailyDesign = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-DAILY-OPERATIONAL-DATA.md'),'utf8');
+const stagingDesign = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-ISOLATED-STAGING-LIFECYCLE-DESIGN.md'),'utf8');
+const gate91TestMatrix = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-GATE-9.1-TEST-MATRIX.md'),'utf8');
+const gate91OwnerWorksheet = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-GATE-9.1-OWNER-DEFINITION-WORKSHEET.md'),'utf8');
+const gate91ForensicReview = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-PR-228-FORENSIC-REVIEW.md'),'utf8');
+assert(gate91ForensicReview.includes('Gate 9.1: BLOCKED') &&
+       gate91ForensicReview.includes('NO MERGE / NO DEPLOY') &&
+       gate91ForensicReview.includes('self-review'),
+  'PR 228 forensic review preserves the blocked gate, no-release decision, and self-review limitation');
+assert(gate91OwnerWorksheet.includes('Status:** OPEN') &&
+       gate91OwnerWorksheet.includes('not an approval record') &&
+       gate91OwnerWorksheet.includes('Gate 9.1 remains BLOCKED'),
+  'Gate 9.1 owner worksheet remains a pending decision aid, not an approval or gate pass');
+const requiredOwnerMeasureKeys = [
+  'bvk','voa','itk','itk_peralihan','itas','itap','itkt',
+  'alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim',
+  'biasa_24','biasa_48','elektronik_48','e_polikarbonat'
+];
+assert(requiredOwnerMeasureKeys.every(key => gate91OwnerWorksheet.includes('| '+key+' |')),
+  'Gate 9.1 owner worksheet enumerates all 17 candidate measures');
+assert(gate91OwnerWorksheet.includes('authoritative source') &&
+       gate91OwnerWorksheet.includes('Required?') &&
+       gate91OwnerWorksheet.includes('Zero vs missing/null') &&
+       gate91OwnerWorksheet.includes('Sign-off record'),
+  'Gate 9.1 owner worksheet requires source-backed event semantics, zero/missing rules, and accountable sign-off');
+assert(gate91Register.includes('count services completed or documents issued'),
+  'Gate 9.1 register records owner-approved completed-service/document-issuance counting basis');
+assert(gate91Register.includes('late entry') && gate91Register.includes('original operational date'),
+  'Gate 9.1 register records late-entry permission and original operational date');
+assert(gate91Worksheet.includes('Owner-approved common counting basis (2026-10-15)') &&
+       gate91Worksheet.includes('late-entry rule (2026-10-15)'),
+  'Gate 9.1 worksheet records both explicit owner decisions');
+assert(dailyBlueprint.includes('intake/receipt alone is not counted') &&
+       dailyBlueprint.includes('late entry is allowed'),
+  'Daily input blueprint reflects approved counting and late-entry rules');
+assert(dailyDesign.includes('Late entry is allowed') &&
+       dailyDesign.includes('late_entry_reason'),
+  'Daily operational design specifies late-entry reason and immutable business date');
+assert(stagingDesign.includes('late_entry_reason') &&
+       stagingDesign.includes('Gate 9.1 passes'),
+  'Staging design carries late-entry audit requirements but keeps implementation gated');
+assert(gate91TestMatrix.includes('Receipt only') &&
+       gate91TestMatrix.includes('Missing reason') &&
+       gate91TestMatrix.includes('Audit failure'),
+  'Gate 9.1 test matrix covers non-counting receipt, mandatory late-entry reason, and fail-closed audit cases');
+assert(gate91TestMatrix.includes('bvk') && gate91TestMatrix.includes('e_polikarbonat') &&
+       gate91TestMatrix.includes('17 candidate keys'),
+  'Gate 9.1 test matrix covers both ends of the 17-measure inventory');
+assert(gate91Register.includes('Gate result remains BLOCKED') &&
+       gate91Register.includes('No persistence') &&
+       dailyBlueprint.includes('Gate 9.1 NOT PASSED'),
+  'Owner policy decisions do not accidentally open Gate 9.1 or authorize writes');
+
+/* Phase 9 source-report normalization rule: blank/no-number => explicit zero.
+ * This is limited to narrative report transcription; API payload validation still rejects missing/null required measures. */
+assert(gate91Register.includes('Narrative-report normalization') &&
+       gate91Register.includes('blank field or a field with no number') &&
+       gate91Register.includes('does not authorize silently coercing missing/null fields'),
+  'Gate 9.1 register records blank-to-zero only for source-report normalization and preserves API missing/null controls');
+assert(gate91OwnerWorksheet.includes('blank field or field with no number is interpreted as explicit `0`') &&
+       gate91OwnerWorksheet.includes('does not authorize the app API to coerce omitted/null measure fields'),
+  'Owner worksheet scopes blank-to-zero to narrative transcription, not app API coercion');
+assert(dailyBlueprint.includes('a blank/no-number field is normalized to explicit `0`') &&
+       dailyBlueprint.includes('omitted/null fields are not silently coerced'),
+  'Daily input blueprint separates source-report normalization from API payload validation');
+const blankToZeroReport = dailyContext.validateDailyInputPayloadV1(dailyPayload({
+  measures:{biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0}
+}));
+assert(blankToZeroReport.ok && blankToZeroReport.normalized.total===0,
+  'Normalized narrative report with blank source fields represented as explicit zeros is valid');
+const missingMeasureStillRejected = dailyContext.validateDailyInputPayloadV1(dailyPayload({
+  measures:{biasa_24:0,biasa_48:0,elektronik_48:0}
+}));
+assert(!missingMeasureStillRejected.ok && missingMeasureStillRejected.errors['measures.e_polikarbonat'],
+  'App payload validator still rejects an omitted measure rather than silently coercing it to zero');
+
+/* Phase 9 narrative daily-report fixtures: source blanks normalize to explicit zero. */
+const narrativeReportFixtures = JSON.parse(fs.readFileSync(
+  path.join(__dirname,'test-fixtures','daily-report-normalization.json'),'utf8'
+));
+const narrativeFixtureDocumentation = fs.readFileSync(
+  path.join(__dirname,'..','docs','PHASE-9-NARRATIVE-REPORT-NORMALIZATION-FIXTURES.md'),'utf8'
+);
+const historicalBandungEvidence = fs.readFileSync(
+  path.join(__dirname,'..','docs','PHASE-9-SOURCE-EVIDENCE-2026-09-23-BANDUNG.md'),'utf8'
+);
+assert(narrativeReportFixtures.schemaVersion==='narrative-daily-report-normalization-fixture-v1' &&
+       narrativeReportFixtures.fixtures.length===3,
+  'Narrative normalization fixture set contains the three supplied reports');
+const expectedNarrativeReports = {
+  'karawang-2026-10-14': {office:'Kantor Imigrasi Kelas I Non TPI Karawang',count:33,nonZero:7,total:32},
+  'bandung-2026-10-12': {office:'Kantor Imigrasi Kelas I TPI Bandung',count:28,nonZero:7,total:31},
+  'bandung-2026-10-14': {office:'Kantor Imigrasi Kelas I TPI Bandung',count:28,nonZero:9,total:49}
+};
+narrativeReportFixtures.fixtures.forEach(report => {
+  const expected = expectedNarrativeReports[report.id];
+  assert(!!expected, 'Narrative report fixture has a recognized report identity: '+report.id);
+  assert(report.office===expected.office && report.measures.length===expected.count &&
+         report.sourceIndicatorCount===expected.count,
+    'Narrative report preserves office and all source indicators: '+report.id);
+  assert(report.measures.every(measure => Number.isSafeInteger(measure.count) && measure.count>=0),
+    'Narrative report normalized counts are explicit non-negative integers: '+report.id);
+  assert(report.measures.filter(measure => measure.count>0).length===expected.nonZero &&
+         report.measures.reduce((sum,measure)=>sum+measure.count,0)===expected.total &&
+         report.expectedArithmeticSum===expected.total &&
+         report.expectedNonZeroIndicators===expected.nonZero,
+    'Narrative report non-zero indicator count and arithmetic sum reconcile: '+report.id);
+});
+assert(narrativeReportFixtures.fixtures.reduce(
+  (sum,report)=>sum+report.measures.reduce((subtotal,measure)=>subtotal+measure.count,0),0
+)===112, 'Combined arithmetic sum of the three narrative reports is 112 after blank-to-zero normalization');
+assert(narrativeReportFixtures.rule.includes('Do not infer mappings'),
+  'Narrative report fixtures do not infer mappings to candidate application measures');
+assert(narrativeFixtureDocumentation.includes('not 30') &&
+       narrativeFixtureDocumentation.includes('not 111') &&
+       narrativeFixtureDocumentation.includes('Gate 9.1 remains BLOCKED'),
+  'Narrative fixture documentation records corrected arithmetic and preserves the release gate');
+assert(historicalBandungEvidence.includes('Subsequent owner decision — 2026-10-15') &&
+       historicalBandungEvidence.includes('blank or no-number service field is represented as explicit integer `0`') &&
+       historicalBandungEvidence.includes('does **not** authorize coercing omitted/null fields'),
+  'Historical source evidence records the later normalization decision without changing app API semantics');
+
+/* Phase 9 candidate-contract inventory and no-lifecycle regression gate. */
+const dailyContractSource = read('DailyInputService.gs');
+const dailyContracts = vm.runInNewContext('DAILY_SERVICE_CONTRACTS_V1', dailyContext);
+assert(!!dailyContracts && Object.keys(dailyContracts).length===2,
+  'Daily candidate contract contains exactly two service families');
+assert(dailyContracts.RESIDENCE_PERMIT.measures.length===13,
+  'Residence Permit candidate contract contains exactly 13 measures');
+assert(dailyContracts.PASSPORT.measures.length===4,
+  'Passport candidate contract contains exactly 4 measures');
+const allDailyMeasureKeys = [
+  ...dailyContracts.RESIDENCE_PERMIT.measures,
+  ...dailyContracts.PASSPORT.measures
+];
+assert(allDailyMeasureKeys.length===17 && new Set(allDailyMeasureKeys).size===17,
+  'All 17 daily candidate measure keys are unique');
+assert(dailyContracts.RESIDENCE_PERMIT.datasetKey==='RESIDENCE_PERMIT_SERVICE_DAILY' &&
+       dailyContracts.PASSPORT.datasetKey==='PASSPORT_SERVICE_DAILY',
+  'Daily candidate dataset identifiers remain separate from canonical monthly identifiers');
+assert(dailyContracts.RESIDENCE_PERMIT.sourceContractKey==='RESIDENCE_PERMIT_SERVICE_MONTHLY' &&
+       dailyContracts.PASSPORT.sourceContractKey==='PASSPORT_SERVICE_MONTHLY',
+  'Daily candidates explicitly identify their monthly reference contracts without replacing them');
+assert(!/function\s+(?:submit|create|save|approve|correct|void|close|reopen)Daily\w*\s*\(/i.test(dailyContractSource),
+  'Daily contract foundation exposes no daily mutation/lifecycle endpoint');
+assert(!/\b(?:appendRow|setValue|setValues|insertSheet|deleteSheet|deleteRow|clearContent|clearFormat|clear|copyTo)\s*\(/.test(dailyContractSource),
+  'Daily candidate contract source contains no spreadsheet write API');
+assert(dailyContractSource.includes('enabled: false'),
+  'Daily input hard guard remains disabled in source');

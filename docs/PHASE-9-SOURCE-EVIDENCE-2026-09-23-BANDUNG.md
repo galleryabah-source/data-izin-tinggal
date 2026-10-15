@@ -184,3 +184,9 @@ This evidence does not authorize any modification of:
 - `DATA_PASSPORT_SERVICE_MONTHLY`
 
 The verified monthly baselines remain authoritative.
+
+## 8. Subsequent owner decision — 2026-10-15
+
+The interpretation above records the status of the evidence at the time it was first documented. On 2026-10-15, the project owner explicitly decided that, for transcription/normalization of supplied narrative daily reports, a blank or no-number service field is represented as explicit integer `0`. The normalized record must preserve the original report as source evidence.
+
+This later decision governs the narrative-report normalization workflow, including this source example when normalized now. It does **not** authorize coercing omitted/null fields in the future application API, and it does not approve mappings from these source labels to the 17 candidate application measures. Per-measure definitions and the broader Gate 9.1 approval remain pending.
