@@ -1,14 +1,14 @@
 # Phase 9 — Daily Measure Approval Worksheet
 
 **Status:** OWNER AUTHORITY CONFIRMED IN CHAT — operational decisions still require explicit values below; this is not blanket approval of candidate semantics.  
-**Owner authority record:** On 2026-10-15, the project owner stated: “Iya saya berwenang karena saya owner dan pemilik data.” This records authority to decide, not approval of unfilled measure definitions or workflow policies.  
+**Owner authority record:** On 2026-10-15, the project owner confirmed authority to decide Gate 9.1. This records decision authority and the two decisions below, not blanket approval of all measure definitions or workflow policies.  
 **Related gate:** Gate 9.1  
-**Contract version:** pending owner decision  
+**Contract version:** candidate-v1; final version freezes only after remaining Gate 9.1 decisions  
 **Partial decision date:** 2026-10-15 (counting basis and late-entry policy only)  
 **Izin Tinggal data owner:** common counting basis approved; per-measure edge-case sign-off pending  
 **Paspor data owner:** common counting basis approved; per-measure edge-case sign-off pending  
-**Operations owner:** pending  
-**Security/application owner:** pending
+**Operations owner:** late-entry rule approved; date boundary, cutover and deadline details pending  
+**Security/application owner:** role/action matrix and separation-of-duties decision pending
 
 ## How to complete this worksheet
 
