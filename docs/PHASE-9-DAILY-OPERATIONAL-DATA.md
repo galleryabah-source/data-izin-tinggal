@@ -1,6 +1,6 @@
 # Phase 9 — Daily Operational Data Design v1
 
-**Status:** contract/validator foundation in PR #228; Gate 9.1 BLOCKED pending operational sign-off  
+**Status:** contract/validator foundation in PR #228; owner approved counting basis and late-entry policy on 2026-10-15; Gate 9.1 remains BLOCKED for remaining decisions  
 **Scope:** in-app daily input for both Residence Permit and Passport, staging, review, correction/revision, period closing, monthly/yearly derivation, historical traceability.
 
 **Capture channel:** one INTAL WEB APP form with a service selector. **WhatsApp integration: HOLD.** Runtime remains Apps Script + Google Sheets for the initial delivery.
@@ -40,7 +40,7 @@ Proposed service-specific families:
 - `RESIDENCE_PERMIT_SERVICE_DAILY`
 - `PASSPORT_SERVICE_DAILY`
 
-Initial candidate measures come from the existing service contracts: the 13 Residence Permit measures and the 4 Passport measures. Before code implementation, freeze the daily meaning of each measure, required-versus-optional behavior, whether zero is a valid reported value, reporting cutoff, and correction authority. Do not reconstruct daily values from monthly aggregates.
+Initial candidate measures come from the existing service contracts: the 13 Residence Permit measures and the 4 Passport measures. **Owner decision (2026-10-15):** the counting basis for all 17 indicators is services completed or documents issued; intake/receipt alone is not counted. Late entry is allowed when the original operational date is preserved and a reason plus audit evidence are recorded. Still freeze the exact event/unit and inclusion/exclusion rules per indicator, required-versus-optional behavior, zero-versus-missing semantics, date cutover/deadline, and correction authority before code implementation. Do not reconstruct daily values from monthly aggregates.
 
 ## 3. Proposed common fields
 
@@ -59,7 +59,9 @@ Initial candidate measures come from the existing service contracts: the 13 Resi
 | `submitted_at` / `approved_at` | DATETIME | Lifecycle timestamps |
 | `closed_at` | DATETIME | Set when the period is closed |
 | `closed_by` | TEXT | Actor who closed the period |
-| `reason` | TEXT | Required for correction, void, close/reopen where applicable |
+| `reason` | TEXT | Required for correction, void, close/reopen and late entry where applicable |
+| `late_entry_reason` | TEXT | Required when report is submitted after the operational reporting day; original operational date remains unchanged |
+| `submitted_at` / `submitted_by` | DATETIME / TEXT | Server-generated audit timestamp and authenticated actor; never supplied as authoritative client values |
 
 This is a design proposal, not an approved production schema.
 
