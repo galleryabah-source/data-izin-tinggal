@@ -1,6 +1,6 @@
 # Phase 9 — Daily Measure Approval Worksheet
 
-**Status:** TEMPLATE ONLY — no measure is approved by this document.  
+**Status:** OWNER REVIEW REQUIRED — candidate labels are prefilled for convenience; no operational measure or shared policy is approved by this worksheet.  
 **Related gate:** Gate 9.1  
 **Contract version:** pending owner decision  
 **Approval date:** pending  
@@ -11,64 +11,77 @@
 
 ## How to complete this worksheet
 
-For every measure, owners must fill in the operational definition and explicitly choose requiredness and zero/missing semantics. Do not approve based on key names alone. A measure definition must state exactly which event is counted and when that event belongs to the operational date. Add concrete examples and have Engineering turn them into deterministic validator and reconciliation fixtures.
+For every measure, owners must fill in the operational definition and explicitly choose requiredness and zero/missing semantics. Do not approve based on key names or display labels alone. A measure definition must state exactly which event is counted, the unit, and when that event belongs to the operational date. Add concrete examples and have Engineering turn them into deterministic validator and reconciliation fixtures.
 
-Allowed decision values:
-- **Required at submit:** Yes / No (if No, explain how missing differs from zero).
-- **Zero valid:** Yes / No (if No, explain the smallest valid value and exceptional cases).
-- **Status:** Pending / Approved / Rejected / Needs clarification.
+For each measure, complete every column:
+- **Operational event/unit:** exact counted event and unit (for example, applications received, decisions made, or documents issued — select only after owner confirms).
+- **Inclusion/exclusion:** duplicate, cancellation, reprint/replacement, transition, correction, and any other applicable edge cases.
+- **Required at submit:** Yes / No. If No, explain how omitted differs from zero.
+- **Zero valid:** Yes / No. If No, explain smallest valid value and exceptional cases.
+- **Examples:** positive, explicit zero, boundary/exception, and rejected example.
+- **Owner decision:** Approved / Rejected / Needs clarification, with approver and date.
 
-## Izin Tinggal measures
+Display labels below are candidate labels only. They are not approved definitions.
 
-| Candidate key | Display label (owner fills) | Operational event and unit counted | Inclusion/exclusion rules | Required at submit? | Is zero valid? | Positive/zero/boundary examples | Owner decision |
+## Izin Tinggal measures — 13 candidates
+
+| Candidate key | Candidate display label | Operational event and unit counted | Inclusion/exclusion rules | Required at submit? | Is zero valid? | Positive/zero/boundary examples | Owner decision / approver / date |
 |---|---|---|---|---|---|---|---|
-| `bvk` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `voa` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `itk` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `itk_peralihan` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `itas` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `itap` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `itkt` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `alih_status_itk_ke_itas` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `alih_status_itas_ke_itap` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `abg` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `epo` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `imk` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `skim` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
+| `bvk` | BVK | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `voa` | VOA | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `itk` | ITK | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `itk_peralihan` | ITK Peralihan | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `itas` | ITAS | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `itap` | ITAP | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `itkt` | ITKT | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `alih_status_itk_ke_itas` | Alih Status ITK ke ITAS | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `alih_status_itas_ke_itap` | Alih Status ITAS ke ITAP | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `abg` | ABG | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `epo` | EPO | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `imk` | IMK | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `skim` | SKIM | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
 
-## Paspor measures
+## Paspor measures — 4 candidates
 
-| Candidate key | Display label (owner fills) | Operational event and unit counted | Inclusion/exclusion rules | Required at submit? | Is zero valid? | Positive/zero/boundary examples | Owner decision |
+| Candidate key | Candidate display label | Operational event and unit counted | Inclusion/exclusion (including replacement/reprint) | Required at submit? | Is zero valid? | Positive/zero/boundary examples | Owner decision / approver / date |
 |---|---|---|---|---|---|---|---|
-| `biasa_24` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `biasa_48` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `elektronik_48` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| `e_polikarbonat` | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
+| `biasa_24` | Paspor Biasa 24 | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `biasa_48` | Paspor Biasa 48 | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `elektronik_48` | Paspor Elektronik 48 | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
+| `e_polikarbonat` | Paspor Elektronik Polikarbonat | Pending owner definition | Pending | Pending | Pending | Pending | Pending |
 
 ## Shared workflow decisions
 
-| Topic | Decision to record | Owner | Status |
-|---|---|---|---|
-| Operational date boundary | Define when a service event is assigned to a date in Asia/Jakarta. | Operations | Pending |
-| Reporting deadline | Specify per-service due time, timezone, and late-entry policy. | Operations | Pending |
-| Office identity | Confirm the canonical Office Reference key and inactive-office behavior. | Data owner / Engineering | Pending |
-| Duplicate report | Define conflict behavior for an existing date + office + service family. | Operations / Engineering | Pending |
-| Retry/idempotency | Confirm that a retry with the same submission ID returns the original outcome. | Engineering | Pending |
-| Approval separation | Define who may submit, review, approve, correct, void, close, and reopen; specify self-approval prohibition or approved exception. | Security / Operations | Pending |
-| Correction after approval | Define reason requirements, revision linking, and treatment after period close. | Operations / Data owner | Pending |
-| Period close | Define review/close criteria, reconciliation evidence, and authorized reopening. | Operations | Pending |
-| Total formula | Confirm server-derived total for each service family and expected totals for fixtures. | Data owner / Engineering | Pending |
-| Historical baseline | Confirm daily-derived monthly projections never silently replace historical monthly datasets. | Data owner | Pending |
+Values in the “Proposed technical baseline” column are engineering proposals for owner review only. They do not constitute operational approval.
+
+| Topic | Proposed technical baseline for owner review | Decision / exception required from owner | Owner | Status |
+|---|---|---|---|---|
+| Operational date boundary | Business date is a date-only key in Asia/Jakarta; audit timestamps are separate. | Exact event-time cutover and timestamp convention. | Operations | Pending |
+| Reporting deadline | No deadline is currently enforced. | Due time per service family, timezone, late-entry permission, and late-entry labeling. | Operations | Pending |
+| Office identity | Resolve submitted office_key server-side to exactly one OFFICE_REFERENCE row with status VERIFIED; reject missing, duplicate, unknown, or non-verified keys. | Confirm canonical key, uniqueness, and behavior for inactive offices. | Data owner / Engineering | Pending |
+| Duplicate logical report | Candidate logical key: operational date + office_key + service family; never silently overwrite. | Conflict response and when a new revision is allowed. | Operations / Engineering | Pending |
+| Retry/idempotency | Same submissionId and same canonical payload returns the original outcome; same ID with a different payload is rejected. | Confirm conflict behavior and canonical payload hash/version approach. | Engineering | Pending |
+| Authorization | Deny by default; dashboard.read grants no write access; permissions are separated by lifecycle action. | Named role-to-action matrix and any approved exception. | Security / Operations | Pending |
+| Approval separation | Proposed default: submitter cannot approve own report. | Confirm rule, reviewer assignment, and rejection/return reasons. | Security / Operations | Pending |
+| Correction after approval | Approved/submitted revisions immutable; correction creates linked revision with reason and actor. | Correction reasons and post-close handling. | Operations / Data owner | Pending |
+| Void | Explicit, authorized, reasoned and audited state transition; no physical deletion of approved evidence. | Eligible states and authorized roles. | Operations / Security | Pending |
+| Period close | Explicit open → review → closed; no implicit close. | Close criteria, reconciliation evidence, reopen authority, and post-close correction procedure. | Operations | Pending |
+| Total formula | Server derives total from the exact approved measure list; client total is never authoritative. | Confirm formula and expected fixture totals for both service families. | Data owner / Engineering | Pending |
+| Aggregation / historical baseline | Latest approved, non-void revision only; no automatic write-back to canonical monthly datasets. | Reconciliation examples and separate approval for any reporting adapter. | Data owner | Pending |
+| Audit and retention | Capture actor, audit timestamp, business date/timezone, contract version, submission ID, revision links, state transitions, reasons, and outcomes; fail closed if required audit evidence cannot be stored. | Exact fields, retention duration, access policy, and audit failure handling. | Security / Data owner | Pending |
+| Staging isolation | After Gate 9.1 only: separate restricted staging store/ledger; no fallback path to monthly datasets. | Environment identity, access list, and explicit proof monthly stores are untouched. | Engineering / Security | Pending |
 
 ## Engineering acceptance checklist
 
-- [ ] Each of the 17 measures has a complete, approved definition.
+- [ ] All 17 measures have complete, approved operational definitions.
 - [ ] Required/optional and zero/missing behavior is explicit for every measure.
-- [ ] Representative valid, zero, missing, invalid, and boundary fixtures exist.
-- [ ] Date boundary, late-entry, duplicate, retry, revision, and period-close cases are tested.
-- [ ] Role/action matrix and negative authorization tests are approved.
-- [ ] Totals reconcile from the approved measure list.
-- [ ] Contract version and owner approval date are recorded.
-- [ ] Gate 9.1 review explicitly records PASS before Gate 9.2 implementation starts.
+- [ ] Positive, explicit-zero, missing, invalid, exception, and boundary fixtures exist for every measure.
+- [ ] Date boundary, cutoff, late-entry, duplicate, retry, revision, void, and period-close cases are tested.
+- [ ] Office key resolves to exactly one VERIFIED Office Reference row; negative tests cover missing, duplicate, unknown, PENDING, and other statuses.
+- [ ] Named role/action matrix and negative authorization tests are approved.
+- [ ] Totals reconcile from the approved measure list and safe-integer rules.
+- [ ] Contract version, named approvers, approval date, and review evidence are recorded.
+- [ ] Staging isolation, idempotency/concurrency, audit-failure, and no-monthly-write protections pass.
+- [ ] Gate 9.1 review explicitly records PASS before Gate 9.2 persistence implementation starts.
 
 **Gate status: BLOCKED until completed and approved.** This worksheet does not authorize writes, staging storage, UI activation, merge, or production deployment.
