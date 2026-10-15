@@ -1307,6 +1307,11 @@ const dailyDesign = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-DAI
 const stagingDesign = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-ISOLATED-STAGING-LIFECYCLE-DESIGN.md'),'utf8');
 const gate91TestMatrix = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-GATE-9.1-TEST-MATRIX.md'),'utf8');
 const gate91OwnerWorksheet = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-GATE-9.1-OWNER-DEFINITION-WORKSHEET.md'),'utf8');
+const gate91ForensicReview = fs.readFileSync(path.join(__dirname,'..','docs','PHASE-9-PR-228-FORENSIC-REVIEW.md'),'utf8');
+assert(gate91ForensicReview.includes('Gate 9.1: BLOCKED') &&
+       gate91ForensicReview.includes('NO MERGE / NO DEPLOY') &&
+       gate91ForensicReview.includes('self-review'),
+  'PR 228 forensic review preserves the blocked gate, no-release decision, and self-review limitation');
 assert(gate91OwnerWorksheet.includes('Status:** OPEN') &&
        gate91OwnerWorksheet.includes('not an approval record') &&
        gate91OwnerWorksheet.includes('Gate 9.1 remains BLOCKED'),
