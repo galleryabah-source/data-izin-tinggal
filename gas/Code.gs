@@ -26,7 +26,7 @@ function seedSecurity_(){
   ]);
   const existingPermissions=new Set(perms.getDataRange().getValues().slice(1).map(r=>String(r[0]||'').toUpperCase()+'|'+String(r[1]||'')));
   const missingPermissions=[];
-  Object.keys(DEFAULT_ROLES).forEach(r=>DEFAULT_ROLES[r].forEach(p=>{const key=r+'|'+p;if(!existingPermissions.has(key))missingPermissions.push([r,p]);}));
+  Object.keys(DEFAULT_ROLES).forEach(r=>DEFAULT_ROLES[r].filter(p=>p.indexOf('daily.')===0).forEach(p=>{const key=r+'|'+p;if(!existingPermissions.has(key))missingPermissions.push([r,p]);}));
   if(missingPermissions.length)perms.getRange(perms.getLastRow()+1,1,missingPermissions.length,2).setValues(missingPermissions);
 }
 function seedDictionary_(){
