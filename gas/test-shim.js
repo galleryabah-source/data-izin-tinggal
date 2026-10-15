@@ -1299,7 +1299,7 @@ assert(leapDayDaily.ok,
 
 /* Phase 9 candidate-contract inventory and no-lifecycle regression gate. */
 const dailyContractSource = read('DailyInputService.gs');
-const dailyContracts = dailyContext.DAILY_SERVICE_CONTRACTS_V1;
+const dailyContracts = vm.runInNewContext('DAILY_SERVICE_CONTRACTS_V1', dailyContext);
 assert(!!dailyContracts && Object.keys(dailyContracts).length===2,
   'Daily candidate contract contains exactly two service families');
 assert(dailyContracts.RESIDENCE_PERMIT.measures.length===13,
