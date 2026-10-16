@@ -1614,6 +1614,7 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
   };
   const lifecycleSource=dailyService.replace('enabled:false,timezone:','enabled:true,timezone:');
   vm.runInNewContext(lifecycleSource,lifecycleContext);
+  assert(lifecycleContext.getDailyInputPolicyV1().enabled===true && lifecycleContext.getDailyInputPolicyV1().stagingReady===true,'Lifecycle test enables writes only with a distinct configured staging spreadsheet');
   const passportMeasures={biasa_24:2,biasa_48:1,elektronik_48:0,e_polikarbonat:0};
   const payload=(id,date='2026-10-16',measures=passportMeasures,lateEntryReason='')=>({
     submissionId:id,serviceFamily:'PASSPORT',operationalDate:date,officeKey:'K-1',
@@ -1623,6 +1624,8 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
   const ledger=()=>dailyStagingDb.getSheetByName('DAILY_INPUT_LEDGER');
   const partialId='11111111-1111-4111-8111-111111111111';
   const partial=lifecycleContext.saveDailyDraft(payload(partialId,'2026-10-16',{biasa_24:2}));
+  assert(!fakeDb.getSheetByName('DAILY_INPUT_LEDGER')&&!fakeDb.getSheetByName('DAILY_INPUT_AUDIT'),'Daily ledger and audit are never created in the canonical spreadsheet');
+  assert(dailyStagingDb.getSheetByName('DAILY_INPUT_AUDIT').getLastRow()===2,'Daily audit event is written to isolated staging storage');
   assert(partial.status==='DRAFT'&&ledger().rows[1][10]==='','Incomplete draft stores a blank total, not zero');
   assert(JSON.parse(ledger().rows[1][9]).biasa_24===2&&Object.keys(JSON.parse(ledger().rows[1][9])).length===1,'Draft preserves only explicitly supplied measures');
   assert(lifecycleContext.saveDailyDraft(payload(partialId,'2026-10-16',{biasa_24:2})).idempotent===true,'Identical draft retry returns the same record');
