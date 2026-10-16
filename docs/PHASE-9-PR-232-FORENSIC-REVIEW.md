@@ -55,3 +55,16 @@ The candidate implementation does not intentionally modify the monthly importer,
 ## 5. Release decision
 
 Keep the PR as draft and keep the runtime kill switch closed. Do not merge, deploy, create the daily ledger, or enable daily writes until the Gate 9.1 decision register is complete, the accountable owner records PASS, the independent forensic review passes, CI is green on the final head, and isolated staging UAT provides evidence.
+
+## 6. Supplemental review — isolated staging storage boundary (2026-10-16)
+
+The implementation was further hardened after the initial self-review:
+
+- Daily ledger creation now resolves through `DAILY_STAGING_SPREADSHEET_ID`, not `getDb_()`/the canonical application spreadsheet.
+- The staging property is rejected when absent, when canonical `SPREADSHEET_ID` is absent, or when staging and canonical IDs are equal.
+- Daily audit events are written to `DAILY_INPUT_AUDIT` in the same staging spreadsheet; daily workflow calls no longer use the canonical `appendAudit_` path.
+- The policy response reports `stagingReady`; daily writes are considered enabled only when the code-level gate, both CONFIG flags, and a distinct staging identity all pass.
+- Regression tests now use separate mock canonical/staging spreadsheets and assert that neither the daily ledger nor daily audit is created in the canonical store, and that a daily audit event lands in staging.
+- CI run #804 passed `npm test` on head `e82f8f1345cb5d7e05202c737f756e85d2daf5b0`: https://github.com/galleryabah-source/data-izin-tinggal/actions/runs/38868683276
+
+**Limit of evidence:** this is still code review and mocked CI, not an actual Apps Script staging run. No real staging spreadsheet ID has been configured or verified in the available project evidence. Do not infer Gate 9.2 PASS from these tests. The runtime kill switch remains false, and this review remains a self-review, not an independent release approval.
