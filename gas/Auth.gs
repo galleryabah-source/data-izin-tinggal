@@ -1,5 +1,18 @@
 function getCurrentIdentity_(){return String(Session.getActiveUser().getEmail()||'').trim().toLowerCase();}
-function getRolePermissions_(role){const sh=getDb_().getSheetByName(SHEETS.PERMISSIONS),v=sh.getDataRange().getValues();return v.slice(1).filter(r=>String(r[0]).toUpperCase()===role).map(r=>String(r[1]));}
+function getRolePermissions_(role){
+  const sh=getDb_().getSheetByName(SHEETS.PERMISSIONS),normalized=String(role||'').trim().toUpperCase();
+  let v=sh.getDataRange().getValues();
+  // Backfill only the daily-input permissions introduced after the original security seed.
+  // This repairs existing production installations without requiring a manual setupApp run.
+  const expected=(DEFAULT_ROLES[normalized]||[]).filter(p=>p.indexOf('daily.')===0);
+  const existing=new Set(v.slice(1).map(r=>String(r[0]||'').trim().toUpperCase()+'|'+String(r[1]||'').trim()));
+  const missing=expected.filter(p=>!existing.has(normalized+'|'+p));
+  if(missing.length){
+    sh.getRange(sh.getLastRow()+1,1,missing.length,2).setValues(missing.map(p=>[normalized,p]));
+    v=sh.getDataRange().getValues();
+  }
+  return v.slice(1).filter(r=>String(r[0]).trim().toUpperCase()===normalized).map(r=>String(r[1]).trim());
+}
 function getCurrentUser_(){
   const email=getCurrentIdentity_(),v=getDb_().getSheetByName(SHEETS.USERS).getDataRange().getValues();
   if(v.length<2)return {authenticated:false,email,role:null,permissions:[]};
