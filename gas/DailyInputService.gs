@@ -240,7 +240,7 @@ function saveDailyDraft(payload){
     }
     const rec=dailyRowArray_(p,office,'DRAFT',1,null,'',user,now,dailyPayloadHash_(p));
     sh.appendRow(rec);
-    try{appendAudit_('DAILY_DRAFT_CREATE',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey}));}
+    try{dailyAppendAudit_(user,'DAILY_DRAFT_CREATE',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey}));}
     catch(e){sh.deleteRow(sh.getLastRow());throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
     return {ok:true,recordId:rec[0],status:'DRAFT'};
   }finally{lock.releaseLock();}
@@ -265,13 +265,13 @@ function submitDailyInput(payload){
       sh.getRange(existing.row,i.updated_by+1,1,2).setValues([[user.email,now]]);
       sh.getRange(existing.row,i.submitted_by+1,1,2).setValues([[user.email,now]]);
       sh.getRange(existing.row,i.payload_hash+1).setValue(hash);
-      try{appendAudit_('DAILY_SUBMIT',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey,total:p.total,from:oldStatus}));}
+      try{dailyAppendAudit_(user,'DAILY_SUBMIT',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey,total:p.total,from:oldStatus}));}
       catch(e){sh.getRange(existing.row,1,1,DAILY_INPUT_HEADERS_V1.length).setValues([oldRow]);throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
       return {ok:true,recordId:existing.recordId,status:'SUBMITTED',total:p.total};
     }
     const nextRevision=latest?latest.revision+1:1,source=(latest&&(latest.status==='VOID'||latest.status==='REJECTED'))?latest:null;
     const rec=dailyRowArray_(p,office,'SUBMITTED',nextRevision,source,'',user,now,hash);sh.appendRow(rec);
-    try{appendAudit_('DAILY_SUBMIT',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey,total:p.total}));}
+    try{dailyAppendAudit_(user,'DAILY_SUBMIT',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey,total:p.total}));}
     catch(e){sh.deleteRow(sh.getLastRow());throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
     return {ok:true,recordId:rec[0],status:'SUBMITTED',total:p.total};
   }finally{lock.releaseLock();}
@@ -290,7 +290,7 @@ function reviewDailySubmission(recordId,decision,reason){
     if(r.submittedBy===user.email)throw new Error('DAILY_SEPARATION_OF_DUTIES');
     const i=dailyHeaderIndex_(sh),now=nowIso_();
     sh.getRange(r.row,i.status+1).setValue(next);sh.getRange(r.row,i.reviewed_by+1,1,3).setValues([[user.email,now,why]]);
-    try{appendAudit_(action==='APPROVE'?'DAILY_APPROVE':'DAILY_REJECT',DAILY_SERVICE_CONTRACTS_V1[r.serviceFamily].datasetKey,r.submissionId,1,'SUCCESS',JSON.stringify({recordId:r.recordId,reason:why}));}
+    try{dailyAppendAudit_(user,action==='APPROVE'?'DAILY_APPROVE':'DAILY_REJECT',DAILY_SERVICE_CONTRACTS_V1[r.serviceFamily].datasetKey,r.submissionId,1,'SUCCESS',JSON.stringify({recordId:r.recordId,reason:why}));}
     catch(e){sh.getRange(r.row,i.status+1).setValue(r.status);sh.getRange(r.row,i.reviewed_by+1,1,3).setValues([[r.reviewedBy,r.reviewedAt,r.decisionReason]]);throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
     return {ok:true,recordId:r.recordId,status:next};
   }finally{lock.releaseLock();}
@@ -316,7 +316,7 @@ function correctDailySubmission(recordId,payload,reason){
     const latest=dailyLatestLogical_(rows,dailyLogicalKey_(source));if(!latest||latest.recordId!==source.recordId)throw new Error('DAILY_CORRECTION_SOURCE_NOT_LATEST');
     const office=dailyOffice_(p.officeKey),now=nowIso_(),revision=source.revision+1,rec=dailyRowArray_(p,office,'SUBMITTED',revision,source,why,user,now,hash);
     rec[22]=why;sh.appendRow(rec);
-    try{appendAudit_('DAILY_CORRECTION_SUBMIT',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({sourceRecordId:source.recordId,revision,reason:why,total:p.total}));}
+    try{dailyAppendAudit_(user,'DAILY_CORRECTION_SUBMIT',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({sourceRecordId:source.recordId,revision,reason:why,total:p.total}));}
     catch(e){sh.deleteRow(sh.getLastRow());throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
     return {ok:true,recordId:rec[0],sourceRecordId:source.recordId,revision,status:'SUBMITTED'};
   }finally{lock.releaseLock();}
@@ -337,7 +337,7 @@ function voidDailySubmission(recordId,reason){
     const p={submissionId:Utilities.getUuid(),serviceFamily:source.serviceFamily,operationalDate:source.operationalDate,officeKey:source.officeKey,contractVersion:source.contractVersion,measures,total:source.total,lateEntryReason:source.lateEntryReason};
     const office=dailyOffice_(p.officeKey),rec=dailyRowArray_(p,office,'VOID',source.revision+1,source,why,user,userNow,dailyPayloadHash_(p));
     rec[21]=why;sh.appendRow(rec);
-    try{appendAudit_('DAILY_VOID',contract.datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({sourceRecordId:source.recordId,reason:why,revision:source.revision+1}));}
+    try{dailyAppendAudit_(user,'DAILY_VOID',contract.datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({sourceRecordId:source.recordId,reason:why,revision:source.revision+1}));}
     catch(e){sh.deleteRow(sh.getLastRow());throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
     return {ok:true,recordId:rec[0],sourceRecordId:source.recordId,status:'VOID',revision:source.revision+1};
   }finally{lock.releaseLock();}
