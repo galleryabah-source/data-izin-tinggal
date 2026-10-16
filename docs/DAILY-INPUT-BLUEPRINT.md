@@ -14,6 +14,7 @@ The first release is an input-and-governance capability, not an automatic rewrit
 - `RESIDENCE_PERMIT_SERVICE_MONTHLY` — protected canonical monthly dataset.
 - `PASSPORT_SERVICE_MONTHLY` — protected canonical monthly dataset.
 - Proposed daily families: `RESIDENCE_PERMIT_SERVICE_DAILY` and `PASSPORT_SERVICE_DAILY`.
+- **Storage boundary enforced in candidate code:** daily ledger and daily audit resolve only through Script Property `DAILY_STAGING_SPREADSHEET_ID`; the ID must be present and must differ from `SPREADSHEET_ID`. Daily mutation policy remains disabled if this distinct staging identity is not configured. `OFFICE_REFERENCE` and feature/gate CONFIG are read from the canonical application store; daily records and daily audit events are written to the staging store. Do not configure the staging property to point at production.
 - WhatsApp capture, group reading, bots, and external messaging APIs are excluded from this delivery.
 
 ## 2. Product and form behavior
