@@ -10,6 +10,12 @@
 **Operations owner:** late-entry rule approved; date boundary, cutover and deadline details pending  
 **Security/application owner:** role/action matrix and separation-of-duties decision pending
 
+## Owner authorization — activation with documented exceptions (2026-10-16)
+
+The application owner explicitly authorized activation of Daily Input for both Izin Tinggal and Paspor while remaining operational decisions are documented as exceptions. This authorization permits a controlled activation path; it does **not** mark all 17 measure definitions or pending workflow controls as approved, and does not change the canonical monthly baseline.
+
+Technical activation requires `DAILY_INPUT_ENABLED=true` and either `DAILY_INPUT_GATE_9_1=PASS` or the explicit CONFIG key `DAILY_INPUT_OWNER_OVERRIDE=APPROVED_WITH_EXCEPTIONS`. When the override is used, policy responses must expose `activationMode=OWNER_APPROVED_WITH_EXCEPTIONS`; the remaining Gate 9.1 decisions stay open for follow-up. The daily spreadsheet remains isolated, with audit and authorization checks mandatory. Production activation is not considered verified until ledger/audit tabs, save/read, and no-canonical-write checks pass.
+
 ## How to complete this worksheet
 
 For every measure, owners must fill in the operational definition and explicitly choose requiredness and zero/missing semantics. Do not approve based on key names or display labels alone. A measure definition must state exactly which event is counted, the unit, and when that event belongs to the operational date. Add concrete examples and have Engineering turn them into deterministic validator and reconciliation fixtures.
