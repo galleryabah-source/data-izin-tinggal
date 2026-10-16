@@ -1623,7 +1623,8 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
   const submitted=lifecycleContext.submitDailyInput(payload(partialId));
   assert(submitted.status==='SUBMITTED'&&submitted.total===3,'Submit derives total on server and transitions draft to submitted');
   dailyTestUser={email:'supervisor@example.com',role:'SUPERVISOR',permissions:['daily.read','daily.draft','daily.submit','daily.review','daily.approve','daily.correct','daily.void']};
-  mustThrow(()=>lifecycleContext.reviewDailySubmission(submitted.recordId,'APPROVE',''),'DAILY_SEPARATION_OF_DUTIES');
+  const selfSubmitted=lifecycleContext.submitDailyInput(payload('99999999-9999-4999-8999-999999999999','2026-10-14',passportMeasures,'uji pemisahan tugas'));
+  mustThrow(()=>lifecycleContext.reviewDailySubmission(selfSubmitted.recordId,'APPROVE',''),'DAILY_SEPARATION_OF_DUTIES');
   const approved=lifecycleContext.reviewDailySubmission(submitted.recordId,'APPROVE','');
   assert(approved.status==='APPROVED','Different reviewer can approve a submitted report');
   assert(lifecycleContext.reviewDailySubmission(submitted.recordId,'APPROVE','').idempotent===true,'Approval retry returns the original decision');
