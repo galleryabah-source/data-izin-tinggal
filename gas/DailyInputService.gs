@@ -194,6 +194,14 @@ function saveDailyDraft(payload){
   try{
     const sh=ensureDailyInputSheet_(),{normalized:p}=dailyValidateDraft_(payload),office=dailyOffice_(p.officeKey),rows=dailyRows_(sh),now=nowIso_();
     const existing=rows.find(r=>r.submissionId===p.submissionId);
+    if(!existing){
+      const latest=dailyLatestLogical_(rows,dailyLogicalKey_(p));
+      if(latest){
+        if(latest.status==='REJECTED')throw new Error('DAILY_CORRECTION_REQUIRED: perbaiki laporan yang ditolak melalui alur revisi.');
+        if(latest.status==='VOID')throw new Error('DAILY_VOIDED_KEY_REQUIRES_REOPEN: laporan yang dibatalkan memerlukan pembukaan kembali yang diaudit.');
+        throw new Error('DAILY_LOGICAL_DUPLICATE: sudah ada laporan untuk tanggal, kantor, dan keluarga layanan ini.');
+      }
+    }
     if(existing){
       if(existing.createdBy!==user.email||existing.status!=='DRAFT')throw new Error('DAILY_IDEMPOTENCY_CONFLICT');
       const oldHash=existing.payloadHash,newHash=dailyPayloadHash_(p);
@@ -223,7 +231,11 @@ function submitDailyInput(payload){
   try{
     const sh=ensureDailyInputSheet_(),office=dailyOffice_(p.officeKey),rows=dailyRows_(sh),hash=dailyPayloadHash_(p),existing=rows.find(r=>r.submissionId===p.submissionId),key=dailyLogicalKey_({serviceFamily:p.serviceFamily,operationalDate:p.operationalDate,officeKey:p.officeKey}),latest=dailyLatestLogical_(rows,key),now=nowIso_();
     if(existing&&existing.status!=='DRAFT'){if(existing.payloadHash===hash)return {ok:true,recordId:existing.recordId,status:existing.status,idempotent:true};throw new Error('DAILY_IDEMPOTENCY_CONFLICT');}
-    if(latest&&latest.status!=='VOID'&&latest.status!=='REJECTED'&&(!existing||latest.recordId!==existing.recordId))throw new Error('DAILY_LOGICAL_DUPLICATE: gunakan koreksi/revisi yang beralasan.');
+    if(latest&&(!existing||latest.recordId!==existing.recordId)){
+      if(latest.status==='REJECTED')throw new Error('DAILY_CORRECTION_REQUIRED: perbaiki laporan yang ditolak melalui alur revisi.');
+      if(latest.status==='VOID')throw new Error('DAILY_VOIDED_KEY_REQUIRES_REOPEN: laporan yang dibatalkan memerlukan pembukaan kembali yang diaudit.');
+      throw new Error('DAILY_LOGICAL_DUPLICATE: gunakan alur koreksi/revisi yang beralasan.');
+    }
     if(existing){
       if(existing.createdBy!==user.email)throw new Error('DAILY_DRAFT_NOT_OWNER');
       const i=dailyHeaderIndex_(sh),oldStatus=existing.status,oldRow=sh.getRange(existing.row,1,1,DAILY_INPUT_HEADERS_V1.length).getValues()[0];
