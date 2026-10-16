@@ -24,7 +24,7 @@ const DAILY_INPUT_GUARD_V1 = Object.freeze({
 // Dedicated production spreadsheet for daily-input records. It must remain distinct
 // from SPREADSHEET_ID (the canonical monthly database). Only new DAILY_INPUT_* tabs
 // are created here; existing tabs and canonical monthly records are never migrated.
-const DAILY_INPUT_SPREADSHEET_ID_V1 = '100-9h1jcLGv0eRgF412CjGZVmIzf2JFVl8GvuKNyLrY;
+const DAILY_INPUT_SPREADSHEET_ID_V1 = '100-9h1jcLGv0eRgF412CjGZVmIzf2JFVl8GvuKNyLrY';
 const DAILY_INPUT_HEADERS_V1 = Object.freeze([
   'record_id','submission_id','service_family','operational_date','office_key','office_name',
   'contract_version','revision','status','measures_json','total','source_record_id',
