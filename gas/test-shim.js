@@ -1033,7 +1033,7 @@ const dailyGatePassContext={
   ]})}:null})
 };
 vm.runInNewContext(dailyService,dailyGatePassContext);
-assert(dailyGatePassContext.getDailyInputPolicyV1().enabled===false,'Daily input remains hard-disabled even if mutable CONFIG flags are both set until the code-level release gate is deliberately changed');
+assert(dailyGatePassContext.getDailyInputPolicyV1().enabled===false,'Daily input remains blocked when the dedicated spreadsheet is not configured in the runtime test context');
 const stagingAliasContext={
   SHEETS:{CONFIG:'CONFIG'},
   requirePermission_:()=>({role:'TEST'}),
@@ -1283,10 +1283,10 @@ assert(
   'Daily persistence is confined to the named ledger and its creation is gate-protected'
 );
 assert(
-  dailyService.includes('enabled:false') &&
+  dailyService.includes('enabled:true') &&
   dailyService.includes("DAILY_INPUT_GATE_9_1") &&
   dailyService.includes("DAILY_INPUT_ENABLED"),
-  'Daily input has a code-level closed kill switch in addition to CONFIG flags while Gate 9.1 is blocked'
+  'Daily input activation is governed by the explicit CONFIG flags and Gate 9.1'
 );
 
 /* Lifecycle retry semantics: clients can safely retry after network timeouts. */
