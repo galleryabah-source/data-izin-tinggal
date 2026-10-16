@@ -1548,3 +1548,102 @@ assert(dailyContractSource.includes("getSheetByName('DAILY_INPUT_LEDGER')") && !
   'Daily ledger is isolated and never opens canonical monthly sheets for writes');
 assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSource.includes('DAILY_INPUT_ENABLED'),
   'Daily lifecycle cannot activate without both gate and feature configuration');
+
+
+/* Phase 9 lifecycle behavior tests with an in-memory Apps Script spreadsheet shim.
+ * The production kill switch is intentionally false; only this isolated test copy
+ * simulates the post-Gate release configuration to exercise guarded transitions. */
+{
+  const nodeCrypto=require('crypto');
+  class DailyFakeRange{
+    constructor(sheet,row,col,numRows=1,numCols=1){this.sheet=sheet;this.row=row;this.col=col;this.numRows=numRows;this.numCols=numCols;}
+    getValues(){const out=[];for(let r=0;r<this.numRows;r++){const row=[];for(let c=0;c<this.numCols;c++)row.push((this.sheet.rows[this.row-1+r]||[])[this.col-1+c]??'');out.push(row);}return out;}
+    setValues(values){for(let r=0;r<values.length;r++){while(this.sheet.rows.length<this.row+r)this.sheet.rows.push([]);for(let c=0;c<values[r].length;c++)this.sheet.rows[this.row-1+r][this.col-1+c]=values[r][c];}return this;}
+    setValue(value){return this.setValues([[value]]);}
+    clearContent(){return this.setValue('');}
+  }
+  class DailyFakeSheet{
+    constructor(name,rows=[]){this.name=name;this.rows=rows.map(r=>r.slice());}
+    getDataRange(){return new DailyFakeRange(this,1,1,Math.max(1,this.getLastRow()),Math.max(1,this.getLastColumn()));}
+    getRange(row,col,numRows=1,numCols=1){return new DailyFakeRange(this,row,col,numRows,numCols);}
+    getLastRow(){return this.rows.length;}
+    getLastColumn(){return this.rows.reduce((n,r)=>Math.max(n,r.length),0);}
+    setFrozenRows(){}
+    appendRow(row){this.rows.push(row.slice());return this;}
+    deleteRow(row){this.rows.splice(row-1,1);return this;}
+  }
+  class DailyFakeSpreadsheet{
+    constructor(){this.sheets={};}
+    getSheetByName(name){return this.sheets[name]||null;}
+    insertSheet(name){if(this.sheets[name])throw new Error('SHEET_EXISTS');this.sheets[name]=new DailyFakeSheet(name);return this.sheets[name];}
+    add(name,rows){this.sheets[name]=new DailyFakeSheet(name,rows);return this.sheets[name];}
+  }
+  const fakeDb=new DailyFakeSpreadsheet();
+  fakeDb.add('CONFIG',[['key','value','updated_at'],['DAILY_INPUT_ENABLED','true',''],['DAILY_INPUT_GATE_9_1','PASS','']]);
+  fakeDb.add('OFFICE_REFERENCE',[['office_key','kantor_imigrasi','status'],['K-1','KANIM TEST','VERIFIED']]);
+  fakeDb.add('AUDIT_LOG',[['event_id','timestamp','actor','action','dataset_key','batch_id','affected_rows','status','details']]);
+  let dailyTestUser={email:'operator@example.com',role:'OPERATOR',permissions:['daily.read','daily.draft','daily.submit','daily.correct']};
+  let dailyTestAuditFails=false,dailyTestUuid=0;
+  const lifecycleContext={
+    APP:{TZ:'Asia/Jakarta'},
+    SHEETS:{CONFIG:'CONFIG'},
+    getDb_:()=>fakeDb,
+    requirePermission_:(permission)=>{if(!dailyTestUser.permissions.includes(permission))throw new Error('FORBIDDEN: '+permission);return dailyTestUser;},
+    appendAudit_:(action,datasetKey,batchId,affectedRows,status,details)=>{if(dailyTestAuditFails)throw new Error('SIMULATED_AUDIT_FAILURE');fakeDb.getSheetByName('AUDIT_LOG').appendRow(['audit-'+fakeDb.getSheetByName('AUDIT_LOG').getLastRow(), '2026-10-16T03:00:00Z',dailyTestUser.email,action,datasetKey,batchId,affectedRows,status,details]);},
+    nowIso_:()=> '2026-10-16T03:00:00.000Z',
+    LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},
+    Utilities:{
+      DigestAlgorithm:{SHA_256:'SHA_256'},Charset:{UTF_8:'UTF_8'},
+      computeDigest:(algo,value)=>Array.from(nodeCrypto.createHash('sha256').update(String(value)).digest()),
+      getUuid:()=>{dailyTestUuid++;return 'aaaaaaaa-aaaa-4aaa-8aaa-'+String(dailyTestUuid).padStart(12,'0');},
+      formatDate:()=> '2026-10-16'
+    }
+  };
+  const lifecycleSource=dailyService.replace('enabled:false,timezone:','enabled:true,timezone:');
+  vm.runInNewContext(lifecycleSource,lifecycleContext);
+  const passportMeasures={biasa_24:2,biasa_48:1,elektronik_48:0,e_polikarbonat:0};
+  const payload=(id,date='2026-10-16',measures=passportMeasures,lateEntryReason='')=>({
+    submissionId:id,serviceFamily:'PASSPORT',operationalDate:date,officeKey:'K-1',
+    contractVersion:'candidate-v1',measures,lateEntryReason
+  });
+  const mustThrow=(fn,code)=>{let ok=false;try{fn();}catch(e){ok=String(e&&e.message||e).includes(code);}assert(ok,'Daily lifecycle throws expected guard: '+code);};
+  const ledger=()=>fakeDb.getSheetByName('DAILY_INPUT_LEDGER');
+  const partialId='11111111-1111-4111-8111-111111111111';
+  const partial=lifecycleContext.saveDailyDraft(payload(partialId,'2026-10-16',{biasa_24:2}));
+  assert(partial.status==='DRAFT'&&ledger().rows[1][10]==='','Incomplete draft stores a blank total, not zero');
+  assert(JSON.parse(ledger().rows[1][9]).biasa_24===2&&Object.keys(JSON.parse(ledger().rows[1][9])).length===1,'Draft preserves only explicitly supplied measures');
+  assert(lifecycleContext.saveDailyDraft(payload(partialId,'2026-10-16',{biasa_24:2})).idempotent===true,'Identical draft retry returns the same record');
+  mustThrow(()=>lifecycleContext.saveDailyDraft(payload('22222222-2222-4222-8222-222222222222')),'DAILY_LOGICAL_DUPLICATE');
+  dailyTestAuditFails=true;
+  const beforeAuditFailure=ledger().getLastRow();
+  mustThrow(()=>lifecycleContext.saveDailyDraft(payload('33333333-3333-4333-8333-333333333333','2026-10-15',passportMeasures,'uji audit rollback')),'DAILY_AUDIT_WRITE_FAILED');
+  assert(ledger().getLastRow()===beforeAuditFailure,'Audit failure rolls back the appended draft');
+  dailyTestAuditFails=false;
+  lifecycleContext.saveDailyDraft(payload(partialId,'2026-10-16',passportMeasures));
+  const submitted=lifecycleContext.submitDailyInput(payload(partialId));
+  assert(submitted.status==='SUBMITTED'&&submitted.total===3,'Submit derives total on server and transitions draft to submitted');
+  dailyTestUser={email:'supervisor@example.com',role:'SUPERVISOR',permissions:['daily.read','daily.draft','daily.submit','daily.review','daily.approve','daily.correct','daily.void']};
+  mustThrow(()=>lifecycleContext.reviewDailySubmission(submitted.recordId,'APPROVE',''),'DAILY_SEPARATION_OF_DUTIES');
+  const approved=lifecycleContext.reviewDailySubmission(submitted.recordId,'APPROVE','');
+  assert(approved.status==='APPROVED','Different reviewer can approve a submitted report');
+  assert(lifecycleContext.reviewDailySubmission(submitted.recordId,'APPROVE','').idempotent===true,'Approval retry returns the original decision');
+  const correctionId='44444444-4444-4444-8444-444444444444';
+  const correctedMeasures={biasa_24:3,biasa_48:1,elektronik_48:0,e_polikarbonat:0};
+  const correction=lifecycleContext.correctDailySubmission(approved.recordId,payload(correctionId,'2026-10-16',correctedMeasures),'Koreksi angka sumber');
+  assert(correction.revision===2&&correction.status==='SUBMITTED','Approved report correction creates a linked new revision');
+  assert(lifecycleContext.correctDailySubmission(approved.recordId,payload(correctionId,'2026-10-16',correctedMeasures),'Koreksi angka sumber').idempotent===true,'Correction retry returns the same revision');
+  dailyTestUser={email:'admin@example.com',role:'ADMIN',permissions:['daily.read','daily.draft','daily.submit','daily.review','daily.approve','daily.correct','daily.void']};
+  lifecycleContext.reviewDailySubmission(correction.recordId,'APPROVE','');
+  const voided=lifecycleContext.voidDailySubmission(correction.recordId,'Laporan duplikat setelah verifikasi');
+  assert(voided.status==='VOID'&&voided.revision===3,'Void creates an audited terminal revision instead of deleting evidence');
+  assert(lifecycleContext.voidDailySubmission(correction.recordId,'Laporan duplikat setelah verifikasi').idempotent===true,'Void retry returns the existing void revision');
+  mustThrow(()=>lifecycleContext.submitDailyInput(payload('55555555-5555-4555-8555-555555555555')),'DAILY_VOIDED_KEY_REQUIRES_REOPEN');
+  mustThrow(()=>lifecycleContext.saveDailyDraft(payload('66666666-6666-4666-8666-666666666666')),'DAILY_VOIDED_KEY_REQUIRES_REOPEN');
+  const rejectedPayload=payload('77777777-7777-4777-8777-777777777777','2026-10-15',passportMeasures,'uji laporan terlambat');
+  const rejectedSubmission=lifecycleContext.submitDailyInput(rejectedPayload);
+  dailyTestUser={email:'supervisor@example.com',role:'SUPERVISOR',permissions:['daily.read','daily.draft','daily.submit','daily.review','daily.approve','daily.correct','daily.void']};
+  lifecycleContext.reviewDailySubmission(rejectedSubmission.recordId,'REJECT','Jumlah tidak sesuai sumber');
+  dailyTestUser={email:'operator@example.com',role:'OPERATOR',permissions:['daily.read','daily.draft','daily.submit','daily.correct']};
+  const rejectedCorrection=lifecycleContext.correctDailySubmission(rejectedSubmission.recordId,payload('88888888-8888-4888-8888-888888888888','2026-10-15',{biasa_24:1,biasa_48:1,elektronik_48:0,e_polikarbonat:0},'uji laporan terlambat'),'Perbaikan sesuai bukti');
+  assert(rejectedCorrection.revision===2&&rejectedCorrection.status==='SUBMITTED','Operator can correct own rejected report with a reason and linked revision');
+}
