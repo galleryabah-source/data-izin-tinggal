@@ -859,7 +859,7 @@ assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary ho
 
 /* Phase 9 daily-input contract validator: pure tests only; no Apps Script writes. */
 const dailyService=read('DailyInputService.gs');
-assert(dailyService.includes('enabled:true') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily input is enabled by default while explicit Gate 9.1 or feature-flag blocks remain enforceable');
+assert(dailyService.includes('enabled:true') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily input can activate only when the explicit feature flag and Gate 9.1 checks pass');
 assert(dailyService.includes("const DAILY_INPUT_SPREADSHEET_ID_V1 = '100-9h1jcLGv0eRgF412CjGZVmIzf2JFVl8GvuKNyLrY'") && dailyService.includes('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL'), 'Daily input targets the dedicated user spreadsheet and rejects canonical database reuse');
 assert(dailyService.includes("name='DAILY_INPUT_AUDIT'") && dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')"), 'Daily input creates only dedicated ledger and audit tabs');
 assert(dailyService.includes('function getDailyInputPolicyV1()'), 'Daily input exposes a policy read endpoint');
@@ -1038,10 +1038,10 @@ const stagingAliasContext={
   SHEETS:{CONFIG:'CONFIG'},
   requirePermission_:()=>({role:'TEST'}),
   getDb_:()=>({getSheetByName:()=>({getDataRange:()=>({getValues:()=>[['key','value'],['DAILY_INPUT_ENABLED','true'],['DAILY_INPUT_GATE_9_1','PASS']]})})}),
-  PropertiesService:{getScriptProperties:()=>({getProperty:(key)=>key==='SPREADSHEET_ID'?'SAME-ID':key==='DAILY_STAGING_SPREADSHEET_ID'?'SAME-ID':''})}
+  PropertiesService:{getScriptProperties:()=>({getProperty:(key)=>key==='SPREADSHEET_ID'?'SAME-ID':key==='DAILY_INPUT_SPREADSHEET_ID'?'SAME-ID':''})}
 };
 vm.runInNewContext(dailyService,stagingAliasContext);
-assert(stagingAliasContext.getDailyInputPolicyV1().stagingReady===false,'Daily input refuses a staging spreadsheet ID that aliases the canonical spreadsheet');
+assert(stagingAliasContext.getDailyInputPolicyV1().stagingReady===false,'Daily input refuses a dedicated spreadsheet ID that aliases the canonical spreadsheet');
 const blockedWriteContext={
   SHEETS:{CONFIG:'CONFIG'},
   requirePermission_:(permission)=>({role:'TEST',email:'test@example.com',permissions:['daily.draft','daily.read']}),
