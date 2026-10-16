@@ -344,8 +344,10 @@ assert(publicTv.includes('kantor_imigrasi') && publicTv.includes('latitude') && 
 assert(!publicTv.includes('source_url') && !publicTv.includes('office_key') && !publicTv.includes('address'), 'Public TV GIS does not expose office reference metadata');
 assert(codeGs.includes("readCacheKey_('running-text-active')") && codeGs.includes('readCachePut_(cacheKey,result,10)'), 'TV running text read path uses bounded cache');
 assert(codeGs.includes("const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':'index'"), 'doGet preserves the dedicated TV template and adds a separate mobile template');
-assert(codeGs.includes("if(view!=='tv'&&view!=='tv-mobile')requireBackOfficeAccess_()"), 'Main workspace remains server-gated while TV and mobile TV use the existing public view path');
+assert(codeGs.includes("if(view!=='tv'&&view!=='tv-mobile'&&view!=='daily')requireBackOfficeAccess_()") && codeGs.includes("if(view==='daily')requirePermission_('daily.read')"), 'Daily route is separately server-gated by daily.read while the main workspace remains back-office-only');
 assert(codeGs.includes('function getBootstrap(){const u=requireBackOfficeAccess_();'), 'Back-office bootstrap is server-gated');
+assert(codeGs.includes("function getDailyBootstrap(){const u=requirePermission_('daily.read');") && codeGs.includes("scope:'DAILY_INPUT_ONLY'"), 'Daily-only bootstrap exposes identity and permissions only after daily.read authorization');
+assert(read('Config.gs').includes("'daily.correct'"), 'Operator role has the narrow permission required to correct rejected daily reports');
 const authSource=read('Auth.gs');
 assert(authSource.includes("const BACKOFFICE_ROLES_ = Object.freeze(['ADMIN','SUPERVISOR'])"), 'Back-office roles map to Owner/Editor without USERS migration');
 assert(authSource.includes('function requireBackOfficeAccess_()'), 'Back-office authorization seam exists');
@@ -1292,6 +1294,15 @@ assert(correctionBody.includes("prior.sourceRecordId===String(recordId)") &&
 assert(voidBody.includes("latest.status==='VOID'&&latest.sourceRecordId===source.recordId&&latest.decisionReason===why") &&
        voidBody.includes("if(source.status!=='APPROVED')throw new Error('DAILY_VOID_SOURCE_INVALID')"),
   'Daily void retry is idempotent and void cannot bypass review by targeting a merely submitted record');
+const correctionEligibility=dailyService.slice(dailyService.indexOf('function correctDailySubmission('),dailyService.indexOf('function voidDailySubmission('));
+assert(correctionEligibility.includes("source.status==='REJECTED'") && correctionEligibility.includes("source.createdBy===user.email") &&
+       correctionEligibility.includes("['ADMIN','SUPERVISOR'].includes(user.role)"),
+  'Operators may correct their own rejected report while approved-report corrections remain privileged');
+assert(read('index.html').includes("getDailyBootstrap") && read('index.html').includes("get('view')==='daily'") &&
+       read('index.html').includes("setBackOfficePage('dailyInputSection')"),
+  'Daily input has a dedicated role-scoped route within the single application shell');
+assert(read('index.html').includes("x.status==='REJECTED'&&canCorrectRejected"),
+  'Rejected submissions expose a permission-scoped correction path instead of becoming a dead end');
 
 
 assert(
