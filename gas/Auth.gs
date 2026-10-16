@@ -5,7 +5,8 @@ function getRolePermissions_(role){
   const assigned=v.slice(1).filter(r=>String(r[0]).trim().toUpperCase()===normalized).map(r=>String(r[1]).trim());
   // Existing production permission sheets predate daily input. Merge only the daily
   // permissions declared for the assigned role so no manual schema reset is needed.
-  const dailyDefaults=(DEFAULT_ROLES[normalized]||[]).filter(p=>p.indexOf('daily.')===0);
+  const roleDefaults=(typeof DEFAULT_ROLES!=='undefined'&&DEFAULT_ROLES[normalized])||[];
+  const dailyDefaults=roleDefaults.filter(p=>p.indexOf('daily.')===0);
   return Array.from(new Set(assigned.concat(dailyDefaults)));
 }
 function getCurrentUser_(){
