@@ -251,10 +251,11 @@ function reviewDailySubmission(recordId,decision,reason){
   if(action==='APPROVE'&&!user.permissions.includes('daily.approve'))throw new Error('FORBIDDEN: daily.approve');
   const lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
-    const sh=ensureDailyInputSheet_(),rows=dailyRows_(sh),r=dailyFindByRecord_(rows,recordId);
+    const sh=ensureDailyInputSheet_(),rows=dailyRows_(sh),r=dailyFindByRecord_(rows,recordId),next=action==='APPROVE'?'APPROVED':'REJECTED';
+    if(r&&r.status===next&&r.reviewedBy===user.email&&r.decisionReason===why)return {ok:true,recordId:r.recordId,status:next,idempotent:true};
     if(!r||r.status!=='SUBMITTED')throw new Error('DAILY_SUBMISSION_NOT_REVIEWABLE');
     if(r.submittedBy===user.email)throw new Error('DAILY_SEPARATION_OF_DUTIES');
-    const i=dailyHeaderIndex_(sh),now=nowIso_(),next=action==='APPROVE'?'APPROVED':'REJECTED';
+    const i=dailyHeaderIndex_(sh),now=nowIso_();
     sh.getRange(r.row,i.status+1).setValue(next);sh.getRange(r.row,i.reviewed_by+1,1,3).setValues([[user.email,now,why]]);
     try{appendAudit_(action==='APPROVE'?'DAILY_APPROVE':'DAILY_REJECT',DAILY_SERVICE_CONTRACTS_V1[r.serviceFamily].datasetKey,r.submissionId,1,'SUCCESS',JSON.stringify({recordId:r.recordId,reason:why}));}
     catch(e){sh.getRange(r.row,i.status+1).setValue(r.status);sh.getRange(r.row,i.reviewed_by+1,1,3).setValues([[r.reviewedBy,r.reviewedAt,r.decisionReason]]);throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
@@ -267,12 +268,17 @@ function correctDailySubmission(recordId,payload,reason){
   const result=validateDailyInputPayloadV1(payload);if(!result.ok)throw new Error('DAILY_INPUT_INVALID: '+JSON.stringify(result.errors));
   const p=result.normalized;assertDailyOperationalDate_(p);const lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
-    const sh=ensureDailyInputSheet_(),rows=dailyRows_(sh),source=dailyFindByRecord_(rows,recordId);
+    const sh=ensureDailyInputSheet_(),rows=dailyRows_(sh),hash=dailyPayloadHash_(p),prior=rows.find(r=>r.submissionId===p.submissionId);
+    if(prior){
+      if(prior.sourceRecordId===String(recordId)&&prior.payloadHash===hash&&prior.correctionReason===why&&['SUBMITTED','APPROVED','REJECTED'].includes(prior.status))
+        return {ok:true,recordId:prior.recordId,sourceRecordId:prior.sourceRecordId,revision:prior.revision,status:prior.status,idempotent:true};
+      throw new Error('DAILY_IDEMPOTENCY_CONFLICT');
+    }
+    const source=dailyFindByRecord_(rows,recordId);
     if(!source||source.status!=='APPROVED')throw new Error('DAILY_CORRECTION_REQUIRES_APPROVED_SOURCE');
     if(source.serviceFamily!==p.serviceFamily||source.operationalDate!==p.operationalDate||source.officeKey!==p.officeKey)throw new Error('DAILY_CORRECTION_CANNOT_CHANGE_LOGICAL_KEY');
-    if(rows.some(r=>r.submissionId===p.submissionId))throw new Error('DAILY_IDEMPOTENCY_CONFLICT');
     const latest=dailyLatestLogical_(rows,dailyLogicalKey_(source));if(!latest||latest.recordId!==source.recordId)throw new Error('DAILY_CORRECTION_SOURCE_NOT_LATEST');
-    const office=dailyOffice_(p.officeKey),now=nowIso_(),revision=source.revision+1,rec=dailyRowArray_(p,office,'SUBMITTED',revision,source,why,user,now,dailyPayloadHash_(p));
+    const office=dailyOffice_(p.officeKey),now=nowIso_(),revision=source.revision+1,rec=dailyRowArray_(p,office,'SUBMITTED',revision,source,why,user,now,hash);
     rec[22]=why;sh.appendRow(rec);
     try{appendAudit_('DAILY_CORRECTION_SUBMIT',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({sourceRecordId:source.recordId,revision,reason:why,total:p.total}));}
     catch(e){sh.deleteRow(sh.getLastRow());throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
@@ -285,8 +291,12 @@ function voidDailySubmission(recordId,reason){
   const lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
     const sh=ensureDailyInputSheet_(),rows=dailyRows_(sh),source=dailyFindByRecord_(rows,recordId);
-    if(!source||!['APPROVED','SUBMITTED'].includes(source.status))throw new Error('DAILY_VOID_SOURCE_INVALID');
-    const latest=dailyLatestLogical_(rows,dailyLogicalKey_(source));if(!latest||latest.recordId!==source.recordId)throw new Error('DAILY_VOID_SOURCE_NOT_LATEST');
+    if(!source)throw new Error('DAILY_VOID_SOURCE_INVALID');
+    const latest=dailyLatestLogical_(rows,dailyLogicalKey_(source));
+    if(latest&&latest.status==='VOID'&&latest.sourceRecordId===source.recordId&&latest.decisionReason===why)
+      return {ok:true,recordId:latest.recordId,sourceRecordId:source.recordId,status:'VOID',revision:latest.revision,idempotent:true};
+    if(source.status!=='APPROVED')throw new Error('DAILY_VOID_SOURCE_INVALID');
+    if(!latest||latest.recordId!==source.recordId)throw new Error('DAILY_VOID_SOURCE_NOT_LATEST');
     const userNow=nowIso_(),contract=DAILY_SERVICE_CONTRACTS_V1[source.serviceFamily],measures=JSON.parse(source.measuresJson||'{}');
     const p={submissionId:Utilities.getUuid(),serviceFamily:source.serviceFamily,operationalDate:source.operationalDate,officeKey:source.officeKey,contractVersion:source.contractVersion,measures,total:source.total,lateEntryReason:source.lateEntryReason};
     const office=dailyOffice_(p.officeKey),rec=dailyRowArray_(p,office,'VOID',source.revision+1,source,why,user,userNow,dailyPayloadHash_(p));
