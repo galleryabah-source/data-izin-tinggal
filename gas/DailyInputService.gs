@@ -1,8 +1,10 @@
 /**
  * Phase 9 — Daily operational input v1.
  * Strictly isolated from canonical monthly datasets/import/registry paths.
- * Activation requires BOTH DAILY_INPUT_ENABLED=true and DAILY_INPUT_GATE_9_1=PASS
- * in CONFIG. No code path may silently coerce missing measures to zero.
+ * Activation requires DAILY_INPUT_ENABLED=true and either DAILY_INPUT_GATE_9_1=PASS
+ * or an explicit DAILY_INPUT_OWNER_OVERRIDE=APPROVED_WITH_EXCEPTIONS in CONFIG.
+ * The owner override is scoped to activation only; it does not certify measure semantics.
+ * No code path may silently coerce missing measures to zero.
  */
 const DAILY_SERVICE_CONTRACTS_V1 = Object.freeze({
   RESIDENCE_PERMIT: Object.freeze({
@@ -67,13 +69,17 @@ function getDailyInputPolicyV1(){
     contractVersion:DAILY_SERVICE_CONTRACTS_V1[k].version,
     measureCount:DAILY_SERVICE_CONTRACTS_V1[k].measures.length
   }));
-  return {contract:'DAILY_INPUT_POLICY_V1',enabled:DAILY_INPUT_GUARD_V1.enabled&&String(c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'true').toLowerCase()==='true'&&String(c[DAILY_INPUT_GUARD_V1.gateKey]||'PASS').toUpperCase()==='PASS'&&stagingReady,
-    gateStatus:String(c[DAILY_INPUT_GUARD_V1.gateKey]||'BLOCKED').toUpperCase(),stagingReady,timezone:DAILY_INPUT_GUARD_V1.timezone,
+  const gateStatus=String(c[DAILY_INPUT_GUARD_V1.gateKey]||'BLOCKED').toUpperCase();
+  const ownerOverride=String(c.DAILY_INPUT_OWNER_OVERRIDE||'').trim().toUpperCase()==='APPROVED_WITH_EXCEPTIONS';
+  const featureEnabled=String(c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'true').toLowerCase()==='true';
+  const gateAllows=gateStatus==='PASS'||ownerOverride;
+  return {contract:'DAILY_INPUT_POLICY_V1',enabled:DAILY_INPUT_GUARD_V1.enabled&&featureEnabled&&gateAllows&&stagingReady,
+    gateStatus,ownerOverride,activationMode:ownerOverride&&gateStatus!=='PASS'?'OWNER_APPROVED_WITH_EXCEPTIONS':'STANDARD_GATE',stagingReady,timezone:DAILY_INPUT_GUARD_V1.timezone,
     countingBasis:DAILY_INPUT_GUARD_V1.countingBasis,lateEntryPolicy:DAILY_INPUT_GUARD_V1.lateEntryPolicy,serviceFamilies:families};
 }
 function assertDailyInputEnabled_(){
   const p=getDailyInputPolicyV1();
-  if(!p.enabled)throw new Error('DAILY_INPUT_GATE_BLOCKED: Gate 9.1 must be PASS and DAILY_INPUT_ENABLED=true.');
+  if(!p.enabled)throw new Error('DAILY_INPUT_GATE_BLOCKED: set DAILY_INPUT_ENABLED=true and either DAILY_INPUT_GATE_9_1=PASS or the documented owner override DAILY_INPUT_OWNER_OVERRIDE=APPROVED_WITH_EXCEPTIONS.');
   return p;
 }
 function getDailyServiceContractV1(serviceFamily){
