@@ -3,7 +3,7 @@ const SHEETS = Object.freeze({CONFIG:'CONFIG',USERS:'USERS',ROLES:'ROLES',PERMIS
 const DEFAULT_ROLES = {
   ADMIN:['dashboard.read','dataset.read','dataset.write','dataset.import','dataset.export','dataset.approve','dataset.delete','map.read','admin.users','admin.roles','admin.config','audit.read','daily.read','daily.draft','daily.submit','daily.review','daily.approve','daily.correct','daily.void'],
   SUPERVISOR:['dashboard.read','dataset.read','dataset.write','dataset.import','dataset.export','dataset.approve','map.read','daily.read','daily.draft','daily.submit','daily.review','daily.approve','daily.correct','daily.void'],
-  OPERATOR:['dashboard.read','dataset.read','dataset.write','dataset.import','map.read','daily.read','daily.draft','daily.submit'],
+  OPERATOR:['dashboard.read','dataset.read','dataset.write','dataset.import','map.read','daily.read','daily.draft','daily.submit','daily.correct'],
   VIEWER:['dashboard.read','dataset.read','map.read','daily.read'],
   AUDITOR:['dashboard.read','dataset.read','audit.read','daily.read']
 };
