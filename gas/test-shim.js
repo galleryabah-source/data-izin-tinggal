@@ -344,7 +344,7 @@ assert(publicTv.includes('kantor_imigrasi') && publicTv.includes('latitude') && 
 assert(!publicTv.includes('source_url') && !publicTv.includes('office_key') && !publicTv.includes('address'), 'Public TV GIS does not expose office reference metadata');
 assert(codeGs.includes("readCacheKey_('running-text-active')") && codeGs.includes('readCachePut_(cacheKey,result,10)'), 'TV running text read path uses bounded cache');
 assert(codeGs.includes("const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':'index'"), 'doGet preserves the dedicated TV template and adds a separate mobile template');
-assert(codeGs.includes("if(view!=='tv'&&view!=='tv-mobile'&&view!=='daily')requireBackOfficeAccess_()") && codeGs.includes("if(view==='daily')requirePermission_('daily.read')"), 'Daily route is separately server-gated by daily.read while the main workspace remains back-office-only');
+assert(codeGs.includes("if(view==='daily')requirePermission_('daily.read')") && codeGs.includes("current.permissions.includes('daily.read')") && codeGs.includes("view='daily'"), 'Daily-only users are routed into the integrated input workspace while the admin shell remains protected');
 assert(codeGs.includes('function getBootstrap(){const u=requireBackOfficeAccess_();'), 'Back-office bootstrap is server-gated');
 assert(codeGs.includes("function getDailyBootstrap(){const u=requirePermission_('daily.read');") && codeGs.includes("scope:'DAILY_INPUT_ONLY'"), 'Daily-only bootstrap exposes identity and permissions only after daily.read authorization');
 assert(read('Config.gs').includes("'daily.correct'"), 'Operator role has the narrow permission required to correct rejected daily reports');
