@@ -246,7 +246,7 @@ function submitDailyInput(payload){
       sh.getRange(existing.row,i.payload_hash+1).setValue(hash);
       try{appendAudit_('DAILY_SUBMIT',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey,total:p.total,from:oldStatus}));}
       catch(e){sh.getRange(existing.row,1,1,DAILY_INPUT_HEADERS_V1.length).setValues([oldRow]);throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
-      return {ok:true,recordId:existing.recordId,status:'SUBMITTED'};
+      return {ok:true,recordId:existing.recordId,status:'SUBMITTED',total:p.total};
     }
     const nextRevision=latest?latest.revision+1:1,source=(latest&&(latest.status==='VOID'||latest.status==='REJECTED'))?latest:null;
     const rec=dailyRowArray_(p,office,'SUBMITTED',nextRevision,source,'',user,now,hash);sh.appendRow(rec);
