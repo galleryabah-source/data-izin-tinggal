@@ -859,7 +859,9 @@ assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary ho
 
 /* Phase 9 daily-input contract validator: pure tests only; no Apps Script writes. */
 const dailyService=read('DailyInputService.gs');
-assert(dailyService.includes('enabled:false') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily mutation endpoints retain a code-level closed kill switch plus Gate 9.1 and feature-flag checks');
+assert(dailyService.includes('enabled:true') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily input is enabled by default while explicit Gate 9.1 or feature-flag blocks remain enforceable');
+assert(dailyService.includes("const DAILY_INPUT_SPREADSHEET_ID_V1 = '100-9h1jcLGv0eRgF412CjGZVmIzf2JFVl8GvuKNyLrY'") && dailyService.includes('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL'), 'Daily input targets the dedicated user spreadsheet and rejects canonical database reuse');
+assert(dailyService.includes("insertSheet('DAILY_INPUT_AUDIT')") && dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')"), 'Daily input creates only dedicated ledger and audit tabs');
 assert(dailyService.includes('function getDailyInputPolicyV1()'), 'Daily input exposes a policy read endpoint');
 assert(dailyService.includes('function getDailyServiceContractV1(serviceFamily)'), 'Daily input fields are server-contract-owned');
 assert(dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')") && dailyService.includes('DAILY_INPUT_HEADERS_V1'), 'Daily writes are isolated to a dedicated ledger with a fixed schema');
