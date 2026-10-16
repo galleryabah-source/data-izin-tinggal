@@ -77,6 +77,9 @@ The only common operational decision currently recorded is: count a service when
 
 ## 5. Isolated Apps Script staging evidence plan
 
+**Implemented fail-closed storage guard:** candidate runtime requires Script Properties `SPREADSHEET_ID` (canonical) and `DAILY_STAGING_SPREADSHEET_ID` (staging), and rejects a missing staging ID or an ID equal to the canonical ID. The daily ledger and `DAILY_INPUT_AUDIT` are written to the staging spreadsheet; office reference and feature/gate configuration are read from the canonical store. The code-level kill switch remains false. No staging ID or runtime credentials are assumed to exist.
+
+
 Run only after the required Gate 9.1 owner decisions are recorded. Staging must have an explicit environment identity and a dedicated restricted spreadsheet/store; verify that it is not the production spreadsheet and that canonical monthly dataset paths cannot be reached by mutation endpoints.
 
 | Test | Method | Pass evidence |
