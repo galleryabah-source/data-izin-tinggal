@@ -34,16 +34,37 @@ function dailyConfig_(){
   rows.forEach(r=>{const k=String(r[0]||'').trim();if(k)result[k]=String(r[1]||'').trim();});
   return result;
 }
+function dailyStagingId_(){
+  const props=PropertiesService.getScriptProperties();
+  const canonicalId=String(props.getProperty('SPREADSHEET_ID')||'').trim();
+  const stagingId=String(props.getProperty('DAILY_STAGING_SPREADSHEET_ID')||'').trim();
+  if(!canonicalId)throw new Error('DAILY_CANONICAL_SPREADSHEET_NOT_CONFIGURED');
+  if(!stagingId)throw new Error('DAILY_STAGING_SPREADSHEET_NOT_CONFIGURED');
+  if(stagingId===canonicalId)throw new Error('DAILY_STAGING_MUST_BE_SEPARATE_FROM_CANONICAL');
+  return stagingId;
+}
+function dailyStagingReady_(){try{dailyStagingId_();return true;}catch(e){return false;}}
+function getDailyStagingDb_(){return SpreadsheetApp.openById(dailyStagingId_());}
+function dailyAppendAudit_(user,action,datasetKey,batchId,affectedRows,status,details){
+  const ss=getDailyStagingDb_(),name='DAILY_INPUT_AUDIT';
+  let sh=ss.getSheetByName(name);
+  const headers=['event_id','timestamp','actor','action','dataset_key','correlation_id','affected_rows','status','details'];
+  if(!sh){sh=ss.insertSheet(name);sh.getRange(1,1,1,headers.length).setValues([headers]);sh.setFrozenRows(1);}
+  const actual=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(String);
+  if(actual.join('|')!==headers.join('|'))throw new Error('DAILY_AUDIT_SCHEMA_MISMATCH');
+  sh.appendRow([Utilities.getUuid(),nowIso_(),String(user&&user.email||''),action,datasetKey,batchId,affectedRows,status,String(details||'')]);
+}
 function getDailyInputPolicyV1(){
   requirePermission_('daily.read');
+  const stagingReady=dailyStagingReady_();
   const c=dailyConfig_(),families=Object.keys(DAILY_SERVICE_CONTRACTS_V1).map(k=>({
     serviceFamily:DAILY_SERVICE_CONTRACTS_V1[k].serviceFamily,
     datasetKey:DAILY_SERVICE_CONTRACTS_V1[k].datasetKey,
     contractVersion:DAILY_SERVICE_CONTRACTS_V1[k].version,
     measureCount:DAILY_SERVICE_CONTRACTS_V1[k].measures.length
   }));
-  return {contract:'DAILY_INPUT_POLICY_V1',enabled:DAILY_INPUT_GUARD_V1.enabled&&String(c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'').toLowerCase()==='true'&&String(c[DAILY_INPUT_GUARD_V1.gateKey]||'').toUpperCase()==='PASS',
-    gateStatus:String(c[DAILY_INPUT_GUARD_V1.gateKey]||'BLOCKED').toUpperCase(),timezone:DAILY_INPUT_GUARD_V1.timezone,
+  return {contract:'DAILY_INPUT_POLICY_V1',enabled:DAILY_INPUT_GUARD_V1.enabled&&String(c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'').toLowerCase()==='true'&&String(c[DAILY_INPUT_GUARD_V1.gateKey]||'').toUpperCase()==='PASS'&&stagingReady,
+    gateStatus:String(c[DAILY_INPUT_GUARD_V1.gateKey]||'BLOCKED').toUpperCase(),stagingReady,timezone:DAILY_INPUT_GUARD_V1.timezone,
     countingBasis:DAILY_INPUT_GUARD_V1.countingBasis,lateEntryPolicy:DAILY_INPUT_GUARD_V1.lateEntryPolicy,serviceFamilies:families};
 }
 function assertDailyInputEnabled_(){
@@ -101,7 +122,7 @@ function validateDailyInputPayloadV1(payload){
 }
 function ensureDailyInputSheet_(){
   assertDailyInputEnabled_();
-  const ss=getDb_();let sh=ss.getSheetByName('DAILY_INPUT_LEDGER');
+  const ss=getDailyStagingDb_();let sh=ss.getSheetByName('DAILY_INPUT_LEDGER');
   if(!sh){sh=ss.insertSheet('DAILY_INPUT_LEDGER');sh.getRange(1,1,1,DAILY_INPUT_HEADERS_V1.length).setValues([DAILY_INPUT_HEADERS_V1.slice()]);}
   const h=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(String);
   if(h.join('|')!==DAILY_INPUT_HEADERS_V1.join('|'))throw new Error('DAILY_INPUT_SCHEMA_MISMATCH');
@@ -213,7 +234,7 @@ function saveDailyDraft(payload){
       sh.getRange(existing.row,i.late_entry_reason+1).setValue(p.lateEntryReason||'');
       sh.getRange(existing.row,i.updated_by+1,1,2).setValues([[user.email,now]]);
       sh.getRange(existing.row,i.payload_hash+1).setValue(newHash);
-      try{appendAudit_('DAILY_DRAFT_UPDATE',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,Object.keys(p.measures).length,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey}));}
+      try{dailyAppendAudit_(user,'DAILY_DRAFT_UPDATE',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,Object.keys(p.measures).length,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey}));}
       catch(e){sh.getRange(existing.row,1,1,DAILY_INPUT_HEADERS_V1.length).setValues([oldRow]);throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
       return {ok:true,recordId:existing.recordId,status:'DRAFT',updated:true};
     }
