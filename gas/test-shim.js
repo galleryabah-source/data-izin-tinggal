@@ -1640,6 +1640,7 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
   assert(lifecycleContext.voidDailySubmission(correction.recordId,'Laporan duplikat setelah verifikasi').idempotent===true,'Void retry returns the existing void revision');
   mustThrow(()=>lifecycleContext.submitDailyInput(payload('55555555-5555-4555-8555-555555555555')),'DAILY_VOIDED_KEY_REQUIRES_REOPEN');
   mustThrow(()=>lifecycleContext.saveDailyDraft(payload('66666666-6666-4666-8666-666666666666')),'DAILY_VOIDED_KEY_REQUIRES_REOPEN');
+  dailyTestUser={email:'operator@example.com',role:'OPERATOR',permissions:['daily.read','daily.draft','daily.submit','daily.correct']};
   const rejectedPayload=payload('77777777-7777-4777-8777-777777777777','2026-10-15',passportMeasures,'uji laporan terlambat');
   const rejectedSubmission=lifecycleContext.submitDailyInput(rejectedPayload);
   dailyTestUser={email:'supervisor@example.com',role:'SUPERVISOR',permissions:['daily.read','daily.draft','daily.submit','daily.review','daily.approve','daily.correct','daily.void']};
