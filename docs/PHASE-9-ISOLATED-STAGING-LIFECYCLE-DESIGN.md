@@ -139,3 +139,8 @@ Submitted and approved revisions are immutable. Corrections create linked revisi
 7. After approved deployment only: production smoke, browser UAT, and integrity regression evidence.
 
 **Current result: NOT IMPLEMENTED / NOT RELEASE-AUTHORIZED. Gate 9.1 remains BLOCKED until owner decisions are signed off.**
+
+
+## Staging storage boundary update (PR #232)
+
+The candidate service now requires `DAILY_STAGING_SPREADSHEET_ID` to be configured as a distinct Apps Script Script Property from canonical `SPREADSHEET_ID`. Daily ledger and daily audit writes use only that staging spreadsheet. The canonical store remains read-only for the daily feature (office reference and feature/gate configuration reads only). Regression tests assert the canonical spreadsheet does not receive the daily ledger/audit. This is mocked CI evidence; a real staging spreadsheet and Apps Script runtime test are still required before Gate 9.2 can pass.
