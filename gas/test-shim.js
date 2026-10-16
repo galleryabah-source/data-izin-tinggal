@@ -1649,3 +1649,25 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
   const rejectedCorrection=lifecycleContext.correctDailySubmission(rejectedSubmission.recordId,payload('88888888-8888-4888-8888-888888888888','2026-10-15',{biasa_24:1,biasa_48:1,elektronik_48:0,e_polikarbonat:0},'uji laporan terlambat'),'Perbaikan sesuai bukti');
   assert(rejectedCorrection.revision===2&&rejectedCorrection.status==='SUBMITTED','Operator can correct own rejected report with a reason and linked revision');
 }
+
+
+/* Phase 9 acceleration pack: keep the 17-measure decision and staging evidence requirements reviewable. */
+const gate91AccelerationPack = fs.readFileSync(
+  path.join(__dirname,'..','docs','PHASE-9-GATE-9.1-ACCELERATION-EVIDENCE-PACK.md'),'utf8'
+);
+const accelerationMeasureKeys = [
+  'bvk','voa','itk','itk_peralihan','itas','itap','itkt',
+  'alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim',
+  'biasa_24','biasa_48','elektronik_48','e_polikarbonat'
+];
+assert(accelerationMeasureKeys.every(key => gate91AccelerationPack.includes('| `'+key+'` |')),
+  'Acceleration evidence pack enumerates each of the 17 measure keys');
+assert(gate91AccelerationPack.includes('NOT AN APPROVAL') &&
+       gate91AccelerationPack.includes('Current status remains BLOCKED') &&
+       gate91AccelerationPack.includes('No daily-to-monthly backfill'),
+  'Acceleration pack cannot be mistaken for owner approval or permission to mutate canonical monthly data');
+assert(gate91AccelerationPack.includes('Same-key concurrency') &&
+       gate91AccelerationPack.includes('Audit write failure') &&
+       gate91AccelerationPack.includes('Canonical isolation') &&
+       gate91AccelerationPack.includes('Independent review'),
+  'Acceleration pack preserves staging concurrency, audit recovery, canonical isolation, and independent release gates');
