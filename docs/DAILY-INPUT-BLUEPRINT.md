@@ -1,6 +1,6 @@
 # Daily Input Implementation Blueprint
 
-**Status:** contract/validator foundation implemented in PR #228 — partial owner decisions recorded; Gate 9.1 NOT PASSED; daily writes and UI not implemented  
+**Status:** candidate lifecycle/UI implemented on PR #232 feature branch — Gate 9.1 NOT PASSED; code-level kill switch remains closed; no production writes or deployment authorized  
 **Scope:** one in-app input form for daily Residence Permit and Passport service reports  
 **Capture channel:** INTAL WEB APP form; WhatsApp integration is **HOLD** and is not a dependency  
 **Runtime baseline:** Google Apps Script Web App + Google Sheets, consistent with the current canonical application
@@ -17,6 +17,15 @@ The first release is an input-and-governance capability, not an automatic rewrit
 - WhatsApp capture, group reading, bots, and external messaging APIs are excluded from this delivery.
 
 ## 2. Product and form behavior
+
+### Integrated route and access boundary
+
+- The daily workspace is part of the same Apps Script application and uses the same authenticated identity, permission registry, audit log, and UI shell.
+- `?view=daily` is the scoped daily route. A signed-in user with `daily.read` who is not an ADMIN/SUPERVISOR is routed to the daily-only workspace rather than the full back office.
+- The daily-only workspace hides unrelated navigation and does not grant admin access. Server endpoints independently enforce `daily.read`, `daily.draft`, `daily.submit`, `daily.review`, `daily.approve`, `daily.correct`, and `daily.void`.
+- Operators may correct their own rejected reports with a reason; they cannot approve them. Corrections to approved reports remain privileged. Retry-safe transitions and logical-key conflicts are covered by in-memory lifecycle tests.
+- These are candidate implementation controls, not Gate 9.1 approval. Keep the runtime disabled until operational definitions and the role/action matrix are signed off.
+
 
 One form shell with service-specific fields:
 
