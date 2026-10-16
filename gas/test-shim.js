@@ -1277,6 +1277,23 @@ assert(
   'Daily input has a code-level closed kill switch in addition to CONFIG flags while Gate 9.1 is blocked'
 );
 
+/* Lifecycle retry semantics: clients can safely retry after network timeouts. */
+const reviewBody=dailyService.slice(dailyService.indexOf('function reviewDailySubmission('),dailyService.indexOf('function correctDailySubmission('));
+const correctionBody=dailyService.slice(dailyService.indexOf('function correctDailySubmission('),dailyService.indexOf('function voidDailySubmission('));
+const voidBody=dailyService.slice(dailyService.indexOf('function voidDailySubmission('));
+assert(reviewBody.includes('r.status===next&&r.reviewedBy===user.email&&r.decisionReason===why') &&
+       reviewBody.includes('idempotent:true'),
+  'Daily review retry returns the same outcome for the same reviewer, decision, and reason');
+assert(correctionBody.includes("prior.sourceRecordId===String(recordId)") &&
+       correctionBody.includes('prior.payloadHash===hash') &&
+       correctionBody.includes('prior.correctionReason===why') &&
+       correctionBody.includes('idempotent:true'),
+  'Daily correction retry returns the original revision only when source, payload, and reason match');
+assert(voidBody.includes("latest.status==='VOID'&&latest.sourceRecordId===source.recordId&&latest.decisionReason===why") &&
+       voidBody.includes("if(source.status!=='APPROVED')throw new Error('DAILY_VOID_SOURCE_INVALID')"),
+  'Daily void retry is idempotent and void cannot bypass review by targeting a merely submitted record');
+
+
 assert(
   dailyService.includes("total:r[i.total]===undefined||r[i.total]===null||r[i.total]===''?null:Number(r[i.total])") &&
   dailyService.includes("status==='DRAFT'?'':Number(p.total)") &&
