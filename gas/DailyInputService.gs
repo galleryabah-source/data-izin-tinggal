@@ -275,7 +275,10 @@ function correctDailySubmission(recordId,payload,reason){
       throw new Error('DAILY_IDEMPOTENCY_CONFLICT');
     }
     const source=dailyFindByRecord_(rows,recordId);
-    if(!source||source.status!=='APPROVED')throw new Error('DAILY_CORRECTION_REQUIRES_APPROVED_SOURCE');
+    if(!source)throw new Error('DAILY_CORRECTION_SOURCE_NOT_FOUND');
+    const canCorrectApproved=['ADMIN','SUPERVISOR'].includes(user.role)&&source.status==='APPROVED';
+    const canCorrectOwnRejected=source.status==='REJECTED'&&(source.createdBy===user.email||['ADMIN','SUPERVISOR'].includes(user.role));
+    if(!canCorrectApproved&&!canCorrectOwnRejected)throw new Error('DAILY_CORRECTION_SOURCE_NOT_ELIGIBLE');
     if(source.serviceFamily!==p.serviceFamily||source.operationalDate!==p.operationalDate||source.officeKey!==p.officeKey)throw new Error('DAILY_CORRECTION_CANNOT_CHANGE_LOGICAL_KEY');
     const latest=dailyLatestLogical_(rows,dailyLogicalKey_(source));if(!latest||latest.recordId!==source.recordId)throw new Error('DAILY_CORRECTION_SOURCE_NOT_LATEST');
     const office=dailyOffice_(p.officeKey),now=nowIso_(),revision=source.revision+1,rec=dailyRowArray_(p,office,'SUBMITTED',revision,source,why,user,now,hash);
