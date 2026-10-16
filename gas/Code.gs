@@ -1,4 +1,4 @@
-function doGet(e){const view=e&&e.parameter&&String(e.parameter.view||'').toLowerCase();if(view!=='tv'&&view!=='tv-mobile')requireBackOfficeAccess_();const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':'index';const title=view==='tv'?'INTAL TV · Command Display':view==='tv-mobile'?'INTAL TV Mobile · Command Display':APP.NAME;return HtmlService.createTemplateFromFile(file).evaluate().setTitle(title).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
+function doGet(e){const view=e&&e.parameter&&String(e.parameter.view||'').toLowerCase();if(view!=='tv'&&view!=='tv-mobile'&&view!=='daily')requireBackOfficeAccess_();if(view==='daily')requirePermission_('daily.read');const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':'index';const title=view==='tv'?'INTAL TV · Command Display':view==='tv-mobile'?'INTAL TV Mobile · Command Display':view==='daily'?'Input Harian · Data Izin Tinggal':APP.NAME;return HtmlService.createTemplateFromFile(file).evaluate().setTitle(title).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
 function setupApp(){
   const props=PropertiesService.getScriptProperties();
   const id=String(props.getProperty('SPREADSHEET_ID')||'').trim();
@@ -77,6 +77,7 @@ function seedDictionary_(){
   rows.forEach(row=>{const key=row[0],target=byKey[key];if(target)sh.getRange(target,1,1,row.length).setValues([row]);else sh.appendRow(row);});
 }
 function getBootstrap(){const u=requireBackOfficeAccess_();return {app:{name:APP.NAME,version:APP.VERSION,timezone:APP.TZ},user:u,permissions:u.permissions};}
+function getDailyBootstrap(){const u=requirePermission_('daily.read');return {app:{name:APP.NAME,version:APP.VERSION,timezone:APP.TZ},user:u,permissions:u.permissions,scope:'DAILY_INPUT_ONLY'};}
 
 
 function ensureRunningTextSheet_(){
