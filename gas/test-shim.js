@@ -1298,6 +1298,13 @@ const correctionEligibility=dailyService.slice(dailyService.indexOf('function co
 assert(correctionEligibility.includes("source.status==='REJECTED'") && correctionEligibility.includes("source.createdBy===user.email") &&
        correctionEligibility.includes("['ADMIN','SUPERVISOR'].includes(user.role)"),
   'Operators may correct their own rejected report while approved-report corrections remain privileged');
+const draftBody=dailyService.slice(dailyService.indexOf('function saveDailyDraft('),dailyService.indexOf('function submitDailyInput('));
+const submitBody=dailyService.slice(dailyService.indexOf('function submitDailyInput('),dailyService.indexOf('function reviewDailySubmission('));
+assert(draftBody.includes('DAILY_LOGICAL_DUPLICATE') && draftBody.includes('DAILY_CORRECTION_REQUIRED') &&
+       draftBody.includes('DAILY_VOIDED_KEY_REQUIRES_REOPEN'),
+  'Draft creation rejects duplicate logical reports and requires explicit correction/reopen for rejected or voided keys');
+assert(submitBody.includes('DAILY_CORRECTION_REQUIRED') && submitBody.includes('DAILY_VOIDED_KEY_REQUIRES_REOPEN'),
+  'Normal submission cannot bypass correction reasons or the audited reopen policy');
 assert(read('index.html').includes("getDailyBootstrap") && read('index.html').includes("get('view')==='daily'") &&
        read('index.html').includes("setBackOfficePage('dailyInputSection')"),
   'Daily input has a dedicated role-scoped route within the single application shell');
