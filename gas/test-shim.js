@@ -1601,7 +1601,7 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
   const lifecycleContext={
     APP:{TZ:'Asia/Jakarta'},
     SHEETS:{CONFIG:'CONFIG'},
-    PropertiesService:{getScriptProperties:()=>({getProperty:(key)=>key==='SPREADSHEET_ID'?'PRODUCTION-ID':key==='DAILY_STAGING_SPREADSHEET_ID'?'STAGING-ID':''})},
+    PropertiesService:{getScriptProperties:()=>({getProperty:(key)=>key==='SPREADSHEET_ID'?'PRODUCTION-ID':key==='DAILY_INPUT_SPREADSHEET_ID'?'STAGING-ID':''})},
     SpreadsheetApp:{openById:(id)=>id==='STAGING-ID'?dailyStagingDb:fakeDb},
     getDb_:()=>fakeDb,
     requirePermission_:(permission)=>{if(!dailyTestUser.permissions.includes(permission))throw new Error('FORBIDDEN: '+permission);return dailyTestUser;},
