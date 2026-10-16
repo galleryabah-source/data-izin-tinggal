@@ -1032,6 +1032,14 @@ const dailyGatePassContext={
 };
 vm.runInNewContext(dailyService,dailyGatePassContext);
 assert(dailyGatePassContext.getDailyInputPolicyV1().enabled===false,'Daily input remains hard-disabled even if mutable CONFIG flags are both set until the code-level release gate is deliberately changed');
+const stagingAliasContext={
+  SHEETS:{CONFIG:'CONFIG'},
+  requirePermission_:()=>({role:'TEST'}),
+  getDb_:()=>({getSheetByName:()=>({getDataRange:()=>({getValues:()=>[['key','value'],['DAILY_INPUT_ENABLED','true'],['DAILY_INPUT_GATE_9_1','PASS']]})})}),
+  PropertiesService:{getScriptProperties:()=>({getProperty:(key)=>key==='SPREADSHEET_ID'?'SAME-ID':key==='DAILY_STAGING_SPREADSHEET_ID'?'SAME-ID':''})}
+};
+vm.runInNewContext(dailyService,stagingAliasContext);
+assert(stagingAliasContext.getDailyInputPolicyV1().stagingReady===false,'Daily input refuses a staging spreadsheet ID that aliases the canonical spreadsheet');
 const blockedWriteContext={
   SHEETS:{CONFIG:'CONFIG'},
   requirePermission_:(permission)=>({role:'TEST',email:'test@example.com',permissions:['daily.draft','daily.read']}),
@@ -1582,14 +1590,19 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
   fakeDb.add('CONFIG',[['key','value','updated_at'],['DAILY_INPUT_ENABLED','true',''],['DAILY_INPUT_GATE_9_1','PASS','']]);
   fakeDb.add('OFFICE_REFERENCE',[['office_key','kantor_imigrasi','status'],['K-1','KANIM TEST','VERIFIED']]);
   fakeDb.add('AUDIT_LOG',[['event_id','timestamp','actor','action','dataset_key','batch_id','affected_rows','status','details']]);
+  const dailyStagingDb=new DailyFakeSpreadsheet();
+  const dailyStagingAudit=dailyStagingDb.add('DAILY_INPUT_AUDIT',[['event_id','timestamp','actor','action','dataset_key','correlation_id','affected_rows','status','details']]);
   let dailyTestUser={email:'operator@example.com',role:'OPERATOR',permissions:['daily.read','daily.draft','daily.submit','daily.correct']};
   let dailyTestAuditFails=false,dailyTestUuid=0;
+  const originalDailyStagingAuditAppend=dailyStagingAudit.appendRow.bind(dailyStagingAudit);
+  dailyStagingAudit.appendRow=function(row){if(dailyTestAuditFails)throw new Error('SIMULATED_AUDIT_FAILURE');return originalDailyStagingAuditAppend(row);};
   const lifecycleContext={
     APP:{TZ:'Asia/Jakarta'},
     SHEETS:{CONFIG:'CONFIG'},
+    PropertiesService:{getScriptProperties:()=>({getProperty:(key)=>key==='SPREADSHEET_ID'?'PRODUCTION-ID':key==='DAILY_STAGING_SPREADSHEET_ID'?'STAGING-ID':''})},
+    SpreadsheetApp:{openById:(id)=>id==='STAGING-ID'?dailyStagingDb:fakeDb},
     getDb_:()=>fakeDb,
     requirePermission_:(permission)=>{if(!dailyTestUser.permissions.includes(permission))throw new Error('FORBIDDEN: '+permission);return dailyTestUser;},
-    appendAudit_:(action,datasetKey,batchId,affectedRows,status,details)=>{if(dailyTestAuditFails)throw new Error('SIMULATED_AUDIT_FAILURE');fakeDb.getSheetByName('AUDIT_LOG').appendRow(['audit-'+fakeDb.getSheetByName('AUDIT_LOG').getLastRow(), '2026-10-16T03:00:00Z',dailyTestUser.email,action,datasetKey,batchId,affectedRows,status,details]);},
     nowIso_:()=> '2026-10-16T03:00:00.000Z',
     LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},
     Utilities:{
@@ -1607,7 +1620,7 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
     contractVersion:'candidate-v1',measures,lateEntryReason
   });
   const mustThrow=(fn,code)=>{let ok=false;try{fn();}catch(e){ok=String(e&&e.message||e).includes(code);}assert(ok,'Daily lifecycle throws expected guard: '+code);};
-  const ledger=()=>fakeDb.getSheetByName('DAILY_INPUT_LEDGER');
+  const ledger=()=>dailyStagingDb.getSheetByName('DAILY_INPUT_LEDGER');
   const partialId='11111111-1111-4111-8111-111111111111';
   const partial=lifecycleContext.saveDailyDraft(payload(partialId,'2026-10-16',{biasa_24:2}));
   assert(partial.status==='DRAFT'&&ledger().rows[1][10]==='','Incomplete draft stores a blank total, not zero');
