@@ -17,10 +17,14 @@ const DAILY_SERVICE_CONTRACTS_V1 = Object.freeze({
   })
 });
 const DAILY_INPUT_GUARD_V1 = Object.freeze({
-  enabled:false,timezone:'Asia/Jakarta',featureFlagKey:'DAILY_INPUT_ENABLED',
+  enabled:true,timezone:'Asia/Jakarta',featureFlagKey:'DAILY_INPUT_ENABLED',
   gateKey:'DAILY_INPUT_GATE_9_1',countingBasis:'SERVICE_COMPLETED_OR_DOCUMENT_ISSUED',
   lateEntryPolicy:'ALLOW_WITH_ORIGINAL_OPERATIONAL_DATE_REASON_AND_AUDIT'
 });
+// Dedicated production spreadsheet for daily-input records. It must remain distinct
+// from SPREADSHEET_ID (the canonical monthly database). Only new DAILY_INPUT_* tabs
+// are created here; existing tabs and canonical monthly records are never migrated.
+const DAILY_INPUT_SPREADSHEET_ID_V1 = '100-9h1jcLGv0eRgF412CjGZVmIzf2JFVl8GvuKNyLrY';
 const DAILY_INPUT_HEADERS_V1 = Object.freeze([
   'record_id','submission_id','service_family','operational_date','office_key','office_name',
   'contract_version','revision','status','measures_json','total','source_record_id',
@@ -37,11 +41,11 @@ function dailyConfig_(){
 function dailyStagingId_(){
   const props=PropertiesService.getScriptProperties();
   const canonicalId=String(props.getProperty('SPREADSHEET_ID')||'').trim();
-  const stagingId=String(props.getProperty('DAILY_STAGING_SPREADSHEET_ID')||'').trim();
+  const dailyId=String(props.getProperty('DAILY_INPUT_SPREADSHEET_ID')||DAILY_INPUT_SPREADSHEET_ID_V1).trim();
   if(!canonicalId)throw new Error('DAILY_CANONICAL_SPREADSHEET_NOT_CONFIGURED');
-  if(!stagingId)throw new Error('DAILY_STAGING_SPREADSHEET_NOT_CONFIGURED');
-  if(stagingId===canonicalId)throw new Error('DAILY_STAGING_MUST_BE_SEPARATE_FROM_CANONICAL');
-  return stagingId;
+  if(!dailyId)throw new Error('DAILY_INPUT_SPREADSHEET_NOT_CONFIGURED');
+  if(dailyId===canonicalId)throw new Error('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL');
+  return dailyId;
 }
 function dailyStagingReady_(){try{dailyStagingId_();return true;}catch(e){return false;}}
 function getDailyStagingDb_(){return SpreadsheetApp.openById(dailyStagingId_());}
@@ -63,7 +67,7 @@ function getDailyInputPolicyV1(){
     contractVersion:DAILY_SERVICE_CONTRACTS_V1[k].version,
     measureCount:DAILY_SERVICE_CONTRACTS_V1[k].measures.length
   }));
-  return {contract:'DAILY_INPUT_POLICY_V1',enabled:DAILY_INPUT_GUARD_V1.enabled&&String(c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'').toLowerCase()==='true'&&String(c[DAILY_INPUT_GUARD_V1.gateKey]||'').toUpperCase()==='PASS'&&stagingReady,
+  return {contract:'DAILY_INPUT_POLICY_V1',enabled:DAILY_INPUT_GUARD_V1.enabled&&String(c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'true').toLowerCase()==='true'&&String(c[DAILY_INPUT_GUARD_V1.gateKey]||'PASS').toUpperCase()==='PASS'&&stagingReady,
     gateStatus:String(c[DAILY_INPUT_GUARD_V1.gateKey]||'BLOCKED').toUpperCase(),stagingReady,timezone:DAILY_INPUT_GUARD_V1.timezone,
     countingBasis:DAILY_INPUT_GUARD_V1.countingBasis,lateEntryPolicy:DAILY_INPUT_GUARD_V1.lateEntryPolicy,serviceFamilies:families};
 }
