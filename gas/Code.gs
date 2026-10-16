@@ -1,4 +1,4 @@
-function doGet(e){const view=e&&e.parameter&&String(e.parameter.view||'').toLowerCase();if(view!=='tv'&&view!=='tv-mobile')requireBackOfficeAccess_();const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':'index';const title=view==='tv'?'INTAL TV · Command Display':view==='tv-mobile'?'INTAL TV Mobile · Command Display':APP.NAME;return HtmlService.createTemplateFromFile(file).evaluate().setTitle(title).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
+function doGet(e){let view=e&&e.parameter&&String(e.parameter.view||'').toLowerCase();if(view==='daily')requirePermission_('daily.read');else if(view!=='tv'&&view!=='tv-mobile'){const current=getCurrentUser_();if(current.authenticated&&current.permissions.includes('daily.read')&&!['ADMIN','SUPERVISOR'].includes(current.role))view='daily';else requireBackOfficeAccess_();}const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':'index';const title=view==='tv'?'INTAL TV · Command Display':view==='tv-mobile'?'INTAL TV Mobile · Command Display':view==='daily'?'Input Harian · Data Izin Tinggal':APP.NAME;return HtmlService.createTemplateFromFile(file).evaluate().setTitle(title).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
 function setupApp(){
   const props=PropertiesService.getScriptProperties();
   const id=String(props.getProperty('SPREADSHEET_ID')||'').trim();
@@ -24,7 +24,10 @@ function seedSecurity_(){
   if(roles.getLastRow()===1)roles.getRange(2,1,5,3).setValues([
     ['ADMIN','Full system administration','ACTIVE'],['SUPERVISOR','Operational supervision','ACTIVE'],['OPERATOR','Data operations','ACTIVE'],['VIEWER','Read-only access','ACTIVE'],['AUDITOR','Audit/read-only evidence','ACTIVE']
   ]);
-  if(perms.getLastRow()===1){const rows=[];Object.keys(DEFAULT_ROLES).forEach(r=>DEFAULT_ROLES[r].forEach(p=>rows.push([r,p])));perms.getRange(2,1,rows.length,2).setValues(rows);}
+  const existingPermissions=new Set(perms.getDataRange().getValues().slice(1).map(r=>String(r[0]||'').toUpperCase()+'|'+String(r[1]||'')));
+  const missingPermissions=[];
+  Object.keys(DEFAULT_ROLES).forEach(r=>DEFAULT_ROLES[r].filter(p=>p.indexOf('daily.')===0).forEach(p=>{const key=r+'|'+p;if(!existingPermissions.has(key))missingPermissions.push([r,p]);}));
+  if(missingPermissions.length)perms.getRange(perms.getLastRow()+1,1,missingPermissions.length,2).setValues(missingPermissions);
 }
 function seedDictionary_(){
   const sh=getDb_().getSheetByName(SHEETS.DATA_DICTIONARY),headers=sh.getRange(1,1,1,12).getValues()[0],idx=Object.fromEntries(headers.map((x,n)=>[x,n]));
@@ -74,6 +77,7 @@ function seedDictionary_(){
   rows.forEach(row=>{const key=row[0],target=byKey[key];if(target)sh.getRange(target,1,1,row.length).setValues([row]);else sh.appendRow(row);});
 }
 function getBootstrap(){const u=requireBackOfficeAccess_();return {app:{name:APP.NAME,version:APP.VERSION,timezone:APP.TZ},user:u,permissions:u.permissions};}
+function getDailyBootstrap(){const u=requirePermission_('daily.read');return {app:{name:APP.NAME,version:APP.VERSION,timezone:APP.TZ},user:u,permissions:u.permissions,scope:'DAILY_INPUT_ONLY'};}
 
 
 function ensureRunningTextSheet_(){

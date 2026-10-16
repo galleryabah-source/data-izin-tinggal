@@ -344,8 +344,10 @@ assert(publicTv.includes('kantor_imigrasi') && publicTv.includes('latitude') && 
 assert(!publicTv.includes('source_url') && !publicTv.includes('office_key') && !publicTv.includes('address'), 'Public TV GIS does not expose office reference metadata');
 assert(codeGs.includes("readCacheKey_('running-text-active')") && codeGs.includes('readCachePut_(cacheKey,result,10)'), 'TV running text read path uses bounded cache');
 assert(codeGs.includes("const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':'index'"), 'doGet preserves the dedicated TV template and adds a separate mobile template');
-assert(codeGs.includes("if(view!=='tv'&&view!=='tv-mobile')requireBackOfficeAccess_()"), 'Main workspace remains server-gated while TV and mobile TV use the existing public view path');
+assert(codeGs.includes("if(view==='daily')requirePermission_('daily.read')") && codeGs.includes("current.permissions.includes('daily.read')") && codeGs.includes("view='daily'"), 'Daily-only users are routed into the integrated input workspace while the admin shell remains protected');
 assert(codeGs.includes('function getBootstrap(){const u=requireBackOfficeAccess_();'), 'Back-office bootstrap is server-gated');
+assert(codeGs.includes("function getDailyBootstrap(){const u=requirePermission_('daily.read');") && codeGs.includes("scope:'DAILY_INPUT_ONLY'"), 'Daily-only bootstrap exposes identity and permissions only after daily.read authorization');
+assert(read('Config.gs').includes("'daily.correct'"), 'Operator role has the narrow permission required to correct rejected daily reports');
 const authSource=read('Auth.gs');
 assert(authSource.includes("const BACKOFFICE_ROLES_ = Object.freeze(['ADMIN','SUPERVISOR'])"), 'Back-office roles map to Owner/Editor without USERS migration');
 assert(authSource.includes('function requireBackOfficeAccess_()'), 'Back-office authorization seam exists');
@@ -857,10 +859,10 @@ assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary ho
 
 /* Phase 9 daily-input contract validator: pure tests only; no Apps Script writes. */
 const dailyService=read('DailyInputService.gs');
-assert(dailyService.includes('const DAILY_INPUT_GUARD_V1 = Object.freeze({\n  enabled: false'), 'Daily input contract remains disabled by default');
+assert(dailyService.includes('enabled:false') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily mutation endpoints retain a code-level closed kill switch plus Gate 9.1 and feature-flag checks');
 assert(dailyService.includes('function getDailyInputPolicyV1()'), 'Daily input exposes a policy read endpoint');
 assert(dailyService.includes('function getDailyServiceContractV1(serviceFamily)'), 'Daily input fields are server-contract-owned');
-assert(!dailyService.includes('appendRow(') && !dailyService.includes('setValues('), 'Daily input contract foundation performs no spreadsheet writes');
+assert(dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')") && dailyService.includes('DAILY_INPUT_HEADERS_V1'), 'Daily writes are isolated to a dedicated ledger with a fixed schema');
 assert(dailyService.includes('DAILY_SERVICE_CONTRACTS_V1') && !read('Config.gs').includes('DAILY_SERVICE_CONTRACTS_V1'), 'Daily contracts remain isolated from the monthly importer registry');
 const dailyContext={};
 vm.runInNewContext(dailyService+';this.validateDailyInputPayloadV1=validateDailyInputPayloadV1;',dailyContext);
@@ -1000,7 +1002,7 @@ const decimalDailyResult=dailyContext.validateDailyInputPayloadV1({
 assert(!decimalDailyResult.ok && decimalDailyResult.errors['measures.biasa_24'], 'Daily validator rejects fractional service counts');
 
 
-/* Phase 9 policy/read-endpoint guard tests: hard-disabled even if config is true. */
+/* Phase 9 policy/read-endpoint guard tests: fail closed unless feature flag AND Gate 9.1 PASS. */
 const dailyPolicyPermissions=[];
 const dailyPolicyContext={
   SHEETS:{CONFIG:'CONFIG'},
@@ -1021,10 +1023,45 @@ assert(dailyPolicy.timezone==='Asia/Jakarta','Daily input policy declares the ap
 assert(dailyPolicy.countingBasis==='SERVICE_COMPLETED_OR_DOCUMENT_ISSUED','Daily input policy exposes the owner-approved completed-service/document-issuance counting basis');
 assert(dailyPolicy.lateEntryPolicy==='ALLOW_WITH_ORIGINAL_OPERATIONAL_DATE_REASON_AND_AUDIT','Daily input policy exposes the owner-approved audited late-entry rule');
 assert(dailyPolicy.serviceFamilies.length===2,'Daily policy advertises only the two candidate service families');
-assert(dailyPolicyPermissions[0]==='dashboard.read','Daily input policy read endpoint requires dashboard.read');
+const dailyGatePassContext={
+  SHEETS:{CONFIG:'CONFIG'},
+  requirePermission_:(permission)=>({role:'TEST',email:'test@example.com',permissions:['daily.approve']}),
+  getDb_:()=>({getSheetByName:(name)=>name==='CONFIG'?{getDataRange:()=>({getValues:()=>[
+    ['key','value'],['DAILY_INPUT_ENABLED','true'],['DAILY_INPUT_GATE_9_1','PASS']
+  ]})}:null})
+};
+vm.runInNewContext(dailyService,dailyGatePassContext);
+assert(dailyGatePassContext.getDailyInputPolicyV1().enabled===false,'Daily input remains hard-disabled even if mutable CONFIG flags are both set until the code-level release gate is deliberately changed');
+const stagingAliasContext={
+  SHEETS:{CONFIG:'CONFIG'},
+  requirePermission_:()=>({role:'TEST'}),
+  getDb_:()=>({getSheetByName:()=>({getDataRange:()=>({getValues:()=>[['key','value'],['DAILY_INPUT_ENABLED','true'],['DAILY_INPUT_GATE_9_1','PASS']]})})}),
+  PropertiesService:{getScriptProperties:()=>({getProperty:(key)=>key==='SPREADSHEET_ID'?'SAME-ID':key==='DAILY_STAGING_SPREADSHEET_ID'?'SAME-ID':''})}
+};
+vm.runInNewContext(dailyService,stagingAliasContext);
+assert(stagingAliasContext.getDailyInputPolicyV1().stagingReady===false,'Daily input refuses a staging spreadsheet ID that aliases the canonical spreadsheet');
+const blockedWriteContext={
+  SHEETS:{CONFIG:'CONFIG'},
+  requirePermission_:(permission)=>({role:'TEST',email:'test@example.com',permissions:['daily.draft','daily.read']}),
+  getDb_:()=>({getSheetByName:(name)=>name==='CONFIG'?{getDataRange:()=>({getValues:()=>[
+    ['key','value'],['DAILY_INPUT_ENABLED','true']
+  ]})}:null})
+};
+vm.runInNewContext(dailyService,blockedWriteContext);
+let blockedWrite=false;
+try{blockedWriteContext.saveDailyDraft({});}catch(e){blockedWrite=String(e&&e.message||e).includes('DAILY_INPUT_GATE_BLOCKED');}
+assert(blockedWrite,'Daily mutation fails closed before touching the ledger when Gate 9.1 is not PASS');
+const partialDraft=dailyContext.dailyValidateDraft_({
+  submissionId:'123e4567-e89b-42d3-a456-426614174000',serviceFamily:'PASSPORT',
+  operationalDate:'2026-10-14',officeKey:'KANIM-TEST',contractVersion:'candidate-v1',
+  measures:{biasa_24:0,biasa_48:2}
+});
+assert(partialDraft.normalized.total===null && Object.keys(partialDraft.normalized.measures).length===2,
+  'Draft validation preserves missing measures as missing instead of coercing them to zero');
+assert(dailyPolicyPermissions[0]==='daily.read','Daily input policy read endpoint requires daily.read');
 const passportPolicy=dailyPolicyContext.getDailyServiceContractV1('PASSPORT');
 assert(passportPolicy.enabled===false&&passportPolicy.measures.length===4,'Passport contract read endpoint stays disabled and returns its four candidate fields');
-assert(dailyPolicyPermissions[1]==='dashboard.read','Daily contract read endpoint requires dashboard.read');
+assert(dailyPolicyPermissions[1]==='daily.read','Daily contract read endpoint requires daily.read');
 let invalidDailyFamilyRejected=false;
 try{dailyPolicyContext.getDailyServiceContractV1('UNKNOWN');}catch(e){invalidDailyFamilyRejected=String(e&&e.message||e)==='DAILY_SERVICE_FAMILY_INVALID';}
 assert(invalidDailyFamilyRejected,'Daily contract endpoint rejects unknown service families');
@@ -1047,7 +1084,7 @@ vm.runInNewContext(dailyService,dailyDeniedContext);
   ['getDailyServiceContractV1',()=>dailyDeniedContext.getDailyServiceContractV1('PASSPORT')]
 ].forEach(([endpoint,invoke])=>{
   let denied=false;
-  try{invoke();}catch(e){denied=String(e&&e.message||e)==='FORBIDDEN: dashboard.read';}
+  try{invoke();}catch(e){denied=String(e&&e.message||e)==='FORBIDDEN: daily.read';}
   assert(denied,'Daily read endpoint denies unauthorized access: '+endpoint);
 });
 assert(dailyDeniedDbReads===0,'Daily read endpoints enforce permission before reading configuration or database state');
@@ -1219,14 +1256,79 @@ assert(!arrayEnvelopeResult.ok && arrayEnvelopeResult.errors.serviceFamily && ar
 });
 
 
-/* Phase 9 read-only boundary: prohibit spreadsheet mutation APIs in the foundation. */
+/* Phase 9 write boundary: every mutating endpoint must fail closed before storage access. */
+const dailyWriteGuards = [
+  ['saveDailyDraft', 'daily.draft'],
+  ['submitDailyInput', 'daily.submit'],
+  ['reviewDailySubmission', 'daily.review'],
+  ['correctDailySubmission', 'daily.correct'],
+  ['voidDailySubmission', 'daily.void']
+];
+dailyWriteGuards.forEach(([endpoint, permission]) => {
+  const start = dailyService.indexOf('function ' + endpoint + '(');
+  const next = dailyService.indexOf('\nfunction ', start + 1);
+  const body = start >= 0 ? dailyService.slice(start, next < 0 ? dailyService.length : next) : '';
+  const authAt = body.indexOf("requirePermission_('" + permission + "')");
+  const gateAt = body.indexOf('assertDailyInputEnabled_();');
+  const lockAt = body.indexOf('LockService.getScriptLock()');
+  assert(start >= 0 && authAt >= 0 && gateAt > authAt && lockAt > gateAt,
+    'Daily write endpoint authorizes, checks the hard gate, then acquires the lock: ' + endpoint);
+});
 assert(
-  !/\.(?:appendRow|setValue|setValues|insertSheet|deleteSheet|deleteRow|clearContent|clearFormat|clear|copyTo)\s*\(/.test(dailyService),
-  'Daily input contract foundation must not call spreadsheet mutation APIs'
+  dailyService.includes("getSheetByName('DAILY_INPUT_LEDGER')") &&
+  dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')") &&
+  dailyService.includes('function ensureDailyInputSheet_(){\n  assertDailyInputEnabled_();'),
+  'Daily persistence is confined to the named ledger and its creation is gate-protected'
 );
 assert(
-  !/\b(?:LockService|PropertiesService)\s*\./.test(dailyService),
-  'Read-only contract foundation must not introduce persistence coordination or mutable property state'
+  dailyService.includes('enabled:false') &&
+  dailyService.includes("DAILY_INPUT_GATE_9_1") &&
+  dailyService.includes("DAILY_INPUT_ENABLED"),
+  'Daily input has a code-level closed kill switch in addition to CONFIG flags while Gate 9.1 is blocked'
+);
+
+/* Lifecycle retry semantics: clients can safely retry after network timeouts. */
+const reviewBody=dailyService.slice(dailyService.indexOf('function reviewDailySubmission('),dailyService.indexOf('function correctDailySubmission('));
+const correctionBody=dailyService.slice(dailyService.indexOf('function correctDailySubmission('),dailyService.indexOf('function voidDailySubmission('));
+const voidBody=dailyService.slice(dailyService.indexOf('function voidDailySubmission('));
+assert(reviewBody.includes('r.status===next&&r.reviewedBy===user.email&&r.decisionReason===why') &&
+       reviewBody.includes('idempotent:true'),
+  'Daily review retry returns the same outcome for the same reviewer, decision, and reason');
+assert(correctionBody.includes("prior.sourceRecordId===String(recordId)") &&
+       correctionBody.includes('prior.payloadHash===hash') &&
+       correctionBody.includes('prior.correctionReason===why') &&
+       correctionBody.includes('idempotent:true'),
+  'Daily correction retry returns the original revision only when source, payload, and reason match');
+assert(voidBody.includes("latest.status==='VOID'&&latest.sourceRecordId===source.recordId&&latest.decisionReason===why") &&
+       voidBody.includes("if(source.status!=='APPROVED')throw new Error('DAILY_VOID_SOURCE_INVALID')"),
+  'Daily void retry is idempotent and void cannot bypass review by targeting a merely submitted record');
+const correctionEligibility=dailyService.slice(dailyService.indexOf('function correctDailySubmission('),dailyService.indexOf('function voidDailySubmission('));
+assert(correctionEligibility.includes("source.status==='REJECTED'") && correctionEligibility.includes("source.createdBy===user.email") &&
+       correctionEligibility.includes("['ADMIN','SUPERVISOR'].includes(user.role)"),
+  'Operators may correct their own rejected report while approved-report corrections remain privileged');
+const draftBody=dailyService.slice(dailyService.indexOf('function saveDailyDraft('),dailyService.indexOf('function submitDailyInput('));
+const submitBody=dailyService.slice(dailyService.indexOf('function submitDailyInput('),dailyService.indexOf('function reviewDailySubmission('));
+assert(draftBody.includes('DAILY_LOGICAL_DUPLICATE') && draftBody.includes('DAILY_CORRECTION_REQUIRED') &&
+       draftBody.includes('DAILY_VOIDED_KEY_REQUIRES_REOPEN'),
+  'Draft creation rejects duplicate logical reports and requires explicit correction/reopen for rejected or voided keys');
+assert(submitBody.includes('DAILY_CORRECTION_REQUIRED') && submitBody.includes('DAILY_VOIDED_KEY_REQUIRES_REOPEN'),
+  'Normal submission cannot bypass correction reasons or the audited reopen policy');
+assert(read('index.html').includes("getDailyBootstrap") && read('index.html').includes("get('view')==='daily'") &&
+       read('index.html').includes("setBackOfficePage('dailyInputSection')"),
+  'Daily input has a dedicated role-scoped route within the single application shell');
+assert(read('index.html').includes("x.status==='REJECTED'&&canCorrectRejected"),
+  'Rejected submissions expose a permission-scoped correction path instead of becoming a dead end');
+
+
+assert(
+  dailyService.includes("total:r[i.total]===undefined||r[i.total]===null||r[i.total]===''?null:Number(r[i.total])") &&
+  dailyService.includes("status==='DRAFT'?'':Number(p.total)") &&
+  dailyService.includes("sh.getRange(existing.row,i.total+1).clearContent()"),
+  'Incomplete daily drafts retain an empty total instead of being represented as zero'
+);
+assert(
+  read('index.html').includes("x.total===null?'—':Number(x.total).toLocaleString('id-ID')"),
+  'Daily review table distinguishes incomplete draft totals from a confirmed zero'
 );
 
 
@@ -1354,7 +1456,7 @@ assert(gate91TestMatrix.includes('bvk') && gate91TestMatrix.includes('e_polikarb
        gate91TestMatrix.includes('17 candidate keys'),
   'Gate 9.1 test matrix covers both ends of the 17-measure inventory');
 assert(gate91Register.includes('Gate result remains BLOCKED') &&
-       gate91Register.includes('No persistence') &&
+       gate91Register.includes('No daily sheet is created') &&
        dailyBlueprint.includes('Gate 9.1 NOT PASSED'),
   'Owner policy decisions do not accidentally open Gate 9.1 or authorize writes');
 
@@ -1427,7 +1529,7 @@ assert(historicalBandungEvidence.includes('Subsequent owner decision — 2026-10
        historicalBandungEvidence.includes('does **not** authorize coercing omitted/null fields'),
   'Historical source evidence records the later normalization decision without changing app API semantics');
 
-/* Phase 9 candidate-contract inventory and no-lifecycle regression gate. */
+/* Phase 9 daily contract inventory and controlled lifecycle regression gate. */
 const dailyContractSource = read('DailyInputService.gs');
 const dailyContracts = vm.runInNewContext('DAILY_SERVICE_CONTRACTS_V1', dailyContext);
 assert(!!dailyContracts && Object.keys(dailyContracts).length===2,
@@ -1448,9 +1550,140 @@ assert(dailyContracts.RESIDENCE_PERMIT.datasetKey==='RESIDENCE_PERMIT_SERVICE_DA
 assert(dailyContracts.RESIDENCE_PERMIT.sourceContractKey==='RESIDENCE_PERMIT_SERVICE_MONTHLY' &&
        dailyContracts.PASSPORT.sourceContractKey==='PASSPORT_SERVICE_MONTHLY',
   'Daily candidates explicitly identify their monthly reference contracts without replacing them');
-assert(!/function\s+(?:submit|create|save|approve|correct|void|close|reopen)Daily\w*\s*\(/i.test(dailyContractSource),
-  'Daily contract foundation exposes no daily mutation/lifecycle endpoint');
-assert(!/\b(?:appendRow|setValue|setValues|insertSheet|deleteSheet|deleteRow|clearContent|clearFormat|clear|copyTo)\s*\(/.test(dailyContractSource),
-  'Daily candidate contract source contains no spreadsheet write API');
-assert(dailyContractSource.includes('enabled: false'),
-  'Daily input hard guard remains disabled in source');
+assert(['saveDailyDraft','submitDailyInput','reviewDailySubmission','correctDailySubmission','voidDailySubmission'].every(name=>dailyContractSource.includes('function '+name+'(')),
+  'Daily lifecycle includes draft, submit, review, correction, and void endpoints');
+assert(dailyContractSource.includes("getSheetByName('DAILY_INPUT_LEDGER')") && !dailyContractSource.includes("getSheetByName('DATA_RESIDENCE_PERMIT_SERVICE_MONTHLY')") && !dailyContractSource.includes("getSheetByName('DATA_PASSPORT_SERVICE_MONTHLY')"),
+  'Daily ledger is isolated and never opens canonical monthly sheets for writes');
+assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSource.includes('DAILY_INPUT_ENABLED'),
+  'Daily lifecycle cannot activate without both gate and feature configuration');
+
+
+/* Phase 9 lifecycle behavior tests with an in-memory Apps Script spreadsheet shim.
+ * The production kill switch is intentionally false; only this isolated test copy
+ * simulates the post-Gate release configuration to exercise guarded transitions. */
+{
+  const nodeCrypto=require('crypto');
+  class DailyFakeRange{
+    constructor(sheet,row,col,numRows=1,numCols=1){this.sheet=sheet;this.row=row;this.col=col;this.numRows=numRows;this.numCols=numCols;}
+    getValues(){const out=[];for(let r=0;r<this.numRows;r++){const row=[];for(let c=0;c<this.numCols;c++)row.push((this.sheet.rows[this.row-1+r]||[])[this.col-1+c]??'');out.push(row);}return out;}
+    setValues(values){for(let r=0;r<values.length;r++){while(this.sheet.rows.length<this.row+r)this.sheet.rows.push([]);for(let c=0;c<values[r].length;c++)this.sheet.rows[this.row-1+r][this.col-1+c]=values[r][c];}return this;}
+    setValue(value){return this.setValues([[value]]);}
+    clearContent(){return this.setValue('');}
+  }
+  class DailyFakeSheet{
+    constructor(name,rows=[]){this.name=name;this.rows=rows.map(r=>r.slice());}
+    getDataRange(){return new DailyFakeRange(this,1,1,Math.max(1,this.getLastRow()),Math.max(1,this.getLastColumn()));}
+    getRange(row,col,numRows=1,numCols=1){return new DailyFakeRange(this,row,col,numRows,numCols);}
+    getLastRow(){return this.rows.length;}
+    getLastColumn(){return this.rows.reduce((n,r)=>Math.max(n,r.length),0);}
+    setFrozenRows(){}
+    appendRow(row){this.rows.push(row.slice());return this;}
+    deleteRow(row){this.rows.splice(row-1,1);return this;}
+  }
+  class DailyFakeSpreadsheet{
+    constructor(){this.sheets={};}
+    getSheetByName(name){return this.sheets[name]||null;}
+    insertSheet(name){if(this.sheets[name])throw new Error('SHEET_EXISTS');this.sheets[name]=new DailyFakeSheet(name);return this.sheets[name];}
+    add(name,rows){this.sheets[name]=new DailyFakeSheet(name,rows);return this.sheets[name];}
+  }
+  const fakeDb=new DailyFakeSpreadsheet();
+  fakeDb.add('CONFIG',[['key','value','updated_at'],['DAILY_INPUT_ENABLED','true',''],['DAILY_INPUT_GATE_9_1','PASS','']]);
+  fakeDb.add('OFFICE_REFERENCE',[['office_key','kantor_imigrasi','status'],['K-1','KANIM TEST','VERIFIED']]);
+  fakeDb.add('AUDIT_LOG',[['event_id','timestamp','actor','action','dataset_key','batch_id','affected_rows','status','details']]);
+  const dailyStagingDb=new DailyFakeSpreadsheet();
+  const dailyStagingAudit=dailyStagingDb.add('DAILY_INPUT_AUDIT',[['event_id','timestamp','actor','action','dataset_key','correlation_id','affected_rows','status','details']]);
+  let dailyTestUser={email:'operator@example.com',role:'OPERATOR',permissions:['daily.read','daily.draft','daily.submit','daily.correct']};
+  let dailyTestAuditFails=false,dailyTestUuid=0;
+  const originalDailyStagingAuditAppend=dailyStagingAudit.appendRow.bind(dailyStagingAudit);
+  dailyStagingAudit.appendRow=function(row){if(dailyTestAuditFails)throw new Error('SIMULATED_AUDIT_FAILURE');return originalDailyStagingAuditAppend(row);};
+  const lifecycleContext={
+    APP:{TZ:'Asia/Jakarta'},
+    SHEETS:{CONFIG:'CONFIG'},
+    PropertiesService:{getScriptProperties:()=>({getProperty:(key)=>key==='SPREADSHEET_ID'?'PRODUCTION-ID':key==='DAILY_STAGING_SPREADSHEET_ID'?'STAGING-ID':''})},
+    SpreadsheetApp:{openById:(id)=>id==='STAGING-ID'?dailyStagingDb:fakeDb},
+    getDb_:()=>fakeDb,
+    requirePermission_:(permission)=>{if(!dailyTestUser.permissions.includes(permission))throw new Error('FORBIDDEN: '+permission);return dailyTestUser;},
+    nowIso_:()=> '2026-10-16T03:00:00.000Z',
+    LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},
+    Utilities:{
+      DigestAlgorithm:{SHA_256:'SHA_256'},Charset:{UTF_8:'UTF_8'},
+      computeDigest:(algo,value)=>Array.from(nodeCrypto.createHash('sha256').update(String(value)).digest()),
+      getUuid:()=>{dailyTestUuid++;return 'aaaaaaaa-aaaa-4aaa-8aaa-'+String(dailyTestUuid).padStart(12,'0');},
+      formatDate:()=> '2026-10-16'
+    }
+  };
+  const lifecycleSource=dailyService.replace('enabled:false,timezone:','enabled:true,timezone:');
+  vm.runInNewContext(lifecycleSource,lifecycleContext);
+  assert(lifecycleContext.getDailyInputPolicyV1().enabled===true && lifecycleContext.getDailyInputPolicyV1().stagingReady===true,'Lifecycle test enables writes only with a distinct configured staging spreadsheet');
+  const passportMeasures={biasa_24:2,biasa_48:1,elektronik_48:0,e_polikarbonat:0};
+  const payload=(id,date='2026-10-16',measures=passportMeasures,lateEntryReason='')=>({
+    submissionId:id,serviceFamily:'PASSPORT',operationalDate:date,officeKey:'K-1',
+    contractVersion:'candidate-v1',measures,lateEntryReason
+  });
+  const mustThrow=(fn,code)=>{let ok=false;try{fn();}catch(e){ok=String(e&&e.message||e).includes(code);}assert(ok,'Daily lifecycle throws expected guard: '+code);};
+  const ledger=()=>dailyStagingDb.getSheetByName('DAILY_INPUT_LEDGER');
+  const partialId='11111111-1111-4111-8111-111111111111';
+  const partial=lifecycleContext.saveDailyDraft(payload(partialId,'2026-10-16',{biasa_24:2}));
+  assert(!fakeDb.getSheetByName('DAILY_INPUT_LEDGER')&&!fakeDb.getSheetByName('DAILY_INPUT_AUDIT'),'Daily ledger and audit are never created in the canonical spreadsheet');
+  assert(dailyStagingDb.getSheetByName('DAILY_INPUT_AUDIT').getLastRow()===2,'Daily audit event is written to isolated staging storage');
+  assert(partial.status==='DRAFT'&&ledger().rows[1][10]==='','Incomplete draft stores a blank total, not zero');
+  assert(JSON.parse(ledger().rows[1][9]).biasa_24===2&&Object.keys(JSON.parse(ledger().rows[1][9])).length===1,'Draft preserves only explicitly supplied measures');
+  assert(lifecycleContext.saveDailyDraft(payload(partialId,'2026-10-16',{biasa_24:2})).idempotent===true,'Identical draft retry returns the same record');
+  mustThrow(()=>lifecycleContext.saveDailyDraft(payload('22222222-2222-4222-8222-222222222222')),'DAILY_LOGICAL_DUPLICATE');
+  dailyTestAuditFails=true;
+  const beforeAuditFailure=ledger().getLastRow();
+  mustThrow(()=>lifecycleContext.saveDailyDraft(payload('33333333-3333-4333-8333-333333333333','2026-10-15',passportMeasures,'uji audit rollback')),'DAILY_AUDIT_WRITE_FAILED');
+  assert(ledger().getLastRow()===beforeAuditFailure,'Audit failure rolls back the appended draft');
+  dailyTestAuditFails=false;
+  lifecycleContext.saveDailyDraft(payload(partialId,'2026-10-16',passportMeasures));
+  const submitted=lifecycleContext.submitDailyInput(payload(partialId));
+  assert(submitted.status==='SUBMITTED'&&submitted.total===3,'Submit derives total on server and transitions draft to submitted');
+  dailyTestUser={email:'supervisor@example.com',role:'SUPERVISOR',permissions:['daily.read','daily.draft','daily.submit','daily.review','daily.approve','daily.correct','daily.void']};
+  const selfSubmitted=lifecycleContext.submitDailyInput(payload('99999999-9999-4999-8999-999999999999','2026-10-14',passportMeasures,'uji pemisahan tugas'));
+  mustThrow(()=>lifecycleContext.reviewDailySubmission(selfSubmitted.recordId,'APPROVE',''),'DAILY_SEPARATION_OF_DUTIES');
+  const approved=lifecycleContext.reviewDailySubmission(submitted.recordId,'APPROVE','');
+  assert(approved.status==='APPROVED','Different reviewer can approve a submitted report');
+  assert(lifecycleContext.reviewDailySubmission(submitted.recordId,'APPROVE','').idempotent===true,'Approval retry returns the original decision');
+  const correctionId='44444444-4444-4444-8444-444444444444';
+  const correctedMeasures={biasa_24:3,biasa_48:1,elektronik_48:0,e_polikarbonat:0};
+  const correction=lifecycleContext.correctDailySubmission(approved.recordId,payload(correctionId,'2026-10-16',correctedMeasures),'Koreksi angka sumber');
+  assert(correction.revision===2&&correction.status==='SUBMITTED','Approved report correction creates a linked new revision');
+  assert(lifecycleContext.correctDailySubmission(approved.recordId,payload(correctionId,'2026-10-16',correctedMeasures),'Koreksi angka sumber').idempotent===true,'Correction retry returns the same revision');
+  dailyTestUser={email:'admin@example.com',role:'ADMIN',permissions:['daily.read','daily.draft','daily.submit','daily.review','daily.approve','daily.correct','daily.void']};
+  lifecycleContext.reviewDailySubmission(correction.recordId,'APPROVE','');
+  const voided=lifecycleContext.voidDailySubmission(correction.recordId,'Laporan duplikat setelah verifikasi');
+  assert(voided.status==='VOID'&&voided.revision===3,'Void creates an audited terminal revision instead of deleting evidence');
+  assert(lifecycleContext.voidDailySubmission(correction.recordId,'Laporan duplikat setelah verifikasi').idempotent===true,'Void retry returns the existing void revision');
+  mustThrow(()=>lifecycleContext.submitDailyInput(payload('55555555-5555-4555-8555-555555555555')),'DAILY_VOIDED_KEY_REQUIRES_REOPEN');
+  mustThrow(()=>lifecycleContext.saveDailyDraft(payload('66666666-6666-4666-8666-666666666666')),'DAILY_VOIDED_KEY_REQUIRES_REOPEN');
+  dailyTestUser={email:'operator@example.com',role:'OPERATOR',permissions:['daily.read','daily.draft','daily.submit','daily.correct']};
+  const rejectedPayload=payload('77777777-7777-4777-8777-777777777777','2026-10-15',passportMeasures,'uji laporan terlambat');
+  const rejectedSubmission=lifecycleContext.submitDailyInput(rejectedPayload);
+  dailyTestUser={email:'supervisor@example.com',role:'SUPERVISOR',permissions:['daily.read','daily.draft','daily.submit','daily.review','daily.approve','daily.correct','daily.void']};
+  lifecycleContext.reviewDailySubmission(rejectedSubmission.recordId,'REJECT','Jumlah tidak sesuai sumber');
+  dailyTestUser={email:'operator@example.com',role:'OPERATOR',permissions:['daily.read','daily.draft','daily.submit','daily.correct']};
+  const rejectedCorrection=lifecycleContext.correctDailySubmission(rejectedSubmission.recordId,payload('88888888-8888-4888-8888-888888888888','2026-10-15',{biasa_24:1,biasa_48:1,elektronik_48:0,e_polikarbonat:0},'uji laporan terlambat'),'Perbaikan sesuai bukti');
+  assert(rejectedCorrection.revision===2&&rejectedCorrection.status==='SUBMITTED','Operator can correct own rejected report with a reason and linked revision');
+}
+
+
+/* Phase 9 acceleration pack: keep the 17-measure decision and staging evidence requirements reviewable. */
+const gate91AccelerationPack = fs.readFileSync(
+  path.join(__dirname,'..','docs','PHASE-9-GATE-9.1-ACCELERATION-EVIDENCE-PACK.md'),'utf8'
+);
+const accelerationMeasureKeys = [
+  'bvk','voa','itk','itk_peralihan','itas','itap','itkt',
+  'alih_status_itk_ke_itas','alih_status_itas_ke_itap','abg','epo','imk','skim',
+  'biasa_24','biasa_48','elektronik_48','e_polikarbonat'
+];
+assert(accelerationMeasureKeys.every(key => gate91AccelerationPack.includes('| `'+key+'` |')),
+  'Acceleration evidence pack enumerates each of the 17 measure keys');
+assert(gate91AccelerationPack.includes('NOT AN APPROVAL') &&
+       gate91AccelerationPack.includes('Current status remains BLOCKED') &&
+       gate91AccelerationPack.includes('No daily-to-monthly backfill'),
+  'Acceleration pack cannot be mistaken for owner approval or permission to mutate canonical monthly data');
+assert(gate91AccelerationPack.includes('Same-key concurrency') &&
+       gate91AccelerationPack.includes('Audit write failure') &&
+       gate91AccelerationPack.includes('Canonical isolation') &&
+       gate91AccelerationPack.includes('Independent review'),
+  'Acceleration pack preserves staging concurrency, audit recovery, canonical isolation, and independent release gates');

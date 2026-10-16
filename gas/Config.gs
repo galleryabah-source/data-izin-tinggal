@@ -1,11 +1,11 @@
 const APP = Object.freeze({NAME:'Data Izin Tinggal',VERSION:'0.2.0',TZ:'Asia/Jakarta',MAX_IMPORT_ROWS:5000,MAX_CELL_CHARS:50000,SHEET_PREFIX:'DATA_',DEPLOYMENT_ID:'AKfycbzwhcpZWp8LhyidPFsvqwBQ6ZrgXjEB60NkyNmaQYsiewsvm9uZ_pwPdrG5xZINF2NK',RELEASE_EVIDENCE_VERSION:'1'});
 const SHEETS = Object.freeze({CONFIG:'CONFIG',USERS:'USERS',ROLES:'ROLES',PERMISSIONS:'PERMISSIONS',DATA_DICTIONARY:'DATA_DICTIONARY',DATASET_REGISTRY:'DATASET_REGISTRY',IMPORT_LOG:'IMPORT_LOG',AUDIT_LOG:'AUDIT_LOG',RUNNING_TEXTS:'RUNNING_TEXTS',PERIOD_CLOSURES:'PERIOD_CLOSURES'});
 const DEFAULT_ROLES = {
-  ADMIN:['dashboard.read','dataset.read','dataset.write','dataset.import','dataset.export','dataset.approve','dataset.delete','map.read','admin.users','admin.roles','admin.config','audit.read'],
-  SUPERVISOR:['dashboard.read','dataset.read','dataset.write','dataset.import','dataset.export','dataset.approve','map.read'],
-  OPERATOR:['dashboard.read','dataset.read','dataset.write','dataset.import','map.read'],
-  VIEWER:['dashboard.read','dataset.read','map.read'],
-  AUDITOR:['dashboard.read','dataset.read','audit.read']
+  ADMIN:['dashboard.read','dataset.read','dataset.write','dataset.import','dataset.export','dataset.approve','dataset.delete','map.read','admin.users','admin.roles','admin.config','audit.read','daily.read','daily.draft','daily.submit','daily.review','daily.approve','daily.correct','daily.void'],
+  SUPERVISOR:['dashboard.read','dataset.read','dataset.write','dataset.import','dataset.export','dataset.approve','map.read','daily.read','daily.draft','daily.submit','daily.review','daily.approve','daily.correct','daily.void'],
+  OPERATOR:['dashboard.read','dataset.read','dataset.write','dataset.import','map.read','daily.read','daily.draft','daily.submit','daily.correct'],
+  VIEWER:['dashboard.read','dataset.read','map.read','daily.read'],
+  AUDITOR:['dashboard.read','dataset.read','audit.read','daily.read']
 };
 const OFFICE_REFERENCE_CONTRACT = Object.freeze({datasetKey:'OFFICE_REFERENCE',version:'1',columns:['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status'],required:['office_key','kantor_imigrasi','address','latitude','longitude','source_url','status'],optional:['verified_at'],businessKey:['office_key']});
 const DATASET_CONTRACTS = Object.freeze({
