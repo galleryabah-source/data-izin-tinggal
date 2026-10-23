@@ -45,8 +45,12 @@ function dailyConfig_(){
 function dailyStagingId_(){
   const props=PropertiesService.getScriptProperties();
   const canonicalId=String(props.getProperty('SPREADSHEET_ID')||'').trim();
-  const dailyId=String(props.getProperty('DAILY_INPUT_SPREADSHEET_ID')||DAILY_INPUT_SPREADSHEET_ID_V1).trim();
+  const configuredDailyId=String(props.getProperty('DAILY_INPUT_SPREADSHEET_ID')||'').trim();
   if(!canonicalId)throw new Error('DAILY_CANONICAL_SPREADSHEET_NOT_CONFIGURED');
+  // A stale override pointing at the canonical database must never be used for daily writes.
+  // Fall back to the dedicated daily spreadsheet constant, then re-check isolation.
+  let dailyId=configuredDailyId||DAILY_INPUT_SPREADSHEET_ID_V1;
+  if(dailyId===canonicalId && DAILY_INPUT_SPREADSHEET_ID_V1!==canonicalId)dailyId=DAILY_INPUT_SPREADSHEET_ID_V1;
   if(!dailyId)throw new Error('DAILY_INPUT_SPREADSHEET_NOT_CONFIGURED');
   if(dailyId===canonicalId)throw new Error('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL');
   return dailyId;
