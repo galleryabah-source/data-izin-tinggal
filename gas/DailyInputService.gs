@@ -55,7 +55,7 @@ function dailyStagingReadinessV1_(){
   try {
     const id=dailyStagingId_();
     const ss=SpreadsheetApp.openById(id);
-    if(!ss || ss.getId()!==id) return {ready:false,reason:'DAILY_SPREADSHEET_ACCESS_FAILED'};
+    if(!ss) return {ready:false,reason:'DAILY_SPREADSHEET_ACCESS_FAILED'};
     return {ready:true,reason:null};
   } catch(e) {
     const message=String(e&&e.message||e);
