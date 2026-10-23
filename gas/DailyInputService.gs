@@ -47,11 +47,18 @@ function dailyStagingId_(){
   const canonicalId=String(props.getProperty('SPREADSHEET_ID')||'').trim();
   const configuredDailyId=String(props.getProperty('DAILY_INPUT_SPREADSHEET_ID')||'').trim();
   if(!canonicalId)throw new Error('DAILY_CANONICAL_SPREADSHEET_NOT_CONFIGURED');
-  // A stale override pointing at the canonical database must never be used for daily writes.
-  // Fall back to the dedicated daily spreadsheet constant, then re-check isolation.
+  // A stale override may point at the canonical database. Never use it for daily writes.
   let dailyId=configuredDailyId||DAILY_INPUT_SPREADSHEET_ID_V1;
-  if(dailyId===canonicalId && DAILY_INPUT_SPREADSHEET_ID_V1!==canonicalId)dailyId=DAILY_INPUT_SPREADSHEET_ID_V1;
   if(!dailyId)throw new Error('DAILY_INPUT_SPREADSHEET_NOT_CONFIGURED');
+  if(dailyId===canonicalId){
+    // Provision a separate spreadsheet once, and persist its ID. This avoids a manual
+    // Script Properties repair while preserving strict isolation from canonical data.
+    const created=SpreadsheetApp.create('INTAL Daily Input Staging');
+    const createdId=String(created&&created.getId()||'').trim();
+    if(!createdId||createdId===canonicalId)throw new Error('DAILY_STAGING_PROVISION_FAILED');
+    props.setProperty('DAILY_INPUT_SPREADSHEET_ID',createdId);
+    dailyId=createdId;
+  }
   if(dailyId===canonicalId)throw new Error('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL');
   return dailyId;
 }
