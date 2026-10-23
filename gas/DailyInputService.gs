@@ -63,14 +63,38 @@ function dailyStagingId_(){
 function dailyStagingReadinessV1_(){
   try {
     const id=dailyStagingId_();
+    const canonicalId=String(PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID')||'').trim();
+    if(!id||id===canonicalId) return {ready:false,reason:'DAILY_AND_CANONICAL_IDS_MATCH'};
     const ss=SpreadsheetApp.openById(id);
-    if(!ss) return {ready:false,reason:'DAILY_SPREADSHEET_ACCESS_FAILED'};
-    return {ready:true,reason:null};
+    if(!ss||String(ss.getId())!==id) return {ready:false,reason:'DAILY_SPREADSHEET_IDENTITY_MISMATCH'};
+    const ledgerHeaders=DAILY_INPUT_HEADERS_V1.slice();
+    const auditHeaders=['event_id','timestamp','actor','action','dataset_key','correlation_id','affected_rows','status','details'];
+    const ensureSchema=(name,headers,reason)=>{
+      let sh=ss.getSheetByName(name);
+      if(!sh){
+        sh=ss.insertSheet(name);
+        sh.getRange(1,1,1,headers.length).setValues([headers]);
+        sh.setFrozenRows(1);
+      }
+      const lastColumn=sh.getLastColumn();
+      if(lastColumn!==headers.length) throw new Error(reason);
+      const actual=sh.getRange(1,1,1,headers.length).getValues()[0].map(String);
+      if(actual.join('|')!==headers.join('|')) throw new Error(reason);
+      if(sh.getFrozenRows()!==1) sh.setFrozenRows(1);
+    };
+    ensureSchema('DAILY_INPUT_LEDGER',ledgerHeaders,'DAILY_LEDGER_SCHEMA_MISMATCH');
+    ensureSchema('DAILY_INPUT_AUDIT',auditHeaders,'DAILY_AUDIT_SCHEMA_MISMATCH');
+    return {ready:true,reason:null,spreadsheetId:id,ledgerReady:true,auditReady:true};
   } catch(e) {
     const message=String(e&&e.message||e);
-    const reason=/DAILY_CANONICAL_SPREADSHEET_NOT_CONFIGURED/.test(message)?'CANONICAL_SPREADSHEET_ID_MISSING':
+    const known=[
+      'DAILY_LEDGER_SCHEMA_MISMATCH','DAILY_AUDIT_SCHEMA_MISMATCH',
+      'DAILY_STAGING_PROVISION_FAILED','DAILY_SPREADSHEET_IDENTITY_MISMATCH'
+    ];
+    const matched=known.find(code=>message.indexOf(code)>=0);
+    const reason=matched||(/DAILY_CANONICAL_SPREADSHEET_NOT_CONFIGURED/.test(message)?'CANONICAL_SPREADSHEET_ID_MISSING':
       /DAILY_INPUT_SPREADSHEET_NOT_CONFIGURED/.test(message)?'DAILY_SPREADSHEET_ID_MISSING':
-      /DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL/.test(message)?'DAILY_AND_CANONICAL_IDS_MATCH':'DAILY_SPREADSHEET_ACCESS_FAILED';
+      /DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL/.test(message)?'DAILY_AND_CANONICAL_IDS_MATCH':'DAILY_SPREADSHEET_ACCESS_FAILED');
     return {ready:false,reason};
   }
 }
