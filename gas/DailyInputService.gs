@@ -27,6 +27,8 @@ const DAILY_INPUT_GUARD_V1 = Object.freeze({
 // from SPREADSHEET_ID (the canonical monthly database). Only new DAILY_INPUT_* tabs
 // are created here; existing tabs and canonical monthly records are never migrated.
 const DAILY_INPUT_SPREADSHEET_ID_V1 = '100-9h1jcLGv0eRgF412CjGZVmIzf2JFVl8GvuKNyLrY';
+// Owner-approved exception recorded in project decisions; CONFIG may explicitly override this value.
+const DAILY_INPUT_OWNER_OVERRIDE_V1 = 'APPROVED_WITH_EXCEPTIONS';
 const DAILY_INPUT_HEADERS_V1 = Object.freeze([
   'record_id','submission_id','service_family','operational_date','office_key','office_name',
   'contract_version','revision','status','measures_json','total','source_record_id',
@@ -49,7 +51,21 @@ function dailyStagingId_(){
   if(dailyId===canonicalId)throw new Error('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL');
   return dailyId;
 }
-function dailyStagingReady_(){try{dailyStagingId_();return true;}catch(e){return false;}}
+function dailyStagingReadinessV1_(){
+  try {
+    const id=dailyStagingId_();
+    const ss=SpreadsheetApp.openById(id);
+    if(!ss || ss.getId()!==id) return {ready:false,reason:'DAILY_SPREADSHEET_ACCESS_FAILED'};
+    return {ready:true,reason:null};
+  } catch(e) {
+    const message=String(e&&e.message||e);
+    const reason=/DAILY_CANONICAL_SPREADSHEET_NOT_CONFIGURED/.test(message)?'CANONICAL_SPREADSHEET_ID_MISSING':
+      /DAILY_INPUT_SPREADSHEET_NOT_CONFIGURED/.test(message)?'DAILY_SPREADSHEET_ID_MISSING':
+      /DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL/.test(message)?'DAILY_AND_CANONICAL_IDS_MATCH':'DAILY_SPREADSHEET_ACCESS_FAILED';
+    return {ready:false,reason};
+  }
+}
+function dailyStagingReady_(){return dailyStagingReadinessV1_().ready;}
 function getDailyStagingDb_(){return SpreadsheetApp.openById(dailyStagingId_());}
 function dailyAppendAudit_(user,action,datasetKey,batchId,affectedRows,status,details){
   const ss=getDailyStagingDb_(),name='DAILY_INPUT_AUDIT';
@@ -62,7 +78,7 @@ function dailyAppendAudit_(user,action,datasetKey,batchId,affectedRows,status,de
 }
 function getDailyInputPolicyV1(){
   requirePermission_('daily.read');
-  const stagingReady=dailyStagingReady_();
+  const staging=dailyStagingReadinessV1_(),stagingReady=staging.ready;
   const c=dailyConfig_(),families=Object.keys(DAILY_SERVICE_CONTRACTS_V1).map(k=>({
     serviceFamily:DAILY_SERVICE_CONTRACTS_V1[k].serviceFamily,
     datasetKey:DAILY_SERVICE_CONTRACTS_V1[k].datasetKey,
@@ -70,12 +86,23 @@ function getDailyInputPolicyV1(){
     measureCount:DAILY_SERVICE_CONTRACTS_V1[k].measures.length
   }));
   const gateStatus=String(c[DAILY_INPUT_GUARD_V1.gateKey]||'BLOCKED').toUpperCase();
-  const ownerOverride=String(c.DAILY_INPUT_OWNER_OVERRIDE||'').trim().toUpperCase()==='APPROVED_WITH_EXCEPTIONS';
-  const featureEnabled=String(c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'true').toLowerCase()==='true';
+  const configuredOverride=String(c.DAILY_INPUT_OWNER_OVERRIDE||'').trim().toUpperCase();
+  const ownerOverride=configuredOverride==='APPROVED_WITH_EXCEPTIONS' || DAILY_INPUT_OWNER_OVERRIDE_V1==='APPROVED_WITH_EXCEPTIONS';
+  const featureValue=String(c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'true').trim().toLowerCase();
+  const featureEnabled=featureValue==='true';
   const gateAllows=gateStatus==='PASS'||ownerOverride;
-  return {contract:'DAILY_INPUT_POLICY_V1',enabled:DAILY_INPUT_GUARD_V1.enabled&&featureEnabled&&gateAllows&&stagingReady,
-    gateStatus,ownerOverride,activationMode:ownerOverride&&gateStatus!=='PASS'?'OWNER_APPROVED_WITH_EXCEPTIONS':'STANDARD_GATE',stagingReady,timezone:DAILY_INPUT_GUARD_V1.timezone,
-    countingBasis:DAILY_INPUT_GUARD_V1.countingBasis,lateEntryPolicy:DAILY_INPUT_GUARD_V1.lateEntryPolicy,serviceFamilies:families};
+  const blockers=[];
+  if(!DAILY_INPUT_GUARD_V1.enabled)blockers.push('CODE_GUARD_DISABLED');
+  if(!featureEnabled)blockers.push('DAILY_INPUT_FEATURE_FLAG_DISABLED');
+  if(!gateAllows)blockers.push('GATE_9_1_BLOCKED_WITHOUT_OWNER_OVERRIDE');
+  if(!stagingReady)blockers.push(staging.reason||'DAILY_STAGING_NOT_READY');
+  const enabled=blockers.length===0;
+  return {contract:'DAILY_INPUT_POLICY_V1',enabled,gateStatus,ownerOverride,
+    ownerOverrideSource:configuredOverride==='APPROVED_WITH_EXCEPTIONS'?'CONFIG':'DOCUMENTED_OWNER_APPROVAL',
+    activationMode:ownerOverride&&gateStatus!=='PASS'?'OWNER_APPROVED_WITH_EXCEPTIONS':'STANDARD_GATE',
+    stagingReady,stagingReason:staging.reason,featureEnabled,blockers,
+    timezone:DAILY_INPUT_GUARD_V1.timezone,countingBasis:DAILY_INPUT_GUARD_V1.countingBasis,
+    lateEntryPolicy:DAILY_INPUT_GUARD_V1.lateEntryPolicy,serviceFamilies:families};
 }
 function assertDailyInputEnabled_(){
   const p=getDailyInputPolicyV1();
