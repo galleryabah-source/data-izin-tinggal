@@ -27,8 +27,6 @@ const DAILY_INPUT_GUARD_V1 = Object.freeze({
 // from SPREADSHEET_ID (the canonical monthly database). Only new DAILY_INPUT_* tabs
 // are created here; existing tabs and canonical monthly records are never migrated.
 const DAILY_INPUT_SPREADSHEET_ID_V1 = '100-9h1jcLGv0eRgF412CjGZVmIzf2JFVl8GvuKNyLrY';
-// Owner-approved exception recorded in project decisions; CONFIG may explicitly override this value.
-const DAILY_INPUT_OWNER_OVERRIDE_V1 = 'APPROVED_WITH_EXCEPTIONS';
 const DAILY_INPUT_HEADERS_V1 = Object.freeze([
   'record_id','submission_id','service_family','operational_date','office_key','office_name',
   'contract_version','revision','status','measures_json','total','source_record_id',
@@ -98,8 +96,8 @@ function getDailyInputPolicyV1(){
   }));
   const gateStatus=String(c[DAILY_INPUT_GUARD_V1.gateKey]||'BLOCKED').toUpperCase();
   const configuredOverride=String(c.DAILY_INPUT_OWNER_OVERRIDE||'').trim().toUpperCase();
-  const ownerOverride=configuredOverride==='APPROVED_WITH_EXCEPTIONS' || DAILY_INPUT_OWNER_OVERRIDE_V1==='APPROVED_WITH_EXCEPTIONS';
-  const featureValue=String(c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'true').trim().toLowerCase();
+  const ownerOverride=configuredOverride==='APPROVED_WITH_EXCEPTIONS';
+  const featureValue=String(c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'false').trim().toLowerCase();
   const featureEnabled=featureValue==='true';
   const gateAllows=gateStatus==='PASS'||ownerOverride;
   const blockers=[];

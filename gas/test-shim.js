@@ -860,6 +860,8 @@ assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary ho
 /* Phase 9 daily-input contract validator: pure tests only; no Apps Script writes. */
 const dailyService=read('DailyInputService.gs');
 assert(dailyService.includes('enabled:true') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily input can activate only when the explicit feature flag and Gate 9.1 checks pass');
+assert(dailyService.includes("c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'false'") && !dailyService.includes('DAILY_INPUT_OWNER_OVERRIDE_V1'), 'Daily input fails closed when the feature flag is missing and never bypasses CONFIG with a hard-coded owner override');
+assert(dailyService.includes("configuredOverride==='APPROVED_WITH_EXCEPTIONS'"), 'Owner-approved exception is honored only when explicitly recorded in CONFIG');
 assert(dailyService.includes("const DAILY_INPUT_SPREADSHEET_ID_V1 = '100-9h1jcLGv0eRgF412CjGZVmIzf2JFVl8GvuKNyLrY'") && dailyService.includes('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL'), 'Daily input targets the dedicated user spreadsheet and rejects canonical database reuse');
 assert(dailyService.includes("name='DAILY_INPUT_AUDIT'") && dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')"), 'Daily input creates only dedicated ledger and audit tabs');
 assert(dailyService.includes('function getDailyInputPolicyV1()'), 'Daily input exposes a policy read endpoint');
