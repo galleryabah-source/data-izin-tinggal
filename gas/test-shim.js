@@ -1580,21 +1580,22 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
     getRange(row,col,numRows=1,numCols=1){return new DailyFakeRange(this,row,col,numRows,numCols);}
     getLastRow(){return this.rows.length;}
     getLastColumn(){return this.rows.reduce((n,r)=>Math.max(n,r.length),0);}
-    setFrozenRows(){}
+    setFrozenRows(n){this.frozenRows=n;} getFrozenRows(){return this.frozenRows||0;}
     appendRow(row){this.rows.push(row.slice());return this;}
     deleteRow(row){this.rows.splice(row-1,1);return this;}
   }
   class DailyFakeSpreadsheet{
-    constructor(){this.sheets={};}
+    constructor(id='PRODUCTION-ID'){this.id=id;this.sheets={};}
+    getId(){return this.id;}
     getSheetByName(name){return this.sheets[name]||null;}
     insertSheet(name){if(this.sheets[name])throw new Error('SHEET_EXISTS');this.sheets[name]=new DailyFakeSheet(name);return this.sheets[name];}
     add(name,rows){this.sheets[name]=new DailyFakeSheet(name,rows);return this.sheets[name];}
   }
-  const fakeDb=new DailyFakeSpreadsheet();
+  const fakeDb=new DailyFakeSpreadsheet('PRODUCTION-ID');
   fakeDb.add('CONFIG',[['key','value','updated_at'],['DAILY_INPUT_ENABLED','true',''],['DAILY_INPUT_GATE_9_1','PASS','']]);
   fakeDb.add('OFFICE_REFERENCE',[['office_key','kantor_imigrasi','status'],['K-1','KANIM TEST','VERIFIED']]);
   fakeDb.add('AUDIT_LOG',[['event_id','timestamp','actor','action','dataset_key','batch_id','affected_rows','status','details']]);
-  const dailyStagingDb=new DailyFakeSpreadsheet();
+  const dailyStagingDb=new DailyFakeSpreadsheet('STAGING-ID');
   const dailyStagingAudit=dailyStagingDb.add('DAILY_INPUT_AUDIT',[['event_id','timestamp','actor','action','dataset_key','correlation_id','affected_rows','status','details']]);
   let dailyTestUser={email:'operator@example.com',role:'OPERATOR',permissions:['daily.read','daily.draft','daily.submit','daily.correct']};
   let dailyTestAuditFails=false,dailyTestUuid=0;
