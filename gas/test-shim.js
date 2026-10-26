@@ -1711,3 +1711,6 @@ assert(read('DailyInputService.gs').includes("i.late_entry_reason+1).setValue(p.
 assert(read('DailyInputService.gs').includes('function reopenDailySubmission(recordId,reason)') &&
        read('DailyInputService.gs').includes('DAILY_REOPEN_REASON_REQUIRED'),
   'VOID report has an explicit reasoned and audited reopening path');
+assert(read('DailyInputService.gs').includes('if(latest&&latest.recordId===existing.recordId)') &&
+       read('DailyInputService.gs').includes('DAILY_REOPEN_SOURCE_NOT_LATEST'),
+  'Reopen retry is idempotent while stale VOID sources remain rejected');
