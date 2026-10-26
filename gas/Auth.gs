@@ -1,5 +1,6 @@
 function getCurrentIdentity_(){return String(Session.getActiveUser().getEmail()||'').trim().toLowerCase();}
 function ensureDailyPermissionMigration_(){
+  if(typeof PropertiesService==='undefined'||typeof LockService==='undefined'||typeof DEFAULT_ROLES==='undefined')return;
   const props=PropertiesService.getScriptProperties(),flag='INTAL_DAILY_PERMISSIONS_MIGRATED_V1';
   if(props.getProperty(flag)==='true')return;
   const lock=LockService.getScriptLock();lock.waitLock(30000);
