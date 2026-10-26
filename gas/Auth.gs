@@ -1,13 +1,29 @@
 function getCurrentIdentity_(){return String(Session.getActiveUser().getEmail()||'').trim().toLowerCase();}
+function ensureDailyPermissionMigration_(){
+  if(typeof PropertiesService==='undefined'||typeof LockService==='undefined'||typeof DEFAULT_ROLES==='undefined')return;
+  const props=PropertiesService.getScriptProperties(),flag='INTAL_DAILY_PERMISSIONS_MIGRATED_V1';
+  if(props.getProperty(flag)==='true')return;
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try{
+    if(props.getProperty(flag)==='true')return;
+    const sh=getDb_().getSheetByName(SHEETS.PERMISSIONS);
+    const values=sh.getDataRange().getValues(),existing=new Set(values.slice(1).map(r=>String(r[0]||'').trim().toUpperCase()+'|'+String(r[1]||'').trim()));
+    const missing=[];
+    Object.keys(DEFAULT_ROLES).forEach(role=>DEFAULT_ROLES[role].filter(p=>p.indexOf('daily.')===0).forEach(permission=>{
+      const key=role+'|'+permission;if(!existing.has(key))missing.push([role,permission]);
+    }));
+    if(missing.length)sh.getRange(sh.getLastRow()+1,1,missing.length,2).setValues(missing);
+    props.setProperty(flag,'true');
+  }finally{lock.releaseLock();}
+}
 function getRolePermissions_(role){
-  const sh=getDb_().getSheetByName(SHEETS.PERMISSIONS),normalized=String(role||'').trim().toUpperCase();
-  const v=sh.getDataRange().getValues();
+  const normalized=String(role||'').trim().toUpperCase();
+  // Migrate legacy installations once. After the migration flag is set, PERMISSIONS
+  // is authoritative, so subsequent revocations are not silently undone.
+  ensureDailyPermissionMigration_();
+  const sh=getDb_().getSheetByName(SHEETS.PERMISSIONS),v=sh.getDataRange().getValues();
   const assigned=v.slice(1).filter(r=>String(r[0]).trim().toUpperCase()===normalized).map(r=>String(r[1]).trim());
-  // Existing production permission sheets predate daily input. Merge only the daily
-  // permissions declared for the assigned role so no manual schema reset is needed.
-  const roleDefaults=(typeof DEFAULT_ROLES!=='undefined'&&DEFAULT_ROLES[normalized])||[];
-  const dailyDefaults=roleDefaults.filter(p=>p.indexOf('daily.')===0);
-  return Array.from(new Set(assigned.concat(dailyDefaults)));
+  return Array.from(new Set(assigned));
 }
 function getCurrentUser_(){
   const email=getCurrentIdentity_(),v=getDb_().getSheetByName(SHEETS.USERS).getDataRange().getValues();

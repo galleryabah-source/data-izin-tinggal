@@ -1698,3 +1698,16 @@ assert(gate91AccelerationPack.includes('Same-key concurrency') &&
        gate91AccelerationPack.includes('Canonical isolation') &&
        gate91AccelerationPack.includes('Independent review'),
   'Acceleration pack preserves staging concurrency, audit recovery, canonical isolation, and independent release gates');
+
+/* Phase 9 audit-remediation regressions. */
+assert(read('Auth.gs').includes('PERMISSIONS') &&
+       read('Auth.gs').includes('INTAL_DAILY_PERMISSIONS_MIGRATED_V1') &&
+       !read('Auth.gs').includes('assigned.concat(dailyDefaults)'),
+  'Daily permissions migrate once, then PERMISSIONS remains authoritative for revocation');
+assert(read('DailyInputService.gs').includes("destinationLatest.recordId!==existing.recordId"),
+  'Updating a draft cannot move it onto an occupied logical key');
+assert(read('DailyInputService.gs').includes("i.late_entry_reason+1).setValue(p.lateEntryReason||'')"),
+  'Submitting a draft persists the exact late-entry reason represented by its payload hash');
+assert(read('DailyInputService.gs').includes('function reopenDailySubmission(recordId,reason)') &&
+       read('DailyInputService.gs').includes('DAILY_REOPEN_REASON_REQUIRED'),
+  'VOID report has an explicit reasoned and audited reopening path');
