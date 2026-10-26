@@ -295,6 +295,9 @@ function saveDailyDraft(payload){
     }
     if(existing){
       if(existing.createdBy!==user.email||existing.status!=='DRAFT')throw new Error('DAILY_IDEMPOTENCY_CONFLICT');
+      const destinationLatest=dailyLatestLogical_(rows,dailyLogicalKey_(p));
+      if(destinationLatest&&destinationLatest.recordId!==existing.recordId)
+        throw new Error('DAILY_LOGICAL_DUPLICATE: tujuan draft sudah memiliki laporan untuk tanggal, kantor, dan keluarga layanan ini.');
       const oldHash=existing.payloadHash,newHash=dailyPayloadHash_(p);
       if(oldHash===newHash)return {ok:true,recordId:existing.recordId,status:existing.status,idempotent:true};
       const i=dailyHeaderIndex_(sh),oldRow=sh.getRange(existing.row,1,1,DAILY_INPUT_HEADERS_V1.length).getValues()[0];
@@ -334,6 +337,7 @@ function submitDailyInput(payload){
       sh.getRange(existing.row,i.total+1).setValue(p.total);
       sh.getRange(existing.row,i.updated_by+1,1,2).setValues([[user.email,now]]);
       sh.getRange(existing.row,i.submitted_by+1,1,2).setValues([[user.email,now]]);
+      sh.getRange(existing.row,i.late_entry_reason+1).setValue(p.lateEntryReason||'');
       sh.getRange(existing.row,i.payload_hash+1).setValue(hash);
       try{dailyAppendAudit_(user,'DAILY_SUBMIT',DAILY_SERVICE_CONTRACTS_V1[p.serviceFamily].datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({operationalDate:p.operationalDate,officeKey:p.officeKey,total:p.total,from:oldStatus}));}
       catch(e){sh.getRange(existing.row,1,1,DAILY_INPUT_HEADERS_V1.length).setValues([oldRow]);throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
@@ -410,5 +414,34 @@ function voidDailySubmission(recordId,reason){
     try{dailyAppendAudit_(user,'DAILY_VOID',contract.datasetKey,p.submissionId,1,'SUCCESS',JSON.stringify({sourceRecordId:source.recordId,reason:why,revision:source.revision+1}));}
     catch(e){sh.deleteRow(sh.getLastRow());throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
     return {ok:true,recordId:rec[0],sourceRecordId:source.recordId,status:'VOID',revision:source.revision+1};
+  }finally{lock.releaseLock();}
+}
+
+function reopenDailySubmission(recordId,reason){
+  const user=requirePermission_('daily.reopen');assertDailyInputEnabled_();
+  if(!['ADMIN','SUPERVISOR'].includes(user.role))throw new Error('FORBIDDEN: daily.reopen');
+  const why=String(reason||'').trim();if(!why)throw new Error('DAILY_REOPEN_REASON_REQUIRED');
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try{
+    const sh=ensureDailyInputSheet_(),rows=dailyRows_(sh),source=dailyFindByRecord_(rows,recordId);
+    if(!source||source.status!=='VOID')throw new Error('DAILY_REOPEN_SOURCE_INVALID');
+    const latest=dailyLatestLogical_(rows,dailyLogicalKey_(source));
+    if(!latest||latest.recordId!==source.recordId)throw new Error('DAILY_REOPEN_SOURCE_NOT_LATEST');
+    const existing=rows.find(r=>r.sourceRecordId===source.recordId&&r.status==='DRAFT');
+    if(existing)return {ok:true,recordId:existing.recordId,sourceRecordId:source.recordId,status:'DRAFT',revision:existing.revision,idempotent:true};
+    const contract=DAILY_SERVICE_CONTRACTS_V1[source.serviceFamily];
+    if(!contract)throw new Error('DAILY_SERVICE_FAMILY_INVALID');
+    const measures=JSON.parse(source.measuresJson||'{}');
+    const p={submissionId:Utilities.getUuid(),serviceFamily:source.serviceFamily,operationalDate:source.operationalDate,
+      officeKey:source.officeKey,contractVersion:source.contractVersion,measures,total:null,
+      lateEntryReason:source.lateEntryReason||''};
+    const office=dailyOffice_(p.officeKey),now=nowIso_();
+    const rec=dailyRowArray_(p,office,'DRAFT',source.revision+1,source,why,user,now,dailyPayloadHash_(p));
+    rec[10]='';rec[22]=why;
+    sh.appendRow(rec);
+    try{dailyAppendAudit_(user,'DAILY_REOPEN',contract.datasetKey,p.submissionId,1,'SUCCESS',
+      JSON.stringify({sourceRecordId:source.recordId,revision:source.revision+1,reason:why}));}
+    catch(e){sh.deleteRow(sh.getLastRow());throw new Error('DAILY_AUDIT_WRITE_FAILED: '+e.message);}
+    return {ok:true,recordId:rec[0],sourceRecordId:source.recordId,status:'DRAFT',revision:source.revision+1};
   }finally{lock.releaseLock();}
 }
