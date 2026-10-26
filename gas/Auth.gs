@@ -3,11 +3,9 @@ function getRolePermissions_(role){
   const sh=getDb_().getSheetByName(SHEETS.PERMISSIONS),normalized=String(role||'').trim().toUpperCase();
   const v=sh.getDataRange().getValues();
   const assigned=v.slice(1).filter(r=>String(r[0]).trim().toUpperCase()===normalized).map(r=>String(r[1]).trim());
-  // Existing production permission sheets predate daily input. Merge only the daily
-  // permissions declared for the assigned role so no manual schema reset is needed.
-  const roleDefaults=(typeof DEFAULT_ROLES!=='undefined'&&DEFAULT_ROLES[normalized])||[];
-  const dailyDefaults=roleDefaults.filter(p=>p.indexOf('daily.')===0);
-  return Array.from(new Set(assigned.concat(dailyDefaults)));
+  // PERMISSIONS is authoritative at runtime. seedSecurity_ performs a one-time
+  // additive migration for missing daily permissions; do not re-add revoked access here.
+  return Array.from(new Set(assigned));
 }
 function getCurrentUser_(){
   const email=getCurrentIdentity_(),v=getDb_().getSheetByName(SHEETS.USERS).getDataRange().getValues();
