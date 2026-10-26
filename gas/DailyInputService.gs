@@ -426,9 +426,15 @@ function reopenDailySubmission(recordId,reason){
     const sh=ensureDailyInputSheet_(),rows=dailyRows_(sh),source=dailyFindByRecord_(rows,recordId);
     if(!source||source.status!=='VOID')throw new Error('DAILY_REOPEN_SOURCE_INVALID');
     const latest=dailyLatestLogical_(rows,dailyLogicalKey_(source));
-    if(!latest||latest.recordId!==source.recordId)throw new Error('DAILY_REOPEN_SOURCE_NOT_LATEST');
     const existing=rows.find(r=>r.sourceRecordId===source.recordId&&r.status==='DRAFT');
-    if(existing)return {ok:true,recordId:existing.recordId,sourceRecordId:source.recordId,status:'DRAFT',revision:existing.revision,idempotent:true};
+    // A retry after a successful reopen sees the new DRAFT as the latest logical
+    // revision. Return that same draft before enforcing the source-is-latest guard.
+    if(existing){
+      if(latest&&latest.recordId===existing.recordId)
+        return {ok:true,recordId:existing.recordId,sourceRecordId:source.recordId,status:'DRAFT',revision:existing.revision,idempotent:true};
+      throw new Error('DAILY_REOPEN_SOURCE_NOT_LATEST');
+    }
+    if(!latest||latest.recordId!==source.recordId)throw new Error('DAILY_REOPEN_SOURCE_NOT_LATEST');
     const contract=DAILY_SERVICE_CONTRACTS_V1[source.serviceFamily];
     if(!contract)throw new Error('DAILY_SERVICE_FAMILY_INVALID');
     const measures=JSON.parse(source.measuresJson||'{}');
