@@ -418,8 +418,8 @@ function voidDailySubmission(recordId,reason){
 }
 
 function reopenDailySubmission(recordId,reason){
-  const user=requirePermission_('daily.reopen');assertDailyInputEnabled_();
-  if(!['ADMIN','SUPERVISOR'].includes(user.role))throw new Error('FORBIDDEN: daily.reopen');
+  const user=requirePermission_('daily.void');assertDailyInputEnabled_();
+  if(!['ADMIN','SUPERVISOR'].includes(user.role))throw new Error('FORBIDDEN: daily.void');
   const why=String(reason||'').trim();if(!why)throw new Error('DAILY_REOPEN_REASON_REQUIRED');
   const lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
