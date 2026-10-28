@@ -27,6 +27,7 @@ const readinessCode=dailyInputCode.slice(readinessStart,readinessEnd);
 assert(!readinessCode.includes('insertSheet(')&&!readinessCode.includes('setValues(')&&!readinessCode.includes('setFrozenRows('),'Daily staging readiness check is read-only');
 assert(dailyInputCode.includes("function provisionDailyInputStorageV1()")&&dailyInputCode.includes("requirePermission_('admin.config')"),'Daily staging provisioning is explicit and admin-authorized');
 const routeCode=read('Code.gs');
+assert(routeCode.includes('function setupApp_(')&&!routeCode.includes('function setupApp('),'setupApp has side effects but is private to Apps Script RPC callers');
 assert(routeCode.includes("view!=='tv'&&view!=='tv-mobile'"),'INTAL TV Mobile remains in the same public read-only view access path');
 assert(routeCode.includes("view==='tv-mobile'?'tv-mobile'"),'doGet routes tv-mobile to its separate template');
 assert(mobileHtml.includes('data-nav="menu"')&&mobileHtml.includes('data-nav="services"'),'Mobile has persistent bottom navigation');
