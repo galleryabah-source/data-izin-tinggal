@@ -48,15 +48,6 @@ function dailyStagingId_(){
   // A stale override may point at the canonical database. Never use it for daily writes.
   let dailyId=configuredDailyId||DAILY_INPUT_SPREADSHEET_ID_V1;
   if(!dailyId)throw new Error('DAILY_INPUT_SPREADSHEET_NOT_CONFIGURED');
-  if(dailyId===canonicalId){
-    // Provision a separate spreadsheet once, and persist its ID. This avoids a manual
-    // Script Properties repair while preserving strict isolation from canonical data.
-    const created=SpreadsheetApp.create('INTAL Daily Input Staging');
-    const createdId=String(created&&created.getId()||'').trim();
-    if(!createdId||createdId===canonicalId)throw new Error('DAILY_STAGING_PROVISION_FAILED');
-    props.setProperty('DAILY_INPUT_SPREADSHEET_ID',createdId);
-    dailyId=createdId;
-  }
   if(dailyId===canonicalId)throw new Error('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL');
   return dailyId;
 }
@@ -69,27 +60,23 @@ function dailyStagingReadinessV1_(){
     if(!ss||String(ss.getId())!==id) return {ready:false,reason:'DAILY_SPREADSHEET_IDENTITY_MISMATCH'};
     const ledgerHeaders=DAILY_INPUT_HEADERS_V1.slice();
     const auditHeaders=['event_id','timestamp','actor','action','dataset_key','correlation_id','affected_rows','status','details'];
-    const ensureSchema=(name,headers,reason)=>{
-      let sh=ss.getSheetByName(name);
-      if(!sh){
-        sh=ss.insertSheet(name);
-        sh.getRange(1,1,1,headers.length).setValues([headers]);
-        sh.setFrozenRows(1);
-      }
+    const checkSchema=(name,headers,missingReason,mismatchReason)=>{
+      const sh=ss.getSheetByName(name);
+      if(!sh||sh.getLastRow()===0||sh.getLastColumn()===0) throw new Error(missingReason);
       const lastColumn=sh.getLastColumn();
-      if(lastColumn!==headers.length) throw new Error(reason);
+      if(lastColumn!==headers.length) throw new Error(mismatchReason);
       const actual=sh.getRange(1,1,1,headers.length).getValues()[0].map(String);
-      if(actual.join('|')!==headers.join('|')) throw new Error(reason);
-      if(sh.getFrozenRows()!==1) sh.setFrozenRows(1);
+      if(actual.join('|')!==headers.join('|')) throw new Error(mismatchReason);
+      if(sh.getFrozenRows()!==1) throw new Error(mismatchReason);
     };
-    ensureSchema('DAILY_INPUT_LEDGER',ledgerHeaders,'DAILY_LEDGER_SCHEMA_MISMATCH');
-    ensureSchema('DAILY_INPUT_AUDIT',auditHeaders,'DAILY_AUDIT_SCHEMA_MISMATCH');
+    checkSchema('DAILY_INPUT_LEDGER',ledgerHeaders,'DAILY_LEDGER_MISSING','DAILY_LEDGER_SCHEMA_MISMATCH');
+    checkSchema('DAILY_INPUT_AUDIT',auditHeaders,'DAILY_AUDIT_MISSING','DAILY_AUDIT_SCHEMA_MISMATCH');
     return {ready:true,reason:null,spreadsheetId:id,ledgerReady:true,auditReady:true};
   } catch(e) {
     const message=String(e&&e.message||e);
     const known=[
       'DAILY_LEDGER_SCHEMA_MISMATCH','DAILY_AUDIT_SCHEMA_MISMATCH',
-      'DAILY_STAGING_PROVISION_FAILED','DAILY_SPREADSHEET_IDENTITY_MISMATCH'
+      'DAILY_LEDGER_MISSING','DAILY_AUDIT_MISSING','DAILY_SPREADSHEET_IDENTITY_MISMATCH'
     ];
     const matched=known.find(code=>message.indexOf(code)>=0);
     const reason=matched||(/DAILY_CANONICAL_SPREADSHEET_NOT_CONFIGURED/.test(message)?'CANONICAL_SPREADSHEET_ID_MISSING':
@@ -97,6 +84,41 @@ function dailyStagingReadinessV1_(){
       /DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL/.test(message)?'DAILY_AND_CANONICAL_IDS_MATCH':'DAILY_SPREADSHEET_ACCESS_FAILED');
     return {ready:false,reason};
   }
+}
+function provisionDailyInputStorageV1(){
+  requirePermission_('admin.config');
+  const lock=LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const id=dailyStagingId_();
+    const canonicalId=String(PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID')||'').trim();
+    if(!canonicalId||id===canonicalId)throw new Error('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL');
+    const ss=SpreadsheetApp.openById(id);
+    const schemas=[
+      {name:'DAILY_INPUT_LEDGER',headers:DAILY_INPUT_HEADERS_V1.slice(),reason:'DAILY_LEDGER_SCHEMA_MISMATCH'},
+      {name:'DAILY_INPUT_AUDIT',headers:['event_id','timestamp','actor','action','dataset_key','correlation_id','affected_rows','status','details'],reason:'DAILY_AUDIT_SCHEMA_MISMATCH'}
+    ];
+    schemas.forEach(spec=>{
+      let sh=ss.getSheetByName(spec.name);
+      if(!sh){
+        sh=ss.insertSheet(spec.name);
+        sh.getRange(1,1,1,spec.headers.length).setValues([spec.headers]);
+        sh.setFrozenRows(1);
+        return;
+      }
+      if(sh.getLastRow()===0&&sh.getLastColumn()===0){
+        sh.getRange(1,1,1,spec.headers.length).setValues([spec.headers]);
+        sh.setFrozenRows(1);
+        return;
+      }
+      if(sh.getLastColumn()!==spec.headers.length||
+        sh.getRange(1,1,1,spec.headers.length).getValues()[0].map(String).join('|')!==spec.headers.join('|')||
+        sh.getFrozenRows()!==1)throw new Error(spec.reason);
+    });
+    const result=dailyStagingReadinessV1_();
+    if(!result.ready)throw new Error(result.reason||'DAILY_STAGING_NOT_READY');
+    return {ok:true,ready:true,spreadsheetId:id,ledgerReady:true,auditReady:true};
+  } finally {lock.releaseLock();}
 }
 function dailyStagingReady_(){return dailyStagingReadinessV1_().ready;}
 function getDailyStagingDb_(){return SpreadsheetApp.openById(dailyStagingId_());}
