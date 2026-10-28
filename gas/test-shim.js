@@ -1832,3 +1832,90 @@ try { ambiguousMigrationRuntime.context.migrateGoogleSubjectColumnV1(); }
 catch (error) { ambiguousMigrationRejected = String(error && error.message || error) === 'USERS_GOOGLE_SUB_HEADER_AMBIGUOUS'; }
 assert(ambiguousMigrationRejected,
   'Google subject migration rejects duplicate google_sub headers rather than guessing');
+
+
+/* GatewayAuth behavior tests: mock Apps Script services and verify fail-closed identity mapping. */
+const gatewayRuntimeSource = read('GatewayAuth.gs');
+function makeGatewayUsersSheet(rows) {
+  return { getDataRange: () => ({ getValues: () => rows.map(row => row.slice()) }) };
+}
+function loadGatewayRuntime({ usersRows, verifyBody, statusCode = 200, fetchThrows = false, config = {} }) {
+  const calls = [];
+  const properties = Object.assign({
+    INTAL_GATEWAY_VERIFY_URL: 'https://gateway.example.test/api/auth/verify-session',
+    GAS_GATEWAY_SHARED_SECRET: 'test-shared-secret'
+  }, config);
+  const context = {
+    SHEETS: { USERS: 'USERS' },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: key => properties[key] || '' }) },
+    UrlFetchApp: { fetch: (url, options) => {
+      calls.push({ url, options });
+      if (fetchThrows) throw new Error('network down');
+      return { getResponseCode: () => statusCode, getContentText: () => JSON.stringify(verifyBody) };
+    } },
+    getDb_: () => ({ getSheetByName: name => name === 'USERS' ? makeGatewayUsersSheet(usersRows) : null }),
+    getRolePermissions_: role => role === 'ADMIN' ? ['dashboard.read', 'admin.users'] : ['dashboard.read'],
+    BACKOFFICE_ROLES_: ['ADMIN', 'SUPERVISOR'],
+    Date, JSON, Math, Number, String, Array, Error
+  };
+  vm.runInNewContext(gatewayRuntimeSource, context);
+  return { context, calls };
+}
+const gatewayHeaders = ['user_id','email','display_name','role','status','password_hash','salt','created_at','updated_at','google_sub'];
+const gatewayUsers = [
+  gatewayHeaders,
+  ['u1','admin@example.test','Admin','ADMIN','ACTIVE','','','','','google-sub-1']
+];
+const gatewayGoodBody = {
+  valid: true,
+  identity: { subject: 'google-sub-1', email: 'admin@example.test', name: 'Admin' },
+  expiresAt: Math.floor(Date.now() / 1000) + 120
+};
+const gatewayRuntime = loadGatewayRuntime({ usersRows: gatewayUsers, verifyBody: gatewayGoodBody });
+const gatewayUser = gatewayRuntime.context.verifyGatewaySession_('test-session-token');
+assert(gatewayUser.authenticated && gatewayUser.subject === 'google-sub-1' &&
+       gatewayUser.email === 'admin@example.test' && gatewayUser.permissions.includes('admin.users'),
+  'Gateway session maps verified Google subject to exactly one active user and server-side permissions');
+assert(gatewayRuntime.calls.length === 1 &&
+       gatewayRuntime.calls[0].url === 'https://gateway.example.test/api/auth/verify-session' &&
+       gatewayRuntime.calls[0].options.headers['x-intal-gateway-key'] === 'test-shared-secret' &&
+       gatewayRuntime.calls[0].options.followRedirects === false,
+  'Gateway session uses configured HTTPS verification endpoint and shared service key without redirects');
+for (const scenario of [
+  { name: 'missing token', token: '', body: gatewayGoodBody, expected: 'UNAUTHENTICATED' },
+  { name: 'expired identity', token: 'token', body: Object.assign({}, gatewayGoodBody, { expiresAt: 1 }), expected: 'UNAUTHENTICATED' },
+  { name: 'mismatched email', token: 'token', body: Object.assign({}, gatewayGoodBody, { identity: { subject: 'google-sub-1', email: 'other@example.test' } }), expected: 'UNAUTHENTICATED' }
+]) {
+  const runtime = loadGatewayRuntime({ usersRows: gatewayUsers, verifyBody: scenario.body });
+  let rejected = false;
+  try { runtime.context.verifyGatewaySession_(scenario.token); }
+  catch (error) { rejected = String(error && error.message || error) === scenario.expected; }
+  assert(rejected, 'Gateway verification rejects ' + scenario.name);
+}
+const duplicateGatewayUsers = gatewayUsers.concat([
+  ['u2','admin@example.test','Second Admin','ADMIN','ACTIVE','','','','','google-sub-1']
+]);
+let duplicateGatewayRejected = false;
+try {
+  loadGatewayRuntime({ usersRows: duplicateGatewayUsers, verifyBody: gatewayGoodBody })
+    .context.verifyGatewaySession_('token');
+} catch (error) {
+  duplicateGatewayRejected = String(error && error.message || error) === 'UNAUTHENTICATED';
+}
+assert(duplicateGatewayRejected, 'Gateway identity mapping rejects duplicate active Google subjects');
+let gatewayUnavailableRejected = false;
+try {
+  loadGatewayRuntime({ usersRows: gatewayUsers, verifyBody: gatewayGoodBody, fetchThrows: true })
+    .context.verifyGatewaySession_('token');
+} catch (error) {
+  gatewayUnavailableRejected = String(error && error.message || error) === 'AUTH_GATEWAY_UNAVAILABLE';
+}
+assert(gatewayUnavailableRejected, 'Gateway verification fails closed on upstream network errors');
+let gatewayUnconfiguredRejected = false;
+try {
+  loadGatewayRuntime({ usersRows: gatewayUsers, verifyBody: gatewayGoodBody, config: { INTAL_GATEWAY_VERIFY_URL: '' } })
+    .context.verifyGatewaySession_('token');
+} catch (error) {
+  gatewayUnconfiguredRejected = String(error && error.message || error) === 'AUTH_GATEWAY_NOT_CONFIGURED';
+}
+assert(gatewayUnconfiguredRejected, 'Gateway verification fails closed when endpoint configuration is missing');
