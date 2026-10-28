@@ -1,20 +1,20 @@
 # Callable Apps Script surface scan — expanded inventory (2026-10-29)
 
-Status: BLOCKED. This is an expanded scan of primary application/service files, not certification of every .gs file or every side effect. Apps Script global functions may be invoked by name through google.script.run; underscore suffixes are a convention, not a security boundary.
+Status: BLOCKED. This is an expanded scan of primary application/service files, not certification of every .gs file or every side effect. Apps Script functions whose names end in an underscore are private to google.script.run; do not count them as browser-callable RPCs. Public global functions without the suffix remain callable by name and still require authorization.
 
 ## High-priority findings
 1. GatewayAuth.gs provides explicit-token verification helpers, but they are not yet the common authorization boundary for all protected RPCs.
 2. Auth.gs retains the legacy Session.getActiveUser().getEmail() identity path.
 3. Protected services currently call requirePermission_() / requireBackOfficeAccess_(), not the gateway token verifier.
-4. Code.gs includes setupApp() with schema/security seeding side effects; it must not be callable as an unguarded web RPC. Restrict invocation to a controlled administrative setup path.
-5. Several service files declare internal helpers as global functions. A trailing underscore does not stop RPC invocation. The browser must only invoke a strict allowlist, and sensitive helpers must not be reachable as public entry points.
+4. Code.gs originally exposed setupApp() with schema/security seeding side effects. It has now been renamed setupApp_() so it is not callable through google.script.run; it remains manually runnable by an authorized script editor. This narrow change does not secure other protected RPCs.
+5. Internal helpers ending in an underscore are private to google.script.run. Public global methods still need server-side authorization; browser dispatch should also use explicit allowlists as defense in depth.
 6. PublicTvService.gs has no permission-guard calls in the scanned file. That is expected only for intended public TV methods; each response still needs sanitization and tests proving no sensitive fields leak.
 7. Code.gs protects ordinary page routing with legacy guards. Public tv/tv-mobile views are intentional exceptions; public page rendering does not authorize protected RPCs.
 
 ## Enumerated global declarations
 
 ### gas/Code.gs
-doGet, setupApp, initializeSchema_, seedSecurity_, seedDictionary_, getBootstrap, getDailyBootstrap, ensureRunningTextSheet_, getRunningTextSheet_, normalizeRunningTextRow_, listRunningTextsAdmin, saveRunningText, deleteRunningText, getActiveRunningTexts, getActiveRunningTexts_.
+doGet, setupApp_ (manual editor setup; private to google.script.run), initializeSchema_, seedSecurity_, seedDictionary_, getBootstrap, getDailyBootstrap, ensureRunningTextSheet_, getRunningTextSheet_, normalizeRunningTextRow_, listRunningTextsAdmin, saveRunningText, deleteRunningText, getActiveRunningTexts, getActiveRunningTexts_.
 
 ### gas/Auth.gs
 getCurrentIdentity_, ensureDailyPermissionMigration_, getRolePermissions_, getCurrentUser_, requirePermission_, requireBackOfficeAccess_, adminCreateUser, bootstrapAdmin_.
@@ -50,7 +50,7 @@ ensureOfficeReferenceSheet, getOfficeReferenceStatus, getOfficeReferenceStatus_,
 
 ## Remediation priority
 1. P0: enumerate every global function across every .gs file, identify direct writes/external effects, classify each as protected RPC, explicitly public read-only RPC, or internal helper; check call sites in all HTML files.
-2. P0: remove browser-callable paths to setupApp and bootstrapAdmin_ unless independently gated; eliminate legacy identity fallback for protected endpoints.
+2. P0: setupApp_ is now private to google.script.run; separately review all public setup/admin entry points and eliminate legacy identity fallback for protected endpoints. bootstrapAdmin_ already ends in underscore and is not browser-callable through google.script.run.
 3. P0: pass session token explicitly into every protected entry point; verify server-side before reads/writes; map active user by unique google_sub; check live server-side permissions; pass validated identity to helpers.
 4. P1: keep only approved public TV endpoints; test output sanitization and ensure no user, audit, registry, backup, or staging data leaks.
 5. P1: test invalid/missing/expired token, gateway outage, unknown/inactive/duplicate subject, permission revocation, zero-write rejection, and authorized role-specific flows.
