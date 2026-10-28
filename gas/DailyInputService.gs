@@ -76,7 +76,7 @@ function dailyStagingReadinessV1_(){
     const message=String(e&&e.message||e);
     const known=[
       'DAILY_LEDGER_SCHEMA_MISMATCH','DAILY_AUDIT_SCHEMA_MISMATCH',
-      'DAILY_LEDGER_MISSING','DAILY_AUDIT_MISSING','DAILY_SPREADSHEET_IDENTITY_MISMATCH'
+      'DAILY_LEDGER_MISSING','DAILY_AUDIT_MISSING','DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL','DAILY_SPREADSHEET_IDENTITY_MISMATCH'
     ];
     const matched=known.find(code=>message.indexOf(code)>=0);
     const reason=matched||(/DAILY_CANONICAL_SPREADSHEET_NOT_CONFIGURED/.test(message)?'CANONICAL_SPREADSHEET_ID_MISSING':
