@@ -1686,6 +1686,8 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
 
 /* Phase 9 staging readiness integrity regressions. */
 const dailyReadinessSource = read('DailyInputService.gs');
+assert(dailyReadinessSource.includes('function validateDailyInputPayloadV1_(') && !dailyReadinessSource.includes('function validateDailyInputPayloadV1('),
+  'Daily payload validator is internal and not exposed as a browser-callable RPC');
 assert(dailyReadinessSource.includes('DAILY_SPREADSHEET_IDENTITY_MISMATCH'), 'Daily staging checks opened spreadsheet identity');
 assert(dailyReadinessSource.includes('DAILY_LEDGER_SCHEMA_MISMATCH') && dailyReadinessSource.includes('DAILY_AUDIT_SCHEMA_MISMATCH'), 'Daily staging verifies ledger and audit schema');
 assert(dailyReadinessSource.includes('DAILY_AND_CANONICAL_IDS_MATCH'), 'Daily staging refuses canonical spreadsheet identity');
