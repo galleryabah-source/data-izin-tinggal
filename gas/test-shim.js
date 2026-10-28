@@ -18,6 +18,14 @@ const mobileScriptEnd=mobileHtml.indexOf('</script>',mobileScriptStart);
 const mobileScriptMatch=mobileScriptStart>='<script>'.length&&mobileScriptEnd>mobileScriptStart?{1:mobileHtml.slice(mobileScriptStart,mobileScriptEnd)}:null;
 assert(!!mobileScriptMatch,'INTAL TV Mobile contains a script block');
 try{new Function(mobileScriptMatch[1]);}catch(e){throw new Error('TEST FAILED: INTAL TV Mobile script syntax: '+e.message);}
+const dailyInputCode=read('DailyInputService.gs');
+assert(dailyInputCode.includes("if(dailyId===canonicalId)throw new Error('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL')"),'Daily input fails closed when staging and canonical IDs match');
+assert(!dailyInputCode.includes("SpreadsheetApp.create('INTAL Daily Input Staging')"),'Daily input request path never auto-creates a replacement staging spreadsheet');
+const readinessStart=dailyInputCode.indexOf('function dailyStagingReadinessV1_()');
+const readinessEnd=dailyInputCode.indexOf('function provisionDailyInputStorageV1()',readinessStart);
+const readinessCode=dailyInputCode.slice(readinessStart,readinessEnd);
+assert(!readinessCode.includes('insertSheet(')&&!readinessCode.includes('setValues(')&&!readinessCode.includes('setFrozenRows('),'Daily staging readiness check is read-only');
+assert(dailyInputCode.includes("function provisionDailyInputStorageV1()")&&dailyInputCode.includes("requirePermission_('admin.config')"),'Daily staging provisioning is explicit and admin-authorized');
 const routeCode=read('Code.gs');
 assert(routeCode.includes("view!=='tv'&&view!=='tv-mobile'"),'INTAL TV Mobile remains in the same public read-only view access path');
 assert(routeCode.includes("view==='tv-mobile'?'tv-mobile'"),'doGet routes tv-mobile to its separate template');
@@ -1596,7 +1604,10 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
   fakeDb.add('OFFICE_REFERENCE',[['office_key','kantor_imigrasi','status'],['K-1','KANIM TEST','VERIFIED']]);
   fakeDb.add('AUDIT_LOG',[['event_id','timestamp','actor','action','dataset_key','batch_id','affected_rows','status','details']]);
   const dailyStagingDb=new DailyFakeSpreadsheet('STAGING-ID');
+  const dailyLedgerHeaders=['record_id','submission_id','service_family','operational_date','office_key','office_name','contract_version','revision','status','measures_json','total','source_record_id','source_submission_id','created_by','created_at','updated_by','updated_at','submitted_by','submitted_at','reviewed_by','reviewed_at','decision_reason','correction_reason','payload_hash','late_entry_reason'];
+  dailyStagingDb.add('DAILY_INPUT_LEDGER',[dailyLedgerHeaders]).setFrozenRows(1);
   const dailyStagingAudit=dailyStagingDb.add('DAILY_INPUT_AUDIT',[['event_id','timestamp','actor','action','dataset_key','correlation_id','affected_rows','status','details']]);
+  dailyStagingAudit.setFrozenRows(1);
   let dailyTestUser={email:'operator@example.com',role:'OPERATOR',permissions:['daily.read','daily.draft','daily.submit','daily.correct']};
   let dailyTestAuditFails=false,dailyTestUuid=0;
   const originalDailyStagingAuditAppend=dailyStagingAudit.appendRow.bind(dailyStagingAudit);
