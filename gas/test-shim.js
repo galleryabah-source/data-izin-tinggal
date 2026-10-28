@@ -18,6 +18,14 @@ const mobileScriptEnd=mobileHtml.indexOf('</script>',mobileScriptStart);
 const mobileScriptMatch=mobileScriptStart>='<script>'.length&&mobileScriptEnd>mobileScriptStart?{1:mobileHtml.slice(mobileScriptStart,mobileScriptEnd)}:null;
 assert(!!mobileScriptMatch,'INTAL TV Mobile contains a script block');
 try{new Function(mobileScriptMatch[1]);}catch(e){throw new Error('TEST FAILED: INTAL TV Mobile script syntax: '+e.message);}
+const dailyInputCode=read('DailyInputService.gs');
+assert(dailyInputCode.includes("if(dailyId===canonicalId)throw new Error('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL')"),'Daily input fails closed when staging and canonical IDs match');
+assert(!dailyInputCode.includes("SpreadsheetApp.create('INTAL Daily Input Staging')"),'Daily input request path never auto-creates a replacement staging spreadsheet');
+const readinessStart=dailyInputCode.indexOf('function dailyStagingReadinessV1_()');
+const readinessEnd=dailyInputCode.indexOf('function dailyStagingReady_()',readinessStart);
+const readinessCode=dailyInputCode.slice(readinessStart,readinessEnd);
+assert(!readinessCode.includes('insertSheet(')&&!readinessCode.includes('setValues(')&&!readinessCode.includes('setFrozenRows('),'Daily staging readiness check is read-only');
+assert(dailyInputCode.includes("function provisionDailyInputStorageV1()")&&dailyInputCode.includes("requirePermission_('admin.config')"),'Daily staging provisioning is explicit and admin-authorized');
 const routeCode=read('Code.gs');
 assert(routeCode.includes("view!=='tv'&&view!=='tv-mobile'"),'INTAL TV Mobile remains in the same public read-only view access path');
 assert(routeCode.includes("view==='tv-mobile'?'tv-mobile'"),'doGet routes tv-mobile to its separate template');
