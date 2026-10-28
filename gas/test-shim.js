@@ -1722,3 +1722,30 @@ assert(read('DailyInputService.gs').includes("i.late_entry_reason+1).setValue(p.
 assert(read('DailyInputService.gs').includes('function reopenDailySubmission(recordId,reason)') &&
        read('DailyInputService.gs').includes('DAILY_REOPEN_REASON_REQUIRED'),
   'VOID report has an explicit reasoned and audited reopening path');
+
+
+/* Google gateway RPC integration seam static security regressions. */
+const gatewayAuthSource = read('GatewayAuth.gs');
+assert(gatewayAuthSource.includes('function verifyGatewaySession_(sessionToken)'),
+  'Gateway auth exposes an explicit session-token verification seam');
+assert(gatewayAuthSource.includes("props.getProperty('INTAL_GATEWAY_VERIFY_URL')") &&
+       gatewayAuthSource.includes("props.getProperty('GAS_GATEWAY_SHARED_SECRET')") &&
+       gatewayAuthSource.includes('UrlFetchApp.fetch(verifyUrl'),
+  'Gateway session verification uses server-side configuration and server-to-server request');
+assert(gatewayAuthSource.includes("throw new Error('AUTH_GATEWAY_UNAVAILABLE')") &&
+       gatewayAuthSource.includes("throw new Error('UNAUTHENTICATED')") &&
+       gatewayAuthSource.includes('followRedirects: false'),
+  'Gateway outage, rejected session, and redirects fail closed');
+assert(gatewayAuthSource.includes("headers.indexOf('google_sub')") &&
+       gatewayAuthSource.includes("headers.indexOf('status')") &&
+       gatewayAuthSource.includes("headers.indexOf('email')"),
+  'Gateway identity mapping requires stable Google subject, active status, and matching email');
+assert(gatewayAuthSource.includes('if (matches.length !== 1)') &&
+       gatewayAuthSource.includes('getRolePermissions_(role)'),
+  'Gateway mapping rejects missing/ambiguous users and reads server-side permissions');
+assert(gatewayAuthSource.includes('function requireGatewayPermission_(permission, sessionToken)') &&
+       gatewayAuthSource.includes('function requireGatewayBackOfficeAccess_(sessionToken)'),
+  'Gateway authorization helpers require an explicit session token');
+assert(read('Auth.gs').includes('Session.getActiveUser().getEmail()') &&
+       !read('Auth.gs').includes('verifyGatewaySession_('),
+  'Legacy identity path is still explicitly recognized as not yet migrated across RPCs');
