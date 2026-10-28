@@ -1749,3 +1749,21 @@ assert(gatewayAuthSource.includes('function requireGatewayPermission_(permission
 assert(read('Auth.gs').includes('Session.getActiveUser().getEmail()') &&
        !read('Auth.gs').includes('verifyGatewaySession_('),
   'Legacy identity path is still explicitly recognized as not yet migrated across RPCs');
+
+
+/* Google subject schema migration static regressions. */
+const googleSubjectMigrationSource = read('GoogleSubjectMigration.gs');
+assert(googleSubjectMigrationSource.includes("function migrateGoogleSubjectColumnV1()") &&
+       googleSubjectMigrationSource.includes("requirePermission_('admin.users')"),
+  'Google subject schema migration is an explicit admin.users-protected operation');
+assert(googleSubjectMigrationSource.includes("header === 'google_sub'") &&
+       googleSubjectMigrationSource.includes("if (matches.length > 1)") &&
+       googleSubjectMigrationSource.includes("if (matches.length === 1)"),
+  'Google subject migration is idempotent and rejects ambiguous existing headers');
+assert(googleSubjectMigrationSource.includes("sheet.getRange(1, newColumn).setValue('google_sub')") &&
+       googleSubjectMigrationSource.includes('USERS_GOOGLE_SUB_MIGRATION_VERIFY_FAILED'),
+  'Google subject migration appends only the new header and verifies persistence');
+assert(googleSubjectMigrationSource.includes('function getGoogleSubjectMappingReadinessV1()') &&
+       googleSubjectMigrationSource.includes('duplicateSubjects') &&
+       googleSubjectMigrationSource.includes('activeWithoutSubject'),
+  'Admin readiness diagnostic reports incomplete or duplicate mappings without exposing subject values');
