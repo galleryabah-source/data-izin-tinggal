@@ -1767,3 +1767,68 @@ assert(googleSubjectMigrationSource.includes('function getGoogleSubjectMappingRe
        googleSubjectMigrationSource.includes('duplicateSubjects') &&
        googleSubjectMigrationSource.includes('activeWithoutSubject'),
   'Admin readiness diagnostic reports incomplete or duplicate mappings without exposing subject values');
+
+
+/* Google subject migration behavior tests using an isolated Apps Script sheet mock. */
+const migrationRuntimeSource = read('GoogleSubjectMigration.gs');
+function makeMigrationSheet(initialRows) {
+  const rows = initialRows.map(row => row.slice());
+  const sheet = {
+    rows,
+    getLastRow: () => rows.length,
+    getLastColumn: () => Math.max(0, ...rows.map(row => row.length)),
+    getDataRange: () => ({ getValues: () => rows.map(row => row.slice()) }),
+    getRange: (row, col, numRows, numCols) => ({
+      getValues: () => Array.from({length:numRows}, (_, r) =>
+        Array.from({length:numCols}, (_, c) => ((rows[row - 1 + r] || [])[col - 1 + c]) || '')
+      ),
+      getValue: () => ((rows[row - 1] || [])[col - 1]) || '',
+      setValue: value => {
+        while (rows.length < row) rows.push([]);
+        while (rows[row - 1].length < col) rows[row - 1].push('');
+        rows[row - 1][col - 1] = value;
+      }
+    })
+  };
+  return sheet;
+}
+function loadMigrationRuntime(sheet) {
+  let permissionChecks = 0;
+  const context = {
+    SHEETS: { USERS: 'USERS' },
+    requirePermission_: permission => {
+      permissionChecks++;
+      if (permission !== 'admin.users') throw new Error('FORBIDDEN');
+    },
+    getDb_: () => ({ getSheetByName: name => name === 'USERS' ? sheet : null }),
+    SpreadsheetApp: { flush: () => {} },
+    Object, String, Array, Error, Number, Math
+  };
+  vm.runInNewContext(migrationRuntimeSource, context);
+  return { context, permissionChecks: () => permissionChecks };
+}
+const migrationSheet = makeMigrationSheet([
+  ['user_id','email','display_name','role','status','password_hash','salt','created_at','updated_at'],
+  ['u1','admin@example.com','Admin','ADMIN','ACTIVE','hash','salt','2026-01-01','2026-01-01']
+]);
+const migrationRuntime = loadMigrationRuntime(migrationSheet);
+const migrationResult = migrationRuntime.context.migrateGoogleSubjectColumnV1();
+assert(migrationResult.ok && migrationResult.changed && migrationSheet.rows[0][9] === 'google_sub',
+  'Google subject migration appends the subject header without replacing existing columns');
+assert(migrationSheet.rows[1][0] === 'u1' && migrationSheet.rows[1][1] === 'admin@example.com' &&
+       migrationSheet.rows[1][9] === undefined,
+  'Google subject migration preserves existing user row values and does not auto-enroll a subject');
+const repeatedMigrationResult = migrationRuntime.context.migrateGoogleSubjectColumnV1();
+assert(repeatedMigrationResult.ok && !repeatedMigrationResult.changed &&
+       migrationSheet.rows[0].filter(value => value === 'google_sub').length === 1,
+  'Repeated Google subject migration is idempotent');
+assert(migrationRuntime.permissionChecks() === 2,
+  'Each schema migration invocation checks admin.users permission');
+const ambiguousMigrationRuntime = loadMigrationRuntime(makeMigrationSheet([
+  ['user_id','google_sub','google_sub','status']
+]));
+let ambiguousMigrationRejected = false;
+try { ambiguousMigrationRuntime.context.migrateGoogleSubjectColumnV1(); }
+catch (error) { ambiguousMigrationRejected = String(error && error.message || error) === 'USERS_GOOGLE_SUB_HEADER_AMBIGUOUS'; }
+assert(ambiguousMigrationRejected,
+  'Google subject migration rejects duplicate google_sub headers rather than guessing');
