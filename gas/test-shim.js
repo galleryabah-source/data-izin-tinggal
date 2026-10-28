@@ -1604,7 +1604,10 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
   fakeDb.add('OFFICE_REFERENCE',[['office_key','kantor_imigrasi','status'],['K-1','KANIM TEST','VERIFIED']]);
   fakeDb.add('AUDIT_LOG',[['event_id','timestamp','actor','action','dataset_key','batch_id','affected_rows','status','details']]);
   const dailyStagingDb=new DailyFakeSpreadsheet('STAGING-ID');
+  const dailyLedgerHeaders=['record_id','submission_id','service_family','operational_date','office_key','office_name','contract_version','revision','status','measures_json','total','source_record_id','source_submission_id','created_by','created_at','updated_by','updated_at','submitted_by','submitted_at','reviewed_by','reviewed_at','decision_reason','correction_reason','payload_hash','late_entry_reason'];
+  dailyStagingDb.add('DAILY_INPUT_LEDGER',[dailyLedgerHeaders]).setFrozenRows(1);
   const dailyStagingAudit=dailyStagingDb.add('DAILY_INPUT_AUDIT',[['event_id','timestamp','actor','action','dataset_key','correlation_id','affected_rows','status','details']]);
+  dailyStagingAudit.setFrozenRows(1);
   let dailyTestUser={email:'operator@example.com',role:'OPERATOR',permissions:['daily.read','daily.draft','daily.submit','daily.correct']};
   let dailyTestAuditFails=false,dailyTestUuid=0;
   const originalDailyStagingAuditAppend=dailyStagingAudit.appendRow.bind(dailyStagingAudit);
