@@ -878,9 +878,9 @@ assert(dailyService.includes('function getDailyServiceContractV1(serviceFamily)'
 assert(dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')") && dailyService.includes('DAILY_INPUT_HEADERS_V1'), 'Daily writes are isolated to a dedicated ledger with a fixed schema');
 assert(dailyService.includes('DAILY_SERVICE_CONTRACTS_V1') && !read('Config.gs').includes('DAILY_SERVICE_CONTRACTS_V1'), 'Daily contracts remain isolated from the monthly importer registry');
 const dailyContext={};
-vm.runInNewContext(dailyService+';this.validateDailyInputPayloadV1=validateDailyInputPayloadV1;',dailyContext);
+vm.runInNewContext(dailyService+';this.validateDailyInputPayloadV1_=validateDailyInputPayloadV1_;',dailyContext);
 const passportDailyMeasures={biasa_24:0,biasa_48:'0',elektronik_48:3,e_polikarbonat:2};
-const validDailyResult=dailyContext.validateDailyInputPayloadV1({
+const validDailyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -889,7 +889,7 @@ const validDailyResult=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(validDailyResult.ok && validDailyResult.normalized.total===5, 'Daily passport validator accepts explicit zeros and derives the total');
-const missingDailyResult=dailyContext.validateDailyInputPayloadV1({
+const missingDailyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -898,7 +898,7 @@ const missingDailyResult=dailyContext.validateDailyInputPayloadV1({
   measures:{biasa_24:0,biasa_48:0,elektronik_48:0}
 });
 assert(!missingDailyResult.ok && missingDailyResult.errors['measures.e_polikarbonat'], 'Daily validator distinguishes a missing value from zero');
-const injectedDailyResult=dailyContext.validateDailyInputPayloadV1({
+const injectedDailyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -907,7 +907,7 @@ const injectedDailyResult=dailyContext.validateDailyInputPayloadV1({
   measures:{...passportDailyMeasures,total:999}
 });
 assert(!injectedDailyResult.ok && injectedDailyResult.errors['measures.total'], 'Daily validator rejects uncontracted or client-supplied total fields');
-const injectedTopLevelTotalResult=dailyContext.validateDailyInputPayloadV1({
+const injectedTopLevelTotalResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -917,7 +917,7 @@ const injectedTopLevelTotalResult=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(!injectedTopLevelTotalResult.ok && injectedTopLevelTotalResult.errors.total, 'Daily validator rejects a client-supplied top-level total');
-const injectedTopLevelFieldResult=dailyContext.validateDailyInputPayloadV1({
+const injectedTopLevelFieldResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -939,7 +939,7 @@ inheritedTopLevelFieldKeys.forEach(key=>{
     measures:passportDailyMeasures
   };
   Object.defineProperty(payload,key,{value:'injected',enumerable:true,configurable:true});
-  const result=dailyContext.validateDailyInputPayloadV1(payload);
+  const result=dailyContext.validateDailyInputPayloadV1_(payload);
   assert(!result.ok && Object.prototype.hasOwnProperty.call(result.errors,key),
     'Daily validator rejects inherited-name top-level field: '+key);
 });
@@ -951,9 +951,9 @@ const inheritedMeasurePayload={
   contractVersion:'candidate-v1',
   measures:Object.create({biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0})
 };
-const inheritedMeasureResult=dailyContext.validateDailyInputPayloadV1(inheritedMeasurePayload);
+const inheritedMeasureResult=dailyContext.validateDailyInputPayloadV1_(inheritedMeasurePayload);
 assert(!inheritedMeasureResult.ok && inheritedMeasureResult.errors['measures.biasa_24'], 'Daily validator requires own properties for every contracted measure');
-const malformedOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
+const malformedOfficeKeyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -962,7 +962,7 @@ const malformedOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(!malformedOfficeKeyResult.ok && malformedOfficeKeyResult.errors.officeKey, 'Daily validator rejects non-string office keys');
-const invalidDailyDate=dailyContext.validateDailyInputPayloadV1({
+const invalidDailyDate=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-02-30',
@@ -971,7 +971,7 @@ const invalidDailyDate=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(!invalidDailyDate.ok && invalidDailyDate.errors.operationalDate, 'Daily validator rejects impossible calendar dates');
-const yearZeroDailyDate=dailyContext.validateDailyInputPayloadV1({
+const yearZeroDailyDate=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'0000-01-01',
@@ -986,7 +986,7 @@ const residenceDailyMeasures={
   bvk:1,voa:2,itk:3,itk_peralihan:4,itas:5,itap:6,itkt:7,
   alih_status_itk_ke_itas:8,alih_status_itas_ke_itap:9,abg:10,epo:11,imk:12,skim:13
 };
-const validResidenceDailyResult=dailyContext.validateDailyInputPayloadV1({
+const validResidenceDailyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'RESIDENCE_PERMIT',
   operationalDate:'2026-10-14',
@@ -995,7 +995,7 @@ const validResidenceDailyResult=dailyContext.validateDailyInputPayloadV1({
   measures:residenceDailyMeasures
 });
 assert(validResidenceDailyResult.ok && validResidenceDailyResult.normalized.total===91, 'Residence Permit daily validator accepts all candidate measures and derives total');
-const negativeDailyResult=dailyContext.validateDailyInputPayloadV1({
+const negativeDailyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1004,7 +1004,7 @@ const negativeDailyResult=dailyContext.validateDailyInputPayloadV1({
   measures:{...passportDailyMeasures,biasa_24:-1}
 });
 assert(!negativeDailyResult.ok && negativeDailyResult.errors['measures.biasa_24'], 'Daily validator rejects negative service counts');
-const decimalDailyResult=dailyContext.validateDailyInputPayloadV1({
+const decimalDailyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1105,7 +1105,7 @@ assert(dailyDeniedDbReads===0,'Daily read endpoints enforce permission before re
 
 
 /* Phase 9 validator boundary matrix: overflow, malformed containers, and contract drift. */
-const unsafeMeasureResult=dailyContext.validateDailyInputPayloadV1({
+const unsafeMeasureResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1115,7 +1115,7 @@ const unsafeMeasureResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!unsafeMeasureResult.ok && unsafeMeasureResult.errors['measures.biasa_24'], 'Daily validator rejects a single measure above the safe-integer boundary');
 
-const overflowTotalResult=dailyContext.validateDailyInputPayloadV1({
+const overflowTotalResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1125,7 +1125,7 @@ const overflowTotalResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!overflowTotalResult.ok && overflowTotalResult.errors.measures, 'Daily validator rejects a derived total above the safe-integer boundary');
 
-const malformedMeasuresArrayResult=dailyContext.validateDailyInputPayloadV1({
+const malformedMeasuresArrayResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1135,7 +1135,7 @@ const malformedMeasuresArrayResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!malformedMeasuresArrayResult.ok && malformedMeasuresArrayResult.errors['measures.biasa_24'], 'Daily validator rejects array-shaped measures by treating required keys as missing');
 
-const nullMeasuresResult=dailyContext.validateDailyInputPayloadV1({
+const nullMeasuresResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1145,7 +1145,7 @@ const nullMeasuresResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!nullMeasuresResult.ok && nullMeasuresResult.errors['measures.biasa_24'], 'Daily validator rejects null measures as incomplete input');
 
-const unknownMeasureResult=dailyContext.validateDailyInputPayloadV1({
+const unknownMeasureResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1155,7 +1155,7 @@ const unknownMeasureResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!unknownMeasureResult.ok && unknownMeasureResult.errors['measures.not_in_contract'], 'Daily validator rejects unknown nested measure keys');
 
-const malformedUuidResult=dailyContext.validateDailyInputPayloadV1({
+const malformedUuidResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'not-a-uuid',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1165,7 +1165,7 @@ const malformedUuidResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!malformedUuidResult.ok && malformedUuidResult.errors.submissionId, 'Daily validator rejects malformed idempotency identifiers');
 
-const contractDriftResult=dailyContext.validateDailyInputPayloadV1({
+const contractDriftResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1175,7 +1175,7 @@ const contractDriftResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!contractDriftResult.ok && contractDriftResult.errors.contractVersion, 'Daily validator rejects stale contract versions');
 
-const explicitZeroResult=dailyContext.validateDailyInputPayloadV1({
+const explicitZeroResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1187,7 +1187,7 @@ assert(explicitZeroResult.ok && explicitZeroResult.normalized.total===0, 'Daily 
 
 
 /* Phase 9 malformed envelope and identity-shape regression cases. */
-const invalidFamilyPayloadResult=dailyContext.validateDailyInputPayloadV1({
+const invalidFamilyPayloadResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'OTHER_SERVICE',
   operationalDate:'2026-10-14',
@@ -1197,7 +1197,7 @@ const invalidFamilyPayloadResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!invalidFamilyPayloadResult.ok && invalidFamilyPayloadResult.errors.serviceFamily, 'Pure validator rejects uncontracted service families');
 ['constructor','toString','__proto__'].forEach(family=>{
-  const result=dailyContext.validateDailyInputPayloadV1({
+  const result=dailyContext.validateDailyInputPayloadV1_({
     submissionId:'123e4567-e89b-42d3-a456-426614174000',
     serviceFamily:family,
     operationalDate:'2026-10-14',
@@ -1209,7 +1209,7 @@ assert(!invalidFamilyPayloadResult.ok && invalidFamilyPayloadResult.errors.servi
     'Daily validator rejects inherited-name service family: '+family);
 });
 
-const malformedDateFormatResult=dailyContext.validateDailyInputPayloadV1({
+const malformedDateFormatResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'14-10-2026',
@@ -1219,7 +1219,7 @@ const malformedDateFormatResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!malformedDateFormatResult.ok && malformedDateFormatResult.errors.operationalDate, 'Pure validator rejects non-ISO operational date formats');
 
-const blankOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
+const blankOfficeKeyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1229,7 +1229,7 @@ const blankOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!blankOfficeKeyResult.ok && blankOfficeKeyResult.errors.officeKey, 'Pure validator rejects blank office identity keys');
 
-const overlongOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
+const overlongOfficeKeyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1239,7 +1239,7 @@ const overlongOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!overlongOfficeKeyResult.ok && overlongOfficeKeyResult.errors.officeKey, 'Pure validator rejects office keys exceeding the contract boundary');
 
-const arrayEnvelopeResult=dailyContext.validateDailyInputPayloadV1([
+const arrayEnvelopeResult=dailyContext.validateDailyInputPayloadV1_([
   '123e4567-e89b-42d3-a456-426614174000',
   'PASSPORT',
   '2026-10-14'
@@ -1256,7 +1256,7 @@ assert(!arrayEnvelopeResult.ok && arrayEnvelopeResult.errors.serviceFamily && ar
   ['not-a-number', NaN],
   ['whitespace-string', '   ']
 ].forEach(([caseName, value]) => {
-  const result = dailyContext.validateDailyInputPayloadV1({
+  const result = dailyContext.validateDailyInputPayloadV1_({
     submissionId:'123e4567-e89b-42d3-a456-426614174000',
     serviceFamily:'PASSPORT',
     operationalDate:'2026-10-14',
@@ -1371,7 +1371,7 @@ inheritedEnvelopeCases.forEach(([field, inheritedValue]) => {
     configurable: true
   });
   Object.setPrototypeOf(payload, prototype);
-  const result = dailyContext.validateDailyInputPayloadV1(payload);
+  const result = dailyContext.validateDailyInputPayloadV1_(payload);
   assert(
     !result.ok && Object.prototype.hasOwnProperty.call(result.errors, field),
     'Daily validator rejects inherited required envelope field: '+field
@@ -1389,30 +1389,30 @@ const dailyPayload = (overrides={}) => ({
   measures:{biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0},
   ...overrides
 });
-const allZeroDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload());
+const allZeroDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload());
 assert(allZeroDaily.ok && allZeroDaily.normalized.total===0,
   'Daily validator accepts explicit all-zero report and derives total zero');
-const arrayMeasuresDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({measures:[0,0,0,0]}));
+const arrayMeasuresDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({measures:[0,0,0,0]}));
 assert(!arrayMeasuresDaily.ok && arrayMeasuresDaily.errors['measures.biasa_24'],
   'Daily validator rejects array-shaped measures rather than treating indexes as service measures');
-const nullMeasuresDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({measures:null}));
+const nullMeasuresDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({measures:null}));
 assert(!nullMeasuresDaily.ok && nullMeasuresDaily.errors['measures.biasa_24'],
   'Daily validator rejects null measures as missing required measures');
-const invalidUuidDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({submissionId:'not-a-uuid'}));
+const invalidUuidDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({submissionId:'not-a-uuid'}));
 assert(!invalidUuidDaily.ok && invalidUuidDaily.errors.submissionId,
   'Daily validator rejects malformed idempotency UUID');
-const staleContractDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({contractVersion:'candidate-v0'}));
+const staleContractDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({contractVersion:'candidate-v0'}));
 assert(!staleContractDaily.ok && staleContractDaily.errors.contractVersion,
   'Daily validator rejects stale contract versions');
-const invalidFamilyDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({serviceFamily:'constructor'}));
+const invalidFamilyDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({serviceFamily:'constructor'}));
 assert(!invalidFamilyDaily.ok && invalidFamilyDaily.errors.serviceFamily,
   'Daily validator rejects prototype property names as service families');
-const overflowDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({
+const overflowDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({
   measures:{biasa_24:Number.MAX_SAFE_INTEGER,biasa_48:1,elektronik_48:0,e_polikarbonat:0}
 }));
 assert(!overflowDaily.ok && overflowDaily.errors.measures,
   'Daily validator rejects a derived total exceeding the safe integer range');
-const leapDayDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({operationalDate:'2024-02-29'}));
+const leapDayDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({operationalDate:'2024-02-29'}));
 assert(leapDayDaily.ok,
   'Daily validator accepts a real leap-day calendar date');
 
@@ -1485,12 +1485,12 @@ assert(gate91OwnerWorksheet.includes('blank field or field with no number is int
 assert(dailyBlueprint.includes('a blank/no-number field is normalized to explicit `0`') &&
        dailyBlueprint.includes('omitted/null fields are not silently coerced'),
   'Daily input blueprint separates source-report normalization from API payload validation');
-const blankToZeroReport = dailyContext.validateDailyInputPayloadV1(dailyPayload({
+const blankToZeroReport = dailyContext.validateDailyInputPayloadV1_(dailyPayload({
   measures:{biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0}
 }));
 assert(blankToZeroReport.ok && blankToZeroReport.normalized.total===0,
   'Normalized narrative report with blank source fields represented as explicit zeros is valid');
-const missingMeasureStillRejected = dailyContext.validateDailyInputPayloadV1(dailyPayload({
+const missingMeasureStillRejected = dailyContext.validateDailyInputPayloadV1_(dailyPayload({
   measures:{biasa_24:0,biasa_48:0,elektronik_48:0}
 }));
 assert(!missingMeasureStillRejected.ok && missingMeasureStillRejected.errors['measures.e_polikarbonat'],
