@@ -27,6 +27,7 @@ const readinessCode=dailyInputCode.slice(readinessStart,readinessEnd);
 assert(!readinessCode.includes('insertSheet(')&&!readinessCode.includes('setValues(')&&!readinessCode.includes('setFrozenRows('),'Daily staging readiness check is read-only');
 assert(dailyInputCode.includes("function provisionDailyInputStorageV1()")&&dailyInputCode.includes("requirePermission_('admin.config')"),'Daily staging provisioning is explicit and admin-authorized');
 const routeCode=read('Code.gs');
+assert(routeCode.includes('function setupApp_(')&&!routeCode.includes('function setupApp('),'setupApp has side effects but is private to Apps Script RPC callers');
 assert(routeCode.includes("view!=='tv'&&view!=='tv-mobile'"),'INTAL TV Mobile remains in the same public read-only view access path');
 assert(routeCode.includes("view==='tv-mobile'?'tv-mobile'"),'doGet routes tv-mobile to its separate template');
 assert(mobileHtml.includes('data-nav="menu"')&&mobileHtml.includes('data-nav="services"'),'Mobile has persistent bottom navigation');
@@ -877,9 +878,9 @@ assert(dailyService.includes('function getDailyServiceContractV1(serviceFamily)'
 assert(dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')") && dailyService.includes('DAILY_INPUT_HEADERS_V1'), 'Daily writes are isolated to a dedicated ledger with a fixed schema');
 assert(dailyService.includes('DAILY_SERVICE_CONTRACTS_V1') && !read('Config.gs').includes('DAILY_SERVICE_CONTRACTS_V1'), 'Daily contracts remain isolated from the monthly importer registry');
 const dailyContext={};
-vm.runInNewContext(dailyService+';this.validateDailyInputPayloadV1=validateDailyInputPayloadV1;',dailyContext);
+vm.runInNewContext(dailyService+';this.validateDailyInputPayloadV1_=validateDailyInputPayloadV1_;',dailyContext);
 const passportDailyMeasures={biasa_24:0,biasa_48:'0',elektronik_48:3,e_polikarbonat:2};
-const validDailyResult=dailyContext.validateDailyInputPayloadV1({
+const validDailyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -888,7 +889,7 @@ const validDailyResult=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(validDailyResult.ok && validDailyResult.normalized.total===5, 'Daily passport validator accepts explicit zeros and derives the total');
-const missingDailyResult=dailyContext.validateDailyInputPayloadV1({
+const missingDailyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -897,7 +898,7 @@ const missingDailyResult=dailyContext.validateDailyInputPayloadV1({
   measures:{biasa_24:0,biasa_48:0,elektronik_48:0}
 });
 assert(!missingDailyResult.ok && missingDailyResult.errors['measures.e_polikarbonat'], 'Daily validator distinguishes a missing value from zero');
-const injectedDailyResult=dailyContext.validateDailyInputPayloadV1({
+const injectedDailyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -906,7 +907,7 @@ const injectedDailyResult=dailyContext.validateDailyInputPayloadV1({
   measures:{...passportDailyMeasures,total:999}
 });
 assert(!injectedDailyResult.ok && injectedDailyResult.errors['measures.total'], 'Daily validator rejects uncontracted or client-supplied total fields');
-const injectedTopLevelTotalResult=dailyContext.validateDailyInputPayloadV1({
+const injectedTopLevelTotalResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -916,7 +917,7 @@ const injectedTopLevelTotalResult=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(!injectedTopLevelTotalResult.ok && injectedTopLevelTotalResult.errors.total, 'Daily validator rejects a client-supplied top-level total');
-const injectedTopLevelFieldResult=dailyContext.validateDailyInputPayloadV1({
+const injectedTopLevelFieldResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -938,7 +939,7 @@ inheritedTopLevelFieldKeys.forEach(key=>{
     measures:passportDailyMeasures
   };
   Object.defineProperty(payload,key,{value:'injected',enumerable:true,configurable:true});
-  const result=dailyContext.validateDailyInputPayloadV1(payload);
+  const result=dailyContext.validateDailyInputPayloadV1_(payload);
   assert(!result.ok && Object.prototype.hasOwnProperty.call(result.errors,key),
     'Daily validator rejects inherited-name top-level field: '+key);
 });
@@ -950,9 +951,9 @@ const inheritedMeasurePayload={
   contractVersion:'candidate-v1',
   measures:Object.create({biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0})
 };
-const inheritedMeasureResult=dailyContext.validateDailyInputPayloadV1(inheritedMeasurePayload);
+const inheritedMeasureResult=dailyContext.validateDailyInputPayloadV1_(inheritedMeasurePayload);
 assert(!inheritedMeasureResult.ok && inheritedMeasureResult.errors['measures.biasa_24'], 'Daily validator requires own properties for every contracted measure');
-const malformedOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
+const malformedOfficeKeyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -961,7 +962,7 @@ const malformedOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(!malformedOfficeKeyResult.ok && malformedOfficeKeyResult.errors.officeKey, 'Daily validator rejects non-string office keys');
-const invalidDailyDate=dailyContext.validateDailyInputPayloadV1({
+const invalidDailyDate=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-02-30',
@@ -970,7 +971,7 @@ const invalidDailyDate=dailyContext.validateDailyInputPayloadV1({
   measures:passportDailyMeasures
 });
 assert(!invalidDailyDate.ok && invalidDailyDate.errors.operationalDate, 'Daily validator rejects impossible calendar dates');
-const yearZeroDailyDate=dailyContext.validateDailyInputPayloadV1({
+const yearZeroDailyDate=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'0000-01-01',
@@ -985,7 +986,7 @@ const residenceDailyMeasures={
   bvk:1,voa:2,itk:3,itk_peralihan:4,itas:5,itap:6,itkt:7,
   alih_status_itk_ke_itas:8,alih_status_itas_ke_itap:9,abg:10,epo:11,imk:12,skim:13
 };
-const validResidenceDailyResult=dailyContext.validateDailyInputPayloadV1({
+const validResidenceDailyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'RESIDENCE_PERMIT',
   operationalDate:'2026-10-14',
@@ -994,7 +995,7 @@ const validResidenceDailyResult=dailyContext.validateDailyInputPayloadV1({
   measures:residenceDailyMeasures
 });
 assert(validResidenceDailyResult.ok && validResidenceDailyResult.normalized.total===91, 'Residence Permit daily validator accepts all candidate measures and derives total');
-const negativeDailyResult=dailyContext.validateDailyInputPayloadV1({
+const negativeDailyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1003,7 +1004,7 @@ const negativeDailyResult=dailyContext.validateDailyInputPayloadV1({
   measures:{...passportDailyMeasures,biasa_24:-1}
 });
 assert(!negativeDailyResult.ok && negativeDailyResult.errors['measures.biasa_24'], 'Daily validator rejects negative service counts');
-const decimalDailyResult=dailyContext.validateDailyInputPayloadV1({
+const decimalDailyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1104,7 +1105,7 @@ assert(dailyDeniedDbReads===0,'Daily read endpoints enforce permission before re
 
 
 /* Phase 9 validator boundary matrix: overflow, malformed containers, and contract drift. */
-const unsafeMeasureResult=dailyContext.validateDailyInputPayloadV1({
+const unsafeMeasureResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1114,7 +1115,7 @@ const unsafeMeasureResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!unsafeMeasureResult.ok && unsafeMeasureResult.errors['measures.biasa_24'], 'Daily validator rejects a single measure above the safe-integer boundary');
 
-const overflowTotalResult=dailyContext.validateDailyInputPayloadV1({
+const overflowTotalResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1124,7 +1125,7 @@ const overflowTotalResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!overflowTotalResult.ok && overflowTotalResult.errors.measures, 'Daily validator rejects a derived total above the safe-integer boundary');
 
-const malformedMeasuresArrayResult=dailyContext.validateDailyInputPayloadV1({
+const malformedMeasuresArrayResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1134,7 +1135,7 @@ const malformedMeasuresArrayResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!malformedMeasuresArrayResult.ok && malformedMeasuresArrayResult.errors['measures.biasa_24'], 'Daily validator rejects array-shaped measures by treating required keys as missing');
 
-const nullMeasuresResult=dailyContext.validateDailyInputPayloadV1({
+const nullMeasuresResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1144,7 +1145,7 @@ const nullMeasuresResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!nullMeasuresResult.ok && nullMeasuresResult.errors['measures.biasa_24'], 'Daily validator rejects null measures as incomplete input');
 
-const unknownMeasureResult=dailyContext.validateDailyInputPayloadV1({
+const unknownMeasureResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1154,7 +1155,7 @@ const unknownMeasureResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!unknownMeasureResult.ok && unknownMeasureResult.errors['measures.not_in_contract'], 'Daily validator rejects unknown nested measure keys');
 
-const malformedUuidResult=dailyContext.validateDailyInputPayloadV1({
+const malformedUuidResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'not-a-uuid',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1164,7 +1165,7 @@ const malformedUuidResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!malformedUuidResult.ok && malformedUuidResult.errors.submissionId, 'Daily validator rejects malformed idempotency identifiers');
 
-const contractDriftResult=dailyContext.validateDailyInputPayloadV1({
+const contractDriftResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1174,7 +1175,7 @@ const contractDriftResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!contractDriftResult.ok && contractDriftResult.errors.contractVersion, 'Daily validator rejects stale contract versions');
 
-const explicitZeroResult=dailyContext.validateDailyInputPayloadV1({
+const explicitZeroResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1186,7 +1187,7 @@ assert(explicitZeroResult.ok && explicitZeroResult.normalized.total===0, 'Daily 
 
 
 /* Phase 9 malformed envelope and identity-shape regression cases. */
-const invalidFamilyPayloadResult=dailyContext.validateDailyInputPayloadV1({
+const invalidFamilyPayloadResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'OTHER_SERVICE',
   operationalDate:'2026-10-14',
@@ -1196,7 +1197,7 @@ const invalidFamilyPayloadResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!invalidFamilyPayloadResult.ok && invalidFamilyPayloadResult.errors.serviceFamily, 'Pure validator rejects uncontracted service families');
 ['constructor','toString','__proto__'].forEach(family=>{
-  const result=dailyContext.validateDailyInputPayloadV1({
+  const result=dailyContext.validateDailyInputPayloadV1_({
     submissionId:'123e4567-e89b-42d3-a456-426614174000',
     serviceFamily:family,
     operationalDate:'2026-10-14',
@@ -1208,7 +1209,7 @@ assert(!invalidFamilyPayloadResult.ok && invalidFamilyPayloadResult.errors.servi
     'Daily validator rejects inherited-name service family: '+family);
 });
 
-const malformedDateFormatResult=dailyContext.validateDailyInputPayloadV1({
+const malformedDateFormatResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'14-10-2026',
@@ -1218,7 +1219,7 @@ const malformedDateFormatResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!malformedDateFormatResult.ok && malformedDateFormatResult.errors.operationalDate, 'Pure validator rejects non-ISO operational date formats');
 
-const blankOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
+const blankOfficeKeyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1228,7 +1229,7 @@ const blankOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!blankOfficeKeyResult.ok && blankOfficeKeyResult.errors.officeKey, 'Pure validator rejects blank office identity keys');
 
-const overlongOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
+const overlongOfficeKeyResult=dailyContext.validateDailyInputPayloadV1_({
   submissionId:'123e4567-e89b-42d3-a456-426614174000',
   serviceFamily:'PASSPORT',
   operationalDate:'2026-10-14',
@@ -1238,7 +1239,7 @@ const overlongOfficeKeyResult=dailyContext.validateDailyInputPayloadV1({
 });
 assert(!overlongOfficeKeyResult.ok && overlongOfficeKeyResult.errors.officeKey, 'Pure validator rejects office keys exceeding the contract boundary');
 
-const arrayEnvelopeResult=dailyContext.validateDailyInputPayloadV1([
+const arrayEnvelopeResult=dailyContext.validateDailyInputPayloadV1_([
   '123e4567-e89b-42d3-a456-426614174000',
   'PASSPORT',
   '2026-10-14'
@@ -1255,7 +1256,7 @@ assert(!arrayEnvelopeResult.ok && arrayEnvelopeResult.errors.serviceFamily && ar
   ['not-a-number', NaN],
   ['whitespace-string', '   ']
 ].forEach(([caseName, value]) => {
-  const result = dailyContext.validateDailyInputPayloadV1({
+  const result = dailyContext.validateDailyInputPayloadV1_({
     submissionId:'123e4567-e89b-42d3-a456-426614174000',
     serviceFamily:'PASSPORT',
     operationalDate:'2026-10-14',
@@ -1370,7 +1371,7 @@ inheritedEnvelopeCases.forEach(([field, inheritedValue]) => {
     configurable: true
   });
   Object.setPrototypeOf(payload, prototype);
-  const result = dailyContext.validateDailyInputPayloadV1(payload);
+  const result = dailyContext.validateDailyInputPayloadV1_(payload);
   assert(
     !result.ok && Object.prototype.hasOwnProperty.call(result.errors, field),
     'Daily validator rejects inherited required envelope field: '+field
@@ -1388,30 +1389,30 @@ const dailyPayload = (overrides={}) => ({
   measures:{biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0},
   ...overrides
 });
-const allZeroDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload());
+const allZeroDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload());
 assert(allZeroDaily.ok && allZeroDaily.normalized.total===0,
   'Daily validator accepts explicit all-zero report and derives total zero');
-const arrayMeasuresDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({measures:[0,0,0,0]}));
+const arrayMeasuresDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({measures:[0,0,0,0]}));
 assert(!arrayMeasuresDaily.ok && arrayMeasuresDaily.errors['measures.biasa_24'],
   'Daily validator rejects array-shaped measures rather than treating indexes as service measures');
-const nullMeasuresDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({measures:null}));
+const nullMeasuresDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({measures:null}));
 assert(!nullMeasuresDaily.ok && nullMeasuresDaily.errors['measures.biasa_24'],
   'Daily validator rejects null measures as missing required measures');
-const invalidUuidDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({submissionId:'not-a-uuid'}));
+const invalidUuidDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({submissionId:'not-a-uuid'}));
 assert(!invalidUuidDaily.ok && invalidUuidDaily.errors.submissionId,
   'Daily validator rejects malformed idempotency UUID');
-const staleContractDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({contractVersion:'candidate-v0'}));
+const staleContractDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({contractVersion:'candidate-v0'}));
 assert(!staleContractDaily.ok && staleContractDaily.errors.contractVersion,
   'Daily validator rejects stale contract versions');
-const invalidFamilyDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({serviceFamily:'constructor'}));
+const invalidFamilyDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({serviceFamily:'constructor'}));
 assert(!invalidFamilyDaily.ok && invalidFamilyDaily.errors.serviceFamily,
   'Daily validator rejects prototype property names as service families');
-const overflowDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({
+const overflowDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({
   measures:{biasa_24:Number.MAX_SAFE_INTEGER,biasa_48:1,elektronik_48:0,e_polikarbonat:0}
 }));
 assert(!overflowDaily.ok && overflowDaily.errors.measures,
   'Daily validator rejects a derived total exceeding the safe integer range');
-const leapDayDaily = dailyContext.validateDailyInputPayloadV1(dailyPayload({operationalDate:'2024-02-29'}));
+const leapDayDaily = dailyContext.validateDailyInputPayloadV1_(dailyPayload({operationalDate:'2024-02-29'}));
 assert(leapDayDaily.ok,
   'Daily validator accepts a real leap-day calendar date');
 
@@ -1484,12 +1485,12 @@ assert(gate91OwnerWorksheet.includes('blank field or field with no number is int
 assert(dailyBlueprint.includes('a blank/no-number field is normalized to explicit `0`') &&
        dailyBlueprint.includes('omitted/null fields are not silently coerced'),
   'Daily input blueprint separates source-report normalization from API payload validation');
-const blankToZeroReport = dailyContext.validateDailyInputPayloadV1(dailyPayload({
+const blankToZeroReport = dailyContext.validateDailyInputPayloadV1_(dailyPayload({
   measures:{biasa_24:0,biasa_48:0,elektronik_48:0,e_polikarbonat:0}
 }));
 assert(blankToZeroReport.ok && blankToZeroReport.normalized.total===0,
   'Normalized narrative report with blank source fields represented as explicit zeros is valid');
-const missingMeasureStillRejected = dailyContext.validateDailyInputPayloadV1(dailyPayload({
+const missingMeasureStillRejected = dailyContext.validateDailyInputPayloadV1_(dailyPayload({
   measures:{biasa_24:0,biasa_48:0,elektronik_48:0}
 }));
 assert(!missingMeasureStillRejected.ok && missingMeasureStillRejected.errors['measures.e_polikarbonat'],
@@ -1685,6 +1686,8 @@ assert(dailyContractSource.includes('DAILY_INPUT_GATE_9_1') && dailyContractSour
 
 /* Phase 9 staging readiness integrity regressions. */
 const dailyReadinessSource = read('DailyInputService.gs');
+assert(dailyReadinessSource.includes('function validateDailyInputPayloadV1_(') && !dailyReadinessSource.includes('function validateDailyInputPayloadV1('),
+  'Daily payload validator is internal and not exposed as a browser-callable RPC');
 assert(dailyReadinessSource.includes('DAILY_SPREADSHEET_IDENTITY_MISMATCH'), 'Daily staging checks opened spreadsheet identity');
 assert(dailyReadinessSource.includes('DAILY_LEDGER_SCHEMA_MISMATCH') && dailyReadinessSource.includes('DAILY_AUDIT_SCHEMA_MISMATCH'), 'Daily staging verifies ledger and audit schema');
 assert(dailyReadinessSource.includes('DAILY_AND_CANONICAL_IDS_MATCH'), 'Daily staging refuses canonical spreadsheet identity');
@@ -1722,3 +1725,227 @@ assert(read('DailyInputService.gs').includes("i.late_entry_reason+1).setValue(p.
 assert(read('DailyInputService.gs').includes('function reopenDailySubmission(recordId,reason)') &&
        read('DailyInputService.gs').includes('DAILY_REOPEN_REASON_REQUIRED'),
   'VOID report has an explicit reasoned and audited reopening path');
+
+
+/* Google gateway RPC integration seam static security regressions. */
+const gatewayAuthSource = read('GatewayAuth.gs');
+assert(gatewayAuthSource.includes('function verifyGatewaySession_(sessionToken)'),
+  'Gateway auth exposes an explicit session-token verification seam');
+assert(gatewayAuthSource.includes("props.getProperty('INTAL_GATEWAY_VERIFY_URL')") &&
+       gatewayAuthSource.includes("props.getProperty('GAS_GATEWAY_SHARED_SECRET')") &&
+       gatewayAuthSource.includes('UrlFetchApp.fetch(verifyUrl'),
+  'Gateway session verification uses server-side configuration and server-to-server request');
+assert(gatewayAuthSource.includes("throw new Error('AUTH_GATEWAY_UNAVAILABLE')") &&
+       gatewayAuthSource.includes("throw new Error('UNAUTHENTICATED')") &&
+       gatewayAuthSource.includes('followRedirects: false'),
+  'Gateway outage, rejected session, and redirects fail closed');
+assert(gatewayAuthSource.includes("headers.indexOf('google_sub')") &&
+       gatewayAuthSource.includes("headers.indexOf('status')") &&
+       gatewayAuthSource.includes("headers.indexOf('email')"),
+  'Gateway identity mapping requires stable Google subject, active status, and matching email');
+assert(gatewayAuthSource.includes('if (matches.length !== 1)') &&
+       gatewayAuthSource.includes('getRolePermissions_(role)'),
+  'Gateway mapping rejects missing/ambiguous users and reads server-side permissions');
+assert(gatewayAuthSource.includes('function requireGatewayPermission_(permission, sessionToken)') &&
+       gatewayAuthSource.includes('function requireGatewayBackOfficeAccess_(sessionToken)'),
+  'Gateway authorization helpers require an explicit session token');
+assert(read('Auth.gs').includes('Session.getActiveUser().getEmail()') &&
+       !read('Auth.gs').includes('verifyGatewaySession_('),
+  'Legacy identity path is still explicitly recognized as not yet migrated across RPCs');
+
+
+/* Google subject schema migration static regressions. */
+const googleSubjectMigrationSource = read('GoogleSubjectMigration.gs');
+assert(googleSubjectMigrationSource.includes("function migrateGoogleSubjectColumnV1()") &&
+       googleSubjectMigrationSource.includes("requirePermission_('admin.users')"),
+  'Google subject schema migration is an explicit admin.users-protected operation');
+assert(googleSubjectMigrationSource.includes("header === 'google_sub'") &&
+       googleSubjectMigrationSource.includes("if (matches.length > 1)") &&
+       googleSubjectMigrationSource.includes("if (matches.length === 1)"),
+  'Google subject migration is idempotent and rejects ambiguous existing headers');
+assert(googleSubjectMigrationSource.includes("sheet.getRange(1, newColumn).setValue('google_sub')") &&
+       googleSubjectMigrationSource.includes('USERS_GOOGLE_SUB_MIGRATION_VERIFY_FAILED'),
+  'Google subject migration appends only the new header and verifies persistence');
+assert(googleSubjectMigrationSource.includes('function getGoogleSubjectMappingReadinessV1()') &&
+       googleSubjectMigrationSource.includes('duplicateSubjects') &&
+       googleSubjectMigrationSource.includes('activeWithoutSubject'),
+  'Admin readiness diagnostic reports incomplete or duplicate mappings without exposing subject values');
+
+
+/* Google subject migration behavior tests using an isolated Apps Script sheet mock. */
+const migrationRuntimeSource = read('GoogleSubjectMigration.gs');
+function makeMigrationSheet(initialRows) {
+  const rows = initialRows.map(row => row.slice());
+  const sheet = {
+    rows,
+    getLastRow: () => rows.length,
+    getLastColumn: () => Math.max(0, ...rows.map(row => row.length)),
+    getDataRange: () => ({ getValues: () => rows.map(row => row.slice()) }),
+    getRange: (row, col, numRows, numCols) => ({
+      getValues: () => Array.from({length:numRows}, (_, r) =>
+        Array.from({length:numCols}, (_, c) => ((rows[row - 1 + r] || [])[col - 1 + c]) || '')
+      ),
+      getValue: () => ((rows[row - 1] || [])[col - 1]) || '',
+      setValue: value => {
+        while (rows.length < row) rows.push([]);
+        while (rows[row - 1].length < col) rows[row - 1].push('');
+        rows[row - 1][col - 1] = value;
+      }
+    })
+  };
+  return sheet;
+}
+function loadMigrationRuntime(sheet) {
+  let permissionChecks = 0;
+  const context = {
+    SHEETS: { USERS: 'USERS' },
+    requirePermission_: permission => {
+      permissionChecks++;
+      if (permission !== 'admin.users') throw new Error('FORBIDDEN');
+    },
+    getDb_: () => ({ getSheetByName: name => name === 'USERS' ? sheet : null }),
+    SpreadsheetApp: { flush: () => {} },
+    Object, String, Array, Error, Number, Math
+  };
+  vm.runInNewContext(migrationRuntimeSource, context);
+  return { context, permissionChecks: () => permissionChecks };
+}
+const migrationSheet = makeMigrationSheet([
+  ['user_id','email','display_name','role','status','password_hash','salt','created_at','updated_at'],
+  ['u1','admin@example.com','Admin','ADMIN','ACTIVE','hash','salt','2026-01-01','2026-01-01']
+]);
+const migrationRuntime = loadMigrationRuntime(migrationSheet);
+const migrationResult = migrationRuntime.context.migrateGoogleSubjectColumnV1();
+assert(migrationResult.ok && migrationResult.changed && migrationSheet.rows[0][9] === 'google_sub',
+  'Google subject migration appends the subject header without replacing existing columns');
+assert(migrationSheet.rows[1][0] === 'u1' && migrationSheet.rows[1][1] === 'admin@example.com' &&
+       migrationSheet.rows[1][9] === undefined,
+  'Google subject migration preserves existing user row values and does not auto-enroll a subject');
+const repeatedMigrationResult = migrationRuntime.context.migrateGoogleSubjectColumnV1();
+assert(repeatedMigrationResult.ok && !repeatedMigrationResult.changed &&
+       migrationSheet.rows[0].filter(value => value === 'google_sub').length === 1,
+  'Repeated Google subject migration is idempotent');
+assert(migrationRuntime.permissionChecks() === 2,
+  'Each schema migration invocation checks admin.users permission');
+const ambiguousMigrationRuntime = loadMigrationRuntime(makeMigrationSheet([
+  ['user_id','google_sub','google_sub','status']
+]));
+let ambiguousMigrationRejected = false;
+try { ambiguousMigrationRuntime.context.migrateGoogleSubjectColumnV1(); }
+catch (error) { ambiguousMigrationRejected = String(error && error.message || error) === 'USERS_GOOGLE_SUB_HEADER_AMBIGUOUS'; }
+assert(ambiguousMigrationRejected,
+  'Google subject migration rejects duplicate google_sub headers rather than guessing');
+
+
+/* GatewayAuth behavior tests: mock Apps Script services and verify fail-closed identity mapping. */
+const gatewayRuntimeSource = read('GatewayAuth.gs');
+function makeGatewayUsersSheet(rows) {
+  return { getDataRange: () => ({ getValues: () => rows.map(row => row.slice()) }) };
+}
+function loadGatewayRuntime({ usersRows, verifyBody, statusCode = 200, fetchThrows = false, config = {}, permissions = null }) {
+  const calls = [];
+  let currentPermissions = permissions;
+  const properties = Object.assign({
+    INTAL_GATEWAY_VERIFY_URL: 'https://gateway.example.test/api/auth/verify-session',
+    GAS_GATEWAY_SHARED_SECRET: 'test-shared-secret'
+  }, config);
+  const context = {
+    SHEETS: { USERS: 'USERS' },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: key => properties[key] || '' }) },
+    UrlFetchApp: { fetch: (url, options) => {
+      calls.push({ url, options });
+      if (fetchThrows) throw new Error('network down');
+      return { getResponseCode: () => statusCode, getContentText: () => JSON.stringify(verifyBody) };
+    } },
+    getDb_: () => ({ getSheetByName: name => name === 'USERS' ? makeGatewayUsersSheet(usersRows) : null }),
+    getRolePermissions_: role => currentPermissions !== null ? currentPermissions.slice() : (role === 'ADMIN' ? ['dashboard.read', 'admin.users'] : ['dashboard.read']),
+    BACKOFFICE_ROLES_: ['ADMIN', 'SUPERVISOR'],
+    Date, JSON, Math, Number, String, Array, Error
+  };
+  vm.runInNewContext(gatewayRuntimeSource, context);
+  return { context, calls, setPermissions: next => { currentPermissions = next.slice(); } };
+}
+const gatewayHeaders = ['user_id','email','display_name','role','status','password_hash','salt','created_at','updated_at','google_sub'];
+const gatewayUsers = [
+  gatewayHeaders,
+  ['u1','admin@example.test','Admin','ADMIN','ACTIVE','','','','','google-sub-1']
+];
+const gatewayGoodBody = {
+  valid: true,
+  identity: { subject: 'google-sub-1', email: 'admin@example.test', name: 'Admin' },
+  expiresAt: Math.floor(Date.now() / 1000) + 120
+};
+const gatewayRuntime = loadGatewayRuntime({ usersRows: gatewayUsers, verifyBody: gatewayGoodBody });
+const gatewayUser = gatewayRuntime.context.verifyGatewaySession_('test-session-token');
+assert(gatewayUser.authenticated && gatewayUser.subject === 'google-sub-1' &&
+       gatewayUser.email === 'admin@example.test' && gatewayUser.permissions.includes('admin.users'),
+  'Gateway session maps verified Google subject to exactly one active user and server-side permissions');
+assert(gatewayRuntime.calls.length === 1 &&
+       gatewayRuntime.calls[0].url === 'https://gateway.example.test/api/auth/verify-session' &&
+       gatewayRuntime.calls[0].options.headers['x-intal-gateway-key'] === 'test-shared-secret' &&
+       gatewayRuntime.calls[0].options.followRedirects === false,
+  'Gateway session uses configured HTTPS verification endpoint and shared service key without redirects');
+const revocationRuntime = loadGatewayRuntime({
+  usersRows: gatewayUsers,
+  verifyBody: gatewayGoodBody,
+  permissions: ['dashboard.read']
+});
+assert(revocationRuntime.context.requireGatewayPermission_('dashboard.read', 'token').role === 'ADMIN',
+  'Gateway permission wrapper authorizes a permission currently assigned on the server');
+revocationRuntime.setPermissions([]);
+let revokedPermissionRejected = false;
+try { revocationRuntime.context.requireGatewayPermission_('dashboard.read', 'token'); }
+catch (error) { revokedPermissionRejected = String(error && error.message || error) === 'FORBIDDEN: dashboard.read'; }
+assert(revokedPermissionRejected,
+  'Gateway permission revocation takes effect on the next verified request without trusting token claims');
+for (const scenario of [
+  { name: 'missing token', token: '', body: gatewayGoodBody, expected: 'UNAUTHENTICATED' },
+  { name: 'expired identity', token: 'token', body: Object.assign({}, gatewayGoodBody, { expiresAt: 1 }), expected: 'UNAUTHENTICATED' },
+  { name: 'mismatched email', token: 'token', body: Object.assign({}, gatewayGoodBody, { identity: { subject: 'google-sub-1', email: 'other@example.test' } }), expected: 'UNAUTHENTICATED' }
+]) {
+  const runtime = loadGatewayRuntime({ usersRows: gatewayUsers, verifyBody: scenario.body });
+  let rejected = false;
+  try { runtime.context.verifyGatewaySession_(scenario.token); }
+  catch (error) { rejected = String(error && error.message || error) === scenario.expected; }
+  assert(rejected, 'Gateway verification rejects ' + scenario.name);
+}
+const duplicateGatewayUsers = gatewayUsers.concat([
+  ['u2','admin@example.test','Second Admin','ADMIN','ACTIVE','','','','','google-sub-1']
+]);
+let duplicateGatewayRejected = false;
+try {
+  loadGatewayRuntime({ usersRows: duplicateGatewayUsers, verifyBody: gatewayGoodBody })
+    .context.verifyGatewaySession_('token');
+} catch (error) {
+  duplicateGatewayRejected = String(error && error.message || error) === 'UNAUTHENTICATED';
+}
+assert(duplicateGatewayRejected, 'Gateway identity mapping rejects duplicate active Google subjects');
+const duplicateHeaderRows = [
+  ['user_id','email','display_name','role','status','password_hash','salt','created_at','updated_at','google_sub','google_sub'],
+  ['u1','admin@example.test','Admin','ADMIN','ACTIVE','','','','','google-sub-1','attacker-sub']
+];
+let duplicateHeaderRejected = false;
+try {
+  loadGatewayRuntime({ usersRows: duplicateHeaderRows, verifyBody: gatewayGoodBody })
+    .context.verifyGatewaySession_('token');
+} catch (error) {
+  duplicateHeaderRejected = String(error && error.message || error) === 'AUTH_USER_DIRECTORY_HEADERS_AMBIGUOUS';
+}
+assert(duplicateHeaderRejected,
+  'Gateway identity mapping rejects duplicate security-sensitive USERS headers instead of silently selecting the first');
+let gatewayUnavailableRejected = false;
+try {
+  loadGatewayRuntime({ usersRows: gatewayUsers, verifyBody: gatewayGoodBody, fetchThrows: true })
+    .context.verifyGatewaySession_('token');
+} catch (error) {
+  gatewayUnavailableRejected = String(error && error.message || error) === 'AUTH_GATEWAY_UNAVAILABLE';
+}
+assert(gatewayUnavailableRejected, 'Gateway verification fails closed on upstream network errors');
+let gatewayUnconfiguredRejected = false;
+try {
+  loadGatewayRuntime({ usersRows: gatewayUsers, verifyBody: gatewayGoodBody, config: { INTAL_GATEWAY_VERIFY_URL: '' } })
+    .context.verifyGatewaySession_('token');
+} catch (error) {
+  gatewayUnconfiguredRejected = String(error && error.message || error) === 'AUTH_GATEWAY_NOT_CONFIGURED';
+}
+assert(gatewayUnconfiguredRejected, 'Gateway verification fails closed when endpoint configuration is missing');

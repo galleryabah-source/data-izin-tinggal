@@ -180,7 +180,7 @@ function dailyMeasureLabelV1_(key){
     elektronik_48:'Paspor Elektronik 48',e_polikarbonat:'Paspor Elektronik Polikarbonat'};
   return labels[key]||key;
 }
-function validateDailyInputPayloadV1(payload){
+function validateDailyInputPayloadV1_(payload){
   const input=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
   const allowed=['submissionId','serviceFamily','operationalDate','officeKey','contractVersion','measures','lateEntryReason'];
   const family=String(input.serviceFamily||'').trim().toUpperCase(),contract=Object.prototype.hasOwnProperty.call(DAILY_SERVICE_CONTRACTS_V1,family)?DAILY_SERVICE_CONTRACTS_V1[family]:null;
@@ -289,7 +289,7 @@ function dailyValidateDraft_(payload){
   const measures=p.measures&&typeof p.measures==='object'&&!Array.isArray(p.measures)?p.measures:{},filled={};
   c.measures.forEach(k=>{const v=Object.prototype.hasOwnProperty.call(measures,k)?measures[k]:undefined;filled[k]=(v===undefined||v===null||String(v).trim()==='')?0:v;});
   const candidate=Object.assign({},p,{serviceFamily:family,measures:filled});
-  const result=validateDailyInputPayloadV1(candidate);
+  const result=validateDailyInputPayloadV1_(candidate);
   const errors=Object.keys(result.errors).filter(k=>!k.startsWith('measures.'));
   if(errors.length)throw new Error('DAILY_DRAFT_INVALID: '+errors.map(k=>k+' '+result.errors[k]).join('; '));
   Object.keys(measures).forEach(k=>{if(!c.measures.includes(k))throw new Error('DAILY_DRAFT_FIELD_INVALID: '+k);});
@@ -342,7 +342,7 @@ function saveDailyDraft(payload){
 }
 function submitDailyInput(payload){
   const user=requirePermission_('daily.submit');assertDailyInputEnabled_();
-  const result=validateDailyInputPayloadV1(payload);if(!result.ok)throw new Error('DAILY_INPUT_INVALID: '+JSON.stringify(result.errors));
+  const result=validateDailyInputPayloadV1_(payload);if(!result.ok)throw new Error('DAILY_INPUT_INVALID: '+JSON.stringify(result.errors));
   const p=result.normalized;assertDailyOperationalDate_(p);const lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
     const sh=ensureDailyInputSheet_(),office=dailyOffice_(p.officeKey),rows=dailyRows_(sh),hash=dailyPayloadHash_(p),existing=rows.find(r=>r.submissionId===p.submissionId),key=dailyLogicalKey_({serviceFamily:p.serviceFamily,operationalDate:p.operationalDate,officeKey:p.officeKey}),latest=dailyLatestLogical_(rows,key),now=nowIso_();
@@ -394,7 +394,7 @@ function reviewDailySubmission(recordId,decision,reason){
 function correctDailySubmission(recordId,payload,reason){
   const user=requirePermission_('daily.correct');assertDailyInputEnabled_();
   const why=String(reason||'').trim();if(!why)throw new Error('DAILY_CORRECTION_REASON_REQUIRED');
-  const result=validateDailyInputPayloadV1(payload);if(!result.ok)throw new Error('DAILY_INPUT_INVALID: '+JSON.stringify(result.errors));
+  const result=validateDailyInputPayloadV1_(payload);if(!result.ok)throw new Error('DAILY_INPUT_INVALID: '+JSON.stringify(result.errors));
   const p=result.normalized;assertDailyOperationalDate_(p);const lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
     const sh=ensureDailyInputSheet_(),rows=dailyRows_(sh),hash=dailyPayloadHash_(p),prior=rows.find(r=>r.submissionId===p.submissionId);
