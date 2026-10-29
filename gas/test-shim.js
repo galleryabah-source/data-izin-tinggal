@@ -1842,8 +1842,9 @@ const gatewayRuntimeSource = read('GatewayAuth.gs');
 function makeGatewayUsersSheet(rows) {
   return { getDataRange: () => ({ getValues: () => rows.map(row => row.slice()) }) };
 }
-function loadGatewayRuntime({ usersRows, verifyBody, statusCode = 200, fetchThrows = false, config = {} }) {
+function loadGatewayRuntime({ usersRows, verifyBody, statusCode = 200, fetchThrows = false, config = {}, permissions = null }) {
   const calls = [];
+  let currentPermissions = permissions;
   const properties = Object.assign({
     INTAL_GATEWAY_VERIFY_URL: 'https://gateway.example.test/api/auth/verify-session',
     GAS_GATEWAY_SHARED_SECRET: 'test-shared-secret'
@@ -1857,12 +1858,12 @@ function loadGatewayRuntime({ usersRows, verifyBody, statusCode = 200, fetchThro
       return { getResponseCode: () => statusCode, getContentText: () => JSON.stringify(verifyBody) };
     } },
     getDb_: () => ({ getSheetByName: name => name === 'USERS' ? makeGatewayUsersSheet(usersRows) : null }),
-    getRolePermissions_: role => role === 'ADMIN' ? ['dashboard.read', 'admin.users'] : ['dashboard.read'],
+    getRolePermissions_: role => currentPermissions !== null ? currentPermissions.slice() : (role === 'ADMIN' ? ['dashboard.read', 'admin.users'] : ['dashboard.read']),
     BACKOFFICE_ROLES_: ['ADMIN', 'SUPERVISOR'],
     Date, JSON, Math, Number, String, Array, Error
   };
   vm.runInNewContext(gatewayRuntimeSource, context);
-  return { context, calls };
+  return { context, calls, setPermissions: next => { currentPermissions = next.slice(); } };
 }
 const gatewayHeaders = ['user_id','email','display_name','role','status','password_hash','salt','created_at','updated_at','google_sub'];
 const gatewayUsers = [
@@ -1884,6 +1885,19 @@ assert(gatewayRuntime.calls.length === 1 &&
        gatewayRuntime.calls[0].options.headers['x-intal-gateway-key'] === 'test-shared-secret' &&
        gatewayRuntime.calls[0].options.followRedirects === false,
   'Gateway session uses configured HTTPS verification endpoint and shared service key without redirects');
+const revocationRuntime = loadGatewayRuntime({
+  usersRows: gatewayUsers,
+  verifyBody: gatewayGoodBody,
+  permissions: ['dashboard.read']
+});
+assert(revocationRuntime.context.requireGatewayPermission_('dashboard.read', 'token').role === 'ADMIN',
+  'Gateway permission wrapper authorizes a permission currently assigned on the server');
+revocationRuntime.setPermissions([]);
+let revokedPermissionRejected = false;
+try { revocationRuntime.context.requireGatewayPermission_('dashboard.read', 'token'); }
+catch (error) { revokedPermissionRejected = String(error && error.message || error) === 'FORBIDDEN: dashboard.read'; }
+assert(revokedPermissionRejected,
+  'Gateway permission revocation takes effect on the next verified request without trusting token claims');
 for (const scenario of [
   { name: 'missing token', token: '', body: gatewayGoodBody, expected: 'UNAUTHENTICATED' },
   { name: 'expired identity', token: 'token', body: Object.assign({}, gatewayGoodBody, { expiresAt: 1 }), expected: 'UNAUTHENTICATED' },
