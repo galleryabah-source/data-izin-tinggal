@@ -1920,6 +1920,19 @@ try {
   duplicateGatewayRejected = String(error && error.message || error) === 'UNAUTHENTICATED';
 }
 assert(duplicateGatewayRejected, 'Gateway identity mapping rejects duplicate active Google subjects');
+const duplicateHeaderRows = [
+  ['user_id','email','display_name','role','status','password_hash','salt','created_at','updated_at','google_sub','google_sub'],
+  ['u1','admin@example.test','Admin','ADMIN','ACTIVE','','','','','google-sub-1','attacker-sub']
+];
+let duplicateHeaderRejected = false;
+try {
+  loadGatewayRuntime({ usersRows: duplicateHeaderRows, verifyBody: gatewayGoodBody })
+    .context.verifyGatewaySession_('token');
+} catch (error) {
+  duplicateHeaderRejected = String(error && error.message || error) === 'AUTH_USER_DIRECTORY_HEADERS_AMBIGUOUS';
+}
+assert(duplicateHeaderRejected,
+  'Gateway identity mapping rejects duplicate security-sensitive USERS headers instead of silently selecting the first');
 let gatewayUnavailableRejected = false;
 try {
   loadGatewayRuntime({ usersRows: gatewayUsers, verifyBody: gatewayGoodBody, fetchThrows: true })
