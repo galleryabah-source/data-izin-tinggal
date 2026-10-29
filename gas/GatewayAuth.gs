@@ -57,15 +57,23 @@ function verifyGatewaySession_(sessionToken) {
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) throw new Error('UNAUTHENTICATED');
   const headers = values[0].map(x => String(x || '').trim());
+  const requiredHeaders = ['google_sub', 'status', 'email', 'user_id', 'display_name', 'role'];
+  const headerCounts = Object.fromEntries(requiredHeaders.map(name =>
+    [name, headers.filter(header => header === name).length]
+  ));
+  if (requiredHeaders.some(name => headerCounts[name] === 0)) {
+    throw new Error('AUTH_USER_DIRECTORY_NOT_CONFIGURED');
+  }
+  // Duplicate security-sensitive headers are ambiguous; never silently select the first.
+  if (requiredHeaders.some(name => headerCounts[name] !== 1)) {
+    throw new Error('AUTH_USER_DIRECTORY_HEADERS_AMBIGUOUS');
+  }
   const subjectIndex = headers.indexOf('google_sub');
   const statusIndex = headers.indexOf('status');
   const emailIndex = headers.indexOf('email');
   const userIdIndex = headers.indexOf('user_id');
   const nameIndex = headers.indexOf('display_name');
   const roleIndex = headers.indexOf('role');
-  if ([subjectIndex, statusIndex, emailIndex, userIdIndex, nameIndex, roleIndex].some(i => i < 0)) {
-    throw new Error('AUTH_USER_DIRECTORY_NOT_CONFIGURED');
-  }
 
   const matches = values.slice(1).filter(row =>
     String(row[subjectIndex] || '').trim() === subject &&
