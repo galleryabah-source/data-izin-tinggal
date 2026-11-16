@@ -1296,10 +1296,12 @@ assert(
   'Daily persistence is confined to the named ledger and its creation is gate-protected'
 );
 assert(
-  dailyService.includes('enabled:true') &&
+  dailyService.includes('enabled:false') &&
+  dailyService.includes("const gateAllows=gateStatus==='PASS'") &&
   dailyService.includes("DAILY_INPUT_GATE_9_1") &&
-  dailyService.includes("DAILY_INPUT_ENABLED"),
-  'Daily input activation is governed by the explicit CONFIG flags and Gate 9.1'
+  dailyService.includes("DAILY_INPUT_ENABLED") &&
+  !dailyService.includes("DAILY_INPUT_OWNER_OVERRIDE"),
+  'Daily input remains code-disabled and has no CONFIG owner-override bypass'
 );
 
 /* Lifecycle retry semantics: clients can safely retry after network timeouts. */
