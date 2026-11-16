@@ -1,9 +1,8 @@
 /**
  * Phase 9 — Daily operational input v1.
  * Strictly isolated from canonical monthly datasets/import/registry paths.
- * Activation requires DAILY_INPUT_ENABLED=true and either DAILY_INPUT_GATE_9_1=PASS
- * or an explicit DAILY_INPUT_OWNER_OVERRIDE=APPROVED_WITH_EXCEPTIONS in CONFIG.
- * The owner override is scoped to activation only; it does not certify measure semantics.
+ * Activation remains prohibited until Gate 9.1 is formally PASS and a separately reviewed release opens the code guard.
+ * CONFIG overrides are never accepted as substitutes for Gate 9.1 approval.
  * No code path may silently coerce missing measures to zero.
  */
 const DAILY_SERVICE_CONTRACTS_V1 = Object.freeze({
@@ -19,14 +18,11 @@ const DAILY_SERVICE_CONTRACTS_V1 = Object.freeze({
   })
 });
 const DAILY_INPUT_GUARD_V1 = Object.freeze({
-  enabled:true,timezone:'Asia/Jakarta',featureFlagKey:'DAILY_INPUT_ENABLED',
+  enabled:false,timezone:'Asia/Jakarta',featureFlagKey:'DAILY_INPUT_ENABLED',
   gateKey:'DAILY_INPUT_GATE_9_1',countingBasis:'SERVICE_COMPLETED_OR_DOCUMENT_ISSUED',
   lateEntryPolicy:'ALLOW_WITH_ORIGINAL_OPERATIONAL_DATE_REASON_AND_AUDIT'
 });
-// Dedicated production spreadsheet for daily-input records. It must remain distinct
-// from SPREADSHEET_ID (the canonical monthly database). Only new DAILY_INPUT_* tabs
-// are created here; existing tabs and canonical monthly records are never migrated.
-const DAILY_INPUT_SPREADSHEET_ID_V1 = '100-9h1jcLGv0eRgF412CjGZVmIzf2JFVl8GvuKNyLrY';
+// Daily staging must be explicitly configured in Script Properties. No embedded ID or fallback is allowed.
 const DAILY_INPUT_HEADERS_V1 = Object.freeze([
   'record_id','submission_id','service_family','operational_date','office_key','office_name',
   'contract_version','revision','status','measures_json','total','source_record_id',
@@ -46,7 +42,7 @@ function dailyStagingId_(){
   const configuredDailyId=String(props.getProperty('DAILY_INPUT_SPREADSHEET_ID')||'').trim();
   if(!canonicalId)throw new Error('DAILY_CANONICAL_SPREADSHEET_NOT_CONFIGURED');
   // A stale override may point at the canonical database. Never use it for daily writes.
-  let dailyId=configuredDailyId||DAILY_INPUT_SPREADSHEET_ID_V1;
+  const dailyId=configuredDailyId;
   if(!dailyId)throw new Error('DAILY_INPUT_SPREADSHEET_NOT_CONFIGURED');
   if(dailyId===canonicalId)throw new Error('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL');
   return dailyId;
@@ -141,27 +137,26 @@ function getDailyInputPolicyV1(){
     measureCount:DAILY_SERVICE_CONTRACTS_V1[k].measures.length
   }));
   const gateStatus=String(c[DAILY_INPUT_GUARD_V1.gateKey]||'BLOCKED').toUpperCase();
-  const configuredOverride=String(c.DAILY_INPUT_OWNER_OVERRIDE||'').trim().toUpperCase();
-  const ownerOverride=configuredOverride==='APPROVED_WITH_EXCEPTIONS';
+  // A CONFIG override is intentionally ignored: only the formal Gate 9.1 PASS is valid.
   const featureValue=String(c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'false').trim().toLowerCase();
   const featureEnabled=featureValue==='true';
-  const gateAllows=gateStatus==='PASS'||ownerOverride;
+  const gateAllows=gateStatus==='PASS';
   const blockers=[];
   if(!DAILY_INPUT_GUARD_V1.enabled)blockers.push('CODE_GUARD_DISABLED');
   if(!featureEnabled)blockers.push('DAILY_INPUT_FEATURE_FLAG_DISABLED');
-  if(!gateAllows)blockers.push('GATE_9_1_BLOCKED_WITHOUT_OWNER_OVERRIDE');
+  if(!gateAllows)blockers.push('GATE_9_1_NOT_PASSED');
   if(!stagingReady)blockers.push(staging.reason||'DAILY_STAGING_NOT_READY');
   const enabled=blockers.length===0;
-  return {contract:'DAILY_INPUT_POLICY_V1',enabled,gateStatus,ownerOverride,
-    ownerOverrideSource:configuredOverride==='APPROVED_WITH_EXCEPTIONS'?'CONFIG':'DOCUMENTED_OWNER_APPROVAL',
-    activationMode:ownerOverride&&gateStatus!=='PASS'?'OWNER_APPROVED_WITH_EXCEPTIONS':'STANDARD_GATE',
+  return {contract:'DAILY_INPUT_POLICY_V1',enabled,gateStatus,ownerOverride:false,
+    ownerOverrideSource:'NOT_SUPPORTED',
+    activationMode:'STANDARD_GATE',
     stagingReady,stagingReason:staging.reason,featureEnabled,blockers,
     timezone:DAILY_INPUT_GUARD_V1.timezone,countingBasis:DAILY_INPUT_GUARD_V1.countingBasis,
     lateEntryPolicy:DAILY_INPUT_GUARD_V1.lateEntryPolicy,serviceFamilies:families};
 }
 function assertDailyInputEnabled_(){
   const p=getDailyInputPolicyV1();
-  if(!p.enabled)throw new Error('DAILY_INPUT_GATE_BLOCKED: set DAILY_INPUT_ENABLED=true and either DAILY_INPUT_GATE_9_1=PASS or the documented owner override DAILY_INPUT_OWNER_OVERRIDE=APPROVED_WITH_EXCEPTIONS.');
+  if(!p.enabled)throw new Error('DAILY_INPUT_GATE_BLOCKED: formal Gate 9.1 PASS, DAILY_INPUT_ENABLED=true, explicit isolated staging configuration, and a separately reviewed code release are required.');
   return p;
 }
 function getDailyServiceContractV1(serviceFamily){
