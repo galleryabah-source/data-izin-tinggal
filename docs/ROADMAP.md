@@ -1,15 +1,41 @@
 # Roadmap
 
+## Release status vocabulary (authoritative)
+
+Every milestone must use one evidence-backed state. These states are not interchangeable:
+
+- `PLANNED`: documented; implementation not evidenced.
+- `IMPLEMENTED`: source exists and relevant automated tests pass on a named commit.
+- `DEPLOYED`: exact commit and immutable deployment/version are evidenced in the target environment.
+- `UAT_PASSED`: named user-acceptance scenarios pass in the target environment with evidence.
+- `PRODUCTION_CERTIFIED`: deployment, UAT, security, data-integrity, backup/recovery and production-smoke evidence are accepted.
+- `BLOCKED`: a required gate or prerequisite is unsatisfied.
+- `HOLD`: explicitly paused by decision.
+
+A state may only advance when its own evidence is recorded. CI PASS alone does not mean DEPLOYED, UAT_PASSED, or PRODUCTION_CERTIFIED. Each release record must identify commit SHA, CI run, environment, immutable deployment/version ID, scenario/evidence link, verifier and timestamp.
+
+## Current authoritative release status — 2026-11-16
+
+- Canonical monthly Residence Permit and Passport data pipeline: retain the last documented production evidence below; this roadmap edit does not re-verify live runtime.
+- Period Closing & Controlled Correction v1: `IMPLEMENTED + DEPLOYED`; authenticated runtime UAT and final production certification remain pending as documented below.
+- Phase 9 Daily Input: `BLOCKED` at Gate 9.1. Candidate lifecycle source exists in the audited `main` baseline, but it is not approved for activation or production use. The P0 remediation PR closes the code guard, removes the override bypass, and requires explicit staging configuration.
+- Google authentication gateway: isolated scaffold only; application-wide RPC integration is `BLOCKED`. Draft PR #246 is not a completed login or authorization release.
+- Production certification for the above blocked workstreams is not implied by source presence or CI.
+
+
 ## Phase 1 — Foundation
 - [x] Apps Script skeleton
 - [x] config
 - [x] routing
 - [x] base UI
 
-## Phase 2 — Security
-- [x] Google identity/session
-- [x] RBAC
-- [x] deny-by-default
+## Phase 2 — Security foundation
+- [x] Legacy email-based identity lookup and role/permission checks implemented
+- [x] RBAC permission matrix implemented
+- [ ] Application-wide Google identity gateway and explicit session validation on every protected RPC — BLOCKED (draft PR #246)
+- [ ] Anonymous/protected RPC inventory and deny-before-side-effect end-to-end verification
+
+**Status:** security foundation `IMPLEMENTED`; gateway authentication integration and current security certification are `BLOCKED`. Do not treat legacy `Session.getActiveUser()` lookup as a completed Google Identity gateway.
 
 ## Phase 3 — Data engine
 - [x] Data dictionary
@@ -135,7 +161,7 @@ The Phase 10.2 figures remain locked as historical certification evidence. The c
 
 The production baseline is now verified end-to-end for both the existing Residence Permit dataset and the Passport dataset. Map v1, Export Verification v1, Backup Snapshot Verification v1, Automated Production Smoke Test v1, Passport governance/runtime regression gates, and the GIS First production UI baseline have passed their verification gates.
 
-The current canonical source model remains monthly. Phase 9 now has a candidate daily lifecycle/UI implementation on branch `feat/daily-input-workflow-v1` for Residence Permit and Passport. It includes an isolated `DAILY_INPUT_LEDGER`, drafts, submit/review/approve, correction revisions, void revisions, server-derived totals, verified-office resolution, idempotency, late-entry reasons, and audit events. Gate 9.1 remains BLOCKED until per-indicator semantics and operational workflow receive explicit owner sign-off. Runtime mutation requires both `CONFIG.DAILY_INPUT_ENABLED=true` and `CONFIG.DAILY_INPUT_GATE_9_1=PASS` plus a deliberate code release opening `DAILY_INPUT_GUARD_V1.enabled`. The current branch keeps the code-level kill switch false, so CONFIG cannot bypass Gate 9.1; no ledger is created. No canonical monthly data/import/registry path is modified. See [Gate 9.1 Decision Register](PHASE-9-GATE-9.1-DECISION-REGISTER.md). WhatsApp integration remains HOLD and is not a dependency.
+The canonical source model remains monthly. Candidate daily lifecycle source exists in the audited `main` baseline for Residence Permit and Passport, including a separate ledger, drafts, submission/review, correction/void revisions, server-derived totals, office resolution, idempotency, late-entry reasons and audit events. Gate 9.1 remains BLOCKED until all per-indicator semantics and operational workflow receive explicit owner sign-off. Daily mutation is not authorized. The P0 security remediation PR closes the code-level kill switch, removes the CONFIG owner-override path, and removes the embedded staging ID fallback. No daily ledger creation, activation, merge or production release is authorized by the current roadmap status. No canonical monthly data/import/registry path may be modified. See [Gate 9.1 Decision Register](PHASE-9-GATE-9.1-DECISION-REGISTER.md). WhatsApp integration remains HOLD and is not a dependency.
 
 The deployment identity evidence chain remains part of the gate: Git commit SHA -> GitHub Actions run -> Apps Script immutable version -> canonical deployment ID -> production smoke -> AUDIT_LOG -> backup snapshot.
 
@@ -178,7 +204,7 @@ Evidence: PR #229 merged as `bcc359ad6ac83288e062c14b876a8aecc99c8bb2`; CI/deplo
 
 ### Phase 9 — Governed Daily Input (Residence Permit + Passport)
 
-**Status: APPROVED PLANNING BASELINE — implementation not started.**  
+**Status: BLOCKED — Gate 9.1 not passed. Candidate daily lifecycle source exists in the audited main baseline, but operational approval, runtime activation, and production release are not authorized.**  
 **Capture channel:** INTAL WEB APP form with one service selector. **WhatsApp integration: HOLD.**  
 **Runtime decision:** extend the existing Apps Script + Google Sheets application first; do not introduce Node.js/PostgreSQL solely for this form.  
 **Sequencing:** Gate 9.1 (contract/workflow freeze) may proceed as planning. Before write-path implementation, reconcile the design with the in-delivery monthly Period Closing & Controlled Correction v1 gate so both changes use one governed lifecycle and do not create competing write seams.
