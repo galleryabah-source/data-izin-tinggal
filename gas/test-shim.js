@@ -866,11 +866,13 @@ assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary ho
 // Service-point GIS registry: pending coordinates are intentionally excluded from plotted orbit.\n
 
 /* Phase 9 daily-input contract validator: pure tests only; no Apps Script writes. */
+const appCode=read('Code.gs');
+assert(appCode.includes('function setupApp_()') && !appCode.includes('function setupApp(){'), 'Setup schema/security seeding is private to the Apps Script editor and not callable as a browser RPC');
 const dailyService=read('DailyInputService.gs');
-assert(dailyService.includes('enabled:true') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily input can activate only when the explicit feature flag and Gate 9.1 checks pass');
-assert(dailyService.includes("c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'false'") && !dailyService.includes('DAILY_INPUT_OWNER_OVERRIDE_V1'), 'Daily input fails closed when the feature flag is missing and never bypasses CONFIG with a hard-coded owner override');
-assert(dailyService.includes("configuredOverride==='APPROVED_WITH_EXCEPTIONS'"), 'Owner-approved exception is honored only when explicitly recorded in CONFIG');
-assert(dailyService.includes("const DAILY_INPUT_SPREADSHEET_ID_V1 = '100-9h1jcLGv0eRgF412CjGZVmIzf2JFVl8GvuKNyLrY'") && dailyService.includes('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL'), 'Daily input targets the dedicated user spreadsheet and rejects canonical database reuse');
+assert(dailyService.includes('enabled:false') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily input code-level kill switch remains closed until a separately reviewed release');
+assert(dailyService.includes("c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'false'") && !dailyService.includes('DAILY_INPUT_OWNER_OVERRIDE'), 'Daily input uses its feature flag and contains no owner-override bypass');
+assert(dailyService.includes("const gateAllows=gateStatus==='PASS'") && dailyService.includes("blockers.push('GATE_9_1_NOT_PASSED')"), 'Only formal Gate 9.1 PASS can satisfy the gate condition');
+assert(dailyService.includes("const dailyId=configuredDailyId") && !dailyService.includes('DAILY_INPUT_SPREADSHEET_ID_V1') && dailyService.includes('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL'), 'Daily staging requires an explicit Script Property and rejects canonical database reuse');
 assert(dailyService.includes("name='DAILY_INPUT_AUDIT'") && dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')"), 'Daily input creates only dedicated ledger and audit tabs');
 assert(dailyService.includes('function getDailyInputPolicyV1()'), 'Daily input exposes a policy read endpoint');
 assert(dailyService.includes('function getDailyServiceContractV1(serviceFamily)'), 'Daily input fields are server-contract-owned');
@@ -1052,6 +1054,7 @@ const stagingAliasContext={
 };
 vm.runInNewContext(dailyService,stagingAliasContext);
 assert(stagingAliasContext.getDailyInputPolicyV1().stagingReady===false,'Daily input refuses a dedicated spreadsheet ID that aliases the canonical spreadsheet');
+assert(stagingAliasContext.getDailyInputPolicyV1().enabled===false,'A CONFIG owner override cannot bypass the closed code guard or Gate 9.1');
 const blockedWriteContext={
   SHEETS:{CONFIG:'CONFIG'},
   requirePermission_:(permission)=>({role:'TEST',email:'test@example.com',permissions:['daily.draft','daily.read']}),
