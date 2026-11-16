@@ -1,5 +1,5 @@
 function doGet(e){let view=e&&e.parameter&&String(e.parameter.view||'').toLowerCase();if(view==='daily')requirePermission_('daily.read');else if(view!=='tv'&&view!=='tv-mobile'){const current=getCurrentUser_();if(current.authenticated&&current.permissions.includes('daily.read')&&!['ADMIN','SUPERVISOR'].includes(current.role))view='daily';else requireBackOfficeAccess_();}const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':'index';const title=view==='tv'?'INTAL TV · Command Display':view==='tv-mobile'?'INTAL TV Mobile · Command Display':view==='daily'?'Input Harian · Data Izin Tinggal':APP.NAME;return HtmlService.createTemplateFromFile(file).evaluate().setTitle(title).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
-function setupApp(){
+function setupApp_(){
   const props=PropertiesService.getScriptProperties();
   const id=String(props.getProperty('SPREADSHEET_ID')||'').trim();
   const ss=id?SpreadsheetApp.openById(id):SpreadsheetApp.getActiveSpreadsheet();
