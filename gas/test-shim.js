@@ -868,6 +868,8 @@ assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary ho
 /* Phase 9 daily-input contract validator: pure tests only; no Apps Script writes. */
 const appCode=read('Code.gs');
 assert(appCode.includes('function setupApp_()') && !appCode.includes('function setupApp(){'), 'Setup schema/security seeding is private to the Apps Script editor and not callable as a browser RPC');
+const bootstrapCode=read('Bootstrap.gs');
+assert(bootstrapCode.includes('function bootstrapCurrentUser_()') && !bootstrapCode.includes('function bootstrapCurrentUser(){'), 'Current-user bootstrap helper is private to the Apps Script editor and not callable as a browser RPC');
 const dailyService=read('DailyInputService.gs');
 assert(dailyService.includes('enabled:false') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily input code-level kill switch remains closed until a separately reviewed release');
 assert(dailyService.includes("c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'false'") && !dailyService.includes('DAILY_INPUT_OWNER_OVERRIDE'), 'Daily input uses its feature flag and contains no owner-override bypass');
