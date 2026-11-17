@@ -1798,17 +1798,17 @@ assert(kanwilMissingId.ok&&!kanwilMissingId.records[0].ok&&kanwilMissingId.recor
 /* Kanwil XLSX adapter and 17-column OCR geometry parser regressions. */
 const kanwilXlsxAdapter=require('./KanwilXlsxAdapter.js');
 const fakeXlsx={
-  read:()=>({SheetNames:['Export'],Sheets:{Export:{rows:[['Laporan Kanwil'],kanwilHeaders,reorderedHeaders.map(header=>{
+  read:()=>({SheetNames:['Export'],Sheets:{Export:{rows:[['Laporan Kanwil'],reorderedHeaders,reorderedHeaders.map(header=>{
     const key=kanwilHeaderMap.mapping.find(x=>x.index===reorderedHeaders.indexOf(header))?.key;
     return kanwilValues[key]??'';
   })]}}}),
   utils:{sheet_to_json:sheet=>sheet.rows}
 };
-const xlsxResult=kanwilXlsxAdapter.parseKanwilXlsxV1(new ArrayBuffer(8),fakeXlsx,{},kanwil.parseKanwilPermitCsvV1);
+const xlsxResult=kanwilXlsxAdapter.parseKanwilXlsxV1(new ArrayBuffer(8),fakeXlsx,{},kanwil.parseKanwilPermitCsvV1,kanwil.kanwilMapHeadersV1_);
 assert(xlsxResult.ok&&xlsxResult.records.length===1&&xlsxResult.source.headerRowNumber===2,'XLSX adapter detects a single header row below workbook metadata');
 assert(xlsxResult.records[0].sourceRowNumber===3&&xlsxResult.records[0].normalizedValues.no_passport==='016199077','XLSX adapter preserves original worksheet row numbers and identifier strings');
 const multipleHeaderXlsx={read:()=>({SheetNames:['Export'],Sheets:{Export:{rows:[kanwilHeaders,kanwilHeaders,kanwilValues]}}}),utils:fakeXlsx.utils};
-const multipleHeaders=kanwilXlsxAdapter.parseKanwilXlsxV1(new ArrayBuffer(8),multipleHeaderXlsx,{},kanwil.parseKanwilPermitCsvV1);
+const multipleHeaders=kanwilXlsxAdapter.parseKanwilXlsxV1(new ArrayBuffer(8),multipleHeaderXlsx,{},kanwil.parseKanwilPermitCsvV1,kanwil.kanwilMapHeadersV1_);
 assert(!multipleHeaders.ok&&multipleHeaders.reason==='MULTIPLE_HEADER_ROWS','XLSX adapter fails closed when multiple candidate header rows exist');
 const kanwilShot=require('./KanwilScreenshotParser.js');
 assert(kanwilShot.KANWIL_SCREENSHOT_COLUMNS_V1.length===17,'Kanwil screenshot parser uses exactly 17 source columns');
