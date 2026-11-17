@@ -1810,4 +1810,11 @@ const kanwilManualKeys=['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal
 assert(kanwilManualKeys.every(key=>kanwilPageSource.includes("['"+key+"'")),'Manual Kanwil form enumerates all 17 source columns');
 assert(kanwilPageSource.includes("input.type=type") && kanwilPageSource.includes("input.inputMode='text'"),'Kanwil manual fields preserve identifiers as text inputs');
 assert(kanwilPageSource.includes('BELUM_DISIMPAN'),'Manual Kanwil entry clearly labels records as not persisted');
+const kanwilServiceSource=read('KanwilStagingService.gs');
+assert(kanwilServiceSource.includes("enabled:false") && kanwilServiceSource.includes("writeEndpointsExposed:false"),'Kanwil staging foundation remains disabled with no write RPC exposed');
+assert(kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID") && kanwilServiceSource.includes("KANWIL_STAGING_MUST_BE_SEPARATE_FROM_CANONICAL"),'Kanwil staging requires a separate spreadsheet identity');
+assert(kanwilServiceSource.includes("requireBackOfficeAccess_()") && kanwilServiceSource.includes("function provisionKanwilStagingSchema_"),'Kanwil schema provisioning is a private back-office guarded helper');
+assert(kanwilServiceSource.includes("reviewOnlyScreenshot:true"),'Kanwil screenshot intake remains explicitly review-only');
+assert(!kanwilServiceSource.includes("function saveKanwil") && !kanwilServiceSource.includes("function commitKanwil"),'Kanwil staging foundation exposes no record persistence or commit endpoint');
+
 
