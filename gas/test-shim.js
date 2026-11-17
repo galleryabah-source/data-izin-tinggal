@@ -7,6 +7,16 @@ for(const name of files){new Function(fs.readFileSync(path.join(__dirname,name),
 
 const assert=(condition,message)=>{if(!condition)throw new Error('TEST FAILED: '+message);};
 const read=(name)=>fs.readFileSync(path.join(__dirname,name),'utf8');
+const screenshotParser=require('./ScreenshotTableParser.js');
+assert(screenshotParser.SCREENSHOT_COLUMNS_V1.length===19,'Screenshot table contract has exactly 19 canonical columns');
+const screenshotHeaders=screenshotParser.SCREENSHOT_COLUMNS_V1.map(([key,aliases],i)=>({text:aliases[0],confidence:96,bbox:{x0:i*100,y0:0,x1:i*100+80,y1:20}}));
+const screenshotValues=screenshotParser.SCREENSHOT_COLUMNS_V1.map(([key],i)=>({text:'V'+(i+1),confidence:95,bbox:{x0:i*100+20,y0:50,x1:i*100+60,y1:70}}));
+const screenshotParsed=screenshotParser.reconstructScreenshotTableV1([...screenshotHeaders,...screenshotValues],{lineTolerance:10,headerWordGap:20});
+assert(screenshotParsed.ok&&screenshotParsed.rows.length===1,'Screenshot parser reconstructs a synthetic 19-column row from word geometry');
+assert(screenshotParsed.rows[0].values.nomor_permohonan==='V7'&&screenshotParsed.rows[0].values.no_passport==='V14','Screenshot parser preserves critical identifiers as strings');
+assert(screenshotParsed.warnings.includes('NO_AUTO_COMMIT'),'Screenshot parser always requires human review');
+const screenshotIncomplete=screenshotParser.reconstructScreenshotTableV1(screenshotHeaders.slice(0,18),{lineTolerance:10,headerWordGap:20});
+assert(!screenshotIncomplete.ok&&screenshotIncomplete.reason==='HEADER_MAPPING_INCOMPLETE_OR_AMBIGUOUS','Screenshot parser rejects incomplete header coverage');
 const screenshotHtml=read('ScreenshotEntry.html');
 assert(screenshotHtml.includes('Tesseract.js')&&screenshotHtml.includes('createWorker(\'eng+ind\''),'Screenshot OCR uses browser-local Tesseract with Indonesian and English language data');
 assert(screenshotHtml.includes('maxFiles=200')&&screenshotHtml.includes('maxBytes=5*1024*1024'),'Screenshot OCR enforces bounded batch and file size');
