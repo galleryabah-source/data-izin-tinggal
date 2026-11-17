@@ -1836,3 +1836,12 @@ assert(kanwilStaging.transitionKanwilStagingV1('REVIEW_REQUIRED','APPROVED','rev
 assert(kanwilStaging.transitionKanwilStagingV1('APPROVED','COMMITTED','').ok,'Only approved row can move to committed');
 assert(kanwilStaging.kanwilDuplicateFingerprintV1_('KANWIL-JABAR','001234').fingerprint==='KANWIL-JABAR::001234','Duplicate fingerprint is scoped and preserves leading zeroes');
 assert(!kanwilStaging.kanwilDuplicateFingerprintV1_('','001234').ok,'Duplicate detection fails closed without explicit Kanwil scope');
+
+/* Tesseract word-result adapter preserves cell-level geometry and confidence. */
+const kanwilOcrAdapter=require('./KanwilOcrAdapter.js');
+const tessResult={data:{text:'TERBIT 001234',words:[...shotHeaders,...shotValues]}};
+const adaptedOcr=kanwilOcrAdapter.adaptTesseractResultToKanwilV1(tessResult,kanwilShot.reconstructKanwilScreenshotTableV1,{lineTolerance:9,headerWordGap:10});
+assert(adaptedOcr.ok&&adaptedOcr.engine==='TESSERACT.JS'&&adaptedOcr.reviewRequired&&!adaptedOcr.autoCommit,'Tesseract adapter produces review-only Kanwil extraction');
+assert(adaptedOcr.rows[0].fieldEvidence.no_passport.meanConfidence===91,'Tesseract confidence and field geometry survive OCR adaptation');
+const noWords=kanwilOcrAdapter.adaptTesseractResultToKanwilV1({data:{text:'only plain text'}},kanwilShot.reconstructKanwilScreenshotTableV1);
+assert(!noWords.ok&&noWords.reason==='TESSERACT_WORDS_MISSING','Tesseract adapter fails closed without word geometry');
