@@ -3,13 +3,14 @@
  * Pure contract helpers only. Persistence/RPC deliberately not implemented.
  */
 const KANWIL_STAGING_FIELD_KEYS_V1=['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','layanan','kategori_produk','nomor_permohonan','tanggal_permohonan','penjamin','nama','jenis_kelamin','tanggal_lahir','kebangsaan','no_passport','jenis_produk','tujuan','posisi_permohonan','status_permohonan'];
+const KANWIL_REVIEW_ONLY_V1=true;
 const KANWIL_STAGING_STATES_V1=['RECEIVED','PARSED','VALIDATION_REQUIRED','REVIEW_REQUIRED','APPROVED','COMMITTED','REJECTED','DUPLICATE','CONFLICT','FAILED','CANCELLED'];
 const KANWIL_STAGING_TRANSITIONS_V1={
   RECEIVED:['PARSED','FAILED','CANCELLED'],
   PARSED:['VALIDATION_REQUIRED','REVIEW_REQUIRED','REJECTED','FAILED'],
   VALIDATION_REQUIRED:['REVIEW_REQUIRED','REJECTED','FAILED'],
   REVIEW_REQUIRED:['APPROVED','REJECTED','DUPLICATE','CONFLICT'],
-  APPROVED:['COMMITTED','CANCELLED'],
+  APPROVED:['CANCELLED'],
   COMMITTED:[],
   REJECTED:[],
   DUPLICATE:[],
@@ -45,6 +46,7 @@ function createKanwilStagingEnvelopeV1(input) {
 function transitionKanwilStagingV1(currentState,nextState,reason) {
   if(!KANWIL_STAGING_STATES_V1.includes(currentState)||!KANWIL_STAGING_STATES_V1.includes(nextState))
     return {ok:false,reason:'STAGING_STATE_UNKNOWN'};
+  if(nextState==='COMMITTED')return {ok:false,reason:'KANWIL_REVIEW_ONLY_NO_COMMIT'};
   if(!(KANWIL_STAGING_TRANSITIONS_V1[currentState]||[]).includes(nextState))
     return {ok:false,reason:'STAGING_TRANSITION_NOT_ALLOWED'};
   if(['REJECTED','CANCELLED','CONFLICT'].includes(nextState)&&!String(reason||'').trim())
@@ -58,4 +60,4 @@ function kanwilDuplicateFingerprintV1_(kanwilScopeId,applicationNumber) {
   if(!scope||!number)return {ok:false,reason:'DUPLICATE_SCOPE_OR_APPLICATION_NUMBER_MISSING'};
   return {ok:true,fingerprint:scope+'::'+number};
 }
-if(typeof module!=='undefined'&&module.exports)module.exports={KANWIL_STAGING_STATES_V1,KANWIL_STAGING_TRANSITIONS_V1,createKanwilStagingEnvelopeV1,transitionKanwilStagingV1,kanwilDuplicateFingerprintV1_};
+if(typeof module!=='undefined'&&module.exports)module.exports={KANWIL_REVIEW_ONLY_V1,KANWIL_STAGING_STATES_V1,KANWIL_STAGING_TRANSITIONS_V1,createKanwilStagingEnvelopeV1,transitionKanwilStagingV1,kanwilDuplicateFingerprintV1_};

@@ -1833,7 +1833,8 @@ assert(kanwilEnvelope.envelope.rawValues.no_passport==='016199077'&&kanwilEnvelo
 assert(!kanwilStaging.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Kanwil record cannot commit before approval');
 assert(!kanwilStaging.transitionKanwilStagingV1('REVIEW_REQUIRED','REJECTED','').ok,'Reject transition requires an explicit reason');
 assert(kanwilStaging.transitionKanwilStagingV1('REVIEW_REQUIRED','APPROVED','reviewed').ok,'Reviewed row can be approved');
-assert(kanwilStaging.transitionKanwilStagingV1('APPROVED','COMMITTED','').ok,'Only approved row can move to committed');
+assert(kanwilStaging.KANWIL_REVIEW_ONLY_V1===true,'Kanwil v1 is explicitly locked to review-only mode');
+assert(!kanwilStaging.transitionKanwilStagingV1('APPROVED','COMMITTED','').ok&&kanwilStaging.transitionKanwilStagingV1('APPROVED','COMMITTED','').reason==='KANWIL_REVIEW_ONLY_NO_COMMIT','Kanwil review-only mode blocks commit even after human approval');
 assert(kanwilStaging.kanwilDuplicateFingerprintV1_('KANWIL-JABAR','001234').fingerprint==='KANWIL-JABAR::001234','Duplicate fingerprint is scoped and preserves leading zeroes');
 assert(!kanwilStaging.kanwilDuplicateFingerprintV1_('','001234').ok,'Duplicate detection fails closed without explicit Kanwil scope');
 
