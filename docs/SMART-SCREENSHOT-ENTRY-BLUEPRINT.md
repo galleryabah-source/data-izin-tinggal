@@ -317,3 +317,22 @@ The owner requires **Rp0 additional recurring or usage-based cost** for this fea
 - “Rp0 additional cost” means no new paid service or metered API is introduced. It does not guarantee unlimited storage, bandwidth, device resources, or Google account capacity; those remain subject to existing account quotas.
 
 **Release posture:** cost-free architecture documented; no OCR provider calls, persistent screenshot tables, RPC exposure, production data writes, merge, or deployment are authorized by this document alone.
+
+
+## 16. Implementation progress — isolated prototype
+
+The current feature branch contains:
+- `gas/ScreenshotEntry.html`: isolated browser-only multi-image intake and Tesseract.js prototype. It does not upload, persist, call Apps Script RPC, or expose a production route.
+- `gas/ScreenshotTableParser.js`: pure deterministic geometry parser prototype that accepts OCR word bounding boxes, attempts exact 19-column header mapping, assigns words to x-coordinate columns, and rejects incomplete/ambiguous headers.
+- `gas/test-shim.js`: source-level regression assertions plus a synthetic 19-column geometry fixture and incomplete-header rejection test.
+
+A direct isolated execution of the parser against the synthetic fixture returned one reconstructed row, retained application/passport identifiers as strings, and rejected an 18-column header. This is a synthetic unit check only—not a real screenshot accuracy result, not the full repository CI run, and not proof of production readiness.
+
+Known parser limitations before real-sample calibration:
+- Header word grouping uses a provisional pixel-gap heuristic; zoom, resolution, table density, and wrapped headers can change it.
+- The current geometry parser does not yet resolve merged cells, multiline/wrapped row values, horizontally scrolled partial tables, or repeated header bands.
+- The parser currently returns raw strings only; strict per-field date/identifier/office validation and duplicate detection remain unimplemented.
+- The OCR UI currently displays raw text and is not yet connected to the geometry parser.
+- No Drive/Sheets persistence, audit RPC, role/permission migration, or production route has been implemented.
+
+Do not enable or deploy this prototype as an operational feature until representative, privacy-approved samples from both source types are supplied, the parser is calibrated against labeled expected values, and the P0 security/authentication gates are closed.
