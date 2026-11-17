@@ -7,6 +7,14 @@ for(const name of files){new Function(fs.readFileSync(path.join(__dirname,name),
 
 const assert=(condition,message)=>{if(!condition)throw new Error('TEST FAILED: '+message);};
 const read=(name)=>fs.readFileSync(path.join(__dirname,name),'utf8');
+const screenshotHtml=read('ScreenshotEntry.html');
+assert(screenshotHtml.includes('Tesseract.js')&&screenshotHtml.includes('createWorker(\'eng+ind\''),'Screenshot OCR uses browser-local Tesseract with Indonesian and English language data');
+assert(screenshotHtml.includes('maxFiles=200')&&screenshotHtml.includes('maxBytes=5*1024*1024'),'Screenshot OCR enforces bounded batch and file size');
+assert(screenshotHtml.includes('tidak diunggah')&&screenshotHtml.includes('tidak dikirim ke API'),'Screenshot prototype discloses local-only image processing');
+assert(!screenshotHtml.includes('google.script.run')&&!screenshotHtml.includes('XMLHttpRequest')&&!screenshotHtml.includes('FormData'),'Screenshot prototype exposes no RPC or image-upload transport');
+const screenshotScript=screenshotHtml.match(/<script>([\\s\\S]*?)<\\/script>/i);
+assert(!!screenshotScript,'Screenshot prototype contains a script block');
+try{new Function(screenshotScript[1]);}catch(e){throw new Error('TEST FAILED: Screenshot OCR script syntax: '+e.message);}
 const mobileHtml=fs.readFileSync(path.join(__dirname,'tv-mobile.html'),'utf8');
 assert(mobileHtml.includes('INTAL TV MOBILE'),'Dedicated INTAL TV Mobile page exists');
 assert(mobileHtml.includes('getPublicTvResidenceDashboard')&&mobileHtml.includes('getPublicTvPassportDashboard'),'Mobile uses canonical read-only dashboard services');
