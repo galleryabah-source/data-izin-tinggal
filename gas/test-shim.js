@@ -1875,3 +1875,13 @@ assert(audit.ok&&audit.event.actor_id==='u1','Kanwil audit event records actor, 
 assert(!kanwilStorage.validateKanwilAuditEventV1({auditId:'a1',action:'APPROVE'}).ok,'Kanwil audit event fails closed without actor and reason');
 const duplicate=kanwilStorage.classifyKanwilDuplicateCandidateV1({kanwilScopeId:'KANWIL-JABAR',applicationNumber:'00123',payloadSha256:'c'.repeat(64)},{kanwilScopeId:'KANWIL-JABAR',applicationNumber:'00123',payloadSha256:'d'.repeat(64)});
 assert(duplicate.ok&&duplicate.candidate&&duplicate.outcome==='PAYLOAD_CONFLICT_CANDIDATE'&&!duplicate.enforceUnique&&duplicate.requiresHumanResolution,'Kanwil duplicate matching is a review candidate and never silently enforces uniqueness');
+
+/* Kanwil local intake limits reject unsafe or oversized batches before parsing. */
+const kanwilIntakePolicy=require('./KanwilIntakePolicy.js');
+assert(kanwilIntakePolicy.validateKanwilLocalFilesV1([{name:'data.csv',size:1024,type:'text/csv'}]).ok,'Kanwil intake accepts a supported CSV within limits');
+assert(!kanwilIntakePolicy.validateKanwilLocalFilesV1([{name:'payload.exe',size:1024,type:'application/octet-stream'}]).ok,'Kanwil intake rejects unsupported extensions');
+assert(!kanwilIntakePolicy.validateKanwilLocalFilesV1([{name:'large.png',size:11*1024*1024,type:'image/png'}]).ok,'Kanwil intake enforces image size ceiling');
+assert(!kanwilIntakePolicy.validateKanwilLocalFilesV1([{name:'wrong.png',size:1024,type:'text/plain'}]).ok,'Kanwil intake rejects MIME and extension mismatch');
+assert(!kanwilIntakePolicy.validateKanwilLocalFilesV1(Array.from({length:51},(_,i)=>({name:'f'+i+'.csv',size:1,type:'text/csv'}))).ok,'Kanwil intake enforces batch file-count limit');
+const kanwilEntryWithPolicy=read('KanwilEntry.html');
+assert(kanwilEntryWithPolicy.includes('KanwilIntakePolicy.js')&&kanwilEntryWithPolicy.includes('validateKanwilLocalFilesV1'),'Kanwil UI validates local files before parsing');
