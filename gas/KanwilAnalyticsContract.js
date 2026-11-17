@@ -54,6 +54,15 @@ function projectKanwilTvAggregateV1_(rows){
   });
 }
 
+function kanwilDistributionV1_(rows,key){
+ const total=Array.isArray(rows)?rows.length:0;
+ return kanwilGroupCountV1_(rows,key).map(x=>({label:x.label,count:x.count,percentage:total?Number((x.count*100/total).toFixed(2)):0}));
+}
+function kanwilCrossTabV1_(rows,rowKey,columnKey){
+ const cells=new Map();
+ (Array.isArray(rows)?rows:[]).forEach(r=>{const a=kanwilSafeDimension_(r&&r[rowKey]),b=kanwilSafeDimension_(r&&r[columnKey]),k=JSON.stringify([a,b]);cells.set(k,(cells.get(k)||0)+1);});
+ return Array.from(cells.entries()).map(([k,count])=>{const p=JSON.parse(k);return {row:p[0],column:p[1],count};}).sort((a,b)=>a.row.localeCompare(b.row,'id')||a.column.localeCompare(b.column,'id'));
+}
 function kanwilDateKey_(value){
   const raw=String(value==null?'':value).trim();
   if(!raw)return null;
@@ -93,9 +102,9 @@ function buildKanwilWorkspaceAnalyticsV1_(records,filters){
     dateBasis:'tanggal_permohonan',
     approvedRecordCount:rows.length,
     totalPermohonan:base.totalPermohonan,
-    jumlahLayanan:base.jumlahLayanan,kategoriProduk:base.kategoriProduk,
-    jenisProduk:base.jenisProduk,kebangsaan:base.kebangsaan,tujuan:base.tujuan,
-    posisiPermohonan:base.posisiPermohonan,statusPermohonan:base.statusPermohonan,
+    jumlahLayanan:kanwilDistributionV1_(rows,'layanan'),kategoriProduk:kanwilDistributionV1_(rows,'kategori_produk'),
+    jenisProduk:kanwilDistributionV1_(rows,'jenis_produk'),kebangsaan:kanwilDistributionV1_(rows,'kebangsaan'),tujuan:kanwilDistributionV1_(rows,'tujuan'),
+    posisiPermohonan:kanwilDistributionV1_(rows,'posisi_permohonan'),statusPermohonan:kanwilDistributionV1_(rows,'status_permohonan'),\n    analisisSilang:{layananKebangsaan:kanwilCrossTabV1_(rows,'layanan','kebangsaan'),layananStatus:kanwilCrossTabV1_(rows,'layanan','status_permohonan'),produkTujuan:kanwilCrossTabV1_(rows,'jenis_produk','tujuan')},
     harian:Array.from(daily.entries()).sort((a,b)=>a[0].localeCompare(b[0])).map(([date,count])=>({date,count})),
     bulanan:Array.from(monthly.entries()).sort((a,b)=>a[0].localeCompare(b[0])).map(([month,count])=>({month,count})),
     kualitasData:{missingRequiredFields:missing,duplicateApplicationNumberGroups:duplicateApplicationNumbers}
@@ -103,5 +112,5 @@ function buildKanwilWorkspaceAnalyticsV1_(records,filters){
 }
 if(typeof module!=='undefined'&&module.exports)module.exports={
  KANWIL_TV_FORBIDDEN_FIELDS_V1,KANWIL_TV_ALLOWED_DIMENSIONS_V1,
- buildKanwilAggregateV1_,projectKanwilTvAggregateV1_,kanwilApprovedRowsV1_,buildKanwilWorkspaceAnalyticsV1_
+ buildKanwilAggregateV1_,projectKanwilTvAggregateV1_,kanwilApprovedRowsV1_,buildKanwilWorkspaceAnalyticsV1_,kanwilDistributionV1_,kanwilCrossTabV1_
 };
