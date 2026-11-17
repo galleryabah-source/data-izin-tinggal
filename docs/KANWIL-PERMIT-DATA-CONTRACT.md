@@ -273,3 +273,19 @@ The five Kanwil modules were fetched from the feature branch and parsed independ
 - Direct transition from `REVIEW_REQUIRED` to `COMMITTED` is rejected.
 
 This is focused module-level synthetic validation only. It is not the full repository `test-shim.js`, not a GitHub Actions CI pass, not a real XLSX workbook test, and not a real screenshot/photo accuracy test. The OCR UI is not yet connected to `KanwilOcrAdapter.js`; no runtime ingestion or persistence exists.
+
+
+## 15. Isolated multi-source browser review shell — 2026-11-17
+
+Added `gas/KanwilEntry.html`, an un-routed browser-only intake prototype:
+- accepts CSV, XLSX/XLS, JPEG and PNG;
+- parses CSV through the Kanwil 17-column contract, choosing comma or semicolon based on the header line;
+- uses a pinned SheetJS Community Edition browser bundle for XLSX decoding;
+- uses browser-local Tesseract.js word output plus the Kanwil OCR geometry adapter for images;
+- presents extracted row candidates in a review table and keeps a local raw OCR/error log;
+- labels every candidate as `REVIEW_REQUIRED`; there is no commit button or persistence path;
+- does not call Apps Script RPC, Drive, Sheets, or upload transports.
+
+The shell fetches only JS module/runtime assets from pinned CDN locations; the selected workbook/image files are passed to browser-side libraries and are not sent to those asset hosts. Offline operation is not supported in this prototype. No credentials or file contents are added to fetch URLs.
+
+A syntax check of the extracted inline script passed. Regression assertions were added to the repository test harness for the shell's syntax and absence of RPC/upload transport. Full test-shim and browser integration have not been executed. XLSX support remains unverified against real workbook samples, and Tesseract runtime behavior remains unverified in the deployed Apps Script HTML sandbox. The HTML fragment is not included in doGet or app navigation.
