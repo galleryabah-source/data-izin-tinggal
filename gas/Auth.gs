@@ -1,4 +1,5 @@
 function workspaceIdentityEnforcementEnabledV1_(){
+  if(typeof PropertiesService==='undefined')return false;
   return PropertiesService.getScriptProperties().getProperty('INTAL_WORKSPACE_IDENTITY_ENFORCEMENT')==='true';
 }
 function getWorkspaceIdentityV1_(){
