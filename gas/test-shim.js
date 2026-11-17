@@ -1775,7 +1775,13 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
     const guard=entry.permission==='backoffice.access'
       ? /requireBackOfficeAccess_\s*\(\s*\)/
       : new RegExp("requirePermission_\\s*\\(\\s*['\\\"]"+entry.permission.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"['\\\"]\\s*\\)");
-    assert(guard.test(segment),'RPC guard matches manifest permission '+entry.permission+': '+name);
+    const directGuard=guard.test(segment);
+    const delegatedGuard=!directGuard&&[...segment.matchAll(/\\b([A-Za-z$][\\w$]*_)\\s*\\(/g)].some(call=>{
+      const helperName=call[1];
+      const helperSource=[...rpcSources.values()].find(text=>new RegExp('^function\\\\s+'+helperName+'\\\\s*\\(','m').test(text));
+      return !!helperSource&&guard.test(rpcDeclarationSegment_(helperSource,helperName));
+    });
+    assert(directGuard||delegatedGuard,'RPC guard matches manifest permission '+entry.permission+' directly or through a guarded private helper: '+name);
   }else if(entry.access==='public_read_only'){
     assert(!/requirePermission_\s*\(/.test(segment),'Public read-only RPC has no permission guard: '+name);
   }else if(entry.access==='self_scope'){
