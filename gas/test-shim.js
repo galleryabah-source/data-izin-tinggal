@@ -1794,3 +1794,29 @@ const kanwilMalformed=kanwil.parseKanwilPermitCsvV1(kanwilHeaders.join(',')+'\n'
 assert(kanwilMalformed.ok&&kanwilMalformed.records[0].reason==='COLUMN_COUNT_MISMATCH','Kanwil parser quarantines rows with mismatched cell counts');
 const kanwilMissingId=kanwil.parseKanwilPermitCsvV1(kanwilHeaders.join(',')+'\n'+kanwilHeaders.map(h=>h==='Nomor Permohonan'?'':(kanwilValues[kanwil.kanwilMapHeadersV1_(kanwilHeaders).mapping.find(x=>x.index===kanwilHeaders.indexOf(h))?.key]||'')).join(','));
 assert(kanwilMissingId.ok&&!kanwilMissingId.records[0].ok&&kanwilMissingId.records[0].warnings.some(x=>x.code==='REQUIRED_IDENTIFIER_MISSING'),'Kanwil parser marks a row without application number as review-required');
+
+/* Kanwil XLSX adapter and 17-column OCR geometry parser regressions. */
+const kanwilXlsxAdapter=require('./KanwilXlsxAdapter.js');
+const fakeXlsx={
+  read:()=>({SheetNames:['Export'],Sheets:{Export:{rows:[['Laporan Kanwil'],kanwilHeaders,reorderedHeaders.map(header=>{
+    const key=kanwilHeaderMap.mapping.find(x=>x.index===reorderedHeaders.indexOf(header))?.key;
+    return kanwilValues[key]??'';
+  })]}}}),
+  utils:{sheet_to_json:sheet=>sheet.rows}
+};
+const xlsxResult=kanwilXlsxAdapter.parseKanwilXlsxV1(new ArrayBuffer(8),fakeXlsx,{},kanwil.parseKanwilPermitCsvV1);
+assert(xlsxResult.ok&&xlsxResult.records.length===1&&xlsxResult.source.headerRowNumber===2,'XLSX adapter detects a single header row below workbook metadata');
+assert(xlsxResult.records[0].sourceRowNumber===3&&xlsxResult.records[0].normalizedValues.no_passport==='016199077','XLSX adapter preserves original worksheet row numbers and identifier strings');
+const multipleHeaderXlsx={read:()=>({SheetNames:['Export'],Sheets:{Export:{rows:[kanwilHeaders,kanwilHeaders,kanwilValues]}}}),utils:fakeXlsx.utils};
+const multipleHeaders=kanwilXlsxAdapter.parseKanwilXlsxV1(new ArrayBuffer(8),multipleHeaderXlsx,{},kanwil.parseKanwilPermitCsvV1);
+assert(!multipleHeaders.ok&&multipleHeaders.reason==='MULTIPLE_HEADER_ROWS','XLSX adapter fails closed when multiple candidate header rows exist');
+const kanwilShot=require('./KanwilScreenshotParser.js');
+assert(kanwilShot.KANWIL_SCREENSHOT_COLUMNS_V1.length===17,'Kanwil screenshot parser uses exactly 17 source columns');
+const shotHeaders=kanwilShot.KANWIL_SCREENSHOT_COLUMNS_V1.map(([key,aliases],i)=>({text:aliases[0],confidence:97,bbox:{x0:i*110,y0:0,x1:i*110+85,y1:18}}));
+const shotValues=kanwilShot.KANWIL_SCREENSHOT_COLUMNS_V1.map(([key],i)=>({text:key==='nomor_permohonan'?'0012345':key==='no_passport'?'012345678':'R'+(i+1),confidence:91,bbox:{x0:i*110+18,y0:45,x1:i*110+75,y1:65}}));
+const shotParsed=kanwilShot.reconstructKanwilScreenshotTableV1([...shotHeaders,...shotValues],{lineTolerance:9,headerWordGap:10});
+assert(shotParsed.ok&&shotParsed.rows.length===1,'Kanwil OCR geometry parser reconstructs a synthetic 17-column row');
+assert(shotParsed.rows[0].values.nomor_permohonan==='0012345'&&shotParsed.rows[0].values.no_passport==='012345678','Kanwil OCR parser preserves leading-zero identifiers');
+assert(shotParsed.warnings.includes('NO_AUTO_COMMIT'),'Kanwil OCR parser always requires explicit human review');
+const shotIncomplete=kanwilShot.reconstructKanwilScreenshotTableV1(shotHeaders.slice(0,16),{lineTolerance:9,headerWordGap:10});
+assert(!shotIncomplete.ok&&shotIncomplete.reason==='HEADER_MAPPING_INCOMPLETE_OR_AMBIGUOUS','Kanwil OCR parser rejects incomplete 17-column header');
