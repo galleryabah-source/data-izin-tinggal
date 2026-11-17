@@ -2,6 +2,7 @@
  * Kanwil Permit v1 — shared staging envelope and guarded state transitions.
  * Pure contract helpers only. Persistence/RPC deliberately not implemented.
  */
+const KANWIL_STAGING_FIELD_KEYS_V1=['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','layanan','kategori_produk','nomor_permohonan','tanggal_permohonan','penjamin','nama','jenis_kelamin','tanggal_lahir','kebangsaan','no_passport','jenis_produk','tujuan','posisi_permohonan','status_permohonan'];
 const KANWIL_STAGING_STATES_V1=['RECEIVED','PARSED','VALIDATION_REQUIRED','REVIEW_REQUIRED','APPROVED','COMMITTED','REJECTED','DUPLICATE','CONFLICT','FAILED','CANCELLED'];
 const KANWIL_STAGING_TRANSITIONS_V1={
   RECEIVED:['PARSED','FAILED','CANCELLED'],
@@ -25,7 +26,7 @@ function createKanwilStagingEnvelopeV1(input) {
   if(!x.rawValues||!x.normalizedValues||!x.fieldEvidence)
     return {ok:false,reason:'STAGING_EVIDENCE_REQUIRED'};
   const raw={},normalized={},evidence={};
-  KANWIL_PERMIT_COLUMNS_V1.forEach(([key])=>{
+  KANWIL_STAGING_FIELD_KEYS_V1.forEach(key=>{
     raw[key]=Object.prototype.hasOwnProperty.call(x.rawValues,key)?String(x.rawValues[key]??''):null;
     normalized[key]=Object.prototype.hasOwnProperty.call(x.normalizedValues,key)?(x.normalizedValues[key]===null?null:String(x.normalizedValues[key])):null;
     evidence[key]=x.fieldEvidence[key]||null;
