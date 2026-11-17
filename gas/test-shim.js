@@ -351,7 +351,7 @@ assert(!publicTv.includes('requirePermission_('), 'Public TV adapter contains no
 assert(publicTv.includes('kantor_imigrasi') && publicTv.includes('latitude') && publicTv.includes('longitude'), 'Public TV GIS exposes only presentation marker fields');
 assert(!publicTv.includes('source_url') && !publicTv.includes('office_key') && !publicTv.includes('address'), 'Public TV GIS does not expose office reference metadata');
 assert(codeGs.includes("readCacheKey_('running-text-active')") && codeGs.includes('readCachePut_(cacheKey,result,10)'), 'TV running text read path uses bounded cache');
-assert(codeGs.includes("const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':'index'"), 'doGet preserves the dedicated TV template and adds a separate mobile template');
+assert(codeGs.includes("const file=view==='tv'?'tv':view==='tv-mobile'?'tv-mobile':view==='kanwil'?'KanwilEntry':'index'"), 'doGet preserves TV templates and serves the protected Kanwil entry template separately');
 assert(codeGs.includes("if(view==='daily')requirePermission_('daily.read')") && codeGs.includes("current.permissions.includes('daily.read')") && codeGs.includes("view='daily'"), 'Daily-only users are routed into the integrated input workspace while the admin shell remains protected');
 assert(codeGs.includes('function getBootstrap(){const u=requireBackOfficeAccess_();'), 'Back-office bootstrap is server-gated');
 assert(codeGs.includes("function getDailyBootstrap(){const u=requirePermission_('daily.read');") && codeGs.includes("scope:'DAILY_INPUT_ONLY'"), 'Daily-only bootstrap exposes identity and permissions only after daily.read authorization');
@@ -1789,3 +1789,68 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
     assert(/getCurrentUser_\s*\(/.test(segment),'Self-scope RPC resolves current user: '+name);
   }
 }
+
+
+/* Kanwil service entry route and review-only boundary. */
+const kanwilRouteSource=read('Code.gs');
+assert(kanwilRouteSource.includes("else if(view==='kanwil')requireBackOfficeAccess_()"),'Kanwil entry route requires authenticated back-office access');
+assert(kanwilRouteSource.includes("view==='kanwil'?'KanwilEntry'"),'Kanwil entry route serves the dedicated Kanwil workspace');
+const kanwilNavSource=read('index.html');
+assert(kanwilNavSource.includes('href="?view=kanwil"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace');
+const kanwilPageSource=read('KanwilEntry.html');
+assert(kanwilPageSource.includes('Mode REVIEW-ONLY aktif'),'Kanwil entry page explicitly discloses review-only mode');
+assert(!kanwilPageSource.includes('google.script.run')&&!kanwilPageSource.includes('FormData')&&!kanwilPageSource.includes('XMLHttpRequest'),'Kanwil review-only workspace has no RPC or upload transport');
+const kanwilReviewContract=require('./KanwilStagingContract.js');
+assert(kanwilReviewContract.KANWIL_REVIEW_ONLY_V1===true,'Kanwil staging contract is locked to review-only');
+assert(!kanwilReviewContract.transitionKanwilStagingV1('APPROVED','COMMITTED','').ok,'Kanwil contract blocks commit from approved state');
+assert(!kanwilReviewContract.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Kanwil review-only contract blocks direct commit');
+assert(!kanwilReviewContract.transitionKanwilStagingV1('APPROVED','COMMITTED','approved').ok,'Kanwil review-only contract blocks commit even after approval');
+assert(kanwilPageSource.includes('kpeManualForm') && kanwilPageSource.includes('Tambahkan ke daftar review'),'Kanwil page exposes a manual application-entry form');
+const kanwilManualKeys=['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','layanan','kategori_produk','nomor_permohonan','tanggal_permohonan','penjamin','nama','jenis_kelamin','tanggal_lahir','kebangsaan','no_passport','jenis_produk','tujuan','posisi_permohonan','status_permohonan'];
+assert(kanwilManualKeys.every(key=>kanwilPageSource.includes("['"+key+"'")),'Manual Kanwil form enumerates all 17 source columns');
+assert(kanwilPageSource.includes("input.type=type") && kanwilPageSource.includes("input.inputMode='text'"),'Kanwil manual fields preserve identifiers as text inputs');
+assert(kanwilPageSource.includes('BELUM_DISIMPAN'),'Manual Kanwil entry clearly labels records as not persisted');
+const kanwilServiceSource=read('KanwilStagingService.gs');
+assert(kanwilServiceSource.includes("enabled:false") && kanwilServiceSource.includes("writeEndpointsExposed:false"),'Kanwil staging foundation remains disabled with no write RPC exposed');
+assert(kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID") && kanwilServiceSource.includes("KANWIL_STAGING_MUST_BE_SEPARATE_FROM_CANONICAL"),'Kanwil staging requires a separate spreadsheet identity');
+assert(kanwilServiceSource.includes("requireBackOfficeAccess_()") && kanwilServiceSource.includes("function provisionKanwilStagingSchema_"),'Kanwil schema provisioning is a private back-office guarded helper');
+assert(kanwilServiceSource.includes("reviewOnlyScreenshot:true"),'Kanwil screenshot intake remains explicitly review-only');
+assert(!kanwilServiceSource.includes("function saveKanwil") && !kanwilServiceSource.includes("function commitKanwil"),'Kanwil staging foundation exposes no record persistence or commit endpoint');
+const kanwilAnalytics=require('./KanwilAnalyticsContract.js');
+const kanwilSampleRows=[
+ {layanan:'CONVERSION',kategori_produk:'ITAP',jenis_produk:'ITASITAP5Y_GENINVEST',kebangsaan:'SAUDI ARABIA',tujuan:'INVESTMENT',posisi_permohonan:'Produk sudah Terbit',status_permohonan:'TERBIT',nama:'RAHASIA A',tanggal_lahir:'1980-01-01',no_passport:'P123',nomor_permohonan:'001',penjamin:'RAHASIA'},
+ {layanan:'CONVERSION',kategori_produk:'ITAP',jenis_produk:'ITASITAP5Y_GENINVEST',kebangsaan:'SAUDI ARABIA',tujuan:'INVESTMENT',posisi_permohonan:'Produk sudah Terbit',status_permohonan:'TERBIT',nama:'RAHASIA B',tanggal_lahir:'1981-01-01',no_passport:'P456',nomor_permohonan:'002',penjamin:'RAHASIA'},
+ {layanan:'EXTEND',kategori_produk:'ITAP',jenis_produk:'ITASITAP_RETIREMENT',kebangsaan:'KOREA SELATAN',tujuan:'FAMILY',posisi_permohonan:'Produk sudah Terbit',status_permohonan:'TERBIT',nama:'RAHASIA C',tanggal_lahir:'1982-01-01',no_passport:'P789',nomor_permohonan:'003',penjamin:'RAHASIA'}
+];
+const kanwilAggregate=kanwilAnalytics.buildKanwilAggregateV1_(kanwilSampleRows);
+assert(kanwilAggregate.totalPermohonan===3,'Kanwil aggregate counts application records');
+assert(kanwilAggregate.jumlahLayanan.find(x=>x.label==='CONVERSION').count===2,'Kanwil aggregate groups service counts');
+assert(kanwilAggregate.kebangsaan.find(x=>x.label==='SAUDI ARABIA').count===2,'Kanwil aggregate groups nationality counts');
+const kanwilTv=kanwilAnalytics.projectKanwilTvAggregateV1_(kanwilSampleRows);
+const kanwilTvSerialized=JSON.stringify(kanwilTv);
+assert(!['RAHASIA','P123','P456','P789','001','002','003','1980-01-01'].some(value=>kanwilTvSerialized.includes(value)),'Kanwil TV projection excludes names, passport/application numbers and dates of birth');
+assert(!kanwilAnalytics.KANWIL_TV_FORBIDDEN_FIELDS_V1.some(key=>Object.prototype.hasOwnProperty.call(kanwilTv,key)),'Kanwil TV output has no forbidden personal-data fields');
+assert(kanwilTv.jumlahLayanan.length===2&&kanwilTv.kategoriProduk.length===1&&kanwilTv.kebangsaan.length===2,'Kanwil TV projection includes aggregate dimensions only');
+assert(kanwilAnalytics.KANWIL_TV_ALLOWED_DIMENSIONS_V1.includes('kebangsaan'),'Nationality is an approved aggregate dimension');
+const kanwilWorkspaceRows=[
+ {...kanwilSampleRows[0],record_state:'APPROVED',tanggal_permohonan:'2026-11-04'},
+ {...kanwilSampleRows[1],record_state:'COMMITTED',tanggal_permohonan:'2026-11-04'},
+ {...kanwilSampleRows[2],record_state:'REVIEW_REQUIRED',tanggal_permohonan:'2026-11-05'},
+ {...kanwilSampleRows[2],record_state:'APPROVED',tanggal_permohonan:'2026-11-06',nomor_permohonan:''}
+];
+const kanwilWorkspace=kanwilAnalytics.buildKanwilWorkspaceAnalyticsV1_(kanwilWorkspaceRows,{});
+assert(kanwilWorkspace.approvedRecordCount===3,'Kanwil workspace analytics excludes pending and review-only records');
+assert(kanwilWorkspace.harian.length===2&&kanwilWorkspace.harian[0].date==='2026-11-04','Kanwil workspace analytics builds daily trend on application date');
+assert(kanwilWorkspace.bulanan.length===1&&kanwilWorkspace.bulanan[0].month==='2026-11','Kanwil workspace analytics builds monthly trend');
+assert(kanwilWorkspace.kualitasData.missingRequiredFields.nomor_permohonan===1,'Kanwil workspace analytics detects missing application numbers');
+assert(kanwilWorkspace.dateBasis==='tanggal_permohonan','Kanwil analytics declares the operational date basis');
+assert(kanwilWorkspace.jumlahLayanan.find(x=>x.label==='CONVERSION').percentage===66.67,'Kanwil workspace distributions calculate percentages');
+assert(kanwilWorkspace.analisisSilang.layananKebangsaan.some(x=>x.row==='CONVERSION'&&x.column==='SAUDI ARABIA'&&x.count===2),'Kanwil workspace computes service by nationality cross-tab');
+assert(kanwilWorkspace.analisisSilang.layananStatus.some(x=>x.row==='CONVERSION'&&x.column==='TERBIT'&&x.count===2),'Kanwil workspace computes service by status cross-tab');
+assert(kanwilWorkspace.analisisSilang.produkTujuan.some(x=>x.row==='ITASITAP5Y_GENINVEST'&&x.column==='INVESTMENT'&&x.count===2),'Kanwil workspace computes product by purpose cross-tab');
+
+assert(!JSON.stringify(kanwilWorkspace).includes('RAHASIA A'),'Kanwil analytics response contains aggregates and quality metrics, not row-level PII');
+
+
+
+
