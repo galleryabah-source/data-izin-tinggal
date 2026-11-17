@@ -1750,7 +1750,7 @@ assert(unclassified.length===0,'RPC manifest blocks unclassified callable declar
 assert(stale.length===0,'RPC manifest contains stale declarations: '+stale.join(', '));
 assert(rpcManifest.getRpcManifestEntryV1('notARealRpc')===null,'Unknown RPC names fail closed in manifest lookup');
 Object.entries(rpcManifest.RPC_MANIFEST_V1).forEach(([name,entry])=>{
-  assert(['protected','public_read_only','self_scope','web_entrypoint'].includes(entry.access),'RPC manifest access class is explicit: '+name);
+  assert(['protected','public_read_only','self_scope','web_entrypoint','stateless_validation'].includes(entry.access),'RPC manifest access class is explicit: '+name);
   if(entry.access==='protected')assert(!!entry.permission,'Protected RPC has a required permission: '+name);
   else assert(entry.permission===null,'Non-protected RPC has no fabricated permission: '+name);
 });
