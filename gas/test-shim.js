@@ -1832,6 +1832,20 @@ assert(!['RAHASIA','P123','P456','P789','001','002','003','1980-01-01'].some(val
 assert(!kanwilAnalytics.KANWIL_TV_FORBIDDEN_FIELDS_V1.some(key=>Object.prototype.hasOwnProperty.call(kanwilTv,key)),'Kanwil TV output has no forbidden personal-data fields');
 assert(kanwilTv.jumlahLayanan.length===2&&kanwilTv.kategoriProduk.length===1&&kanwilTv.kebangsaan.length===2,'Kanwil TV projection includes aggregate dimensions only');
 assert(kanwilAnalytics.KANWIL_TV_ALLOWED_DIMENSIONS_V1.includes('kebangsaan'),'Nationality is an approved aggregate dimension');
+const kanwilWorkspaceRows=[
+ {...kanwilSampleRows[0],record_state:'APPROVED',tanggal_permohonan:'2026-11-04'},
+ {...kanwilSampleRows[1],record_state:'COMMITTED',tanggal_permohonan:'2026-11-04'},
+ {...kanwilSampleRows[2],record_state:'REVIEW_REQUIRED',tanggal_permohonan:'2026-11-05'},
+ {...kanwilSampleRows[2],record_state:'APPROVED',tanggal_permohonan:'2026-11-06',nomor_permohonan:''}
+];
+const kanwilWorkspace=kanwilAnalytics.buildKanwilWorkspaceAnalyticsV1_(kanwilWorkspaceRows,{});
+assert(kanwilWorkspace.approvedRecordCount===3,'Kanwil workspace analytics excludes pending and review-only records');
+assert(kanwilWorkspace.harian.length===2&&kanwilWorkspace.harian[0].date==='2026-11-04','Kanwil workspace analytics builds daily trend on application date');
+assert(kanwilWorkspace.bulanan.length===1&&kanwilWorkspace.bulanan[0].month==='2026-11','Kanwil workspace analytics builds monthly trend');
+assert(kanwilWorkspace.kualitasData.missingRequiredFields.nomor_permohonan===1,'Kanwil workspace analytics detects missing application numbers');
+assert(kanwilWorkspace.dateBasis==='tanggal_permohonan','Kanwil analytics declares the operational date basis');
+assert(!JSON.stringify(kanwilWorkspace).includes('RAHASIA A'),'Kanwil analytics response contains aggregates and quality metrics, not row-level PII');
+
 
 
 
