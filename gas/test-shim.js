@@ -1816,5 +1816,22 @@ assert(kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID") && kanwilSe
 assert(kanwilServiceSource.includes("requireBackOfficeAccess_()") && kanwilServiceSource.includes("function provisionKanwilStagingSchema_"),'Kanwil schema provisioning is a private back-office guarded helper');
 assert(kanwilServiceSource.includes("reviewOnlyScreenshot:true"),'Kanwil screenshot intake remains explicitly review-only');
 assert(!kanwilServiceSource.includes("function saveKanwil") && !kanwilServiceSource.includes("function commitKanwil"),'Kanwil staging foundation exposes no record persistence or commit endpoint');
+const kanwilAnalytics=require('./KanwilAnalyticsContract.js');
+const kanwilSampleRows=[
+ {layanan:'CONVERSION',kategori_produk:'ITAP',jenis_produk:'ITASITAP5Y_GENINVEST',kebangsaan:'SAUDI ARABIA',tujuan:'INVESTMENT',posisi_permohonan:'Produk sudah Terbit',status_permohonan:'TERBIT',nama:'RAHASIA A',tanggal_lahir:'1980-01-01',no_passport:'P123',nomor_permohonan:'001',penjamin:'RAHASIA'},
+ {layanan:'CONVERSION',kategori_produk:'ITAP',jenis_produk:'ITASITAP5Y_GENINVEST',kebangsaan:'SAUDI ARABIA',tujuan:'INVESTMENT',posisi_permohonan:'Produk sudah Terbit',status_permohonan:'TERBIT',nama:'RAHASIA B',tanggal_lahir:'1981-01-01',no_passport:'P456',nomor_permohonan:'002',penjamin:'RAHASIA'},
+ {layanan:'EXTEND',kategori_produk:'ITAP',jenis_produk:'ITASITAP_RETIREMENT',kebangsaan:'KOREA SELATAN',tujuan:'FAMILY',posisi_permohonan:'Produk sudah Terbit',status_permohonan:'TERBIT',nama:'RAHASIA C',tanggal_lahir:'1982-01-01',no_passport:'P789',nomor_permohonan:'003',penjamin:'RAHASIA'}
+];
+const kanwilAggregate=kanwilAnalytics.buildKanwilAggregateV1_(kanwilSampleRows);
+assert(kanwilAggregate.totalPermohonan===3,'Kanwil aggregate counts application records');
+assert(kanwilAggregate.jumlahLayanan.find(x=>x.label==='CONVERSION').count===2,'Kanwil aggregate groups service counts');
+assert(kanwilAggregate.kebangsaan.find(x=>x.label==='SAUDI ARABIA').count===2,'Kanwil aggregate groups nationality counts');
+const kanwilTv=kanwilAnalytics.projectKanwilTvAggregateV1_(kanwilSampleRows);
+const kanwilTvSerialized=JSON.stringify(kanwilTv);
+assert(!['RAHASIA','P123','P456','P789','001','002','003','1980-01-01'].some(value=>kanwilTvSerialized.includes(value)),'Kanwil TV projection excludes names, passport/application numbers and dates of birth');
+assert(!kanwilAnalytics.KANWIL_TV_FORBIDDEN_FIELDS_V1.some(key=>Object.prototype.hasOwnProperty.call(kanwilTv,key)),'Kanwil TV output has no forbidden personal-data fields');
+assert(kanwilTv.jumlahLayanan.length===2&&kanwilTv.kategoriProduk.length===1&&kanwilTv.kebangsaan.length===2,'Kanwil TV projection includes aggregate dimensions only');
+assert(kanwilAnalytics.KANWIL_TV_ALLOWED_DIMENSIONS_V1.includes('kebangsaan'),'Nationality is an approved aggregate dimension');
+
 
 
