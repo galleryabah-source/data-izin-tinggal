@@ -37,7 +37,7 @@ Images are processed in-browser only. Do not add cloud OCR fallback.
   if(!root||root.dataset.initialized==='1')return;
   root.dataset.initialized='1';
   const $=id=>document.getElementById(id);
-  const state={files:[],busy:false};
+  const state={files:[],busy:false,previewUrls:[]};
   const maxFiles=200,maxBytes=5*1024*1024,maxPixels=40000000;
   const say=t=>{$('sseStatus').textContent=t;};
   const validImage=async file=>{
@@ -48,12 +48,13 @@ Images are processed in-browser only. Do not add cloud OCR fallback.
     finally{URL.revokeObjectURL(url);}
   };
   function render(){
+    state.previewUrls.forEach(url=>URL.revokeObjectURL(url));state.previewUrls=[];
     $('sseCount').textContent=state.files.length+' gambar dipilih';
     $('sseRun').disabled=!state.files.length||state.busy;
     $('sseFilesList').replaceChildren();
     state.files.forEach((file,i)=>{
       const card=document.createElement('article');card.className='sse-file';
-      const img=document.createElement('img');img.alt='Pratinjau '+file.name;img.src=URL.createObjectURL(file);
+      const img=document.createElement('img');img.alt='Pratinjau '+file.name;img.src=URL.createObjectURL(file);state.previewUrls.push(img.src);
       const name=document.createElement('div');name.className='sse-file-name';name.textContent=file.name;
       const status=document.createElement('div');status.className='sse-status';status.textContent=(file.size/1024).toFixed(0)+' KB · menunggu OCR';
       card.append(img,name,status);$('sseFilesList').append(card);
