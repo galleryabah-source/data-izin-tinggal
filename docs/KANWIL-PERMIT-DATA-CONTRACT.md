@@ -214,3 +214,20 @@ Current posture: contract proposal only. No Kanwil runtime, RPC, storage, UI rou
 6. Can the owner provide privacy-approved representative samples for all three input paths (Excel, screenshot, camera photo), with expected values?
 
 Until these are answered, keep the contract versioned as provisional and do not activate production ingestion.
+
+
+## 12. Implementation progress — contract and CSV parser prototype
+
+The feature branch now contains `gas/KanwilPermitContract.js` with:
+- the explicit 17-column Kanwil v1 schema and header aliases;
+- normalized, order-independent header mapping with missing/duplicate header rejection;
+- a deterministic quoted-delimited-text parser (including escaped quotes, commas inside quoted cells, CRLF and UTF-8 BOM);
+- preservation of raw source values and identifiers as strings;
+- strict ISO date validation for date of birth;
+- timestamp timezone warnings rather than assuming a timezone;
+- row-level quarantine for column-count mismatch and missing application number;
+- mandatory human-review/no-auto-commit result flags.
+
+Regression assertions were added to `gas/test-shim.js` for reordered headers, leading-zero identifiers, quoted sponsor names, timezone uncertainty, missing/duplicate headers, malformed row widths, and missing application number.
+
+**Important limitations:** this is a pure CSV/delimited-text parser only. Native XLSX workbook decoding, screenshot OCR integration for the 17-column Kanwil contract, persistence, audit RPCs, permissions, UI route, and reporting adapter are not implemented. The parser has not been run against a representative owner-provided source file. The assertions are committed to the repository test harness, but a full GitHub Actions run has not yet been observed for the latest commit.
