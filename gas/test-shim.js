@@ -1754,3 +1754,31 @@ Object.entries(rpcManifest.RPC_MANIFEST_V1).forEach(([name,entry])=>{
   if(entry.access==='protected')assert(!!entry.permission,'Protected RPC has a required permission: '+name);
   else assert(entry.permission===null,'Non-protected RPC has no fabricated permission: '+name);
 });
+
+/* Manifest authorization metadata must agree with the endpoint's own server guard. */
+function rpcDeclarationSegment_(source,name){
+  const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const start=source.search(new RegExp('^function\\s+'+escaped+'\\s*\\(','m'));
+  if(start<0)return '';
+  const next=source.slice(start+1).search(/^function\s+[A-Za-z$][\w$]*\s*\(/m);
+  return source.slice(start,next<0?source.length:start+1+next);
+}
+const rpcSources=new Map();
+for(const sourceFile of fs.readdirSync(__dirname).filter(name=>name.endsWith('.gs'))){
+  rpcSources.set(sourceFile,read(sourceFile));
+}
+for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
+  const source=[...rpcSources.values()].find(text=>new RegExp('^function\\s+'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*\\(','m').test(text));
+  assert(!!source,'RPC manifest declaration has source: '+name);
+  const segment=rpcDeclarationSegment_(source,name);
+  if(entry.access==='protected'){
+    const guard=entry.permission==='backoffice.access'
+      ? /requireBackOfficeAccess_\s*\(\s*\)/
+      : new RegExp("requirePermission_\\s*\\(\\s*['\\\"]"+entry.permission.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"['\\\"]\\s*\\)");
+    assert(guard.test(segment),'RPC guard matches manifest permission '+entry.permission+': '+name);
+  }else if(entry.access==='public_read_only'){
+    assert(!/requirePermission_\s*\(/.test(segment),'Public read-only RPC has no permission guard: '+name);
+  }else if(entry.access==='self_scope'){
+    assert(/getCurrentUser_\s*\(/.test(segment),'Self-scope RPC resolves current user: '+name);
+  }
+}
