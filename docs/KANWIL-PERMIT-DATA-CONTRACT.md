@@ -297,3 +297,16 @@ A syntax check of the extracted inline script passed. Regression assertions were
 The idempotency descriptor requires a caller-supplied 64-character SHA-256; the module does not claim to hash file bytes. Duplicate matching is explicitly non-destructive: same scoped application number produces an identical-payload or conflict candidate, never an automatic uniqueness decision. Revision append requires the expected next revision, actor, correlation ID, payload checksum, and reason.
 
 **Boundary:** this is a pure contract, not a persistence adapter. No Google Sheets/Drive write, lock, RPC, authentication, transaction, or production storage is implemented. The eventual Sheets adapter must use server-side gateway authorization, serialize writes with a lock, append the event/audit journal, and reconcile partial multi-sheet writes. Google Sheets does not provide cross-sheet ACID transactions; do not describe this as atomic database commit.
+
+
+## 15. Local intake resource limits
+
+The browser prototype now validates selected files before parsing through `gas/KanwilIntakePolicy.js`:
+
+- Maximum 50 files per batch.
+- Maximum 20 MiB per file and 100 MiB combined batch.
+- Maximum 10 MiB per image.
+- Supported extensions: CSV, XLSX, XLS, JPG/JPEG, and PNG.
+- If the browser provides a MIME type, it must match the extension allowlist.
+
+These are client-side pilot guardrails, not a security boundary or proof of file content. Extension and MIME metadata can be forged. A future server-side adapter must independently inspect magic bytes, enforce quotas, and reject malformed/hostile workbook and image content before persistence. Browser-local parsing still has device-memory and runtime constraints.
