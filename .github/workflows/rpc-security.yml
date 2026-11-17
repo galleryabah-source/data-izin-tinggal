@@ -1,0 +1,38 @@
+name: RPC Security Contract
+
+on:
+  pull_request:
+    paths:
+      - "gas/**/*.gs"
+      - "gas/**/*.js"
+      - "docs/RPC-*.md"
+      - "package.json"
+      - ".github/workflows/rpc-security.yml"
+  push:
+    branches:
+      - main
+      - "fix/p0-security-gates-2026-11-16"
+      - "audit/exhaustive-rpc-surface-2026-11-17"
+    paths:
+      - "gas/**/*.gs"
+      - "gas/**/*.js"
+      - "docs/RPC-*.md"
+      - "package.json"
+      - ".github/workflows/rpc-security.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  rpc-contract:
+    name: RPC manifest and guard contract
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run repository test suite
+        run: npm test
