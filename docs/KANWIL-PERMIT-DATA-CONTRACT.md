@@ -231,3 +231,21 @@ The feature branch now contains `gas/KanwilPermitContract.js` with:
 Regression assertions were added to `gas/test-shim.js` for reordered headers, leading-zero identifiers, quoted sponsor names, timezone uncertainty, missing/duplicate headers, malformed row widths, and missing application number.
 
 **Important limitations:** this is a pure CSV/delimited-text parser only. Native XLSX workbook decoding, screenshot OCR integration for the 17-column Kanwil contract, persistence, audit RPCs, permissions, UI route, and reporting adapter are not implemented. The parser has not been run against a representative owner-provided source file. The assertions are committed to the repository test harness, but a full GitHub Actions run has not yet been observed for the latest commit.
+
+
+## 13. Implementation progress — workbook adapter, OCR geometry and shared staging contract
+
+The isolated feature branch now also contains:
+
+- `gas/KanwilXlsxAdapter.js`: a browser-side adapter that accepts an injected SheetJS-compatible XLSX engine, locates exactly one complete 17-column header row, converts worksheet cells through the shared CSV contract parser, and preserves worksheet row numbers. It does not bundle or fetch the XLSX library, so runtime workbook decoding is not yet wired.
+- `gas/KanwilScreenshotParser.js`: a dedicated geometry parser for the 17 Kanwil columns, separate from the generic 19-column screenshot prototype. It rejects incomplete/ambiguous headers and always requires human verification.
+- `gas/KanwilStagingContract.js`: a shared row envelope for all four source channels, explicit lifecycle transition rules, reason-required rejection/cancellation/conflict transitions, and a duplicate fingerprint scoped by explicit Kanwil ID plus application number.
+- `gas/test-shim.js`: synthetic assertions for the XLSX adapter, header row discovery, row-number preservation, 17-column OCR geometry, staging envelope, guarded transitions, and scoped duplicate identity.
+
+### Current implementation boundary
+
+These are pure parser/contract prototypes, not a complete ingestion runtime. No SheetJS distribution is bundled; no real XLSX file has been parsed; no actual OCR output has been calibrated; no staging persistence, immutable revision store, duplicate-resolution transaction, private Drive upload, audit RPC, server-side permission enforcement, review UI, or reporting adapter has been implemented. GitHub Actions has not yet reported a run for the latest feature-branch commit. Do not mark these capabilities deployed or production-ready.
+
+### Revision and duplicate policy reminder
+
+The staging fingerprint is only a candidate identity (`kanwil_scope_id::nomor_permohonan`). It must not become a database uniqueness constraint until global/scoped uniqueness is confirmed from source exports. Conflicting payloads must retain both source versions and require an authorized reviewer. The revision store must be append-only; no source evidence or prior approved value may be overwritten.
