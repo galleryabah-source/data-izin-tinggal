@@ -1844,6 +1844,11 @@ assert(kanwilWorkspace.harian.length===2&&kanwilWorkspace.harian[0].date==='2026
 assert(kanwilWorkspace.bulanan.length===1&&kanwilWorkspace.bulanan[0].month==='2026-11','Kanwil workspace analytics builds monthly trend');
 assert(kanwilWorkspace.kualitasData.missingRequiredFields.nomor_permohonan===1,'Kanwil workspace analytics detects missing application numbers');
 assert(kanwilWorkspace.dateBasis==='tanggal_permohonan','Kanwil analytics declares the operational date basis');
+assert(kanwilWorkspace.jumlahLayanan.find(x=>x.label==='CONVERSION').percentage===66.67,'Kanwil workspace distributions calculate percentages');
+assert(kanwilWorkspace.analisisSilang.layananKebangsaan.some(x=>x.row==='CONVERSION'&&x.column==='SAUDI ARABIA'&&x.count===2),'Kanwil workspace computes service by nationality cross-tab');
+assert(kanwilWorkspace.analisisSilang.layananStatus.some(x=>x.row==='CONVERSION'&&x.column==='TERBIT'&&x.count===2),'Kanwil workspace computes service by status cross-tab');
+assert(kanwilWorkspace.analisisSilang.produkTujuan.some(x=>x.row==='ITASITAP5Y_GENINVEST'&&x.column==='INVESTMENT'&&x.count===2),'Kanwil workspace computes product by purpose cross-tab');
+
 assert(!JSON.stringify(kanwilWorkspace).includes('RAHASIA A'),'Kanwil analytics response contains aggregates and quality metrics, not row-level PII');
 
 
