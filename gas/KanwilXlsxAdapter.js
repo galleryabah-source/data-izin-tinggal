@@ -3,7 +3,7 @@
  * Accepts SheetJS Community Edition (XLSX) as an injected dependency.
  * Does not load a CDN, call network, or persist workbook data.
  */
-function parseKanwilXlsxV1(arrayBuffer, XLSX, options) {
+function parseKanwilXlsxV1(arrayBuffer, XLSX, options, csvParser) {
   if(!XLSX||!XLSX.read||!XLSX.utils||!XLSX.utils.sheet_to_json)
     return {ok:false,reason:'XLSX_ENGINE_UNAVAILABLE',records:[]};
   let workbook;
@@ -21,7 +21,7 @@ function parseKanwilXlsxV1(arrayBuffer, XLSX, options) {
   const headerIndex=candidates[0].index;
   const rows=matrix.slice(headerIndex).map(row=>row.map(v=>String(v==null?'':v)));
   const csv=rows.map(row=>row.map(v=>'"'+v.replace(/"/g,'""')+'"').join(',')).join('\n');
-  const parsed=parseKanwilPermitCsvV1(csv);
+  const parseCsv=csvParser||((text)=>parseKanwilPermitCsvV1(text));\n  if(typeof parseCsv!=='function')return {ok:false,reason:'KANWIL_CSV_PARSER_UNAVAILABLE',records:[]};\n  const parsed=parseCsv(csv);
   if(!parsed.ok)return parsed;
   parsed.source={fileType:'XLSX',sheetName,headerRowNumber:headerIndex+1};
   parsed.records.forEach(record=>{record.sourceRowNumber+=headerIndex;});
