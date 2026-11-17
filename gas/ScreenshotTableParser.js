@@ -53,7 +53,7 @@ function sseGroupHeaderCells_(words, gap) {
 }
 function reconstructScreenshotTableV1(words, options) {
   const opt=options||{}, tolerance=Number.isFinite(opt.lineTolerance)?opt.lineTolerance:12;
-  const headerGap=Number.isFinite(opt.headerWordGap)?opt.headerWordGap:42;
+  const headerGap=Number.isFinite(opt.headerWordGap)?opt.headerWordGap:14;
   const lines=sseGroupLines_(words,tolerance);
   if(!lines.length)return {ok:false,reason:'NO_TEXT_WORDS',rows:[],header:[]};
   const candidates=lines.map((line,index)=>({index,cells:sseGroupHeaderCells_(line.words,headerGap)}))
