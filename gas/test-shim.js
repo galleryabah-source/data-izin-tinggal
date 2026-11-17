@@ -1736,7 +1736,7 @@ const rpcManifest=require('./RpcManifest.js');
 const callableDeclarations=new Set();
 for(const sourceFile of fs.readdirSync(__dirname).filter(name=>name.endsWith('.gs'))){
   const source=read(sourceFile);
-  const declaration=/^function\\s+([A-Za-z$][\\w$]*)\\s*\\(/gm;
+  const declaration=/^function\s+([A-Za-z$][\w$]*)\s*\(/gm;
   let match;
   while((match=declaration.exec(source))!==null){
     const name=match[1];
