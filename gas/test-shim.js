@@ -1845,3 +1845,12 @@ assert(adaptedOcr.ok&&adaptedOcr.engine==='TESSERACT.JS'&&adaptedOcr.reviewRequi
 assert(adaptedOcr.rows[0].fieldEvidence.no_passport.meanConfidence===91,'Tesseract confidence and field geometry survive OCR adaptation');
 const noWords=kanwilOcrAdapter.adaptTesseractResultToKanwilV1({data:{text:'only plain text'}},kanwilShot.reconstructKanwilScreenshotTableV1);
 assert(!noWords.ok&&noWords.reason==='TESSERACT_WORDS_MISSING','Tesseract adapter fails closed without word geometry');
+
+/* Kanwil browser intake shell stays local-only and does not expose persistence/RPC. */
+const kanwilEntryHtml=read('KanwilEntry.html');
+assert(kanwilEntryHtml.includes('xlsx@0.18.5')&&kanwilEntryHtml.includes('Tesseract.js'),'Kanwil intake shell loads pinned browser-side XLSX and OCR libraries');
+assert(kanwilEntryHtml.includes('reviewRequired')||kanwilEntryHtml.includes('REVIEW_REQUIRED'),'Kanwil intake shell marks extracted records for human review');
+assert(!kanwilEntryHtml.includes('google.script.run')&&!kanwilEntryHtml.includes('FormData')&&!kanwilEntryHtml.includes('XMLHttpRequest'),'Kanwil intake shell has no Apps Script RPC or upload transport');
+const kanwilEntryScript=kanwilEntryHtml.match(/<script>([\\s\\S]*?)<\\/script>/i);
+assert(!!kanwilEntryScript,'Kanwil intake shell contains a script block');
+try{new Function(kanwilEntryScript[1]);}catch(e){throw new Error('TEST FAILED: Kanwil intake script syntax: '+e.message);}
