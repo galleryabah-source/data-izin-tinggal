@@ -24,10 +24,10 @@ const KANWIL_PERMIT_COLUMNS_V1 = [
 ];
 function kanwilNormalizeHeaderV1_(value) {
   return String(value == null ? '' : value).normalize('NFKC').toLowerCase()
-    .replace(/[^a-z0-9]+/g,' ').trim().replace(/\\s+/g,' ');
+    .replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
 }
 function kanwilParseDelimitedV1_(source, delimiter) {
-  const text=String(source == null ? '' : source).replace(/^\\uFEFF/,'');
+  const text=String(source == null ? '' : source).replace(/^\uFEFF/,'');
   const sep=delimiter || ',';
   const rows=[]; let row=[], cell='', quoted=false;
   for(let i=0;i<text.length;i++){
@@ -38,11 +38,11 @@ function kanwilParseDelimitedV1_(source, delimiter) {
       else cell+=ch;
     } else if(ch==='"' && cell==='') quoted=true;
     else if(ch===sep){row.push(cell);cell='';}
-    else if(ch==='\\n'){row.push(cell.replace(/\\r$/,''));rows.push(row);row=[];cell='';}
+    else if(ch==='\n'){row.push(cell.replace(/\r$/,''));rows.push(row);row=[];cell='';}
     else cell+=ch;
   }
   if(quoted)return {ok:false,reason:'CSV_UNCLOSED_QUOTE',rows:[]};
-  if(cell!==''||row.length){row.push(cell.replace(/\\r$/,''));rows.push(row);}
+  if(cell!==''||row.length){row.push(cell.replace(/\r$/,''));rows.push(row);}
   while(rows.length && rows[rows.length-1].every(v=>String(v).trim()===''))rows.pop();
   return {ok:true,rows};
 }
@@ -71,7 +71,7 @@ function kanwilValidateValueV1_(key, raw) {
   if(!value)return {raw:raw == null ? '' : String(raw),value:null,warnings:[]};
   if(key==='nomor_permohonan'||key==='no_passport')return {raw:String(raw),value:String(raw).trim(),warnings:[]};
   if(key==='tanggal_lahir'){
-    const iso=/^\\d{4}-\\d{2}-\\d{2}$/.test(value);
+    const iso=/^\d{4}-\d{2}-\d{2}$/.test(value);
     if(!iso)return {raw:String(raw),value:null,warnings:['DATE_REQUIRES_REVIEW']};
     const d=new Date(value+'T00:00:00Z');
     if(Number.isNaN(d.getTime())||d.toISOString().slice(0,10)!==value)return {raw:String(raw),value:null,warnings:['INVALID_DATE']};
@@ -79,7 +79,7 @@ function kanwilValidateValueV1_(key, raw) {
   }
   if(key.startsWith('tanggal_')){
     // Preserve source timestamp until source timezone convention is verified.
-    const iso=/^\\d{4}-\\d{2}-\\d{2}(?:[ T]\\d{2}:\\d{2}(?::\\d{2})?)?$/.test(value);
+    const iso=/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/.test(value);
     return {raw:String(raw),value:iso?value:null,warnings:iso?['TIMEZONE_UNCONFIRMED']:['DATETIME_REQUIRES_REVIEW']};
   }
   return {raw:String(raw),value,warnings:[]};
