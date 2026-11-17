@@ -133,3 +133,43 @@ No production deployment, bulk permission change, spreadsheet sharing change, or
 - Kanwil Smart Screenshot Entry remains draft/review-only.
 - Public TV remains an anonymous finite allowlist pending data-owner publication approval.
 - No production deployment or UAT certification is claimed.
+
+
+## 11. Repository deployment baseline — verified 2026-11-17
+
+The source-controlled Apps Script manifest at `gas/appsscript.json` currently declares:
+
+```json
+{
+  "webapp": {
+    "executeAs": "USER_DEPLOYING",
+    "access": "ANYONE_ANONYMOUS"
+  }
+}
+```
+
+The production deploy workflow is `.github/workflows/deploy-gas.yml`:
+- deploy runs only on a push to `main`;
+- it uses the GitHub Actions `production` environment;
+- clasp credentials and Apps Script ID are read from GitHub Secrets;
+- it pushes source, creates an immutable version and updates the pinned deployment ID;
+- pull-request runs validate only; the deploy job is skipped.
+
+This confirms the checked-in source manifest is currently configured to execute as the deployer and permit anonymous access. It does not independently prove the live Apps Script deployment settings have not drifted; the Apps Script deployment configuration must still be inspected directly by an authorized project administrator.
+
+### Mandatory migration safety decision
+
+Do not change the production manifest directly from `USER_DEPLOYING / ANYONE_ANONYMOUS` to `USER_ACCESSING / DOMAIN` in the same release as the first identity guard.
+
+That change affects both the authentication boundary and the effective principal for Spreadsheet/Drive operations. Existing code uses Script Properties to open the canonical spreadsheet and other Google services; those calls may behave differently or fail when executed as each user.
+
+Required sequence:
+1. Preserve the current production deployment and manifest unchanged.
+2. Create a separate non-production Apps Script deployment/project with an isolated test spreadsheet and isolated Drive folder; never point it at the canonical production spreadsheet.
+3. Configure that non-production deployment as `USER_ACCESSING` and restrict access to the approved Workspace domain.
+4. Test active-user email visibility, user consent/scopes, spreadsheet access, Drive access, quotas and all required service operations using least-privilege Workspace test accounts.
+5. Implement the identity guard behind an explicit server-side feature flag that defaults OFF. When ON, missing identity, missing domain allowlist, domain mismatch, missing or duplicate active USERS mapping must fail closed. There is no `getEffectiveUser()` or client-payload fallback.
+6. Test the guard and protected RPCs in the isolated deployment, including negative tests and rollback.
+7. Only after owner-approved UAT and a reviewed storage-access model may a separate production migration PR alter the manifest and release workflow.
+
+The repository does not contain live Apps Script deployment settings, Google Workspace domain configuration, spreadsheet ACLs, Drive ACLs, or GitHub secret values. Those cannot be verified from source code and must not be inferred from the manifest or workflow alone.
