@@ -77,7 +77,7 @@ assert(authViewer.requirePermission_('dataset.read').role==='VIEWER','RBAC permi
 const makeWorkspaceProps=(values)=>({getScriptProperties:()=>({getProperty:(key)=>values[key]||''})});
 const workspaceIdentity=(email,values)=>{
   const session={getActiveUser:()=>({getEmail:()=>email})};
-  const fn=new Function('Session','PropertiesService',authCode+'\\nreturn {getWorkspaceIdentityV1_,getCurrentIdentity_};');
+  const fn=new Function('Session','PropertiesService',authCode+'\nreturn {getWorkspaceIdentityV1_,getCurrentIdentity_};');
   return fn(session,makeWorkspaceProps(values));
 };
 const validWorkspace=workspaceIdentity('Admin@EXAMPLE.GOV.ID',{INTAL_WORKSPACE_IDENTITY_ENFORCEMENT:'true',INTAL_WORKSPACE_ALLOWED_DOMAINS:'example.gov.id'});
