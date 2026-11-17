@@ -28,7 +28,7 @@ const DATASET_CONTRACTS = Object.freeze({
     optional:['total_permohonan'],ignored:['no'],businessKey:['periode','kantor_imigrasi'],measures:['m_paspor','walk_in','prioritas','percepatan','eazy','inovasi','bap'],derived:['total_permohonan']
   })
 });
-function getDb_(){const id=PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');if(!id)throw new Error('SPREADSHEET_ID belum dikonfigurasi. Jalankan setupApp().');return SpreadsheetApp.openById(id);}
+function getDb_(){const id=PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');if(!id)throw new Error('SPREADSHEET_ID belum dikonfigurasi. Jalankan setupApp_() dari Apps Script editor.');return SpreadsheetApp.openById(id);}
 const READ_CACHE_TTL_SEC=10;
 const READ_CACHE_GENERATION_KEY='INTAL_READ_CACHE_GENERATION';
 function getReadCacheGeneration_(){const value=Number(PropertiesService.getScriptProperties().getProperty(READ_CACHE_GENERATION_KEY)||0);return Number.isFinite(value)&&value>=0?value:0;}

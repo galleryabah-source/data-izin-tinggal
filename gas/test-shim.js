@@ -866,11 +866,16 @@ assert(gisTv.includes("weight:2.4,opacity:1,fillOpacity:0.045"),'GIS boundary ho
 // Service-point GIS registry: pending coordinates are intentionally excluded from plotted orbit.\n
 
 /* Phase 9 daily-input contract validator: pure tests only; no Apps Script writes. */
+const appCode=read('Code.gs');
+assert(appCode.includes('function setupApp_()') && !appCode.includes('function setupApp(){'), 'Setup schema/security seeding is private to the Apps Script editor and not callable as a browser RPC');
+const bootstrapCode=read('Bootstrap.gs');
+assert(bootstrapCode.includes('function bootstrapCurrentUser_()') && !bootstrapCode.includes('function bootstrapCurrentUser(){'), 'Current-user bootstrap helper is private to the Apps Script editor and not callable as a browser RPC');
+assert(bootstrapCode.includes("return bootstrapAdmin_(email,'Administrator')"), 'Editor-only bootstrap delegates to the guarded private admin bootstrap helper');
 const dailyService=read('DailyInputService.gs');
-assert(dailyService.includes('enabled:true') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily input can activate only when the explicit feature flag and Gate 9.1 checks pass');
-assert(dailyService.includes("c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'false'") && !dailyService.includes('DAILY_INPUT_OWNER_OVERRIDE_V1'), 'Daily input fails closed when the feature flag is missing and never bypasses CONFIG with a hard-coded owner override');
-assert(dailyService.includes("configuredOverride==='APPROVED_WITH_EXCEPTIONS'"), 'Owner-approved exception is honored only when explicitly recorded in CONFIG');
-assert(dailyService.includes("const DAILY_INPUT_SPREADSHEET_ID_V1 = '100-9h1jcLGv0eRgF412CjGZVmIzf2JFVl8GvuKNyLrY'") && dailyService.includes('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL'), 'Daily input targets the dedicated user spreadsheet and rejects canonical database reuse');
+assert(dailyService.includes('enabled:false') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily input code-level kill switch remains closed until a separately reviewed release');
+assert(dailyService.includes("c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'false'") && !dailyService.includes('DAILY_INPUT_OWNER_OVERRIDE'), 'Daily input uses its feature flag and contains no owner-override bypass');
+assert(dailyService.includes("const gateAllows=gateStatus==='PASS'") && dailyService.includes("blockers.push('GATE_9_1_NOT_PASSED')"), 'Only formal Gate 9.1 PASS can satisfy the gate condition');
+assert(dailyService.includes("const dailyId=configuredDailyId") && !dailyService.includes('DAILY_INPUT_SPREADSHEET_ID_V1') && dailyService.includes('DAILY_INPUT_MUST_BE_SEPARATE_FROM_CANONICAL'), 'Daily staging requires an explicit Script Property and rejects canonical database reuse');
 assert(dailyService.includes("name='DAILY_INPUT_AUDIT'") && dailyService.includes("insertSheet('DAILY_INPUT_LEDGER')"), 'Daily input creates only dedicated ledger and audit tabs');
 assert(dailyService.includes('function getDailyInputPolicyV1()'), 'Daily input exposes a policy read endpoint');
 assert(dailyService.includes('function getDailyServiceContractV1(serviceFamily)'), 'Daily input fields are server-contract-owned');
@@ -1052,6 +1057,7 @@ const stagingAliasContext={
 };
 vm.runInNewContext(dailyService,stagingAliasContext);
 assert(stagingAliasContext.getDailyInputPolicyV1().stagingReady===false,'Daily input refuses a dedicated spreadsheet ID that aliases the canonical spreadsheet');
+assert(stagingAliasContext.getDailyInputPolicyV1().enabled===false,'A CONFIG owner override cannot bypass the closed code guard or Gate 9.1');
 const blockedWriteContext={
   SHEETS:{CONFIG:'CONFIG'},
   requirePermission_:(permission)=>({role:'TEST',email:'test@example.com',permissions:['daily.draft','daily.read']}),
@@ -1293,10 +1299,12 @@ assert(
   'Daily persistence is confined to the named ledger and its creation is gate-protected'
 );
 assert(
-  dailyService.includes('enabled:true') &&
+  dailyService.includes('enabled:false') &&
+  dailyService.includes("const gateAllows=gateStatus==='PASS'") &&
   dailyService.includes("DAILY_INPUT_GATE_9_1") &&
-  dailyService.includes("DAILY_INPUT_ENABLED"),
-  'Daily input activation is governed by the explicit CONFIG flags and Gate 9.1'
+  dailyService.includes("DAILY_INPUT_ENABLED") &&
+  !dailyService.includes("DAILY_INPUT_OWNER_OVERRIDE"),
+  'Daily input remains code-disabled and has no CONFIG owner-override bypass'
 );
 
 /* Lifecycle retry semantics: clients can safely retry after network timeouts. */
@@ -1722,3 +1730,62 @@ assert(read('DailyInputService.gs').includes("i.late_entry_reason+1).setValue(p.
 assert(read('DailyInputService.gs').includes('function reopenDailySubmission(recordId,reason)') &&
        read('DailyInputService.gs').includes('DAILY_REOPEN_REASON_REQUIRED'),
   'VOID report has an explicit reasoned and audited reopening path');
+
+/* Deny-by-default RPC inventory drift gate. */
+const rpcManifest=require('./RpcManifest.js');
+const callableDeclarations=new Set();
+for(const sourceFile of fs.readdirSync(__dirname).filter(name=>name.endsWith('.gs'))){
+  const source=read(sourceFile);
+  const declaration=/^function\s+([A-Za-z$][\w$]*)\s*\(/gm;
+  let match;
+  while((match=declaration.exec(source))!==null){
+    const name=match[1];
+    if(!name.endsWith('_'))callableDeclarations.add(name);
+  }
+}
+const manifestNames=new Set(Object.keys(rpcManifest.RPC_MANIFEST_V1));
+const unclassified=[...callableDeclarations].filter(name=>!manifestNames.has(name));
+const stale=[...manifestNames].filter(name=>!callableDeclarations.has(name));
+assert(unclassified.length===0,'RPC manifest blocks unclassified callable declarations: '+unclassified.join(', '));
+assert(stale.length===0,'RPC manifest contains stale declarations: '+stale.join(', '));
+assert(rpcManifest.getRpcManifestEntryV1('notARealRpc')===null,'Unknown RPC names fail closed in manifest lookup');
+Object.entries(rpcManifest.RPC_MANIFEST_V1).forEach(([name,entry])=>{
+  assert(['protected','public_read_only','self_scope','web_entrypoint','stateless_validation'].includes(entry.access),'RPC manifest access class is explicit: '+name);
+  if(entry.access==='protected')assert(!!entry.permission,'Protected RPC has a required permission: '+name);
+  else assert(entry.permission===null,'Non-protected RPC has no fabricated permission: '+name);
+});
+
+/* Manifest authorization metadata must agree with the endpoint's own server guard. */
+function rpcDeclarationSegment_(source,name){
+  const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const start=source.search(new RegExp('^function\\s+'+escaped+'\\s*\\(','m'));
+  if(start<0)return '';
+  const next=source.slice(start+1).search(/^function\s+[A-Za-z$][\w$]*\s*\(/m);
+  return source.slice(start,next<0?source.length:start+1+next);
+}
+const rpcSources=new Map();
+for(const sourceFile of fs.readdirSync(__dirname).filter(name=>name.endsWith('.gs'))){
+  rpcSources.set(sourceFile,read(sourceFile));
+}
+for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
+  const source=[...rpcSources.values()].find(text=>new RegExp('^function\\s+'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*\\(','m').test(text));
+  assert(!!source,'RPC manifest declaration has source: '+name);
+  const segment=rpcDeclarationSegment_(source,name);
+  if(entry.access==='protected'){
+    const guard=entry.permission==='backoffice.access'
+      ? /requireBackOfficeAccess_\s*\(\s*\)/
+      : new RegExp("requirePermission_\\s*\\(\\s*['\\\"]"+entry.permission.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"['\\\"]\\s*\\)");
+    const directGuard=guard.test(segment);
+    const delegatedGuard=!directGuard&&[...segment.matchAll(/\b([A-Za-z$][\w$]*)\s*\(/g)].some(call=>{
+      const helperName=call[1];
+      if(helperName===name)return false;
+      const helperSource=[...rpcSources.values()].find(text=>new RegExp('^function\\s+'+helperName+'\\s*\\(','m').test(text));
+      return !!helperSource&&guard.test(rpcDeclarationSegment_(helperSource,helperName));
+    });
+    assert(directGuard||delegatedGuard,'RPC guard matches manifest permission '+entry.permission+' directly or through a guarded function: '+name);
+  }else if(entry.access==='public_read_only'){
+    assert(!/requirePermission_\s*\(/.test(segment),'Public read-only RPC has no permission guard: '+name);
+  }else if(entry.access==='self_scope'){
+    assert(/getCurrentUser_\s*\(/.test(segment),'Self-scope RPC resolves current user: '+name);
+  }
+}
