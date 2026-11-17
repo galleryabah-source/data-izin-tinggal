@@ -45,7 +45,8 @@ function kanwilStagingReadinessV1_(){
 }
 /**
  * Explicit provisioning helper for a future reviewed admin workflow.
- * Does not create a spreadsheet, set a property, or alter canonical storage.
+ * Does not create a spreadsheet or alter canonical storage. It stores the dedicated
+ * staging ID in Script Properties only after all six schemas validate.
  */
 function provisionKanwilStagingSchema_(stagingSpreadsheetId){
   requireBackOfficeAccess_();
@@ -64,5 +65,8 @@ function provisionKanwilStagingSchema_(stagingSpreadsheetId){
     if(actual.join('|')!==headers.join('|'))throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
     sh.setFrozenRows(1);
   });
+  // Persist the dedicated target only after all six schema headers validate.
+  // This function must be run explicitly by an authorized back-office owner.
+  PropertiesService.getScriptProperties().setProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty,id);
   return kanwilStagingReadinessV1_();
 }
