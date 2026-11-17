@@ -1730,3 +1730,27 @@ assert(read('DailyInputService.gs').includes("i.late_entry_reason+1).setValue(p.
 assert(read('DailyInputService.gs').includes('function reopenDailySubmission(recordId,reason)') &&
        read('DailyInputService.gs').includes('DAILY_REOPEN_REASON_REQUIRED'),
   'VOID report has an explicit reasoned and audited reopening path');
+
+/* Deny-by-default RPC inventory drift gate. */
+const rpcManifest=require('./RpcManifest.js');
+const callableDeclarations=new Set();
+for(const sourceFile of fs.readdirSync(__dirname).filter(name=>name.endsWith('.gs'))){
+  const source=read(sourceFile);
+  const declaration=/^function\\s+([A-Za-z$][\\w$]*)\\s*\\(/gm;
+  let match;
+  while((match=declaration.exec(source))!==null){
+    const name=match[1];
+    if(!name.endsWith('_'))callableDeclarations.add(name);
+  }
+}
+const manifestNames=new Set(Object.keys(rpcManifest.RPC_MANIFEST_V1));
+const unclassified=[...callableDeclarations].filter(name=>!manifestNames.has(name));
+const stale=[...manifestNames].filter(name=>!callableDeclarations.has(name));
+assert(unclassified.length===0,'RPC manifest blocks unclassified callable declarations: '+unclassified.join(', '));
+assert(stale.length===0,'RPC manifest contains stale declarations: '+stale.join(', '));
+assert(rpcManifest.getRpcManifestEntryV1('notARealRpc')===null,'Unknown RPC names fail closed in manifest lookup');
+Object.entries(rpcManifest.RPC_MANIFEST_V1).forEach(([name,entry])=>{
+  assert(['protected','public_read_only','self_scope','web_entrypoint'].includes(entry.access),'RPC manifest access class is explicit: '+name);
+  if(entry.access==='protected')assert(!!entry.permission,'Protected RPC has a required permission: '+name);
+  else assert(entry.permission===null,'Non-protected RPC has no fabricated permission: '+name);
+});
