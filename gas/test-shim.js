@@ -1748,3 +1748,49 @@ assert(read('DailyInputService.gs').includes("i.late_entry_reason+1).setValue(p.
 assert(read('DailyInputService.gs').includes('function reopenDailySubmission(recordId,reason)') &&
        read('DailyInputService.gs').includes('DAILY_REOPEN_REASON_REQUIRED'),
   'VOID report has an explicit reasoned and audited reopening path');
+
+/* Kanwil Permit v1: isolated 17-column contract and CSV ingestion regressions. */
+const kanwil=require('./KanwilPermitContract.js');
+assert(kanwil.KANWIL_PERMIT_COLUMNS_V1.length===17,'Kanwil contract contains exactly the 17 columns observed in the supplied source table');
+const kanwilHeaders=kanwil.KANWIL_PERMIT_COLUMNS_V1.map(([key,aliases])=>aliases[0]);
+const reorderedHeaders=[...kanwilHeaders].reverse();
+const kanwilHeaderMap=kanwil.kanwilMapHeadersV1_(reorderedHeaders);
+assert(kanwilHeaderMap.ok&&kanwilHeaderMap.mapping.length===17,'Kanwil header mapping supports reordered source columns');
+const kanwilValues={
+  tanggal_pembayaran:'2026-10-19 17:52:09',
+  tanggal_mulai_verifikasi:'',
+  tanggal_auto_terbit:'2026-10-19 17:52:09',
+  layanan:'CONVERSION',
+  kategori_produk:'ITAP',
+  nomor_permohonan:'191026964790',
+  tanggal_permohonan:'2026-10-19 14:36:28',
+  penjamin:'YAYASAN PUSAT ILMU KEISLAMAN, INTERNATIONAL',
+  nama:'MOHAMAD DARWICH',
+  jenis_kelamin:'MALE',
+  tanggal_lahir:'1971-06-03',
+  kebangsaan:'SURIAH',
+  no_passport:'016199077',
+  jenis_produk:'ITASITAP_PREACHER',
+  tujuan:'EMPLOYMENT',
+  posisi_permohonan:'Produk sudah Terbit',
+  status_permohonan:'TERBIT'
+};
+const csvEscape=value=>'"'+String(value).replace(/"/g,'""')+'"';
+const kanwilCsv=[reorderedHeaders.map(csvEscape).join(','),reorderedHeaders.map(header=>{
+  const key=kanwilHeaderMap.mapping.find(x=>x.index===reorderedHeaders.indexOf(header))?.key;
+  return csvEscape(kanwilValues[key]??'');
+}).join(',')].join('\r\n');
+const kanwilParsed=kanwil.parseKanwilPermitCsvV1('\uFEFF'+kanwilCsv);
+assert(kanwilParsed.ok&&kanwilParsed.records.length===1&&kanwilParsed.records[0].ok,'Kanwil CSV parser maps a reordered 17-column row');
+assert(kanwilParsed.records[0].normalizedValues.nomor_permohonan==='191026964790'&&kanwilParsed.records[0].normalizedValues.no_passport==='016199077','Kanwil parser preserves application and passport identifiers including leading zeroes');
+assert(kanwilParsed.records[0].rawValues.penjamin==='YAYASAN PUSAT ILMU KEISLAMAN, INTERNATIONAL','Kanwil CSV parser preserves quoted commas in sponsor names');
+assert(kanwilParsed.records[0].warnings.some(x=>x.code==='TIMEZONE_UNCONFIRMED'),'Kanwil parser does not assume the source timestamp timezone');
+assert(kanwilParsed.warnings.includes('NO_AUTO_COMMIT'),'Kanwil CSV ingestion always requires human review');
+const kanwilMissing=kanwil.parseKanwilPermitCsvV1(kanwilHeaders.slice(1).join(',')+'\n'+kanwilHeaders.slice(1).map(()=> 'x').join(','));
+assert(!kanwilMissing.ok&&kanwilMissing.reason==='HEADER_MAPPING_INCOMPLETE_OR_AMBIGUOUS','Kanwil parser rejects a missing required header');
+const kanwilDuplicate=kanwil.kanwilMapHeadersV1_([...kanwilHeaders,'No. Passport']);
+assert(!kanwilDuplicate.ok&&kanwilDuplicate.duplicateKeys.includes('no_passport'),'Kanwil parser rejects duplicate aliases for a canonical field');
+const kanwilMalformed=kanwil.parseKanwilPermitCsvV1(kanwilHeaders.join(',')+'\n'+kanwilHeaders.slice(1).map(()=> 'x').join(','));
+assert(kanwilMalformed.ok&&kanwilMalformed.records[0].reason==='COLUMN_COUNT_MISMATCH','Kanwil parser quarantines rows with mismatched cell counts');
+const kanwilMissingId=kanwil.parseKanwilPermitCsvV1(kanwilHeaders.join(',')+'\n'+kanwilHeaders.map(h=>h==='Nomor Permohonan'?'':(kanwilValues[kanwil.kanwilMapHeadersV1_(kanwilHeaders).mapping.find(x=>x.index===kanwilHeaders.indexOf(h))?.key]||'')).join(','));
+assert(kanwilMissingId.ok&&!kanwilMissingId.records[0].ok&&kanwilMissingId.records[0].warnings.some(x=>x.code==='REQUIRED_IDENTIFIER_MISSING'),'Kanwil parser marks a row without application number as review-required');
