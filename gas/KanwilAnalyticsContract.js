@@ -53,7 +53,55 @@ function projectKanwilTvAggregateV1_(rows){
     statusPermohonan:aggregate.statusPermohonan
   });
 }
+
+function kanwilDateKey_(value){
+  const raw=String(value==null?'':value).trim();
+  if(!raw)return null;
+  const m=raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);
+  if(m)return m[1]+'-'+m[2]+'-'+m[3];
+  const d=new Date(raw);
+  return Number.isNaN(d.getTime())?null:d.toISOString().slice(0,10);
+}
+function kanwilApprovedRowsV1_(records){
+  return (Array.isArray(records)?records:[]).filter(r=>
+    r&&['APPROVED','COMMITTED'].includes(String(r.record_state||'').toUpperCase())
+  );
+}
+function buildKanwilWorkspaceAnalyticsV1_(records,filters){
+  const f=filters||{};
+  const from=kanwilDateKey_(f.fromDate),to=kanwilDateKey_(f.toDate);
+  const approved=kanwilApprovedRowsV1_(records);
+  const rows=approved.filter(r=>{
+    const d=kanwilDateKey_(r.tanggal_permohonan);
+    if(from&&(!d||d<from))return false;
+    if(to&&(!d||d>to))return false;
+    return ['layanan','kategori_produk','jenis_produk','kebangsaan','tujuan','posisi_permohonan','status_permohonan']
+      .every(k=>!f[k]||String(r[k]||'')===String(f[k]));
+  });
+  const base=buildKanwilAggregateV1_(rows);
+  const daily=new Map();
+  rows.forEach(r=>{const d=kanwilDateKey_(r.tanggal_permohonan);if(d)daily.set(d,(daily.get(d)||0)+1);});
+  const monthly=new Map();
+  daily.forEach((count,date)=>{const month=date.slice(0,7);monthly.set(month,(monthly.get(month)||0)+count);});
+  const required=['nomor_permohonan','nama','layanan','kategori_produk','tanggal_permohonan','kebangsaan','jenis_produk','tujuan','status_permohonan'];
+  const missing={};required.forEach(k=>{missing[k]=rows.filter(r=>!String(r[k]||'').trim()).length;});
+  const duplicateNumbers=new Map();
+  rows.forEach(r=>{const key=String(r.nomor_permohonan||'').trim();if(key)duplicateNumbers.set(key,(duplicateNumbers.get(key)||0)+1);});
+  const duplicateApplicationNumbers=Array.from(duplicateNumbers.values()).filter(n=>n>1).length;
+  return {
+    contractVersion:'KANWIL_WORKSPACE_ANALYTICS_V1',
+    dateBasis:'tanggal_permohonan',
+    approvedRecordCount:rows.length,
+    totalPermohonan:base.totalPermohonan,
+    jumlahLayanan:base.jumlahLayanan,kategoriProduk:base.kategoriProduk,
+    jenisProduk:base.jenisProduk,kebangsaan:base.kebangsaan,tujuan:base.tujuan,
+    posisiPermohonan:base.posisiPermohonan,statusPermohonan:base.statusPermohonan,
+    harian:Array.from(daily.entries()).sort((a,b)=>a[0].localeCompare(b[0])).map(([date,count])=>({date,count})),
+    bulanan:Array.from(monthly.entries()).sort((a,b)=>a[0].localeCompare(b[0])).map(([month,count])=>({month,count})),
+    kualitasData:{missingRequiredFields:missing,duplicateApplicationNumberGroups:duplicateApplicationNumbers}
+  };
+}
 if(typeof module!=='undefined'&&module.exports)module.exports={
  KANWIL_TV_FORBIDDEN_FIELDS_V1,KANWIL_TV_ALLOWED_DIMENSIONS_V1,
- buildKanwilAggregateV1_,projectKanwilTvAggregateV1_
+ buildKanwilAggregateV1_,projectKanwilTvAggregateV1_,kanwilApprovedRowsV1_,buildKanwilWorkspaceAnalyticsV1_
 };
