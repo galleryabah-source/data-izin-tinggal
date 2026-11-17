@@ -9,6 +9,24 @@ CDN delivers JS/runtime assets only; selected files are processed in this browse
 </style>
 <header><h2>Kanwil Permit — Input & Review Lokal</h2><div class="muted">Excel · CSV · Screenshot · Foto · Kontrak 17 kolom</div></header>
 <div class="notice"><b>Prototipe terisolasi.</b> File diproses di browser. Tidak ada pengiriman file ke server, Drive, Sheets, atau OCR cloud. Library JavaScript dimuat dari CDN; gambar dan workbook tidak dikirim ke CDN. Mode REVIEW-ONLY aktif: hasil hanya untuk pemeriksaan lokal. Tidak tersedia persetujuan operasional, commit, upload, maupun penyimpanan.</div>
+<section class="manual-entry" aria-labelledby="kpeManualTitle">
+<h3 id="kpeManualTitle">Input Manual Permohonan Kanwil</h3>
+<p class="muted">Masukkan satu data permohonan sesuai 17 kolom sumber. Tambah ke daftar hanya menyimpan sementara di memori halaman ini; belum tersimpan ke server atau database.</p>
+<form id="kpeManualForm" class="manual-grid">
+<div class="manual-fields" id="kpeManualFields"></div>
+<div class="toolbar"><button type="submit">Tambahkan ke daftar review</button><button type="reset" class="secondary">Kosongkan form</button></div>
+</form>
+</section>
+<style>
+.kpe .manual-entry{margin:18px 0;padding:14px;background:#fff;border:1px solid #dbe4ef;border-radius:10px}
+.kpe .manual-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.kpe .manual-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpe .manual-field label{font-size:12px;font-weight:700;color:#334155}
+.kpe .manual-field input,.kpe .manual-field select{box-sizing:border-box;width:100%;min-width:0;padding:9px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#172b45}
+.kpe button.secondary{background:#64748b}
+@media(max-width:800px){.kpe .manual-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.kpe .manual-fields{grid-template-columns:1fr}}
+</style>
 <div class="toolbar"><input id="kpeFiles" type="file" multiple accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,image/jpeg,image/png"><button id="kpeRun" type="button">Proses file terpilih</button><button id="kpeClear" type="button">Bersihkan</button></div>
 <div class="progress"><span id="kpeProgress"></span></div><div class="status" id="kpeStatus" role="status" aria-live="polite">Belum ada file diproses.</div>
 <div class="tablewrap"><table><thead><tr><th>File</th><th>Baris sumber</th><th>Nomor permohonan</th><th>Nama</th><th>Nomor paspor</th><th>Status</th><th>Catatan review</th></tr></thead><tbody id="kpeRows"><tr><td colspan="7">Belum ada hasil.</td></tr></tbody></table></div>
@@ -19,6 +37,34 @@ CDN delivers JS/runtime assets only; selected files are processed in this browse
 'use strict';
 const root=document.getElementById('kanwilEntryPrototype');if(!root||root.dataset.ready)return;root.dataset.ready='1';
 const $=id=>document.getElementById(id),state={busy:false,rows:[],log:[]};
+const manualFields=[
+ ['tanggal_pembayaran','Tanggal Pembayaran','datetime-local'],['tanggal_mulai_verifikasi','Tanggal Mulai Verifikasi','datetime-local'],['tanggal_auto_terbit','Tanggal Auto Terbit','datetime-local'],
+ ['layanan','Layanan','text'],['kategori_produk','Kategori Produk','text'],['nomor_permohonan','Nomor Permohonan','text'],
+ ['tanggal_permohonan','Tanggal Permohonan','datetime-local'],['penjamin','Penjamin','text'],['nama','Nama','text'],
+ ['jenis_kelamin','Jenis Kelamin','select'],['tanggal_lahir','Tanggal Lahir','date'],['kebangsaan','Kebangsaan','text'],
+ ['no_passport','No. Passport','text'],['jenis_produk','Jenis Produk','text'],['tujuan','Tujuan','text'],
+ ['posisi_permohonan','Posisi Permohonan','text'],['status_permohonan','Status Permohonan','text']
+];
+function initManualForm(){
+ const host=$('kpeManualFields');manualFields.forEach(([key,label,type])=>{
+  const wrap=document.createElement('div');wrap.className='manual-field';
+  const lab=document.createElement('label');lab.htmlFor='kpe_'+key;lab.textContent=label;wrap.append(lab);
+  let input;
+  if(type==='select'){input=document.createElement('select');[['','Pilih jenis kelamin'],['MALE','MALE'],['FEMALE','FEMALE']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;input.append(o);});}
+  else{input=document.createElement('input');input.type=type;}
+  input.id='kpe_'+key;input.name=key;input.autocomplete='off';
+  if(key==='nomor_permohonan'||key==='nama')input.required=true;
+  if(key==='nomor_permohonan'||key==='no_passport')input.inputMode='text';
+  wrap.append(input);host.append(wrap);
+ });
+ $('kpeManualForm').addEventListener('submit',event=>{
+  event.preventDefault();const values={};manualFields.forEach(([key])=>{const v=$('kpe_'+key).value.trim();values[key]=v||null;});
+  if(!values.nomor_permohonan||!values.nama){say('Nomor Permohonan dan Nama wajib diisi.');return;}
+  state.rows.push({file:'INPUT MANUAL (SEMENTARA)',sourceRowNumber:'—',values,state:'REVIEW_REQUIRED',warnings:['BELUM_DISIMPAN','PERIKSA_17_KOLOM']});
+  render();event.target.reset();say('Data ditambahkan ke daftar review sementara. Belum tersimpan permanen.');
+ });
+}
+
 const say=t=>{$('kpeStatus').textContent=t;};
 function addScript(url){return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=url;s.onload=resolve;s.onerror=()=>reject(new Error('Gagal memuat library '+url));document.head.appendChild(s);});}
 async function loadXlsx(){if(!window.XLSX)await addScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');if(!window.XLSX)throw Error('SheetJS tidak tersedia');return window.XLSX;}
@@ -72,5 +118,6 @@ $('kpeRun').addEventListener('click',async()=>{
  }catch(e){say('Gagal memulai: '+(e.message||String(e)));}
  finally{state.busy=false;$('kpeRun').disabled=false;render();}
 });
+initManualForm();
 })();
 </script>
