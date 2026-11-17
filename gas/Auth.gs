@@ -1,4 +1,24 @@
-function getCurrentIdentity_(){return String(Session.getActiveUser().getEmail()||'').trim().toLowerCase();}
+function workspaceIdentityEnforcementEnabledV1_(){
+  if(typeof PropertiesService==='undefined')return false;
+  return PropertiesService.getScriptProperties().getProperty('INTAL_WORKSPACE_IDENTITY_ENFORCEMENT')==='true';
+}
+function getWorkspaceIdentityV1_(){
+  const email=String(Session.getActiveUser().getEmail()||'').trim().toLowerCase();
+  if(!email)throw new Error('UNAUTHENTICATED');
+  const rawDomains=String(PropertiesService.getScriptProperties().getProperty('INTAL_WORKSPACE_ALLOWED_DOMAINS')||'').trim();
+  const domains=rawDomains.split(/[;,\\s]+/).map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
+  if(!domains.length)throw new Error('WORKSPACE_DOMAIN_POLICY_MISSING');
+  const at=email.lastIndexOf('@');
+  const domain=at>0?email.slice(at+1):'';
+  if(!domain||!domains.includes(domain))throw new Error('UNAUTHENTICATED');
+  return {email,domain,provider:'GOOGLE_WORKSPACE'};
+}
+function getCurrentIdentity_(){
+  if(workspaceIdentityEnforcementEnabledV1_())return getWorkspaceIdentityV1_().email;
+  // Transitional compatibility only until an isolated USER_ACCESSING deployment
+  // has passed identity and storage-access tests.
+  return String(Session.getActiveUser().getEmail()||'').trim().toLowerCase();
+}
 function ensureDailyPermissionMigration_(){
   if(typeof PropertiesService==='undefined'||typeof LockService==='undefined'||typeof DEFAULT_ROLES==='undefined')return;
   const props=PropertiesService.getScriptProperties(),flag='INTAL_DAILY_PERMISSIONS_MIGRATED_V1';
@@ -29,7 +49,9 @@ function getCurrentUser_(){
   const email=getCurrentIdentity_(),v=getDb_().getSheetByName(SHEETS.USERS).getDataRange().getValues();
   if(v.length<2)return {authenticated:false,email,role:null,permissions:[]};
   const h=v[0],i=Object.fromEntries(h.map((x,n)=>[x,n]));
-  const r=v.slice(1).find(x=>String(x[i.email]).trim().toLowerCase()===email&&String(x[i.status]).toUpperCase()==='ACTIVE');
+  const matching=v.slice(1).filter(x=>String(x[i.email]||'').trim().toLowerCase()===email);
+  if(workspaceIdentityEnforcementEnabledV1_()&&matching.length!==1)throw new Error('UNAUTHENTICATED');
+  const r=matching.find(x=>String(x[i.status]).toUpperCase()==='ACTIVE');
   if(!r)return {authenticated:false,email,role:null,permissions:[]};
   const role=String(r[i.role]).toUpperCase();
   return {authenticated:true,email,userId:String(r[i.user_id]),displayName:String(r[i.display_name]),role,permissions:getRolePermissions_(role)};
