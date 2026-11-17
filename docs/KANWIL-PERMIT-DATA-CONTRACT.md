@@ -289,3 +289,11 @@ Added `gas/KanwilEntry.html`, an un-routed browser-only intake prototype:
 The shell fetches only JS module/runtime assets from pinned CDN locations; the selected workbook/image files are passed to browser-side libraries and are not sent to those asset hosts. Offline operation is not supported in this prototype. No credentials or file contents are added to fetch URLs.
 
 A syntax check of the extracted inline script passed. Regression assertions were added to the repository test harness for the shell's syntax and absence of RPC/upload transport. Full test-shim and browser integration have not been executed. XLSX support remains unverified against real workbook samples, and Tesseract runtime behavior remains unverified in the deployed Apps Script HTML sandbox. The HTML fragment is not included in doGet or app navigation.
+
+## 14. Implementation progress — isolated persistence boundary contract
+
+`gas/KanwilStorageContract.js` now defines the six proposed Kanwil-only storage schemas and pure validators for batch provenance, source-file/row idempotency descriptors, sequential revision append, audit-event completeness, and duplicate-candidate classification.
+
+The idempotency descriptor requires a caller-supplied 64-character SHA-256; the module does not claim to hash file bytes. Duplicate matching is explicitly non-destructive: same scoped application number produces an identical-payload or conflict candidate, never an automatic uniqueness decision. Revision append requires the expected next revision, actor, correlation ID, payload checksum, and reason.
+
+**Boundary:** this is a pure contract, not a persistence adapter. No Google Sheets/Drive write, lock, RPC, authentication, transaction, or production storage is implemented. The eventual Sheets adapter must use server-side gateway authorization, serialize writes with a lock, append the event/audit journal, and reconcile partial multi-sheet writes. Google Sheets does not provide cross-sheet ACID transactions; do not describe this as atomic database commit.
