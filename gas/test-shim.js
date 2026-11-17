@@ -1789,3 +1789,17 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
     assert(/getCurrentUser_\s*\(/.test(segment),'Self-scope RPC resolves current user: '+name);
   }
 }
+
+
+/* Kanwil service entry route and review-only boundary. */
+const kanwilRouteSource=read('Code.gs');
+assert(kanwilRouteSource.includes("else if(view==='kanwil')requireBackOfficeAccess_()"),'Kanwil entry route requires authenticated back-office access');
+assert(kanwilRouteSource.includes("view==='kanwil'?'KanwilEntry'"),'Kanwil entry route serves the dedicated Kanwil workspace');
+const kanwilNavSource=read('index.html');
+assert(kanwilNavSource.includes('href="?view=kanwil"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace');
+const kanwilPageSource=read('KanwilEntry.html');
+assert(kanwilPageSource.includes('Mode REVIEW-ONLY aktif'),'Kanwil entry page explicitly discloses review-only mode');
+assert(!kanwilPageSource.includes('google.script.run')&&!kanwilPageSource.includes('FormData')&&!kanwilPageSource.includes('XMLHttpRequest'),'Kanwil review-only workspace has no RPC or upload transport');
+const kanwilReviewContract=require('./KanwilStagingContract.js');
+assert(kanwilReviewContract.KANWIL_REVIEW_ONLY_V1===true,'Kanwil staging contract is locked to review-only');
+assert(!kanwilReviewContract.transitionKanwilStagingV1('APPROVED','COMMITTED','').ok,'Kanwil contract blocks commit from approved state');
