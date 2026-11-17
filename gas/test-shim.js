@@ -1820,3 +1820,19 @@ assert(shotParsed.rows[0].values.nomor_permohonan==='0012345'&&shotParsed.rows[0
 assert(shotParsed.warnings.includes('NO_AUTO_COMMIT'),'Kanwil OCR parser always requires explicit human review');
 const shotIncomplete=kanwilShot.reconstructKanwilScreenshotTableV1(shotHeaders.slice(0,16),{lineTolerance:9,headerWordGap:10});
 assert(!shotIncomplete.ok&&shotIncomplete.reason==='HEADER_MAPPING_INCOMPLETE_OR_AMBIGUOUS','Kanwil OCR parser rejects incomplete 17-column header');
+
+/* Shared staging envelope, lifecycle and scoped duplicate fingerprint. */
+const kanwilStaging=require('./KanwilStagingContract.js');
+const kanwilEnvelope=kanwilStaging.createKanwilStagingEnvelopeV1({
+  batchId:'batch-1',fileId:'file-1',sourceChannel:'SCREENSHOT',sourceRowNumber:2,
+  contractVersion:'KANWIL_PERMIT_APPLICATION_V1',rawValues:kanwilValues,normalizedValues:kanwilValues,
+  fieldEvidence:{nomor_permohonan:{bbox:{x0:10,y0:10,x1:40,y1:20},confidence:95}}
+});
+assert(kanwilEnvelope.ok&&kanwilEnvelope.envelope.state==='RECEIVED','CSV/XLSX/OCR records share one Kanwil staging envelope');
+assert(kanwilEnvelope.envelope.rawValues.no_passport==='016199077'&&kanwilEnvelope.envelope.commitState==='NOT_COMMITTED','Staging envelope preserves raw identifiers and remains uncommitted');
+assert(!kanwilStaging.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Kanwil record cannot commit before approval');
+assert(!kanwilStaging.transitionKanwilStagingV1('REVIEW_REQUIRED','REJECTED','').ok,'Reject transition requires an explicit reason');
+assert(kanwilStaging.transitionKanwilStagingV1('REVIEW_REQUIRED','APPROVED','reviewed').ok,'Reviewed row can be approved');
+assert(kanwilStaging.transitionKanwilStagingV1('APPROVED','COMMITTED','').ok,'Only approved row can move to committed');
+assert(kanwilStaging.kanwilDuplicateFingerprintV1_('KANWIL-JABAR','001234').fingerprint==='KANWIL-JABAR::001234','Duplicate fingerprint is scoped and preserves leading zeroes');
+assert(!kanwilStaging.kanwilDuplicateFingerprintV1_('','001234').ok,'Duplicate detection fails closed without explicit Kanwil scope');
