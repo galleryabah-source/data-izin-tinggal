@@ -7,6 +7,24 @@ for(const name of files){new Function(fs.readFileSync(path.join(__dirname,name),
 
 const assert=(condition,message)=>{if(!condition)throw new Error('TEST FAILED: '+message);};
 const read=(name)=>fs.readFileSync(path.join(__dirname,name),'utf8');
+const screenshotParser=require('./ScreenshotTableParser.js');
+assert(screenshotParser.SCREENSHOT_COLUMNS_V1.length===19,'Screenshot table contract has exactly 19 canonical columns');
+const screenshotHeaders=screenshotParser.SCREENSHOT_COLUMNS_V1.map(([key,aliases],i)=>({text:aliases[0],confidence:96,bbox:{x0:i*100,y0:0,x1:i*100+80,y1:20}}));
+const screenshotValues=screenshotParser.SCREENSHOT_COLUMNS_V1.map(([key],i)=>({text:'V'+(i+1),confidence:95,bbox:{x0:i*100+20,y0:50,x1:i*100+60,y1:70}}));
+const screenshotParsed=screenshotParser.reconstructScreenshotTableV1([...screenshotHeaders,...screenshotValues],{lineTolerance:10,headerWordGap:10});
+assert(screenshotParsed.ok&&screenshotParsed.rows.length===1,'Screenshot parser reconstructs a synthetic 19-column row from word geometry');
+assert(screenshotParsed.rows[0].values.nomor_permohonan==='V7'&&screenshotParsed.rows[0].values.no_passport==='V14','Screenshot parser preserves critical identifiers as strings');
+assert(screenshotParsed.warnings.includes('NO_AUTO_COMMIT'),'Screenshot parser always requires human review');
+const screenshotIncomplete=screenshotParser.reconstructScreenshotTableV1(screenshotHeaders.slice(0,18),{lineTolerance:10,headerWordGap:10});
+assert(!screenshotIncomplete.ok&&screenshotIncomplete.reason==='HEADER_MAPPING_INCOMPLETE_OR_AMBIGUOUS','Screenshot parser rejects incomplete header coverage');
+const screenshotHtml=read('ScreenshotEntry.html');
+assert(screenshotHtml.includes('Tesseract.js')&&screenshotHtml.includes('createWorker(\'eng+ind\''),'Screenshot OCR uses browser-local Tesseract with Indonesian and English language data');
+assert(screenshotHtml.includes('maxFiles=200')&&screenshotHtml.includes('maxBytes=5*1024*1024'),'Screenshot OCR enforces bounded batch and file size');
+assert(screenshotHtml.includes('tidak diunggah')&&screenshotHtml.includes('tidak dikirim ke API'),'Screenshot prototype discloses local-only image processing');
+assert(!screenshotHtml.includes('google.script.run')&&!screenshotHtml.includes('XMLHttpRequest')&&!screenshotHtml.includes('FormData'),'Screenshot prototype exposes no RPC or image-upload transport');
+const screenshotScript=screenshotHtml.match(/<script>([\\s\\S]*?)<\\/script>/i);
+assert(!!screenshotScript,'Screenshot prototype contains a script block');
+try{new Function(screenshotScript[1]);}catch(e){throw new Error('TEST FAILED: Screenshot OCR script syntax: '+e.message);}
 const mobileHtml=fs.readFileSync(path.join(__dirname,'tv-mobile.html'),'utf8');
 assert(mobileHtml.includes('INTAL TV MOBILE'),'Dedicated INTAL TV Mobile page exists');
 assert(mobileHtml.includes('getPublicTvResidenceDashboard')&&mobileHtml.includes('getPublicTvPassportDashboard'),'Mobile uses canonical read-only dashboard services');
@@ -1730,3 +1748,140 @@ assert(read('DailyInputService.gs').includes("i.late_entry_reason+1).setValue(p.
 assert(read('DailyInputService.gs').includes('function reopenDailySubmission(recordId,reason)') &&
        read('DailyInputService.gs').includes('DAILY_REOPEN_REASON_REQUIRED'),
   'VOID report has an explicit reasoned and audited reopening path');
+
+/* Kanwil Permit v1: isolated 17-column contract and CSV ingestion regressions. */
+const kanwil=require('./KanwilPermitContract.js');
+assert(kanwil.KANWIL_PERMIT_COLUMNS_V1.length===17,'Kanwil contract contains exactly the 17 columns observed in the supplied source table');
+const kanwilHeaders=kanwil.KANWIL_PERMIT_COLUMNS_V1.map(([key,aliases])=>aliases[0]);
+const reorderedHeaders=[...kanwilHeaders].reverse();
+const kanwilHeaderMap=kanwil.kanwilMapHeadersV1_(reorderedHeaders);
+assert(kanwilHeaderMap.ok&&kanwilHeaderMap.mapping.length===17,'Kanwil header mapping supports reordered source columns');
+const kanwilValues={
+  tanggal_pembayaran:'2026-10-19 17:52:09',
+  tanggal_mulai_verifikasi:'',
+  tanggal_auto_terbit:'2026-10-19 17:52:09',
+  layanan:'CONVERSION',
+  kategori_produk:'ITAP',
+  nomor_permohonan:'191026964790',
+  tanggal_permohonan:'2026-10-19 14:36:28',
+  penjamin:'YAYASAN PUSAT ILMU KEISLAMAN, INTERNATIONAL',
+  nama:'MOHAMAD DARWICH',
+  jenis_kelamin:'MALE',
+  tanggal_lahir:'1971-06-03',
+  kebangsaan:'SURIAH',
+  no_passport:'016199077',
+  jenis_produk:'ITASITAP_PREACHER',
+  tujuan:'EMPLOYMENT',
+  posisi_permohonan:'Produk sudah Terbit',
+  status_permohonan:'TERBIT'
+};
+const csvEscape=value=>'"'+String(value).replace(/"/g,'""')+'"';
+const kanwilCsv=[reorderedHeaders.map(csvEscape).join(','),reorderedHeaders.map(header=>{
+  const key=kanwilHeaderMap.mapping.find(x=>x.index===reorderedHeaders.indexOf(header))?.key;
+  return csvEscape(kanwilValues[key]??'');
+}).join(',')].join('\r\n');
+const kanwilParsed=kanwil.parseKanwilPermitCsvV1('\uFEFF'+kanwilCsv);
+assert(kanwilParsed.ok&&kanwilParsed.records.length===1&&kanwilParsed.records[0].ok,'Kanwil CSV parser maps a reordered 17-column row');
+assert(kanwilParsed.records[0].normalizedValues.nomor_permohonan==='191026964790'&&kanwilParsed.records[0].normalizedValues.no_passport==='016199077','Kanwil parser preserves application and passport identifiers including leading zeroes');
+assert(kanwilParsed.records[0].rawValues.penjamin==='YAYASAN PUSAT ILMU KEISLAMAN, INTERNATIONAL','Kanwil CSV parser preserves quoted commas in sponsor names');
+assert(kanwilParsed.records[0].warnings.some(x=>x.code==='TIMEZONE_UNCONFIRMED'),'Kanwil parser does not assume the source timestamp timezone');
+assert(kanwilParsed.warnings.includes('NO_AUTO_COMMIT'),'Kanwil CSV ingestion always requires human review');
+const kanwilMissing=kanwil.parseKanwilPermitCsvV1(kanwilHeaders.slice(1).join(',')+'\n'+kanwilHeaders.slice(1).map(()=> 'x').join(','));
+assert(!kanwilMissing.ok&&kanwilMissing.reason==='HEADER_MAPPING_INCOMPLETE_OR_AMBIGUOUS','Kanwil parser rejects a missing required header');
+const kanwilDuplicate=kanwil.kanwilMapHeadersV1_([...kanwilHeaders,'No. Passport']);
+assert(!kanwilDuplicate.ok&&kanwilDuplicate.duplicateKeys.includes('no_passport'),'Kanwil parser rejects duplicate aliases for a canonical field');
+const kanwilMalformed=kanwil.parseKanwilPermitCsvV1(kanwilHeaders.join(',')+'\n'+kanwilHeaders.slice(1).map(()=> 'x').join(','));
+assert(kanwilMalformed.ok&&kanwilMalformed.records[0].reason==='COLUMN_COUNT_MISMATCH','Kanwil parser quarantines rows with mismatched cell counts');
+const kanwilMissingId=kanwil.parseKanwilPermitCsvV1(kanwilHeaders.join(',')+'\n'+kanwilHeaders.map(h=>h==='Nomor Permohonan'?'':(kanwilValues[kanwil.kanwilMapHeadersV1_(kanwilHeaders).mapping.find(x=>x.index===kanwilHeaders.indexOf(h))?.key]||'')).join(','));
+assert(kanwilMissingId.ok&&!kanwilMissingId.records[0].ok&&kanwilMissingId.records[0].warnings.some(x=>x.code==='REQUIRED_IDENTIFIER_MISSING'),'Kanwil parser marks a row without application number as review-required');
+
+/* Kanwil XLSX adapter and 17-column OCR geometry parser regressions. */
+const kanwilXlsxAdapter=require('./KanwilXlsxAdapter.js');
+const fakeXlsx={
+  read:()=>({SheetNames:['Export'],Sheets:{Export:{rows:[['Laporan Kanwil'],reorderedHeaders,reorderedHeaders.map(header=>{
+    const key=kanwilHeaderMap.mapping.find(x=>x.index===reorderedHeaders.indexOf(header))?.key;
+    return kanwilValues[key]??'';
+  })]}}}),
+  utils:{sheet_to_json:sheet=>sheet.rows}
+};
+const xlsxResult=kanwilXlsxAdapter.parseKanwilXlsxV1(new ArrayBuffer(8),fakeXlsx,{},kanwil.parseKanwilPermitCsvV1,kanwil.kanwilMapHeadersV1_);
+assert(xlsxResult.ok&&xlsxResult.records.length===1&&xlsxResult.source.headerRowNumber===2,'XLSX adapter detects a single header row below workbook metadata');
+assert(xlsxResult.records[0].sourceRowNumber===3&&xlsxResult.records[0].normalizedValues.no_passport==='016199077','XLSX adapter preserves original worksheet row numbers and identifier strings');
+const multipleHeaderXlsx={read:()=>({SheetNames:['Export'],Sheets:{Export:{rows:[kanwilHeaders,kanwilHeaders,kanwilValues]}}}),utils:fakeXlsx.utils};
+const multipleHeaders=kanwilXlsxAdapter.parseKanwilXlsxV1(new ArrayBuffer(8),multipleHeaderXlsx,{},kanwil.parseKanwilPermitCsvV1,kanwil.kanwilMapHeadersV1_);
+assert(!multipleHeaders.ok&&multipleHeaders.reason==='MULTIPLE_HEADER_ROWS','XLSX adapter fails closed when multiple candidate header rows exist');
+const kanwilShot=require('./KanwilScreenshotParser.js');
+assert(kanwilShot.KANWIL_SCREENSHOT_COLUMNS_V1.length===17,'Kanwil screenshot parser uses exactly 17 source columns');
+const shotHeaders=kanwilShot.KANWIL_SCREENSHOT_COLUMNS_V1.map(([key,aliases],i)=>({text:aliases[0],confidence:97,bbox:{x0:i*110,y0:0,x1:i*110+85,y1:18}}));
+const shotValues=kanwilShot.KANWIL_SCREENSHOT_COLUMNS_V1.map(([key],i)=>({text:key==='nomor_permohonan'?'0012345':key==='no_passport'?'012345678':'R'+(i+1),confidence:91,bbox:{x0:i*110+18,y0:45,x1:i*110+75,y1:65}}));
+const shotParsed=kanwilShot.reconstructKanwilScreenshotTableV1([...shotHeaders,...shotValues],{lineTolerance:9,headerWordGap:10});
+assert(shotParsed.ok&&shotParsed.rows.length===1,'Kanwil OCR geometry parser reconstructs a synthetic 17-column row');
+assert(shotParsed.rows[0].values.nomor_permohonan==='0012345'&&shotParsed.rows[0].values.no_passport==='012345678','Kanwil OCR parser preserves leading-zero identifiers');
+assert(shotParsed.warnings.includes('NO_AUTO_COMMIT'),'Kanwil OCR parser always requires explicit human review');
+const shotIncomplete=kanwilShot.reconstructKanwilScreenshotTableV1(shotHeaders.slice(0,16),{lineTolerance:9,headerWordGap:10});
+assert(!shotIncomplete.ok&&shotIncomplete.reason==='HEADER_MAPPING_INCOMPLETE_OR_AMBIGUOUS','Kanwil OCR parser rejects incomplete 17-column header');
+
+/* Shared staging envelope, lifecycle and scoped duplicate fingerprint. */
+const kanwilStaging=require('./KanwilStagingContract.js');
+const kanwilEnvelope=kanwilStaging.createKanwilStagingEnvelopeV1({
+  batchId:'batch-1',fileId:'file-1',sourceChannel:'SCREENSHOT',sourceRowNumber:2,
+  contractVersion:'KANWIL_PERMIT_APPLICATION_V1',rawValues:kanwilValues,normalizedValues:kanwilValues,
+  fieldEvidence:{nomor_permohonan:{bbox:{x0:10,y0:10,x1:40,y1:20},confidence:95}}
+});
+assert(kanwilEnvelope.ok&&kanwilEnvelope.envelope.state==='RECEIVED','CSV/XLSX/OCR records share one Kanwil staging envelope');
+assert(kanwilEnvelope.envelope.rawValues.no_passport==='016199077'&&kanwilEnvelope.envelope.commitState==='NOT_COMMITTED','Staging envelope preserves raw identifiers and remains uncommitted');
+assert(!kanwilStaging.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Kanwil record cannot commit before approval');
+assert(!kanwilStaging.transitionKanwilStagingV1('REVIEW_REQUIRED','REJECTED','').ok,'Reject transition requires an explicit reason');
+assert(kanwilStaging.transitionKanwilStagingV1('REVIEW_REQUIRED','APPROVED','reviewed').ok,'Reviewed row can be approved');
+assert(kanwilStaging.transitionKanwilStagingV1('APPROVED','COMMITTED','').ok,'Only approved row can move to committed');
+assert(kanwilStaging.kanwilDuplicateFingerprintV1_('KANWIL-JABAR','001234').fingerprint==='KANWIL-JABAR::001234','Duplicate fingerprint is scoped and preserves leading zeroes');
+assert(!kanwilStaging.kanwilDuplicateFingerprintV1_('','001234').ok,'Duplicate detection fails closed without explicit Kanwil scope');
+
+/* Tesseract word-result adapter preserves cell-level geometry and confidence. */
+const kanwilOcrAdapter=require('./KanwilOcrAdapter.js');
+const tessResult={data:{text:'TERBIT 001234',words:[...shotHeaders,...shotValues]}};
+const adaptedOcr=kanwilOcrAdapter.adaptTesseractResultToKanwilV1(tessResult,kanwilShot.reconstructKanwilScreenshotTableV1,{lineTolerance:9,headerWordGap:10});
+assert(adaptedOcr.ok&&adaptedOcr.engine==='TESSERACT.JS'&&adaptedOcr.reviewRequired&&!adaptedOcr.autoCommit,'Tesseract adapter produces review-only Kanwil extraction');
+assert(adaptedOcr.rows[0].fieldEvidence.no_passport.meanConfidence===91,'Tesseract confidence and field geometry survive OCR adaptation');
+const noWords=kanwilOcrAdapter.adaptTesseractResultToKanwilV1({data:{text:'only plain text'}},kanwilShot.reconstructKanwilScreenshotTableV1);
+assert(!noWords.ok&&noWords.reason==='TESSERACT_WORDS_MISSING','Tesseract adapter fails closed without word geometry');
+
+/* Kanwil browser intake shell stays local-only and does not expose persistence/RPC. */
+const kanwilEntryHtml=read('KanwilEntry.html');
+assert(kanwilEntryHtml.includes('xlsx@0.18.5')&&kanwilEntryHtml.includes('Tesseract.js'),'Kanwil intake shell loads pinned browser-side XLSX and OCR libraries');
+assert(kanwilEntryHtml.includes('reviewRequired')||kanwilEntryHtml.includes('REVIEW_REQUIRED'),'Kanwil intake shell marks extracted records for human review');
+assert(!kanwilEntryHtml.includes('google.script.run')&&!kanwilEntryHtml.includes('FormData')&&!kanwilEntryHtml.includes('XMLHttpRequest'),'Kanwil intake shell has no Apps Script RPC or upload transport');
+const kanwilEntryScript=kanwilEntryHtml.match(/<script>([\\s\\S]*?)<\\/script>/i);
+assert(!!kanwilEntryScript,'Kanwil intake shell contains a script block');
+try{new Function(kanwilEntryScript[1]);}catch(e){throw new Error('TEST FAILED: Kanwil intake script syntax: '+e.message);}
+
+/* Kanwil storage boundary: schema, idempotency, revision and audit contracts. */
+const kanwilStorage=require('./KanwilStorageContract.js');
+assert(Object.keys(kanwilStorage.KANWIL_STORAGE_SCHEMAS_V1).length===6,'Kanwil storage contract defines exactly six isolated stores');
+assert(kanwilStorage.KANWIL_STORAGE_SCHEMAS_V1.KANWIL_APPLICATION_STAGING.includes('idempotency_key'),'Kanwil staging store persists a deterministic idempotency key');
+assert(kanwilStorage.KANWIL_STORAGE_SCHEMAS_V1.KANWIL_APPLICATION_EVENTS.includes('event_sequence'),'Kanwil event journal has an explicit sequence');
+const batchDescriptor=kanwilStorage.createKanwilBatchDescriptorV1({batchId:'b-1',kanwilScopeId:'KANWIL-JABAR',sourceChannel:'CSV',contractVersion:'KANWIL_PERMIT_APPLICATION_V1',parserVersion:'csv-v1',createdBy:'operator-1',correlationId:'corr-1'});
+assert(batchDescriptor.ok&&batchDescriptor.batch.state==='CREATED','Kanwil batch descriptor requires explicit scope and provenance');
+assert(!kanwilStorage.createKanwilBatchDescriptorV1({batchId:'b-1',sourceChannel:'CSV'}).ok,'Kanwil batch fails closed without explicit scope and provenance');
+const idempotency=kanwilStorage.buildKanwilIdempotencyDescriptorV1({kanwilScopeId:'KANWIL-JABAR',sourceFileSha256:'a'.repeat(64),contractVersion:'v1',parserVersion:'p1',sourceRowNumber:3});
+assert(idempotency.ok&&idempotency.key.endsWith('|3'),'Kanwil idempotency key binds scope, checksum, versions and source row');
+assert(!kanwilStorage.buildKanwilIdempotencyDescriptorV1({kanwilScopeId:'KANWIL-JABAR',sourceFileSha256:'bad',contractVersion:'v1',parserVersion:'p1',sourceRowNumber:3}).ok,'Kanwil idempotency rejects a non-SHA256 checksum');
+const revision=kanwilStorage.validateKanwilRevisionAppendV1({recordId:'r1',actorId:'u1',correlationId:'c1',payloadSha256:'b'.repeat(64),currentRevision:1,nextRevision:2,reason:'Koreksi berdasarkan sumber asli'});
+assert(revision.ok&&revision.revision.revision===2,'Kanwil revision append requires actor, reason and sequential revision');
+assert(!kanwilStorage.validateKanwilRevisionAppendV1({recordId:'r1',actorId:'u1',correlationId:'c1',payloadSha256:'b'.repeat(64),currentRevision:1,nextRevision:3,reason:'Koreksi'}).ok,'Kanwil revision rejects skipped revision sequence');
+assert(!kanwilStorage.validateKanwilRevisionAppendV1({recordId:'r1',actorId:'u1',correlationId:'c1',payloadSha256:'b'.repeat(64),currentRevision:1,nextRevision:2}).ok,'Kanwil revision requires an explicit reason');
+const audit=kanwilStorage.validateKanwilAuditEventV1({auditId:'a1',actorId:'u1',action:'APPROVE',reason:'Dokumen diverifikasi',correlationId:'c1',occurredAt:'2026-11-17T07:00:00+07:00'});
+assert(audit.ok&&audit.event.actor_id==='u1','Kanwil audit event records actor, action, reason and correlation');
+assert(!kanwilStorage.validateKanwilAuditEventV1({auditId:'a1',action:'APPROVE'}).ok,'Kanwil audit event fails closed without actor and reason');
+const duplicate=kanwilStorage.classifyKanwilDuplicateCandidateV1({kanwilScopeId:'KANWIL-JABAR',applicationNumber:'00123',payloadSha256:'c'.repeat(64)},{kanwilScopeId:'KANWIL-JABAR',applicationNumber:'00123',payloadSha256:'d'.repeat(64)});
+assert(duplicate.ok&&duplicate.candidate&&duplicate.outcome==='PAYLOAD_CONFLICT_CANDIDATE'&&!duplicate.enforceUnique&&duplicate.requiresHumanResolution,'Kanwil duplicate matching is a review candidate and never silently enforces uniqueness');
+
+/* Kanwil local intake limits reject unsafe or oversized batches before parsing. */
+const kanwilIntakePolicy=require('./KanwilIntakePolicy.js');
+assert(kanwilIntakePolicy.validateKanwilLocalFilesV1([{name:'data.csv',size:1024,type:'text/csv'}]).ok,'Kanwil intake accepts a supported CSV within limits');
+assert(!kanwilIntakePolicy.validateKanwilLocalFilesV1([{name:'payload.exe',size:1024,type:'application/octet-stream'}]).ok,'Kanwil intake rejects unsupported extensions');
+assert(!kanwilIntakePolicy.validateKanwilLocalFilesV1([{name:'large.png',size:11*1024*1024,type:'image/png'}]).ok,'Kanwil intake enforces image size ceiling');
+assert(!kanwilIntakePolicy.validateKanwilLocalFilesV1([{name:'wrong.png',size:1024,type:'text/plain'}]).ok,'Kanwil intake rejects MIME and extension mismatch');
+assert(!kanwilIntakePolicy.validateKanwilLocalFilesV1(Array.from({length:51},(_,i)=>({name:'f'+i+'.csv',size:1,type:'text/csv'}))).ok,'Kanwil intake enforces batch file-count limit');
+const kanwilEntryWithPolicy=read('KanwilEntry.html');
+assert(kanwilEntryWithPolicy.includes('KanwilIntakePolicy.js')&&kanwilEntryWithPolicy.includes('validateKanwilLocalFilesV1'),'Kanwil UI validates local files before parsing');
