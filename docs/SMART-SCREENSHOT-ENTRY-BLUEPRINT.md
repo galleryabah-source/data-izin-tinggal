@@ -1,6 +1,6 @@
 # INTAL Smart Screenshot Entry — Technical Blueprint
 
-**Status:** Architecture approved by product owner; implementation gated by the current P0 security work and OCR provider configuration.  
+**Status:** Cost-free architecture selected; implementation gated by the current P0 security work, sample validation, and browser-runtime compatibility.  
 **Target repository:** `galleryabah-source/data-izin-tinggal`  
 **Target runtime:** Existing Google Apps Script + Google Sheets application.  
 **Timezone:** `Asia/Jakarta`  
@@ -12,7 +12,7 @@ The owner selected:
 
 - Image sources: both direct screenshots and camera photos.
 - Volume: bulk, including more than 100 images per operational day.
-- Persistence: hybrid. High-confidence records may be committed automatically only after every hard validation passes; uncertain or conflicting records require human review.
+- Persistence: hybrid. Original images remain in the existing private Drive storage and extracted records remain in isolated Sheets storage. OCR runs locally in the user's browser; every extracted row requires human confirmation before commit in v1.
 
 This feature is an additional ingestion channel. It is not a new application and must reuse INTAL's existing identity, server-side authorization, audit, and operational UI conventions.
 
@@ -94,14 +94,15 @@ Do not overwrite the original image.
 
 ### 4.3 OCR provider adapter
 
-Initial provider candidate: Google Cloud Vision `DOCUMENT_TEXT_DETECTION`, invoked server-side only. Use an adapter contract so the provider can be replaced without changing extraction or persistence.
+**No paid OCR provider is used in v1.** OCR runs in the browser using the open-source Tesseract.js engine (WebAssembly) with Indonesian/English language data as needed. Image pixels are processed on the user's device; screenshots are not uploaded to an OCR API and no OCR API key, cloud project, or billing account is required.
 
-Provider configuration:
-- API key/credential stored only in Script Properties or an approved secret store; never in source code, HTML, logs, or spreadsheet cells.
-- Restrict credentials to the Vision API and server-side use.
-- Require explicit project/billing setup, credential validation, data-processing/privacy review, and owner/security approval before enabling calls.
-- Missing/invalid credentials must fail closed and leave the batch in a retryable configuration-error state.
-- Do not send images to a general-purpose LLM in v1. OCR text and bounding boxes are sufficient for deterministic table reconstruction; AI-assisted interpretation can be considered later under a separate data-processing approval.
+Implementation constraints:
+- Pin and review the Tesseract.js and trained-data versions. Prefer serving pinned assets from an already available application asset origin; if a public CDN is used, it is only for downloading the open-source runtime/language files and must not receive image content.
+- Run OCR in a Web Worker so the UI remains responsive; cap worker count and memory use, and process files sequentially or in small bounded groups.
+- Keep image processing and OCR in the browser. Only after user confirmation may the structured record and the original image be sent to existing authorized INTAL storage.
+- If browser memory, device performance, network access to static assets, or language-data availability prevents OCR, mark the file `REVIEW_REQUIRED`; do not fall back to a paid/cloud OCR service.
+- Tesseract confidence is not reliable cell-level evidence for table reconstruction. Therefore v1 does not auto-commit OCR results. Every row is reviewed and explicitly committed by an authorized operator.
+- Do not send images or OCR text to a general-purpose LLM or any external OCR endpoint in v1.
 
 ### 4.4 Table reconstruction
 
@@ -118,7 +119,7 @@ A table is eligible for record extraction only when the header mapping is unambi
 
 ## 5. Bulk job model
 
-Processing must be asynchronous and resumable. Do not run an unbounded 100+ image batch inside one Apps Script request.
+Processing must be asynchronous and resumable. Browser-side OCR is performed in bounded chunks and persisted progress is checkpointed through the existing app only after authorization; do not run an unbounded batch in one browser task or Apps Script request.
 
 Batch states:
 
@@ -148,11 +149,10 @@ Proposed pilot policy:
 - Critical fields: `nomor_permohonan`, `nama`, `tanggal_lahir`, `no_passport`, `kebangsaan`, `kantor_imigrasi`.
 - Non-critical fields: remaining 13 fields.
 - Provisional field thresholds: critical >= 0.99; other fields >= 0.97.
-- Row confidence is the minimum confidence among required/observed fields, not the average.
-- Auto-save is allowed only when all 19 headers map unambiguously, all required source fields are present, all values pass deterministic validation, all critical fields meet threshold, no row/file conflict exists, and the actor has explicit commit permission.
-- Any low-confidence critical value, ambiguous date, partial table, duplicate, conflicting record, unknown office, malformed identifier, or OCR warning routes to manual review.
-- Do not lower thresholds merely to increase automation percentage.
-- If the provider does not return reliable confidence at cell/word level, auto-save is disabled and all records require review.
+- Browser OCR confidence is advisory only; it is not a correctness guarantee and is not treated as cell-level proof.
+- **Auto-save/auto-commit is disabled in v1.** Every extracted row is shown beside its source image and requires explicit operator review and commit.
+- Any low-confidence text, ambiguous date, partial table, duplicate, conflicting record, unknown office, malformed identifier, or OCR warning is highlighted for manual correction or rejection.
+- No cloud OCR fallback is permitted, even when local OCR fails.
 
 The owner may configure thresholds only through an audited admin workflow. Threshold changes must be versioned and re-run against the labeled evaluation set before activation.
 
@@ -260,7 +260,8 @@ All IDs are server-generated UUIDs. All mutation endpoints validate actor permis
 - [ ] P0 setup RPC and daily-input bypass fixes merged and verified.
 - [ ] Complete RPC inventory/authentication boundary review closed.
 - [ ] Approved permission matrix and restricted storage access.
-- [ ] OCR provider, project, billing, credentials, and data-processing review approved.
+- [ ] Local Tesseract.js runtime and language-data versions pinned, reviewed, and tested without paid APIs.
+- [ ] Browser asset delivery confirmed without introducing a paid hosting dependency.
 - [ ] Retention/deletion policy approved.
 
 ### Gate B — Contract and deterministic parser
@@ -280,8 +281,8 @@ All IDs are server-generated UUIDs. All mutation endpoints validate actor permis
 
 ### Gate D — Validation and controlled activation
 - [ ] Unit, parser fixture, concurrency/idempotency, authorization-negative, audit-failure, and quota tests pass.
-- [ ] Labeled pilot accuracy meets owner-approved thresholds.
-- [ ] Bulk load test for >100 images/day passes with measured execution/cost.
+- [ ] Labeled pilot accuracy and human-review workload measured on representative devices.
+- [ ] Bulk load test for >100 images/day passes within existing browser, Apps Script, Drive, and Sheets quotas; no paid OCR fallback.
 - [ ] Production UAT verifies upload → OCR → review/auto-save → audit → monitoring.
 - [ ] Deployment evidence and rollback/disable switch recorded.
 - [ ] Production certification is separate from implemented/deployed status.
@@ -300,9 +301,19 @@ All IDs are server-generated UUIDs. All mutation endpoints validate actor permis
 ## 14. Open implementation prerequisites
 
 1. Confirm the authorized source system/export context and the permitted use/retention of the personal data shown in screenshots.
-2. Approve Google Cloud Vision as the initial OCR processor (or select an approved equivalent) and configure server-only credentials.
-3. Supply a representative labeled sample set containing both screenshot and camera-photo inputs, including examples with all 19 columns and known expected values.
+2. Supply a representative labeled sample set containing both screenshot and camera-photo inputs, including examples with all 19 columns and known expected values.
+3. Validate Tesseract.js compatibility with the Apps Script HTML sandbox and existing deployment asset path; if that is not viable, stop and return a manual-review workflow rather than introducing paid services.
 4. Close P0 security PRs #248/#249 before adding any browser-callable server functions.
-5. Calibrate confidence thresholds using the labeled set; until then, keep auto-save disabled and route all records to review.
+5. Measure local OCR accuracy, browser memory, throughput, and review effort; auto-commit remains disabled in v1.
 
-**Release posture:** design approved; no OCR provider calls, persistent screenshot tables, RPC exposure, production data writes, merge, or deployment are authorized by this document alone.
+## 15. Zero-additional-cost operating rule
+
+The owner requires **Rp0 additional recurring or usage-based cost** for this feature. Accordingly:
+
+- Prohibited in v1: Google Cloud Vision, paid OCR APIs, paid AI APIs, new hosting/CDN subscriptions, new database subscriptions, paid automation services, or any fallback that can incur per-request charges.
+- Reuse only the existing INTAL Apps Script deployment, existing authorized Drive storage, and existing Sheets capacity. Do not upgrade Google Workspace/Drive or enable a paid service to make this feature work.
+- Use browser-local open-source OCR. The browser downloads static runtime/language assets; image content remains on-device until the operator explicitly submits it to the existing INTAL storage workflow.
+- Enforce storage and execution quotas. If existing free capacity is insufficient, pause intake and show a capacity warning; never trigger a paid upgrade or silently route to a paid provider.
+- “Rp0 additional cost” means no new paid service or metered API is introduced. It does not guarantee unlimited storage, bandwidth, device resources, or Google account capacity; those remain subject to existing account quotas.
+
+**Release posture:** cost-free architecture documented; no OCR provider calls, persistent screenshot tables, RPC exposure, production data writes, merge, or deployment are authorized by this document alone.
