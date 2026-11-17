@@ -104,7 +104,8 @@ function buildKanwilWorkspaceAnalyticsV1_(records,filters){
     totalPermohonan:base.totalPermohonan,
     jumlahLayanan:kanwilDistributionV1_(rows,'layanan'),kategoriProduk:kanwilDistributionV1_(rows,'kategori_produk'),
     jenisProduk:kanwilDistributionV1_(rows,'jenis_produk'),kebangsaan:kanwilDistributionV1_(rows,'kebangsaan'),tujuan:kanwilDistributionV1_(rows,'tujuan'),
-    posisiPermohonan:kanwilDistributionV1_(rows,'posisi_permohonan'),statusPermohonan:kanwilDistributionV1_(rows,'status_permohonan'),\n    analisisSilang:{layananKebangsaan:kanwilCrossTabV1_(rows,'layanan','kebangsaan'),layananStatus:kanwilCrossTabV1_(rows,'layanan','status_permohonan'),produkTujuan:kanwilCrossTabV1_(rows,'jenis_produk','tujuan')},
+    posisiPermohonan:kanwilDistributionV1_(rows,'posisi_permohonan'),statusPermohonan:kanwilDistributionV1_(rows,'status_permohonan'),
+    analisisSilang:{layananKebangsaan:kanwilCrossTabV1_(rows,'layanan','kebangsaan'),layananStatus:kanwilCrossTabV1_(rows,'layanan','status_permohonan'),produkTujuan:kanwilCrossTabV1_(rows,'jenis_produk','tujuan')},
     harian:Array.from(daily.entries()).sort((a,b)=>a[0].localeCompare(b[0])).map(([date,count])=>({date,count})),
     bulanan:Array.from(monthly.entries()).sort((a,b)=>a[0].localeCompare(b[0])).map(([month,count])=>({month,count})),
     kualitasData:{missingRequiredFields:missing,duplicateApplicationNumberGroups:duplicateApplicationNumbers}
