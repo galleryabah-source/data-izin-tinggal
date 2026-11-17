@@ -249,3 +249,27 @@ These are pure parser/contract prototypes, not a complete ingestion runtime. No 
 ### Revision and duplicate policy reminder
 
 The staging fingerprint is only a candidate identity (`kanwil_scope_id::nomor_permohonan`). It must not become a database uniqueness constraint until global/scoped uniqueness is confirmed from source exports. Conflicting payloads must retain both source versions and require an authorized reviewer. The revision store must be append-only; no source evidence or prior approved value may be overwritten.
+
+
+## 14. Corrective engineering and validation — 2026-11-17
+
+A source review found malformed generated source in the first XLSX adapter and Kanwil screenshot parser, plus an undeclared cross-module dependency in the staging helper. These were corrected before proceeding:
+
+- Rewrote `KanwilScreenshotParser.js` as a clean 17-column module. It now retains per-field OCR word text, confidence and bounding boxes in `fieldEvidence`.
+- Rewrote `KanwilXlsxAdapter.js` with explicit injected dependencies for the XLSX engine, header mapper and CSV contract parser. This keeps the module testable and avoids relying on undeclared globals.
+- Corrected escaped regular expressions in `KanwilPermitContract.js` so header whitespace, BOM, line endings and strict ISO date checks behave as intended.
+- Made `KanwilStagingContract.js` self-contained with its own fixed v1 field-key list rather than relying on another module's lexical constant.
+- Added `KanwilOcrAdapter.js` to convert Tesseract word-level output to the 17-column geometry parser while preserving confidence and evidence. It explicitly returns `reviewRequired=true` and `autoCommit=false`.
+- Added regression assertions for the OCR adapter and missing word geometry.
+
+### Focused validation executed
+
+The five Kanwil modules were fetched from the feature branch and parsed independently with JavaScript's syntax compiler. A focused synthetic execution then verified:
+- CSV parse returns one record and preserves leading-zero passport number `016199077`.
+- Quoted sponsor text containing a comma remains intact.
+- 17-column screenshot parser reconstructs one synthetic row and retains field confidence.
+- Staging envelope constructs successfully.
+- XLSX adapter finds the header below a title row and retains worksheet row number 3.
+- Direct transition from `REVIEW_REQUIRED` to `COMMITTED` is rejected.
+
+This is focused module-level synthetic validation only. It is not the full repository `test-shim.js`, not a GitHub Actions CI pass, not a real XLSX workbook test, and not a real screenshot/photo accuracy test. The OCR UI is not yet connected to `KanwilOcrAdapter.js`; no runtime ingestion or persistence exists.
