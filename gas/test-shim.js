@@ -72,6 +72,27 @@ let forbiddenRejected=false;
 try{authViewer.requirePermission_('admin.config');}catch(e){forbiddenRejected=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
 assert(forbiddenRejected,'RBAC rejects unauthorized permission');
 assert(authViewer.requirePermission_('dataset.read').role==='VIEWER','RBAC permits assigned permission');
+ 
+// Workspace identity guard remains staged OFF and fails closed when explicitly enabled.
+const makeWorkspaceProps=(values)=>({getScriptProperties:()=>({getProperty:(key)=>values[key]||''})});
+const workspaceIdentity=(email,values)=>{
+  const session={getActiveUser:()=>({getEmail:()=>email})};
+  const fn=new Function('Session','PropertiesService',authCode+'\\nreturn {getWorkspaceIdentityV1_,getCurrentIdentity_};');
+  return fn(session,makeWorkspaceProps(values));
+};
+const validWorkspace=workspaceIdentity('Admin@EXAMPLE.GOV.ID',{INTAL_WORKSPACE_IDENTITY_ENFORCEMENT:'true',INTAL_WORKSPACE_ALLOWED_DOMAINS:'example.gov.id'});
+assert(validWorkspace.getWorkspaceIdentityV1_().email==='admin@example.gov.id','Workspace identity normalizes email');
+assert(validWorkspace.getWorkspaceIdentityV1_().domain==='example.gov.id','Workspace identity checks exact domain');
+let missingWorkspaceIdentity=false;
+try{workspaceIdentity('',{INTAL_WORKSPACE_IDENTITY_ENFORCEMENT:'true',INTAL_WORKSPACE_ALLOWED_DOMAINS:'example.gov.id'}).getWorkspaceIdentityV1_();}catch(e){missingWorkspaceIdentity=String(e.message)==='UNAUTHENTICATED';}
+assert(missingWorkspaceIdentity,'Workspace identity rejects missing active-user email');
+let missingWorkspacePolicy=false;
+try{workspaceIdentity('admin@example.gov.id',{INTAL_WORKSPACE_IDENTITY_ENFORCEMENT:'true'}).getWorkspaceIdentityV1_();}catch(e){missingWorkspacePolicy=String(e.message)==='WORKSPACE_DOMAIN_POLICY_MISSING';}
+assert(missingWorkspacePolicy,'Workspace identity rejects missing domain policy');
+let wrongWorkspaceDomain=false;
+try{workspaceIdentity('admin@gmail.com',{INTAL_WORKSPACE_IDENTITY_ENFORCEMENT:'true',INTAL_WORKSPACE_ALLOWED_DOMAINS:'example.gov.id'}).getWorkspaceIdentityV1_();}catch(e){wrongWorkspaceDomain=String(e.message)==='UNAUTHENTICATED';}
+assert(wrongWorkspaceDomain,'Workspace identity rejects non-allowlisted domain');
+
 
 const periodClosingCode=read('PeriodClosingService.gs');
 assert(periodClosingCode.includes('if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(period))'),'Period closing accepts only valid YYYY-MM calendar months');
