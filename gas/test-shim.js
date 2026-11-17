@@ -1854,3 +1854,24 @@ assert(!kanwilEntryHtml.includes('google.script.run')&&!kanwilEntryHtml.includes
 const kanwilEntryScript=kanwilEntryHtml.match(/<script>([\\s\\S]*?)<\\/script>/i);
 assert(!!kanwilEntryScript,'Kanwil intake shell contains a script block');
 try{new Function(kanwilEntryScript[1]);}catch(e){throw new Error('TEST FAILED: Kanwil intake script syntax: '+e.message);}
+
+/* Kanwil storage boundary: schema, idempotency, revision and audit contracts. */
+const kanwilStorage=require('./KanwilStorageContract.js');
+assert(Object.keys(kanwilStorage.KANWIL_STORAGE_SCHEMAS_V1).length===6,'Kanwil storage contract defines exactly six isolated stores');
+assert(kanwilStorage.KANWIL_STORAGE_SCHEMAS_V1.KANWIL_APPLICATION_STAGING.includes('idempotency_key'),'Kanwil staging store persists a deterministic idempotency key');
+assert(kanwilStorage.KANWIL_STORAGE_SCHEMAS_V1.KANWIL_APPLICATION_EVENTS.includes('event_sequence'),'Kanwil event journal has an explicit sequence');
+const batchDescriptor=kanwilStorage.createKanwilBatchDescriptorV1({batchId:'b-1',kanwilScopeId:'KANWIL-JABAR',sourceChannel:'CSV',contractVersion:'KANWIL_PERMIT_APPLICATION_V1',parserVersion:'csv-v1',createdBy:'operator-1',correlationId:'corr-1'});
+assert(batchDescriptor.ok&&batchDescriptor.batch.state==='CREATED','Kanwil batch descriptor requires explicit scope and provenance');
+assert(!kanwilStorage.createKanwilBatchDescriptorV1({batchId:'b-1',sourceChannel:'CSV'}).ok,'Kanwil batch fails closed without explicit scope and provenance');
+const idempotency=kanwilStorage.buildKanwilIdempotencyDescriptorV1({kanwilScopeId:'KANWIL-JABAR',sourceFileSha256:'a'.repeat(64),contractVersion:'v1',parserVersion:'p1',sourceRowNumber:3});
+assert(idempotency.ok&&idempotency.key.endsWith('|3'),'Kanwil idempotency key binds scope, checksum, versions and source row');
+assert(!kanwilStorage.buildKanwilIdempotencyDescriptorV1({kanwilScopeId:'KANWIL-JABAR',sourceFileSha256:'bad',contractVersion:'v1',parserVersion:'p1',sourceRowNumber:3}).ok,'Kanwil idempotency rejects a non-SHA256 checksum');
+const revision=kanwilStorage.validateKanwilRevisionAppendV1({recordId:'r1',actorId:'u1',correlationId:'c1',payloadSha256:'b'.repeat(64),currentRevision:1,nextRevision:2,reason:'Koreksi berdasarkan sumber asli'});
+assert(revision.ok&&revision.revision.revision===2,'Kanwil revision append requires actor, reason and sequential revision');
+assert(!kanwilStorage.validateKanwilRevisionAppendV1({recordId:'r1',actorId:'u1',correlationId:'c1',payloadSha256:'b'.repeat(64),currentRevision:1,nextRevision:3,reason:'Koreksi'}).ok,'Kanwil revision rejects skipped revision sequence');
+assert(!kanwilStorage.validateKanwilRevisionAppendV1({recordId:'r1',actorId:'u1',correlationId:'c1',payloadSha256:'b'.repeat(64),currentRevision:1,nextRevision:2}).ok,'Kanwil revision requires an explicit reason');
+const audit=kanwilStorage.validateKanwilAuditEventV1({auditId:'a1',actorId:'u1',action:'APPROVE',reason:'Dokumen diverifikasi',correlationId:'c1',occurredAt:'2026-11-17T07:00:00+07:00'});
+assert(audit.ok&&audit.event.actor_id==='u1','Kanwil audit event records actor, action, reason and correlation');
+assert(!kanwilStorage.validateKanwilAuditEventV1({auditId:'a1',action:'APPROVE'}).ok,'Kanwil audit event fails closed without actor and reason');
+const duplicate=kanwilStorage.classifyKanwilDuplicateCandidateV1({kanwilScopeId:'KANWIL-JABAR',applicationNumber:'00123',payloadSha256:'c'.repeat(64)},{kanwilScopeId:'KANWIL-JABAR',applicationNumber:'00123',payloadSha256:'d'.repeat(64)});
+assert(duplicate.ok&&duplicate.candidate&&duplicate.outcome==='PAYLOAD_CONFLICT_CANDIDATE'&&!duplicate.enforceUnique&&duplicate.requiresHumanResolution,'Kanwil duplicate matching is a review candidate and never silently enforces uniqueness');
