@@ -2291,7 +2291,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     'Duplicate retry rejection still releases the script lock');
   importPeriodClosed=true;
   let closedPeriodRejected=false;
-  try{importRuntime.commitImport('periode\tkantor_imigrasi\n2026-09\tKANIM TEST');}
+  try{importRuntime.commitImport('periode\tkantor_imigrasi\n2026-09\tKANIM CLOSED');}
   catch(e){closedPeriodRejected=String(e&&e.message||e).startsWith('PERIOD_CLOSED:');}
   assert(closedPeriodRejected&&dataSheet.rows.length===2&&importDatasetCreates===1,
     'A closed-period import is rejected before dataset creation or canonical writes');
