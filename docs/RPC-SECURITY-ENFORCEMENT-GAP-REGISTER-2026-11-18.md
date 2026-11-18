@@ -161,3 +161,8 @@ This reduces known blind spots but does not prove complete absence of side effec
 The CI harness now executes the public dashboard and map sanitizers against deliberately contaminated fixtures containing identity, permission, user, and raw-row fields. It asserts exact top-level and nested response keys. It also exercises the running-text data path with active and inactive rows and verifies that the anonymous endpoint returns only active content strings, not content IDs or creator metadata.
 
 Coverage is intentionally partial: the current executable projection tests cover dashboard, map, and running-text responses. Analytical running text, Passport YoY responses, office-level YoY, service-point references, and M-Paspor quota still require their own exact response-schema and data-publication review before Public TV can be production-certified.
+
+
+Additional Public TV contract coverage now executes the analytical running-text adapter against a controlled reporting fixture and enforces an allowlist of narrative fields. The service-point reference endpoint is also exercised and its point records are constrained to the declared public reference fields, including explicit coordinate/reference status.
+
+The remaining public response contracts still needing dedicated executable fixtures are Passport YoY, office-level Passport YoY, Passport service YoY, and M-Paspor quota. Their publication approval and live response verification remain separate release gates.
