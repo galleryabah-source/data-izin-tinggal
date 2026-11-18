@@ -2680,12 +2680,14 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   const snapshotRegistry={
     getDataRange:()=>({getValues:()=>[
       ['dataset_key','status','sheet_name','schema_signature'],
-      ['RESIDENCE_PERMIT_SERVICE_MONTHLY','ACTIVE','DATA_RESIDENCE','residence-signature']
+      ['RESIDENCE_PERMIT_SERVICE_MONTHLY','ACTIVE','DATA_RESIDENCE','residence-signature'],
+      ['PASSPORT_SERVICE_MONTHLY','ACTIVE','DATA_PASSPORT_SERVICE_MONTHLY','passport-signature'],
+      ['PASSPORT_SERVICE_MONTHLY_2025','ACTIVE','DATA_PASSPORT_SERVICE_MONTHLY_2025','passport-2025-signature']
     ]})
   };
   const snapshotSource={
     getId:()=> 'source-spreadsheet-123456',
-    getSheetByName:name=>name==='DATASET_REGISTRY'?snapshotRegistry:(name==='DATA_RESIDENCE'?snapshotSourceSheet:null)
+    getSheetByName:name=>name==='DATASET_REGISTRY'?snapshotRegistry:(name==='DATA_RESIDENCE'||name==='DATA_PASSPORT_SERVICE_MONTHLY'||name==='DATA_PASSPORT_SERVICE_MONTHLY_2025'?snapshotSourceSheet:null)
   };
   const snapshotContract={
     version:'1',
@@ -2702,8 +2704,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   function makeSnapshotRuntime(auditShouldFail){
     const created=[];
     const runtime=new Function(
-      'requirePermission_','backupConfig_','getDb_','getActiveDatasetContract_',
-      'APP','SHEETS','Utilities','SpreadsheetApp','DriveApp','PropertiesService',
+      'requirePermission_','backupConfig_','getDb_','APP','SHEETS','DATASET_CONTRACTS','Utilities','SpreadsheetApp','DriveApp','PropertiesService',
       'appendAudit_','nowIso_','LockService','Logger',
       read('BackupService.gs')+'\n'+read('PassportGovernanceService.gs')+
       '\nreturn {createResidencePermitSnapshot,createPassportServiceSnapshot,createPassportServiceMonthly2025Snapshot};'
@@ -2711,13 +2712,13 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
       ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
       ()=>({folderId:'backup-folder-123456'}),
       ()=>snapshotSource,
-      key=>Object.assign({},snapshotDataset,{
-        contract:Object.assign({},snapshotContract,{version:key==='PASSPORT_SERVICE_MONTHLY_2025'?'1':'1'}),
-        sheetName:'DATA_'+key,
-        registryRow:{schema_signature:key==='PASSPORT_SERVICE_MONTHLY_2025'?'passport-2025-signature':'passport-signature'}
-      }),
       {TZ:'Asia/Jakarta',SHEET_PREFIX:'DATA_'},
       {DATASET_REGISTRY:'DATASET_REGISTRY'},
+      {
+        RESIDENCE_PERMIT_SERVICE_MONTHLY:{version:'1',derived:['total'],measures:['layanan_a']},
+        PASSPORT_SERVICE_MONTHLY:{version:'1',derived:['total'],measures:['layanan_a']},
+        PASSPORT_SERVICE_MONTHLY_2025:{version:'1',derived:['total'],measures:['layanan_a']}
+      },
       {
         DigestAlgorithm:{SHA_256:'SHA_256'},Charset:{UTF_8:'UTF_8'},
         computeDigest:()=>[1,2,3,4],
