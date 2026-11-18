@@ -1816,7 +1816,7 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
 const publicRunningTextSource=read('PublicTvService.gs');
 const publicRunningTextEndpoint=new Function(
   'getActiveRunningTexts_',
-  publicRunningTextSource+'\\nreturn getPublicTvRunningTexts;'
+  publicRunningTextSource+'\nreturn getPublicTvRunningTexts;'
 )(()=>['NAMA PEMOHON','NO PASPOR X1234567','konten administrasi internal']);
 assert(JSON.stringify(publicRunningTextEndpoint())==='[]',
   'Public TV does not expose administrator-authored running text without explicit public approval');
