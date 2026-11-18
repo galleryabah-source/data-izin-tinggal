@@ -272,3 +272,18 @@ A controlled runtime fixture now exercises `verifyOfficeReferenceCoordinatesV1()
 GitHub Actions `RPC Security Contract` run #114 (run ID `44248167227`) completed SUCCESS for code head `bfc3bd79978324f7ebdb1022b608ddb743075d9e`; the full `npm test` command passed.
 
 **Scope limitation:** coordinate values are fixture inputs from the existing service implementation. This test does not independently validate the geographic correctness of those coordinates, the source URLs, or the real office-reference sheet ACL. Those remain separate data-owner and deployment verification tasks.
+
+
+### P0 — Import commit is not failure-atomic across canonical data, registry/cache, log, and audit
+
+**Source evidence:** `gas/ImportService.gs` `commitImport()` appends accepted rows to the canonical dataset first, updates the registry row count, bumps the read-cache generation, appends `IMPORT_LOG`, then appends `AUDIT_LOG`. The `finally` block releases the script lock, but there is no compensating rollback or durable recovery state for a failure after the canonical write. A failure at the import-log or audit stage can therefore return an RPC error while some earlier side effects remain committed. The existing success fixture verifies the normal path only; the new failure-injection characterization fixture deliberately throws from `appendAudit_()` after the canonical row and import-log append and records the resulting partial-success state.
+
+**Required remediation before production certification:** introduce a durable import lifecycle/recovery contract (for example, a batch state with PREPARING/COMMITTED/FAILED and deterministic recovery/reconciliation), or a carefully verified compensating-write protocol. Define which side effects are authoritative, how row-count/cache generation are reconciled, how an audit append failure is surfaced, and how retries avoid duplicate business keys and duplicate batch effects. Do not claim cross-sheet atomicity from `LockService`; it serializes cooperating script executions but does not provide a multi-sheet transaction.
+
+### P0 — Google Sheets source provenance is committed separately from canonical import
+
+**Source evidence:** `gas/SourceConnectorService.gs` `commitGoogleSourceImport()` adapts the external source, calls `commitImport()` (which completes its canonical/import-log/audit sequence), and only afterwards calls `appendAudit_('IMPORT_SOURCE_COMMIT', ...)` with source spreadsheet and sheet provenance. If this second audit append fails, the RPC throws after the canonical import has already succeeded. The source adapter is read-only against the external spreadsheet, but provenance and canonical commit are not one atomic lifecycle.
+
+**Required remediation before production certification:** move immutable source provenance into the same durable batch lifecycle as the canonical import, so the batch record contains source type, spreadsheet ID, spreadsheet name, sheet name, source schema signature, and contract version before/with commit finalization. Provide an idempotent reconciliation path for a committed batch whose provenance record is incomplete. A separate post-commit audit call must not be the sole source-provenance record.
+
+**Classification:** both findings are P0 integrity gaps. The characterization fixtures demonstrate the failure ordering in controlled dependencies; they do not establish production rollback behavior, nor do they modify production data. No runtime fix, deployment, or canonical baseline change is included in this audit-only change.
