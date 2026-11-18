@@ -154,3 +154,10 @@ This remains a bounded sink list, not a complete side-effect/data-flow proof. Dy
 The transitive effect collector now emits explicit blockers for computed member invocation (for example, `target[method]()`), dynamic code execution through `eval` / `Function`, template interpolation, and malformed function syntax. Public-read-only and stateless-validation CI contracts reject these blockers in their reachable helper paths. A regression fixture initially exposed that the effect collector did not carry the computed-call finding from the function extractor; the collector was corrected to detect the pattern directly in each reachable function body, and the next CI run passed.
 
 This reduces known blind spots but does not prove complete absence of side effects. The sink inventory and lexical parser remain intentionally bounded.
+
+
+### Public TV projection regression coverage
+
+The CI harness now executes the public dashboard and map sanitizers against deliberately contaminated fixtures containing identity, permission, user, and raw-row fields. It asserts exact top-level and nested response keys. It also exercises the running-text data path with active and inactive rows and verifies that the anonymous endpoint returns only active content strings, not content IDs or creator metadata.
+
+Coverage is intentionally partial: the current executable projection tests cover dashboard, map, and running-text responses. Analytical running text, Passport YoY responses, office-level YoY, service-point references, and M-Paspor quota still require their own exact response-schema and data-publication review before Public TV can be production-certified.
