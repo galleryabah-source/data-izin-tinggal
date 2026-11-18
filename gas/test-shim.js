@@ -2475,3 +2475,25 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   assert(validOfficeAudits===2&&validOfficeLockReleases===2,
     'Office-reference verification records each authorized result and releases the lock on both calls');
 }
+
+
+/* Characterize Google Sheets provenance audit failure after canonical import commit. */
+{
+  let sourceImportCommits=0,sourceAuditAttempts=0;
+  const sourceSchema={contractKey:'PASSPORT_SERVICE_MONTHLY',datasetKey:'PASSPORT_SERVICE_MONTHLY',signature:'passport-source-test',contractVersion:'1'};
+  const sourceRuntime=new Function(
+    'requirePermission_','adaptGoogleSourceMatrix_','detectSchema_','commitImport','appendAudit_',
+    read('SourceConnectorService.gs')+'\\nreturn {commitGoogleSourceImport};'
+  )(
+    ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    ()=>({spreadsheetId:'source-spreadsheet-id-1234567890',spreadsheetName:'Source Fixture',sheetName:'September',sourceHeaders:['Periode','Kantor Imigrasi'],sourceColumns:['periode','kantor_imigrasi'],rows:[['2026-09','KANIM TEST']]}),
+    ()=>sourceSchema,
+    ()=>{sourceImportCommits++;return {ok:true,batchId:'batch-source-001',datasetKey:'PASSPORT_SERVICE_MONTHLY',inserted:1};},
+    ()=>{sourceAuditAttempts++;throw new Error('SOURCE_PROVENANCE_AUDIT_FAILED');}
+  );
+  let provenanceFailureReturned=false;
+  try{sourceRuntime.commitGoogleSourceImport({datasetKey:'PASSPORT_SERVICE_MONTHLY',sheetName:'September'});}
+  catch(e){provenanceFailureReturned=String(e&&e.message||e)==='SOURCE_PROVENANCE_AUDIT_FAILED';}
+  assert(provenanceFailureReturned&&sourceImportCommits===1&&sourceAuditAttempts===1,
+    'Characterization: Google source RPC reports provenance audit failure after canonical commitImport has already succeeded (known split-commit gap)');
+}
