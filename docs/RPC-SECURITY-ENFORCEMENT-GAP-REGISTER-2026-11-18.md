@@ -395,3 +395,24 @@ This is a high-impact trust boundary: requests may originate from anonymous web 
 5. Reassess whether `USER_DEPLOYING` plus `ANYONE_ANONYMOUS` remains appropriate after the RPC authorization audit. Any manifest/deployment change requires a separate approved change and deployment verification.
 
 **Evidence limitation:** this finding is based on the checked-in manifest, not a live deployment inspection. It does not establish which deployment version is currently active or prove its effective access configuration. No manifest, deployment, Workspace identity flag, ACL, Script Properties, or production runtime was changed.
+
+### Authorized snapshot creation fixture and audit-failure characterization
+
+The controlled Node.js runtime suite now exercises the authorized creation paths for:
+- `createResidencePermitSnapshot()`
+- `createPassportServiceSnapshot()`
+- `createPassportServiceMonthly2025Snapshot()`
+
+Using isolated Spreadsheet/Drive service doubles, the fixture verifies:
+- Each RPC creates a snapshot artifact with a dataset sheet and `SNAPSHOT_MANIFEST`.
+- The manifest contains the header and ten declared metadata entries, including `snapshot_id`, creation time, dataset identity, schema signature, source identity, row count, checksum, and COMPLETE status.
+- The data sheet receives the controlled source header and row.
+- Each artifact is moved into the configured backup folder through the Drive double.
+- One successful `BACKUP_SNAPSHOT_CREATE` audit event is emitted per artifact.
+- The source fixture is unchanged.
+
+A separate failure-injection case forces `appendAudit_()` to throw after Residence snapshot creation and folder placement. The RPC returns `SNAPSHOT_AUDIT_FAILED` while the artifact remains created and placed in the folder. This confirms the already documented P0 reconciliation gap; it is a characterization test, not a runtime fix.
+
+GitHub Actions RPC Security Contract run #144 (run ID `44268796387`) passed the repository test suite on code head `4cb85d5b3d01a6d3831c736bdadbdad0b1678311`.
+
+**Limitations:** These tests use controlled doubles only. They do not validate real Drive file type/parents, actual Spreadsheet writes/flush behavior, concurrent requests, quota/timeouts, cleanup/reconciliation, real ACLs, or production deployment identity. No real backup artifact was created; no Drive configuration, canonical source data, restore capability, or deployment was changed.
