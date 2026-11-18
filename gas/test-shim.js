@@ -932,6 +932,7 @@ const doGetCode=read('Code.gs');
 const doGetFixture=(permissionError,backOfficeError,currentUser)=> {
   const calls={permission:[],backOffice:0,template:null};
   const htmlService={
+    XFrameOptionsMode:{ALLOWALL:'ALLOWALL'},
     createTemplateFromFile:(name)=>{calls.template=name;return {evaluate:()=>({setTitle:()=>({setXFrameOptionsMode:()=>({ok:true})})})};}
   };
   const fn=new Function('requirePermission_','requireBackOfficeAccess_','getCurrentUser_','HtmlService','APP',
