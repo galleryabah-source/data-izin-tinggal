@@ -59,7 +59,7 @@ function extract(s){
     }
     const b=clean.indexOf('{',i);
     assert.notEqual(b,-1,'Function has opening brace: '+m[1]);
-    out.set(m[1],bodyAt(s,b));
+    try{out.set(m[1],bodyAt(s,b));}catch(error){throw new Error('Function body parser failed for '+m[1]+': '+error.message);}
   }
   return out;
 }
