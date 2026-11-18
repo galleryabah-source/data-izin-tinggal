@@ -2255,7 +2255,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   const importRuntime=new Function(
     'requirePermission_','detectSchema_','LockService','getDatasetBySignature_','DATASET_CONTRACTS',
     'assertPeriodsOpenForImport_','ensureDataset_','getDb_','Utilities',
-    'updateDatasetRowCount_','bumpReadCacheGeneration_','appendAudit_','nowIso_','SpreadsheetApp','APP',
+    'updateDatasetRowCount_','bumpReadCacheGeneration_','appendAudit_','nowIso_','SpreadsheetApp','APP','SHEETS',
     read('ImportService.gs')+'\nreturn {commitImport};'
   )(
     ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
@@ -2272,7 +2272,8 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     ()=>{importAudits++;},
     ()=> '2026-11-18T02:00:00.000Z',
     {flush:()=>{}},
-    {MAX_IMPORT_ROWS:1000,TZ:'Asia/Jakarta'}
+    {MAX_IMPORT_ROWS:1000,TZ:'Asia/Jakarta'},
+    {IMPORT_LOG:'IMPORT_LOG'}
   );
   const first=importRuntime.commitImport('periode\tkantor_imigrasi\n2026-09\tKANIM TEST');
   assert(first.ok&&first.inserted===1&&first.datasetKey==='PASSPORT_SERVICE_MONTHLY',
