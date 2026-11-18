@@ -2301,3 +2301,77 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   assert(importPeriodChecks===2,
     'Period closure policy is evaluated for first commit and duplicate retry, but not for an empty valid-row set');
 }
+
+
+/* Authorized period-close lifecycle: close, idempotent retry, reopen, and clean re-close. */
+{
+  class PeriodFakeRange {
+    constructor(sheet,row,col,numRows=1,numCols=1){this.sheet=sheet;this.row=row;this.col=col;this.numRows=numRows;this.numCols=numCols;}
+    getValues(){
+      const out=[];
+      for(let r=0;r<this.numRows;r++){
+        const row=[];
+        for(let c=0;c<this.numCols;c++)row.push((this.sheet.rows[this.row-1+r]||[])[this.col-1+c]??'');
+        out.push(row);
+      }
+      return out;
+    }
+    setValues(values){
+      for(let r=0;r<values.length;r++){
+        while(this.sheet.rows.length<this.row+r)this.sheet.rows.push([]);
+        for(let c=0;c<values[r].length;c++)this.sheet.rows[this.row-1+r][this.col-1+c]=values[r][c];
+      }
+      return this;
+    }
+    setValue(value){return this.setValues([[value]]);}
+    clearContent(){return this.setValue('');}
+  }
+  class PeriodFakeSheet {
+    constructor(rows=[]){this.rows=rows.map(r=>r.slice());}
+    getDataRange(){return new PeriodFakeRange(this,1,1,Math.max(1,this.getLastRow()),Math.max(1,this.getLastColumn()));}
+    getRange(row,col,numRows=1,numCols=1){return new PeriodFakeRange(this,row,col,numRows,numCols);}
+    getLastRow(){return this.rows.length;}
+    getLastColumn(){return this.rows.reduce((n,r)=>Math.max(n,r.length),0);}
+    appendRow(row){this.rows.push(row.slice());return this;}
+    setFrozenRows(n){this.frozenRows=n;return this;}
+  }
+  const closureHeaders=['closure_id','dataset_key','periode','status','closed_by','closed_at','reason','reopened_by','reopened_at','reopen_reason'];
+  const closureSheet=new PeriodFakeSheet([closureHeaders]);
+  const periodDb={getSheetByName:(name)=>name==='PERIOD_CLOSURES'?closureSheet:null,insertSheet:()=>closureSheet};
+  let periodLockWaits=0,periodLockReleases=0,periodAuditEvents=0;
+  const periodRuntime=new Function(
+    'requirePermission_','LockService','DATASET_CONTRACTS','getDb_','SHEETS',
+    'getServiceDashboard_','nowIso_','Utilities','appendAudit_',
+    read('PeriodClosingService.gs')+'\\nreturn {closePeriod,reopenPeriod};'
+  )(
+    ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    {getScriptLock:()=>({waitLock:()=>{periodLockWaits++;},releaseLock:()=>{periodLockReleases++;}})},
+    {PASSPORT_SERVICE_MONTHLY:{measures:['biasa_24','biasa_48']}},
+    ()=>periodDb,
+    {PERIOD_CLOSURES:'PERIOD_CLOSURES'},
+    ()=>({rowCount:80,grandTotal:327088}),
+    ()=> '2026-11-18T02:30:00.000Z',
+    {getUuid:()=> 'closure-test-001'},
+    ()=>{periodAuditEvents++;}
+  );
+  const closed=periodRuntime.closePeriod('PASSPORT_SERVICE_MONTHLY','2026-09','Rekonsiliasi selesai');
+  assert(closed.ok&&closed.status==='CLOSED'&&closed.rowCount===80,
+    'Authorized closePeriod records a CLOSED period with source row count');
+  assert(closureSheet.rows.length===2&&closureSheet.rows[1][3]==='CLOSED'&&periodAuditEvents===1,
+    'Period close writes one closure record and one audit event');
+  const repeatedClose=periodRuntime.closePeriod('PASSPORT_SERVICE_MONTHLY','2026-09','Rekonsiliasi selesai');
+  assert(repeatedClose.alreadyClosed===true&&closureSheet.rows.length===2&&periodAuditEvents===1,
+    'Repeated close is idempotent and does not append another closure or audit event');
+  const reopened=periodRuntime.reopenPeriod('PASSPORT_SERVICE_MONTHLY','2026-09','Koreksi terkontrol');
+  assert(reopened.status==='OPEN'&&reopened.correctionRequired===true,
+    'Authorized reopenPeriod records an OPEN period and requires controlled correction');
+  assert(closureSheet.rows[1][3]==='OPEN'&&closureSheet.rows[1][9]==='Koreksi terkontrol'&&periodAuditEvents===2,
+    'Period reopen stores its reason and appends a separate audit event');
+  const reclosed=periodRuntime.closePeriod('PASSPORT_SERVICE_MONTHLY','2026-09','Koreksi selesai');
+  assert(reclosed.status==='CLOSED'&&closureSheet.rows[1][3]==='CLOSED',
+    'A reopened period can be formally closed again after correction');
+  assert(closureSheet.rows[1][7]===''&&closureSheet.rows[1][8]===''&&closureSheet.rows[1][9]==='',
+    'Re-closing clears stale reopen actor, timestamp, and reason metadata');
+  assert(periodAuditEvents===3&&periodLockWaits===4&&periodLockReleases===4,
+    'Close/reopen audit counts and script-lock release counts match all four authorized calls');
+}
