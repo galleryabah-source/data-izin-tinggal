@@ -1811,6 +1811,34 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
   }
 }
 
+
+/* Public INTAL TV projection must be aggregate-only, even if private cores return extra fields. */
+const publicTvSource=read('PublicTvService.gs');
+const publicTvSanitizers=new Function(publicTvSource+'\nreturn {sanitizePublicTvDashboard_,sanitizePublicTvMap_};')();
+const publicTvUnsafeDashboard={
+  datasetKey:'PASSPORT_SERVICE_MONTHLY',rowCount:1,metric:'total',grandTotal:9,
+  applicantName:'PRIVATE NAME',passportNumber:'X1234567',applicationNumber:'APP-001',
+  rows:[{nama:'PRIVATE NAME',no_paspor:'X1234567'}],
+  monthly:[{periode:'2026-01',total:9,rows:1,nama:'PRIVATE NAME'}],
+  offices:[{kantor_imigrasi:'KANIM UJI',total:9,rows:1,no_paspor:'X1234567'}],
+  services:[{key:'biasa_24',total:9,nama:'PRIVATE NAME'}],
+  filters:{periode:'2026-01',kantor_imigrasi:'KANIM UJI',metric:'total',availablePeriods:['2026-01'],availableOffices:['KANIM UJI'],rawRows:[{nama:'PRIVATE NAME'}]},
+  users:[{email:'private@example.gov.id'}]
+};
+const publicTvSafeDashboard=publicTvSanitizers.sanitizePublicTvDashboard_(publicTvUnsafeDashboard);
+const publicTvSafeDashboardJson=JSON.stringify(publicTvSafeDashboard);
+assert(!['PRIVATE NAME','X1234567','APP-001','private@example.gov.id','rawRows','applicantName'].some(x=>publicTvSafeDashboardJson.includes(x)),'Public TV dashboard projection strips PII and unapproved fields');
+assert(publicTvSafeDashboard.monthly[0].total===9&&publicTvSafeDashboard.offices[0].kantor_imigrasi==='KANIM UJI','Public TV dashboard retains approved aggregate fields');
+const publicTvSafeMap=publicTvSanitizers.sanitizePublicTvMap_({
+  datasetKey:'PASSPORT_SERVICE_MONTHLY',rowCount:1,metric:'total',
+  filters:{periode:'2026-01',kantor_imigrasi:'KANIM UJI',metric:'total',rawRows:[{nama:'PRIVATE NAME'}]},
+  markers:[{kantor_imigrasi:'KANIM UJI',latitude:-6.9,longitude:107.6,total:9,metricValue:9,rows:1,nama:'PRIVATE NAME',no_paspor:'X1234567'}],
+  rawRows:[{nama:'PRIVATE NAME'}]
+});
+const publicTvSafeMapJson=JSON.stringify(publicTvSafeMap);
+assert(!['PRIVATE NAME','X1234567','rawRows'].some(x=>publicTvSafeMapJson.includes(x)),'Public TV map projection strips PII and raw rows');
+assert(publicTvSafeMap.markers[0].total===9&&publicTvSafeMap.markers[0].latitude===-6.9,'Public TV map retains approved aggregate and coordinate fields');
+
 /* Kanwil service entry route and review-only boundary. */
 const kanwilRouteSource=read('Code.gs');
 assert(kanwilRouteSource.includes("else if(view==='kanwil')requireBackOfficeAccess_()"),'Kanwil entry route requires authenticated back-office access');
