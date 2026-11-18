@@ -2705,8 +2705,8 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
       'requirePermission_','backupConfig_','getDb_','getActiveDatasetContract_',
       'APP','SHEETS','Utilities','SpreadsheetApp','DriveApp','PropertiesService',
       'appendAudit_','nowIso_','LockService','Logger',
-      read('BackupService.gs')+'\\n'+read('PassportGovernanceService.gs')+
-      '\\nreturn {createResidencePermitSnapshot,createPassportServiceSnapshot,createPassportServiceMonthly2025Snapshot};'
+      read('BackupService.gs')+'\n'+read('PassportGovernanceService.gs')+
+      '\nreturn {createResidencePermitSnapshot,createPassportServiceSnapshot,createPassportServiceMonthly2025Snapshot};'
     )(
       ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
       ()=>({folderId:'backup-folder-123456'}),
