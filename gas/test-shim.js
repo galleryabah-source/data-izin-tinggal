@@ -1849,21 +1849,21 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
 
 /* Public TV response projection and running-text privacy regressions. */
 const publicTvCode=read('PublicTvService.gs');
-const publicTvRuntime=new Function('getActiveRunningTexts_',publicTvCode+'\\nreturn {getPublicTvRunningTexts,sanitizePublicTvDashboard_,sanitizePublicTvMap_};')(()=>['Informasi layanan']);
+const publicTvRuntime=new Function('getActiveRunningTexts_',publicTvCode+'\nreturn {getPublicTvRunningTexts,sanitizePublicTvDashboard_,sanitizePublicTvMap_};')(()=>['Informasi layanan']);
 const runningTextRows=[
   ['content_id','content','status','priority','start_at','end_at','created_by','created_at','updated_at'],
   ['secret-id-1','Informasi layanan publik','ACTIVE',1,'','','admin@example.gov.id','2026-11-18T00:00:00Z','2026-11-18T00:00:00Z'],
   ['secret-id-2','Teks tidak aktif','INACTIVE',2,'','','operator@example.gov.id','','']
 ];
 const runningTextSheet={getDataRange:()=>({getValues:()=>runningTextRows})};
-const codeRuntime=new Function('getDb_','SHEETS','readCacheKey_','readCacheGet_','readCachePut_',read('Code.gs')+'\\nreturn {getActiveRunningTexts_};')(
+const codeRuntime=new Function('getDb_','SHEETS','readCacheKey_','readCacheGet_','readCachePut_',read('Code.gs')+'\nreturn {getActiveRunningTexts_};')(
   ()=>({getSheetByName:()=>runningTextSheet}),
   {RUNNING_TEXTS:'RUNNING_TEXTS'},
   ()=> 'running-text-test',
   ()=> null,
   (_key,value)=>value
 );
-const publicRunningTexts=new Function('getActiveRunningTexts_',publicTvCode+'\\nreturn getPublicTvRunningTexts;')(codeRuntime.getActiveRunningTexts_)();
+const publicRunningTexts=new Function('getActiveRunningTexts_',publicTvCode+'\nreturn getPublicTvRunningTexts;')(codeRuntime.getActiveRunningTexts_)();
 assert(Array.isArray(publicRunningTexts)&&publicRunningTexts.length===1&&publicRunningTexts[0]==='Informasi layanan publik',
   'Anonymous running-text RPC returns active content strings only');
 assert(!JSON.stringify(publicRunningTexts).includes('secret-id-1')&&!JSON.stringify(publicRunningTexts).includes('admin@example.gov.id'),
