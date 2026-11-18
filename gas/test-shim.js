@@ -2745,7 +2745,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
       },
       {
         getFolderById:id=>({addFile:file=>{file.folderId=id;file.inFolder=true;}}),
-        getFileById:id=>({id,getParents:()=>({hasNext:()=>false}),getName:()=> 'snapshot'}),
+        getFileById:id=>created.find(file=>file.id===id)||({id,getParents:()=>({hasNext:()=>false}),getName:()=> 'snapshot'}),
         getRootFolder:()=>({removeFile:()=>{}})
       },
       {getScriptProperties:()=>({getProperty:()=> 'backup-folder-123456'})},
