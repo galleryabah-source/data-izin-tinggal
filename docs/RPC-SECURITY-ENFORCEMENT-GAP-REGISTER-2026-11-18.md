@@ -298,3 +298,19 @@ Two deterministic failure-injection fixtures now characterize the non-atomic fai
 GitHub Actions `RPC Security Contract` run #126 (run ID `44256950504`) completed SUCCESS for code head `deac5cf041febc43798fe8c605672e9f955a52bb`; the full `npm test` suite passed.
 
 **Important interpretation:** these are characterization tests that intentionally assert the currently observed unsafe partial-commit behavior. They make the P0 failure modes reproducible; they do not represent a fix. The next code change must replace these assertions with safe recovery/idempotency assertions once a durable batch lifecycle is implemented. Until then, the two import paths remain uncertified for production failure recovery.
+
+
+### Required transactional-import remediation contract (design gate; not implemented here)
+
+The current import RPCs do not accept a durable caller idempotency key. `commitImport()` generates a new UUID batch ID inside the commit path, after validation, while `commitGoogleSourceImport()` has no source checksum/range identity in the canonical batch record. Therefore, after a canonical commit followed by provenance-audit failure, a caller retry is likely to be treated as a duplicate business key rather than reconciling the incomplete provenance record.
+
+Before changing runtime code, the remediation must define and test these invariants:
+1. **Stable request identity:** derive/accept a request idempotency key bound to dataset key, contract/schema version, normalized payload checksum, and (for Google Sheets) source spreadsheet ID, sheet ID/name, selected source range or bounded source snapshot, and source checksum. Reuse with different content must fail closed.
+2. **Durable batch state:** persist a batch record with explicit states such as `PREPARED`, `DATA_WRITTEN`, `FINALIZED`, `FAILED_REQUIRES_RECONCILIATION`, and `RECONCILED`. State transitions must be monotonic and auditable.
+3. **Commit authority:** define exactly when the batch is considered committed. The API must not report a generic failure after durable commit without returning a stable batch identity and a machine-readable `committed`/`reconciliationRequired` state.
+4. **Recoverability:** a retry with the same idempotency key must resume/reconcile the existing batch, not append a second dataset row, log, or provenance event. A recovery operation must verify the expected canonical row set and reconcile registry row count/cache generation from physical data.
+5. **Provenance coupling:** source metadata/checksum must be persisted as part of the batch record before finalization; a post-commit best-effort audit append cannot be the only provenance store.
+6. **Failure injection:** test throws after each side-effect boundary (batch prepare, dataset append, registry count, cache generation, import log, audit/provenance, flush), process interruption/retry, duplicate request concurrency, and lock release. Assert no silent partial commit and deterministic reconciliation.
+7. **Operational controls:** recovery must be admin-authorized, separately audited, dry-run capable, and unable to rewrite historical monthly baselines without explicit governed correction. Do not enable automatic deletion/rollback of canonical rows until collision and concurrent-write safety are proven.
+
+**Design constraint:** Apps Script `LockService` serializes cooperating executions; it is not a database transaction across Spreadsheet tabs, Drive files, and Script Properties. A durable state machine plus idempotent reconciliation is required; a `try/finally` lock release alone is insufficient.
