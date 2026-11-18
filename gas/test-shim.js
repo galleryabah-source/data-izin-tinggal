@@ -2660,13 +2660,20 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   const snapshotArtifacts=[];
   let snapshotSequence=0;
   class SnapshotFakeRange {
-    constructor(sheet){this.sheet=sheet;}
-    setValues(values){this.sheet.rows=values.map(row=>row.slice());return this;}
+    constructor(sheet,row,col){this.sheet=sheet;this.row=row;this.col=col;}
+    setValues(values){
+      for(let r=0;r<values.length;r++){
+        while(this.sheet.rows.length<this.row-1+r)this.sheet.rows.push([]);
+        const target=this.sheet.rows[this.row-1+r]||(this.sheet.rows[this.row-1+r]=[]);
+        for(let c=0;c<values[r].length;c++)target[this.col-1+c]=values[r][c];
+      }
+      return this;
+    }
   }
   class SnapshotFakeSheet {
     constructor(name){this.name=name;this.rows=[];this.frozenRows=0;}
     setName(name){this.name=name;return this;}
-    getRange(){return new SnapshotFakeRange(this);}
+    getRange(row,col){return new SnapshotFakeRange(this,row,col);}
     setFrozenRows(count){this.frozenRows=count;return this;}
     getDataRange(){return {getValues:()=>this.rows.map(row=>row.slice())};}
   }
