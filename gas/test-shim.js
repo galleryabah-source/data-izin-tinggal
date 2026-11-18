@@ -2253,12 +2253,13 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   let importPeriodClosed=false,importUuid=0,importParseCount=0,failImportAudit=false;
   const importSchema={signature:'passport-test-v1',contractKey:'PASSPORT_SERVICE_MONTHLY',contractVersion:'1',datasetKey:'PASSPORT_SERVICE_MONTHLY',columns:['periode','kantor_imigrasi']};
   const importRuntime=new Function(
-    'requirePermission_','detectSchema_','LockService','getDatasetBySignature_','DATASET_CONTRACTS',
+    'requirePermission_','parseDelimited_','detectSchema_','LockService','getDatasetBySignature_','DATASET_CONTRACTS',
     'assertPeriodsOpenForImport_','ensureDataset_','getDb_','Utilities',
     'updateDatasetRowCount_','bumpReadCacheGeneration_','appendAudit_','nowIso_','SpreadsheetApp','APP','SHEETS',
     read('ImportService.gs')+'\nreturn {commitImport};'
   )(
     ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    (text)=>{const row=String(text).split('\\n')[1]||'';return [['periode','kantor_imigrasi'],['2026-09',(row.split('\\t')[1]||'').trim()]];},
     ()=>importSchema,
     {getScriptLock:()=>({waitLock:()=>{importLockWaits++;},releaseLock:()=>{importLockReleases++;}})},
     (signature)=>({datasetKey:'PASSPORT_SERVICE_MONTHLY',sheetName:'DATA_PASSPORT_SERVICE_MONTHLY'}),
