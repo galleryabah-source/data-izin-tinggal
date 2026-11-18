@@ -183,9 +183,14 @@ function collectReachableEffects(graph, entryName) {
     const parsed = tokenize(fn.bodyText);
     for (let i = 0; i < parsed.tokens.length - 1; i++) {
       const token = parsed.tokens[i], next = parsed.tokens[i + 1];
-      if (token.type !== 'id' || next.value !== '(') continue;
-      if (MUTATION_CALLS.has(token.value)) mutations.push({ functionName: name, call: token.value, file: fn.file });
-      if (EXTERNAL_IO_CALLS.has(token.value)) externalIo.push({ functionName: name, call: token.value, file: fn.file });
+      if (token.value === ']' && next.value === '(') {
+        unresolved.push(name + ':COMPUTED_CALL_NOT_ANALYZED');
+      }
+      if (token.type === 'id' && next.value === '(') {
+        if (MUTATION_CALLS.has(token.value)) mutations.push({ functionName: name, call: token.value, file: fn.file });
+        if (EXTERNAL_IO_CALLS.has(token.value)) externalIo.push({ functionName: name, call: token.value, file: fn.file });
+        if (token.value === 'eval' || token.value === 'Function') unresolved.push(name + ':DYNAMIC_CODE_EXECUTION:' + token.value);
+      }
     }
     unresolved.push(...parsed.unsupported.map(reason => name + ':' + reason));
   }
