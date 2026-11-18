@@ -92,7 +92,9 @@ for(const [name,policy] of Object.entries(manifest)){
     assert(re.test(code),'Reachable guard matches '+policy.permission+': '+name);
   }
   if(policy.access==='public_read_only'){
-    assert(!/\.(?:appendRow|setValue|setValues|deleteRow|insertRow|insertSheet|deleteSheet|clear|clearContent|clearContents|setFormula|setFormulas|copyTo|moveTo)\s*\(/.test(code),'Public RPC call graph has no known Spreadsheet mutation: '+name);
+    const writePattern=/\.(?:appendRow|setValue|setValues|deleteRow|insertRow|insertSheet|deleteSheet|clear|clearContent|clearContents|setFormula|setFormulas|copyTo|moveTo)\s*\(/;
+    const writeHits=graph.filter(item=>writePattern.test(item.body)).map(item=>item.name+': '+(item.body.match(writePattern)||[])[0]);
+    assert(writeHits.length===0,'Public RPC call graph has no known Spreadsheet mutation: '+name+'; hits='+writeHits.join(', '));
     assert(!/\b(?:commitImport|appendAudit_|adminCreateUser|saveRunningText|deleteRunningText|closePeriod|reopenPeriod)\s*\(/.test(code),'Public RPC does not reach known mutation services: '+name);
   }
   if(policy.access==='self_scope')assert(/\bgetCurrentUser_\s*\(/.test(code),'Self-scope RPC resolves current principal: '+name);
