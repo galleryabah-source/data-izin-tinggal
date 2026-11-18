@@ -2342,7 +2342,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   const periodRuntime=new Function(
     'requirePermission_','LockService','DATASET_CONTRACTS','getDb_','SHEETS',
     'getServiceDashboard_','nowIso_','Utilities','appendAudit_',
-    read('PeriodClosingService.gs')+'\\nreturn {closePeriod,reopenPeriod};'
+    read('PeriodClosingService.gs')+'\nreturn {closePeriod,reopenPeriod};'
   )(
     ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
     {getScriptLock:()=>({waitLock:()=>{periodLockWaits++;},releaseLock:()=>{periodLockReleases++;}})},
