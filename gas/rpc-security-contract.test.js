@@ -118,7 +118,7 @@ for(const [name,policy] of Object.entries(manifest)){
   }
   if(policy.access==='public_read_only'){
     const writePattern=/\.(?:appendRow|setValue|setValues|deleteRow|insertRow|insertSheet|deleteSheet|clear|clearContent|clearContents|setFormula|setFormulas|copyTo|moveTo)\s*\(/;
-    const writeHits=graph.filter(item=>writePattern.test(item.body)).map(item=>item.name+': '+(item.body.match(writePattern)||[])[0]);
+    const writeHits=graph.filter(item=>writePattern.test(stripStrings(item.body))).map(item=>item.name+': '+(stripStrings(item.body).match(writePattern)||[])[0]);
     assert(writeHits.length===0,'Public RPC call graph has no known Spreadsheet mutation: '+name+'; hits='+writeHits.join(', '));
     assert(!/\b(?:commitImport|appendAudit_|adminCreateUser|saveRunningText|deleteRunningText|closePeriod|reopenPeriod)\s*\(/.test(executableCode),'Public RPC does not reach known mutation services: '+name);
   }
