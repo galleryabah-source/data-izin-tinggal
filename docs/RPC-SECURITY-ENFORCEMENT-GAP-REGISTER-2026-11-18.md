@@ -188,3 +188,12 @@ The harness also exercises `hasPermission` and `getMyPermissions` with separate 
 A runtime fixture now invokes the protected `adminCreateUser` RPC under both VIEWER and ADMIN identities. The VIEWER request must fail with `FORBIDDEN: admin.users` before UUID generation or persistent writes; the ADMIN request is permitted and produces the expected single user-row write. This is a focused negative/positive endpoint test, not yet an exhaustive runtime test of every protected manifest RPC.
 
 The fixture passed in RPC Security Contract #87 (run ID `44244365008`), tested commit `d7df431505e4b8777a475ecf7f2598a352064f50`.
+
+### Daily Input provisioning denial-before-side-effect fixture
+
+The protected RPC fixture now also invokes the real `provisionDailyInputStorageV1()` implementation with a VIEWER identity and controlled Apps Script service doubles. The caller has `daily.read` but not `admin.config`. The fixture asserts the exact `FORBIDDEN: admin.config` denial and verifies that denial occurs before script-lock acquisition, Spreadsheet access, sheet writes, or Script Properties mutation.
+
+GitHub Actions `RPC Security Contract` run #91 (run ID `44245421444`) completed SUCCESS for PR #262 head `9dce820577d69750847ae455540ce0d4d6b2c62e`; the full repository `npm test` command passed. Run #90 had failed because the fixture source concatenation contained an over-escaped newline; this was corrected in the subsequent commit before run #91.
+
+This is a controlled fixture-level authorization test. It does not certify deployed Apps Script behavior, Workspace identity enforcement, real Drive/Spreadsheet ACLs, or the complete Daily Input lifecycle. Gate 9.1 remains BLOCKED and Daily Input remains disabled.
+
