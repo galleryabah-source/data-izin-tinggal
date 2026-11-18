@@ -1811,3 +1811,54 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
     assert(/getCurrentUser_\s*\(/.test(segment),'Self-scope RPC resolves current user: '+name);
   }
 }
+
+
+/* RPC call-graph inventory: transitive edges are visible; this is not path-sensitive authorization proof. */
+const rpcAudit=require('./rpc-audit.js');
+const rpcFixture={
+  'endpoint.gs': `
+    function guardedEndpoint() { return helperOne(); }
+    function helperOne() { return helperTwo(); }
+    function helperTwo() { requirePermission_('dataset.read'); return readSensitiveRows_(); }
+    function readSensitiveRows_() { return []; }
+  `
+};
+const rpcGraph=rpcAudit.analyzeCallGraph(rpcFixture);
+assert(rpcGraph.unsupported.length===0,'RPC analyzer accepts supported classic function fixture');
+const rpcReachable=rpcAudit.reachableFunctions(rpcGraph,'guardedEndpoint');
+assert(['guardedEndpoint','helperOne','helperTwo','readSensitiveRows_'].every(name=>rpcReachable.names.includes(name)),
+  'RPC analyzer resolves multi-hop helper call graph');
+assert(rpcReachable.unresolved.includes('requirePermission_'),
+  'RPC analyzer reports framework authorization calls outside source inventory as unresolved');
+assert(rpcGraph.functions.get('helperTwo').bodyText.includes("requirePermission_('dataset.read')"),
+  'RPC analyzer preserves guard call in the reachable helper body');
+
+const rpcWrongPermission=rpcAudit.analyzeCallGraph({
+  'wrong-permission.gs': `
+    function endpointWithWrongPermission() { return helper(); }
+    function helper() { requirePermission_('admin.config'); }
+  `
+});
+const wrongPermissionReachable=rpcAudit.reachableFunctions(rpcWrongPermission,'endpointWithWrongPermission');
+const wrongPermissionBody=wrongPermissionReachable.names.map(name=>rpcWrongPermission.functions.get(name).bodyText).join('\\n');
+assert(wrongPermissionBody.includes("requirePermission_('admin.config')") &&
+       !wrongPermissionBody.includes("requirePermission_('dataset.read')"),
+  'RPC graph evidence keeps the actual permission literal visible for exact-policy comparison');
+
+const rpcTemplateUnsupported=rpcAudit.extractFunctions(
+  'function templateCall(){ return `value: ${invokeTarget()}`; }'
+);
+assert(rpcTemplateUnsupported.unsupported.includes('TEMPLATE_INTERPOLATION_NOT_ANALYZED'),
+  'RPC analyzer flags template interpolation instead of silently treating it as statically complete');
+
+const rpcAmbiguous=rpcAudit.analyzeCallGraph({
+  'one.gs':'function duplicateName(){ return 1; }',
+  'two.gs':'function duplicateName(){ return 2; }'
+});
+assert(rpcAmbiguous.unsupported.includes('AMBIGUOUS_FUNCTION:duplicateName'),
+  'RPC analyzer fails closed on duplicate global function declarations');
+
+const rpcUnbalanced=rpcAudit.extractFunctions('function broken(){ if (true) { return 1; }');
+assert(rpcUnbalanced.unsupported.includes('UNBALANCED_FUNCTION_BODY:broken'),
+  'RPC analyzer reports unbalanced function bodies');
+
