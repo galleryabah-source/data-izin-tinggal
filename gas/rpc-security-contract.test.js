@@ -19,6 +19,30 @@ function stripComments(s) {
   }
   return o;
 }
+function stripStrings(s){
+  let out='',state='code',quote='',inClass=false;
+  for(let i=0;i<s.length;i++){
+    const c=s[i],n=s[i+1];
+    if(state==='string'){
+      if(c==='\\'){out+=' ';if(i+1<s.length){out+=s[i+1]==='\\n'?'\\n':' ';i++;}continue;}
+      if(c===quote)state='code';
+      out+=c==='\\n'?'\\n':' ';continue;
+    }
+    if(state==='regex'){
+      if(c==='\\'){out+=' ';if(i+1<s.length){out+=s[i+1]==='\\n'?'\\n':' ';i++;}continue;}
+      if(c==='[')inClass=true;else if(c===']')inClass=false;else if(c==='/'&&!inClass)state='code';
+      out+=c==='\\n'?'\\n':' ';continue;
+    }
+    if(c==="'"||c==='"'||c.charCodeAt(0)===96){quote=c;state='string';out+=' ';continue;}
+    if(c==='/'){
+      const prefix=s.slice(0,i).trimEnd(),previous=prefix.slice(-1);
+      const regexCanStart="=(:,;!?{[|&".includes(previous)||["return","throw","case","delete","void","typeof","instanceof","in","of","yield","await"].some(keyword=>prefix.endsWith(keyword));
+      if(regexCanStart){state='regex';inClass=false;out+=' ';continue;}
+    }
+    out+=c;
+  }
+  return out;
+}
 function bodyAt(s,start){
   let d=0,state='code',q='',inClass=false;
   for(let i=start;i<s.length;i++){
