@@ -360,3 +360,19 @@ The RPC security fixture suite now adds controlled executable contracts for the 
 GitHub Actions RPC Security Contract run #133 (run ID `44260229090`) completed SUCCESS; `npm test` passed on PR #262 head `c013ae2805e44905aae02e45280868390f9ffac0`.
 
 **Scope limitation:** these tests establish source-level callable naming and behavior under controlled Node.js doubles. They do not prove Apps Script's deployed RPC exposure semantics, editor-only execution policy, deployment execution identity, Workspace session behavior, or real HTML-service access behavior. The underscore convention is the Apps Script client-callability boundary assumed by this source contract and must still be confirmed in an isolated deployed environment. No setup, bootstrap, Script Properties, user table, production deployment, or ACL was changed by these fixtures.
+
+
+### Office-reference administration RPC fixture coverage
+
+The office-reference admin surface now has additional controlled runtime tests:
+
+- `ensureOfficeReferenceSheet()`, `seedOfficeReferenceDraft()`, `prepareOfficeReferenceDraftMetadata()`, and `previewOfficeReferenceGeocoding()` all reject callers without `admin.config` before database or Maps access.
+- Authorized sheet setup creates the exact eight-column `OFFICE_REFERENCE` header.
+- Authorized draft seeding inserts the ten configured office rows as `PENDING`; replay skips all ten and does not duplicate rows.
+- Metadata preparation fills the configured Garut address and source URL while leaving the record `PENDING`; replay is a no-op.
+- Audit fixtures confirm seed and metadata-repair events are emitted for the tested operations.
+- Existing coordinate-verification fixtures remain in place: all-row preflight, one bulk write for ten rows, no-op replay, and lock release.
+
+GitHub Actions RPC Security Contract run #136 (run ID `44260592002`) completed SUCCESS; `npm test` passed on PR #262 head `c895ca785046d1d2878f77073ea2600b98ff5b8f`.
+
+**Scope limitation:** controlled fixtures do not prove geographic correctness of the draft addresses or coordinates, live Google Maps geocoder results, real sheet ACLs, or production deployment behavior. Draft records remain `PENDING`; these tests do not certify or publish the reference data.
