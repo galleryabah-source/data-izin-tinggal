@@ -1791,10 +1791,11 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
   const reachable=rpcAudit.reachableFunctions(rpcGraph,name);
   const reachableBodies=reachable.names.map(fnName=>rpcGraph.functions.get(fnName).bodyText).join('\\n');
   if(entry.access==='protected'){
-    const guard=entry.permission==='backoffice.access'
-      ? /requireBackOfficeAccess_\\s*\\(\\s*\\)/
-      : new RegExp("requirePermission_\\\\s*\\\\(\\\\s*['\\\\\"]"+entry.permission.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&')+"['\\\\\"]\\\\s*\\\\)");
-    assert(guard.test(reachableBodies),
+    const hasGuard=entry.permission==='backoffice.access'
+      ? /requireBackOfficeAccess_\\s*\\(\\s*\\)/.test(reachableBodies)
+      : reachableBodies.includes("requirePermission_('"+entry.permission+"')") ||
+        reachableBodies.includes('requirePermission_("'+entry.permission+'")');
+    assert(hasGuard,
       'RPC reachable call graph contains exact server permission guard '+entry.permission+': '+name);
   }else if(entry.access==='public_read_only'){
     assert(!/requirePermission_\\s*\\(/.test(reachableBodies),
