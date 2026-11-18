@@ -2375,3 +2375,94 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   assert(periodAuditEvents===3&&periodLockWaits===4&&periodLockReleases===4,
     'Close/reopen audit counts and script-lock release counts match all four authorized calls');
 }
+
+
+/* Office-reference canonical verification: authorization, all-row preflight, and idempotent replay. */
+{
+  const officeHeaders=['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status'];
+  const officeKeys=[
+    'KANIM_KELAS_I_NON_TPI_BEKASI','KANIM_KELAS_I_NON_TPI_BOGOR','KANIM_KELAS_I_NON_TPI_DEPOK',
+    'KANIM_KELAS_I_NON_TPI_KARAWANG','KANIM_KELAS_I_NON_TPI_TASIKMALAYA','KANIM_KELAS_I_TPI_BANDUNG',
+    'KANIM_KELAS_I_TPI_CIREBON','KANIM_KELAS_II_NON_TPI_GARUT','KANIM_KELAS_II_NON_TPI_SUKABUMI',
+    'KANIM_KELAS_III_NON_TPI_CIANJUR'
+  ];
+  const officeRows=(missingAddress=false)=>[officeHeaders].concat(officeKeys.map((key,index)=>[
+    key,'KANIM TEST '+(index+1),missingAddress&&index===4?'':'Alamat uji '+(index+1),'','','https://example.gov.id/office/'+(index+1),'','PENDING'
+  ]));
+  class OfficeFakeRange {
+    constructor(sheet,row,col,numRows=1,numCols=1){this.sheet=sheet;this.row=row;this.col=col;this.numRows=numRows;this.numCols=numCols;}
+    getValues(){
+      const out=[];
+      for(let r=0;r<this.numRows;r++){
+        const row=[];
+        for(let c=0;c<this.numCols;c++)row.push((this.sheet.rows[this.row-1+r]||[])[this.col-1+c]??'');
+        out.push(row);
+      }
+      return out;
+    }
+    setValues(values){
+      this.sheet.writeCalls++;
+      for(let r=0;r<values.length;r++){
+        while(this.sheet.rows.length<this.row+r)this.sheet.rows.push([]);
+        this.sheet.rows[this.row-1+r]=values[r].slice();
+      }
+      return this;
+    }
+  }
+  class OfficeFakeSheet {
+    constructor(rows){this.rows=rows.map(r=>r.slice());this.writeCalls=0;}
+    getDataRange(){return new OfficeFakeRange(this,1,1,this.rows.length,officeHeaders.length);}
+    getRange(row,col,numRows=1,numCols=1){return new OfficeFakeRange(this,row,col,numRows,numCols);}
+  }
+  const deniedOfficeSheet=new OfficeFakeSheet(officeRows());
+  let deniedOfficeLockRequests=0;
+  const deniedOfficeRuntime=new Function('requirePermission_','LockService','getDb_','nowIso_','appendAudit_',read('OfficeReferenceService.gs')+'\\nreturn {verifyOfficeReferenceCoordinatesV1};')(
+    ()=>{throw new Error('FORBIDDEN: admin.config');},
+    {getScriptLock:()=>{deniedOfficeLockRequests++;return {tryLock:()=>true,releaseLock:()=>{};}}},
+    ()=>({getSheetByName:()=>deniedOfficeSheet}),
+    ()=> '2026-11-18T03:00:00.000Z',
+    ()=>{}
+  );
+  let officeUnauthorized=false;
+  try{deniedOfficeRuntime.verifyOfficeReferenceCoordinatesV1();}
+  catch(e){officeUnauthorized=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+  assert(officeUnauthorized&&deniedOfficeLockRequests===0&&deniedOfficeSheet.writeCalls===0,
+    'Office-reference verification denies unauthorized callers before lock acquisition or sheet mutation');
+
+  const invalidOfficeSheet=new OfficeFakeSheet(officeRows(true));
+  let invalidOfficeLockReleases=0,invalidOfficeAudits=0;
+  const invalidOfficeRuntime=new Function('requirePermission_','LockService','getDb_','nowIso_','appendAudit_',read('OfficeReferenceService.gs')+'\\nreturn {verifyOfficeReferenceCoordinatesV1};')(
+    ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    {getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{invalidOfficeLockReleases++;}})},
+    ()=>({getSheetByName:()=>invalidOfficeSheet}),
+    ()=> '2026-11-18T03:00:00.000Z',
+    ()=>{invalidOfficeAudits++;}
+  );
+  let officePreflightRejected=false;
+  try{invalidOfficeRuntime.verifyOfficeReferenceCoordinatesV1();}
+  catch(e){officePreflightRejected=String(e&&e.message||e).startsWith('OFFICE_REFERENCE_VERIFICATION_REJECTED:');}
+  assert(officePreflightRejected&&invalidOfficeSheet.writeCalls===0&&invalidOfficeAudits===0,
+    'Office-reference preflight rejects an incomplete address before bulk coordinate writes or audit success');
+  assert(invalidOfficeLockReleases===1,
+    'Office-reference verification releases its lock after preflight rejection');
+
+  const validOfficeSheet=new OfficeFakeSheet(officeRows(false));
+  let validOfficeLockReleases=0,validOfficeAudits=0;
+  const validOfficeRuntime=new Function('requirePermission_','LockService','getDb_','nowIso_','appendAudit_',read('OfficeReferenceService.gs')+'\\nreturn {verifyOfficeReferenceCoordinatesV1};')(
+    ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    {getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{validOfficeLockReleases++;}})},
+    ()=>({getSheetByName:()=>validOfficeSheet}),
+    ()=> '2026-11-18T03:00:00.000Z',
+    ()=>{validOfficeAudits++;}
+  );
+  const verifiedOffice=validOfficeRuntime.verifyOfficeReferenceCoordinatesV1();
+  assert(verifiedOffice.ok&&verifiedOffice.changed===10&&validOfficeSheet.writeCalls===1,
+    'Authorized office-reference verification updates all ten expected offices in one bulk sheet write');
+  assert(validOfficeSheet.rows.slice(1).every(row=>row[7]==='VERIFIED'&&Number.isFinite(Number(row[3]))&&Number.isFinite(Number(row[4]))&&row[6]==='2026-11-18T03:00:00.000Z'),
+    'Verified office rows contain numeric coordinates, timestamp, and VERIFIED status');
+  const officeReplay=validOfficeRuntime.verifyOfficeReferenceCoordinatesV1();
+  assert(officeReplay.ok&&officeReplay.changed===0&&validOfficeSheet.writeCalls===1,
+    'Replaying office-reference verification does not rewrite already verified canonical coordinates');
+  assert(validOfficeAudits===2&&validOfficeLockReleases===2,
+    'Office-reference verification records each authorized result and releases the lock on both calls');
+}
