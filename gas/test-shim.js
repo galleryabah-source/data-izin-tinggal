@@ -94,6 +94,37 @@ let workspaceWrongDomain=false;
 try{workspaceIdentity('admin@gmail.com',{INTAL_WORKSPACE_IDENTITY_ENFORCEMENT:'true',INTAL_WORKSPACE_ALLOWED_DOMAINS:'example.gov.id'}).getWorkspaceIdentityV1_();}catch(e){workspaceWrongDomain=String(e.message)==='UNAUTHENTICATED';}
 assert(workspaceWrongDomain,'Workspace identity rejects unapproved domains');
 
+// Transitional mode must remain compatible until an isolated USER_ACCESSING
+// deployment has passed runtime identity and storage-access verification.
+const transitionalProps=makeWorkspaceProps({});
+const transitionalAuth=new Function('Session','PropertiesService',authCode+'\nreturn {getCurrentIdentity_,workspaceIdentityEnforcementEnabledV1_};')(
+  {getActiveUser:()=>({getEmail:()=> 'Admin@Example.Gov.Id'})},
+  transitionalProps
+);
+assert(transitionalAuth.workspaceIdentityEnforcementEnabledV1_()===false,'Workspace identity enforcement defaults OFF when the server-side flag is absent');
+assert(transitionalAuth.getCurrentIdentity_()==='admin@example.gov.id','Transitional identity continues to normalize the active-user email without enabling enforcement');
+
+// When enforcement is enabled, duplicate internal email mappings must fail closed,
+// including the case where one duplicate row is inactive.
+const duplicateUsers=[
+  ['user_id','email','display_name','role','status'],
+  ['u1','admin@example.gov.id','Admin A','ADMIN','ACTIVE'],
+  ['u2','admin@example.gov.id','Admin B','VIEWER','INACTIVE']
+];
+const duplicateProps=makeWorkspaceProps({
+  INTAL_WORKSPACE_IDENTITY_ENFORCEMENT:'true',
+  INTAL_WORKSPACE_ALLOWED_DOMAINS:'example.gov.id'
+});
+const duplicateAuth=new Function('Session','getDb_','SHEETS','PropertiesService',authCode+'\nreturn {getCurrentUser_};')(
+  {getActiveUser:()=>({getEmail:()=> 'admin@example.gov.id'})},
+  ()=>makeDb(duplicateUsers,permissions),
+  SHEETS,
+  duplicateProps
+);
+let duplicateMappingRejected=false;
+try{duplicateAuth.getCurrentUser_();}catch(e){duplicateMappingRejected=String(e&&e.message||e)==='UNAUTHENTICATED';}
+assert(duplicateMappingRejected,'Workspace enforcement rejects duplicate USERS email mappings even when only one row is ACTIVE');
+
 
 const periodClosingCode=read('PeriodClosingService.gs');
 assert(periodClosingCode.includes('if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(period))'),'Period closing accepts only valid YYYY-MM calendar months');
