@@ -1975,7 +1975,7 @@ assert(serviceYoY.services.every(row=>Object.keys(row).sort().join('|')==='base2
 
 const quotaCode=read('MpasporQuotaService.gs');
 let quotaRows=[['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status']];
-const quotaRuntime=new Function('getDb_',quotaCode+'\\nreturn {getPublicTvMpasporQuota,MPASPOR_QUOTA_SNAPSHOT};')(
+const quotaRuntime=new Function('getDb_',quotaCode+'\nreturn {getPublicTvMpasporQuota,MPASPOR_QUOTA_SNAPSHOT};')(
   ()=>({getSheetByName:()=>({getDataRange:()=>({getValues:()=>quotaRows})})})
 );
 quotaRuntime.MPASPOR_QUOTA_SNAPSHOT.offices.forEach((office,index)=>{
