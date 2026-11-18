@@ -197,3 +197,14 @@ GitHub Actions `RPC Security Contract` run #91 (run ID `44245421444`) completed 
 
 This is a controlled fixture-level authorization test. It does not certify deployed Apps Script behavior, Workspace identity enforcement, real Drive/Spreadsheet ACLs, or the complete Daily Input lifecycle. Gate 9.1 remains BLOCKED and Daily Input remains disabled.
 
+### Import and period-mutation denial-before-lock fixtures
+
+The protected RPC negative matrix now includes three additional entrypoints:
+- `commitImport()`: a caller without `dataset.import` must receive the exact `FORBIDDEN: dataset.import` denial before parsing input or requesting the script lock.
+- `closePeriod()`: a caller without `admin.config` must be denied before requesting the script lock.
+- `reopenPeriod()`: a caller without `admin.config` must be denied before requesting the script lock.
+
+The tests invoke the actual service function declarations in controlled V8 fixtures and count lock requests. RPC Security Contract run #96 (run ID `44245796901`) completed SUCCESS with `npm test` on code head `1f5e69157059afbc87877b5e24416981c441cb76`.
+
+These fixtures prove only the tested unauthorized-denial ordering. They do not yet test authorized import/period mutation success, downstream transactional behavior, all import variants, or deployed Apps Script runtime behavior. The protected RPC matrix remains incomplete.
+
