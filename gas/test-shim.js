@@ -2225,3 +2225,84 @@ assert(residenceSnapshotDenied&&passportSnapshotDenied&&passport2025SnapshotDeni
 assert(backupConfigReads===0&&backupDatasetReads===0,
   'Snapshot creation denial occurs before backup configuration or canonical dataset reads');
 
+
+
+/* Authorized canonical import path: success, duplicate retry rejection, and period gate. */
+{
+  class ImportFakeRange {
+    constructor(sheet,row,col,numRows=1,numCols=1){this.sheet=sheet;this.row=row;this.col=col;this.numRows=numRows;this.numCols=numCols;}
+    setValues(values){
+      for(let r=0;r<values.length;r++){
+        while(this.sheet.rows.length<this.row+r)this.sheet.rows.push([]);
+        this.sheet.rows[this.row-1+r]=values[r].slice();
+      }
+      return this;
+    }
+  }
+  class ImportFakeSheet {
+    constructor(rows=[]){this.rows=rows.map(r=>r.slice());}
+    getLastRow(){return this.rows.length;}
+    getRange(row,col,numRows=1,numCols=1){return new ImportFakeRange(this,row,col,numRows,numCols);}
+    appendRow(row){this.rows.push(row.slice());return this;}
+  }
+  const dataSheet=new ImportFakeSheet([['periode','kantor_imigrasi']]);
+  const importLog=new ImportFakeSheet([['batch_id','timestamp','actor','dataset_key','contract_version','source_rows','accepted','rejected','duplicates','status','errors']]);
+  const importDb={getSheetByName:(name)=>name==='DATA_PASSPORT_SERVICE_MONTHLY'?dataSheet:name==='IMPORT_LOG'?importLog:null};
+  let importLockWaits=0,importLockReleases=0,importDatasetCreates=0,importAudits=0,importPeriodChecks=0;
+  let importPeriodClosed=false,importUuid=0;
+  const importSchema={signature:'passport-test-v1',contractKey:'PASSPORT_SERVICE_MONTHLY',contractVersion:'1',datasetKey:'PASSPORT_SERVICE_MONTHLY',columns:['periode','kantor_imigrasi']};
+  const importRuntime=new Function(
+    'requirePermission_','parseDelimited_','detectSchema_','LockService','validateRows_',
+    'DATASET_CONTRACTS','assertPeriodsOpenForImport_','ensureDataset_','getDb_','Utilities',
+    'updateDatasetRowCount_','bumpReadCacheGeneration_','appendAudit_','nowIso_','SpreadsheetApp','APP',
+    read('ImportService.gs')+'\\nreturn {commitImport};'
+  )(
+    ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    (text)=>[['periode','kantor_imigrasi'],['2026-09','KANIM TEST']],
+    ()=>importSchema,
+    {getScriptLock:()=>({waitLock:()=>{importLockWaits++;},releaseLock:()=>{importLockReleases++;}})},
+    (schema,rows)=>{
+      const key=rows[0][0]+'|'+rows[0][1].trim().toUpperCase();
+      const exists=dataSheet.rows.slice(1).some(r=>String(r[0])+'|'+String(r[1]).trim().toUpperCase()===key);
+      return exists
+        ?{valid:[],errors:[{row:2,error:'Duplikat business key: '+key}],duplicates:1}
+        :{valid:[['2026-09','KANIM TEST']],errors:[],duplicates:0};
+    },
+    {PASSPORT_SERVICE_MONTHLY:{columns:importSchema.columns}},
+    ()=>{importPeriodChecks++;if(importPeriodClosed)throw new Error('PERIOD_CLOSED: PASSPORT_SERVICE_MONTHLY 2026-09.');return true;},
+    (schema,user)=>{importDatasetCreates++;return {datasetKey:schema.datasetKey,sheetName:'DATA_PASSPORT_SERVICE_MONTHLY',rowCount:0};},
+    ()=>importDb,
+    {getUuid:()=>{importUuid++;return 'batch-'+importUuid;}},
+    ()=>{},
+    ()=> 'cache-generation-1',
+    ()=>{importAudits++;},
+    ()=> '2026-11-18T02:00:00.000Z',
+    {flush:()=>{}},
+    {MAX_IMPORT_ROWS:1000}
+  );
+  const first=importRuntime.commitImport('periode\\tkantor_imigrasi\\n2026-09\\tKANIM TEST');
+  assert(first.ok&&first.inserted===1&&first.datasetKey==='PASSPORT_SERVICE_MONTHLY',
+    'Authorized commitImport writes the accepted canonical row and returns the batch result');
+  assert(dataSheet.rows.length===2&&importLog.rows.length===2&&importAudits===1,
+    'Authorized commitImport writes one dataset row, one import-log row, and one audit event');
+  assert(importLockWaits===1&&importLockReleases===1,
+    'Authorized import releases the script lock after a successful commit');
+  const beforeRetry={data:dataSheet.rows.length,log:importLog.rows.length,audit:importAudits};
+  let duplicateRetryRejected=false;
+  try{importRuntime.commitImport('periode\\tkantor_imigrasi\\n2026-09\\tKANIM TEST');}
+  catch(e){duplicateRetryRejected=String(e&&e.message||e)==='Tidak ada baris valid untuk diimpor.';}
+  assert(duplicateRetryRejected&&dataSheet.rows.length===beforeRetry.data&&importLog.rows.length===beforeRetry.log&&importAudits===beforeRetry.audit,
+    'A repeated business-key import is rejected without duplicating canonical rows or appending another batch/audit');
+  assert(importLockWaits===2&&importLockReleases===2,
+    'Duplicate retry rejection still releases the script lock');
+  importPeriodClosed=true;
+  let closedPeriodRejected=false;
+  try{importRuntime.commitImport('periode\\tkantor_imigrasi\\n2026-09\\tKANIM TEST');}
+  catch(e){closedPeriodRejected=String(e&&e.message||e).startsWith('PERIOD_CLOSED:');}
+  assert(closedPeriodRejected&&dataSheet.rows.length===2&&importDatasetCreates===1,
+    'A closed-period import is rejected before dataset creation or canonical writes');
+  assert(importLockWaits===3&&importLockReleases===3,
+    'Closed-period rejection releases the script lock');
+  assert(importPeriodChecks===2,
+    'Period closure policy is evaluated for first commit and duplicate retry, but not for an empty valid-row set');
+}
