@@ -2109,7 +2109,7 @@ assert(dailyProvisionLockRequests===0&&dailyProvisionOpens===0&&dailyProvisionSh
 
 /* Protected RPC denial matrix: import and period mutations reject before lock acquisition. */
 let importLockRequests=0;
-const importDeniedRuntime=new Function('requirePermission_','LockService',read('ImportService.gs')+'\\nreturn {commitImport};')(
+const importDeniedRuntime=new Function('requirePermission_','LockService',read('ImportService.gs')+'\nreturn {commitImport};')(
   ()=>{throw new Error('FORBIDDEN: dataset.import');},
   {getScriptLock:()=>{importLockRequests++;return {waitLock:()=>{},releaseLock:()=>{}};}}
 );
@@ -2120,7 +2120,7 @@ assert(importDenied,'commitImport rejects a caller without dataset.import before
 assert(importLockRequests===0,'commitImport denial occurs before script-lock acquisition');
 
 let periodLockRequests=0;
-const periodDeniedRuntime=new Function('requirePermission_','LockService',read('PeriodClosingService.gs')+'\\nreturn {closePeriod,reopenPeriod};')(
+const periodDeniedRuntime=new Function('requirePermission_','LockService',read('PeriodClosingService.gs')+'\nreturn {closePeriod,reopenPeriod};')(
   ()=>{throw new Error('FORBIDDEN: admin.config');},
   {getScriptLock:()=>{periodLockRequests++;return {waitLock:()=>{},releaseLock:()=>{}};}}
 );
