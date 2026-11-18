@@ -352,7 +352,7 @@ assert(tvUi.includes('service-point-marker') && tvUi.includes('point.pointTypeLa
 assert(publicTv.includes('maps.app.goo.gl/sxyHQwNwzs3i75fY8'), 'Depok service point preserves supplied Google Maps source');
 assert(publicTv.includes('function getPublicTvResidenceDashboard') && publicTv.includes('function getPublicTvPassportDashboard'), 'Public TV dashboard adapters exist');
 assert(publicTv.includes('function getPublicTvResidenceMap') && publicTv.includes('function getPublicTvPassportMap'), 'Public TV GIS adapters exist');
-assert(publicTv.includes('function getPublicTvRunningTexts') && publicTv.includes('getActiveRunningTexts_()'), 'Public TV running text uses non-mutating core');
+assert(publicTv.includes('function getPublicTvRunningTexts') && publicTv.includes('return [];') && publicTv.includes('no explicit public-approval field or review'), 'Public TV manual running text fails closed without approval');
 assert(publicTv.includes('function getPublicTvAnalyticalRunningTexts'), 'Public TV exposes canonical analytical running-text adapter');
 assert(publicTv.includes('const monthly=(report.monthly||[]).map'), 'Analytical running text derives monthly trend from canonical cross-service monthly data');
 assert(publicTv.includes('signedPct(x.combined-prev.combined,prev.combined)'), 'Analytical running text calculates month-to-month combined change');
@@ -1811,6 +1811,18 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
   }
 }
 
+
+/* Public manual running text is fail-closed until explicit approval exists. */
+const publicRunningTextSource=read('PublicTvService.gs');
+const publicRunningTextEndpoint=new Function(
+  'getActiveRunningTexts_',
+  publicRunningTextSource+'\nreturn getPublicTvRunningTexts;'
+)(()=>['NAMA PEMOHON','NO PASPOR X1234567','konten administrasi internal']);
+assert(JSON.stringify(publicRunningTextEndpoint())==='[]',
+  'Public TV does not expose administrator-authored running text without explicit public approval');
+assert(publicRunningTextSource.includes('no explicit public-approval field or review') &&
+       publicRunningTextSource.includes('getPublicTvAnalyticalRunningTexts()'),
+  'Public running text fail-closed policy preserves aggregate analytical narratives');
 
 /* Public INTAL TV projection must be aggregate-only, even if private cores return extra fields. */
 const publicTvSource=read('PublicTvService.gs');

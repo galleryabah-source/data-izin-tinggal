@@ -21,8 +21,19 @@ function getPublicTvPassportMap(filters){
   return sanitizePublicTvMap_(getServiceMap_('PASSPORT_SERVICE_MONTHLY',sanitizePublicTvFilters_(filters)));
 }
 
+/**
+ * Manual running text is not public by default.
+ *
+ * RUNNING_TEXTS currently has no explicit public-approval field or review
+ * workflow. Returning administrator-authored content directly would create
+ * an uncontrolled disclosure path. Keep this endpoint fail-closed until a
+ * separately audited public-content approval contract is implemented.
+ *
+ * Aggregate analytical narratives remain available through
+ * getPublicTvAnalyticalRunningTexts().
+ */
 function getPublicTvRunningTexts(){
-  return getActiveRunningTexts_();
+  return [];
 }
 
 function sanitizePublicTvFilters_(filters){
