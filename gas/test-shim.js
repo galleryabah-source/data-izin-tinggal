@@ -1814,7 +1814,7 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
 
 /* Public INTAL TV projection must be aggregate-only, even if private cores return extra fields. */
 const publicTvSource=read('PublicTvService.gs');
-const publicTvSanitizers=new Function(publicTvSource+'\\nreturn {sanitizePublicTvDashboard_,sanitizePublicTvMap_};')();
+const publicTvSanitizers=new Function(publicTvSource+'\nreturn {sanitizePublicTvDashboard_,sanitizePublicTvMap_};')();
 const publicTvUnsafeDashboard={
   datasetKey:'PASSPORT_SERVICE_MONTHLY',rowCount:1,metric:'total',grandTotal:9,
   applicantName:'PRIVATE NAME',passportNumber:'X1234567',applicationNumber:'APP-001',
