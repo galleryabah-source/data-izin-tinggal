@@ -2280,7 +2280,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     {flush:()=>{}},
     {MAX_IMPORT_ROWS:1000}
   );
-  const first=importRuntime.commitImport('periode\\tkantor_imigrasi\\n2026-09\\tKANIM TEST');
+  const first=importRuntime.commitImport('periode\tkantor_imigrasi\n2026-09\tKANIM TEST');
   assert(first.ok&&first.inserted===1&&first.datasetKey==='PASSPORT_SERVICE_MONTHLY',
     'Authorized commitImport writes the accepted canonical row and returns the batch result');
   assert(dataSheet.rows.length===2&&importLog.rows.length===2&&importAudits===1,
@@ -2289,7 +2289,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     'Authorized import releases the script lock after a successful commit');
   const beforeRetry={data:dataSheet.rows.length,log:importLog.rows.length,audit:importAudits};
   let duplicateRetryRejected=false;
-  try{importRuntime.commitImport('periode\\tkantor_imigrasi\\n2026-09\\tKANIM TEST');}
+  try{importRuntime.commitImport('periode\tkantor_imigrasi\n2026-09\tKANIM TEST');}
   catch(e){duplicateRetryRejected=String(e&&e.message||e)==='Tidak ada baris valid untuk diimpor.';}
   assert(duplicateRetryRejected&&dataSheet.rows.length===beforeRetry.data&&importLog.rows.length===beforeRetry.log&&importAudits===beforeRetry.audit,
     'A repeated business-key import is rejected without duplicating canonical rows or appending another batch/audit');
@@ -2297,7 +2297,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     'Duplicate retry rejection still releases the script lock');
   importPeriodClosed=true;
   let closedPeriodRejected=false;
-  try{importRuntime.commitImport('periode\\tkantor_imigrasi\\n2026-09\\tKANIM TEST');}
+  try{importRuntime.commitImport('periode\tkantor_imigrasi\n2026-09\tKANIM TEST');}
   catch(e){closedPeriodRejected=String(e&&e.message||e).startsWith('PERIOD_CLOSED:');}
   assert(closedPeriodRejected&&dataSheet.rows.length===2&&importDatasetCreates===1,
     'A closed-period import is rejected before dataset creation or canonical writes');
