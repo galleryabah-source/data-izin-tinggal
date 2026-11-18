@@ -1862,3 +1862,26 @@ const rpcUnbalanced=rpcAudit.extractFunctions('function broken(){ if (true) { re
 assert(rpcUnbalanced.unsupported.includes('UNBALANCED_FUNCTION_BODY:broken'),
   'RPC analyzer reports unbalanced function bodies');
 
+
+
+/* RPC analyzer lexical hardening: regex bodies are opaque; dynamic invocation is a blocker. */
+const regexLexicalFixture=rpcAudit.extractFunctions(
+  "function regexSafe(){ return /function ghost\\(\\)\\{\\}/.test('x'); }"
+);
+assert(regexLexicalFixture.functions.size===1 && regexLexicalFixture.functions.has('regexSafe'),
+  'RPC analyzer treats regex literals as opaque and does not invent function declarations from regex text');
+assert(regexLexicalFixture.unsupported.length===0,
+  'RPC analyzer handles a simple regex literal without false unsupported-syntax findings');
+
+const dynamicDispatchFixture=rpcAudit.extractFunctions(
+  'function dynamicEndpoint(target,method){ return target[method](); }'
+);
+assert(dynamicDispatchFixture.unsupported.includes('COMPUTED_CALL_NOT_ANALYZED:dynamicEndpoint'),
+  'RPC analyzer blocks computed/dynamic function invocation');
+
+const dynamicCodeFixture=rpcAudit.extractFunctions(
+  'function dynamicCodeEndpoint(source){ return Function(source)(); }'
+);
+assert(dynamicCodeFixture.unsupported.includes('DYNAMIC_CODE_EXECUTION:dynamicCodeEndpoint:Function'),
+  'RPC analyzer blocks dynamic Function constructor execution');
+
