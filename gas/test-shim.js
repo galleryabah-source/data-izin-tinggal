@@ -1813,6 +1813,23 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
 }
 
 
+
+/* Apply transitive call-graph inventory to every protected manifest endpoint. */
+const allRpcSources=Object.fromEntries(rpcSources);
+const completeRpcGraph=rpcAudit.analyzeCallGraph(allRpcSources);
+assert(!completeRpcGraph.unsupported.some(item=>item.startsWith('AMBIGUOUS_FUNCTION:')),
+  'RPC call graph has no ambiguous global function declarations');
+for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
+  if(entry.access!=='protected')continue;
+  const reachable=rpcAudit.reachableFunctions(completeRpcGraph,name);
+  assert(reachable.names.includes(name),'Protected RPC is present in call graph: '+name);
+  const reachableBodies=reachable.names.map(fnName=>completeRpcGraph.functions.get(fnName).bodyText).join('\\n');
+  const exactGuard=entry.permission==='backoffice.access'
+    ? /requireBackOfficeAccess_\\s*\\(\\s*\\)/.test(reachableBodies)
+    : new RegExp("requirePermission_\\\\s*\\\\(\\\\s*['\\\\\\\"]"+entry.permission.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\/* RPC call-graph inventory: transitive edges are visible; this is not path-sensitive authorization proof. */')+"['\\\\\\\"]\\\\s*\\\\)").test(reachableBodies);
+  assert(exactGuard,'Transitive call graph contains exact server guard for '+entry.permission+': '+name);
+}
+
 /* RPC call-graph inventory: transitive edges are visible; this is not path-sensitive authorization proof. */
 const rpcAudit=require('./rpc-audit.js');
 const rpcFixture={
