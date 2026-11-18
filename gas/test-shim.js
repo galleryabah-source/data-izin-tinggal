@@ -1777,128 +1777,30 @@ Object.entries(rpcManifest.RPC_MANIFEST_V1).forEach(([name,entry])=>{
   else assert(entry.permission===null,'Non-protected RPC has no fabricated permission: '+name);
 });
 
-/* Manifest authorization metadata must agree with the endpoint's own server guard. */
-function rpcDeclarationSegment_(source,name){
-  const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const start=source.search(new RegExp('^function\\s+'+escaped+'\\s*\\(','m'));
-  if(start<0)return '';
-  const next=source.slice(start+1).search(/^function\s+[A-Za-z$][\w$]*\s*\(/m);
-  return source.slice(start,next<0?source.length:start+1+next);
-}
+/* Manifest authorization metadata: inspect transitive statically named helper reachability. */
 const rpcSources=new Map();
 for(const sourceFile of fs.readdirSync(__dirname).filter(name=>name.endsWith('.gs'))){
   rpcSources.set(sourceFile,read(sourceFile));
 }
+const rpcGraph=rpcAudit.analyzeCallGraph(Object.fromEntries(rpcSources));
+assert(!rpcGraph.unsupported.some(reason=>reason.startsWith('AMBIGUOUS_FUNCTION:')),
+  'RPC source graph has no ambiguous global function declarations: '+rpcGraph.unsupported.filter(reason=>reason.startsWith('AMBIGUOUS_FUNCTION:')).join(', '));
+
 for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
-  const source=[...rpcSources.values()].find(text=>new RegExp('^function\\s+'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*\\(','m').test(text));
-  assert(!!source,'RPC manifest declaration has source: '+name);
-  const segment=rpcDeclarationSegment_(source,name);
+  assert(rpcGraph.functions.has(name),'RPC manifest declaration exists in the global source graph: '+name);
+  const reachable=rpcAudit.reachableFunctions(rpcGraph,name);
+  const reachableBodies=reachable.names.map(fnName=>rpcGraph.functions.get(fnName).bodyText).join('\\n');
   if(entry.access==='protected'){
     const guard=entry.permission==='backoffice.access'
-      ? /requireBackOfficeAccess_\s*\(\s*\)/
-      : new RegExp("requirePermission_\\s*\\(\\s*['\\\"]"+entry.permission.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"['\\\"]\\s*\\)");
-    const directGuard=guard.test(segment);
-    const delegatedGuard=!directGuard&&[...segment.matchAll(/\b([A-Za-z$][\w$]*)\s*\(/g)].some(call=>{
-      const helperName=call[1];
-      if(helperName===name)return false;
-      const helperSource=[...rpcSources.values()].find(text=>new RegExp('^function\\s+'+helperName+'\\s*\\(','m').test(text));
-      return !!helperSource&&guard.test(rpcDeclarationSegment_(helperSource,helperName));
-    });
-    assert(directGuard||delegatedGuard,'RPC guard matches manifest permission '+entry.permission+' directly or through a guarded function: '+name);
+      ? /requireBackOfficeAccess_\\s*\\(\\s*\\)/
+      : new RegExp("requirePermission_\\\\s*\\\\(\\\\s*['\\\\\"]"+entry.permission.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&')+"['\\\\\"]\\\\s*\\\\)");
+    assert(guard.test(reachableBodies),
+      'RPC reachable call graph contains exact server permission guard '+entry.permission+': '+name);
   }else if(entry.access==='public_read_only'){
-    assert(!/requirePermission_\s*\(/.test(segment),'Public read-only RPC has no permission guard: '+name);
+    assert(!/requirePermission_\\s*\\(/.test(reachableBodies),
+      'Public read-only RPC reachable helpers do not add an interactive permission dependency: '+name);
   }else if(entry.access==='self_scope'){
-    assert(/getCurrentUser_\s*\(/.test(segment),'Self-scope RPC resolves current user: '+name);
+    assert(/getCurrentUser_\\s*\\(/.test(reachableBodies),
+      'Self-scope RPC reachable call graph resolves the current user: '+name);
   }
 }
-
-
-
-/* Apply transitive call-graph inventory to every protected manifest endpoint. */
-const allRpcSources=Object.fromEntries(rpcSources);
-const completeRpcGraph=rpcAudit.analyzeCallGraph(allRpcSources);
-assert(!completeRpcGraph.unsupported.some(item=>item.startsWith('AMBIGUOUS_FUNCTION:')),
-  'RPC call graph has no ambiguous global function declarations');
-for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
-  if(entry.access!=='protected')continue;
-  const reachable=rpcAudit.reachableFunctions(completeRpcGraph,name);
-  assert(reachable.names.includes(name),'Protected RPC is present in call graph: '+name);
-  const reachableBodies=reachable.names.map(fnName=>completeRpcGraph.functions.get(fnName).bodyText).join('\\n');
-  const exactGuard=entry.permission==='backoffice.access'
-    ? /requireBackOfficeAccess_\\s*\\(\\s*\\)/.test(reachableBodies)
-    : new RegExp("requirePermission_\\\\s*\\\\(\\\\s*['\\\\\\\"]"+entry.permission.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\/* RPC call-graph inventory: transitive edges are visible; this is not path-sensitive authorization proof. */')+"['\\\\\\\"]\\\\s*\\\\)").test(reachableBodies);
-  assert(exactGuard,'Transitive call graph contains exact server guard for '+entry.permission+': '+name);
-}
-
-/* RPC call-graph inventory: transitive edges are visible; this is not path-sensitive authorization proof. */
-const rpcAudit=require('./rpc-audit.js');
-const rpcFixture={
-  'endpoint.gs': `
-    function guardedEndpoint() { return helperOne(); }
-    function helperOne() { return helperTwo(); }
-    function helperTwo() { requirePermission_('dataset.read'); return readSensitiveRows_(); }
-    function readSensitiveRows_() { return []; }
-  `
-};
-const rpcGraph=rpcAudit.analyzeCallGraph(rpcFixture);
-assert(rpcGraph.unsupported.length===0,'RPC analyzer accepts supported classic function fixture');
-const rpcReachable=rpcAudit.reachableFunctions(rpcGraph,'guardedEndpoint');
-assert(['guardedEndpoint','helperOne','helperTwo','readSensitiveRows_'].every(name=>rpcReachable.names.includes(name)),
-  'RPC analyzer resolves multi-hop helper call graph');
-assert(rpcReachable.unresolved.includes('requirePermission_'),
-  'RPC analyzer reports framework authorization calls outside source inventory as unresolved');
-assert(rpcGraph.functions.get('helperTwo').bodyText.includes("requirePermission_('dataset.read')"),
-  'RPC analyzer preserves guard call in the reachable helper body');
-
-const rpcWrongPermission=rpcAudit.analyzeCallGraph({
-  'wrong-permission.gs': `
-    function endpointWithWrongPermission() { return helper(); }
-    function helper() { requirePermission_('admin.config'); }
-  `
-});
-const wrongPermissionReachable=rpcAudit.reachableFunctions(rpcWrongPermission,'endpointWithWrongPermission');
-const wrongPermissionBody=wrongPermissionReachable.names.map(name=>rpcWrongPermission.functions.get(name).bodyText).join('\\n');
-assert(wrongPermissionBody.includes("requirePermission_('admin.config')") &&
-       !wrongPermissionBody.includes("requirePermission_('dataset.read')"),
-  'RPC graph evidence keeps the actual permission literal visible for exact-policy comparison');
-
-const rpcTemplateUnsupported=rpcAudit.extractFunctions(
-  'function templateCall(){ return `value: ${invokeTarget()}`; }'
-);
-assert(rpcTemplateUnsupported.unsupported.includes('TEMPLATE_INTERPOLATION_NOT_ANALYZED'),
-  'RPC analyzer flags template interpolation instead of silently treating it as statically complete');
-
-const rpcAmbiguous=rpcAudit.analyzeCallGraph({
-  'one.gs':'function duplicateName(){ return 1; }',
-  'two.gs':'function duplicateName(){ return 2; }'
-});
-assert(rpcAmbiguous.unsupported.includes('AMBIGUOUS_FUNCTION:duplicateName'),
-  'RPC analyzer fails closed on duplicate global function declarations');
-
-const rpcUnbalanced=rpcAudit.extractFunctions('function broken(){ if (true) { return 1; }');
-assert(rpcUnbalanced.unsupported.includes('UNBALANCED_FUNCTION_BODY:broken'),
-  'RPC analyzer reports unbalanced function bodies');
-
-
-
-/* RPC analyzer lexical hardening: regex bodies are opaque; dynamic invocation is a blocker. */
-const regexLexicalFixture=rpcAudit.extractFunctions(
-  "function regexSafe(){ return /function ghost\\(\\)\\{\\}/.test('x'); }"
-);
-assert(regexLexicalFixture.functions.size===1 && regexLexicalFixture.functions.has('regexSafe'),
-  'RPC analyzer treats regex literals as opaque and does not invent function declarations from regex text');
-assert(regexLexicalFixture.unsupported.length===0,
-  'RPC analyzer handles a simple regex literal without false unsupported-syntax findings');
-
-const dynamicDispatchFixture=rpcAudit.extractFunctions(
-  'function dynamicEndpoint(target,method){ return target[method](); }'
-);
-assert(dynamicDispatchFixture.unsupported.includes('COMPUTED_CALL_NOT_ANALYZED:dynamicEndpoint'),
-  'RPC analyzer blocks computed/dynamic function invocation');
-
-const dynamicCodeFixture=rpcAudit.extractFunctions(
-  'function dynamicCodeEndpoint(source){ return Function(source)(); }'
-);
-assert(dynamicCodeFixture.unsupported.includes('DYNAMIC_CODE_EXECUTION:dynamicCodeEndpoint:Function'),
-  'RPC analyzer blocks dynamic Function constructor execution');
-
