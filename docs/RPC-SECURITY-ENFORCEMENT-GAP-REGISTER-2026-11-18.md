@@ -130,7 +130,9 @@ The analyzer:
 
 **Important limitation:** this is a constrained inventory tool, not a complete ECMAScript parser, control-flow analyzer, or authorization proof. It does not prove that a guard dominates every path, resolve dynamic dispatch/aliases, or establish side-effect/data-flow safety. It must not be used as a reason to enable a global RPC gateway or to certify an endpoint. Unsupported/ambiguous results remain blockers and require syntax-aware tooling or manual review.
 
-Fixture tests cover multi-hop helper reachability, visibility of a wrong permission literal, template interpolation fail-closed reporting, duplicate declarations, and unbalanced bodies. CI must pass before this branch can be treated as CI-verified.
+Fixture tests cover multi-hop helper reachability, visibility of a wrong permission literal, template interpolation fail-closed reporting, duplicate declarations, and unbalanced bodies. The repository test harness also builds a cross-file graph for the manifest and checks that each protected endpoint has a reachable exact permission guard; public-read-only and self-scope classifications receive corresponding reachable-call checks. This remains a static, name-based check and is not proof of guard dominance or side-effect purity.
+
+GitHub Actions `RPC Security Contract` run #65 completed SUCCESS for head `3215acfc459340315a46aa9f0062ffc35a184c3e`. Earlier iterations failed on fixture and regular-expression assertions; those failures were corrected before run #65. This CI result applies to the tested commit only.
 
 
 ### Analyzer hardening note
