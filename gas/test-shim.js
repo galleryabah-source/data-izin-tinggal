@@ -1898,3 +1898,26 @@ assert(Object.keys(projectedMap.markers[0]).sort().join('|')==='kantor_imigrasi|
   'Public map markers use an explicit field allowlist');
 assert(!JSON.stringify(projectedMap).includes('private@example.gov.id')&&!JSON.stringify(projectedMap).includes('rawRow'),
   'Public map projection removes identity and raw-row fields');
+
+
+const publicTvAnalyticsRuntime=new Function('getCrossServiceReporting_',publicTvCode+'\nreturn {getPublicTvAnalyticalRunningTexts,getPublicTvServicePoints};')(()=>({
+  monthly:[{periode:'2026-01',residenceTotal:10,passportTotal:20,combinedTotal:30}],
+  offices:[{kantor_imigrasi:'Kanim Contoh',residenceTotal:10,passportTotal:20,combinedTotal:30,residenceRows:1,passportRows:1}],
+  totals:{residence:10,passport:20,combined:30},
+  users:[{email:'private@example.gov.id'}],rawRows:[['private']]
+}));
+const analyticalTexts=publicTvAnalyticsRuntime.getPublicTvAnalyticalRunningTexts();
+const allowedAnalyticalKeys=new Set(['type','periode','text','rank','kantor_imigrasi','residence','passport','combined','residenceRows','passportRows']);
+assert(Array.isArray(analyticalTexts)&&analyticalTexts.length>0&&analyticalTexts.every(item=>Object.keys(item).every(key=>allowedAnalyticalKeys.has(key))),
+  'Public analytical running-text records stay within an explicit field allowlist');
+assert(analyticalTexts.every(item=>typeof item.text==='string')&&!JSON.stringify(analyticalTexts).includes('private@example.gov.id'),
+  'Public analytical running-text output contains narrative text and no caller identity');
+
+const servicePoints=publicTvAnalyticsRuntime.getPublicTvServicePoints();
+const allowedServicePointKeys=new Set(['pointId','parentOffice','pointType','pointTypeLabel','name','location','latitude','longitude','dailyCapacity','boothCount','mapsUrl','hours','status','statusLabel','coordinateStatus','coordinateStatusLabel']);
+assert(servicePoints&&servicePoints.readOnly===true&&Array.isArray(servicePoints.points)&&servicePoints.points.length>0,
+  'Public service-point endpoint declares a read-only reference contract');
+assert(servicePoints.points.every(point=>Object.keys(point).every(key=>allowedServicePointKeys.has(key))),
+  'Public service-point records stay within the approved structural field allowlist');
+assert(servicePoints.points.every(point=>point.coordinateStatus||point.status==='REFERENCE'),
+  'Public service-point records carry explicit coordinate or reference status');
