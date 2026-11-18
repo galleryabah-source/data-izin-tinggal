@@ -115,3 +115,19 @@ Required remediation:
 ## Non-impact boundary
 
 This gap register is documentation only. It does not activate Workspace identity enforcement, change the active Apps Script deployment, modify Script Properties or Drive/Spreadsheet ACLs, enable Daily Input, change Gate 9.1, or mutate canonical monthly Residence Permit / Passport datasets.
+
+
+## Follow-up implementation — constrained call-graph inventory
+
+Branch `security/rpc-callgraph-audit-v1-2026-11-18` adds `gas/rpc-audit.js` and fixture coverage in `gas/test-shim.js`.
+
+The analyzer:
+- tokenizes source while skipping line/block comments and quoted strings;
+- extracts classic named function declarations using balanced parameter/body delimiters;
+- records statically named calls and computes transitive reachability across supplied source files;
+- reports duplicate global function names, malformed declarations/bodies, and template interpolation as unsupported;
+- preserves reachable helper bodies so a reviewer/test can compare the actual permission literal against the manifest.
+
+**Important limitation:** this is a constrained inventory tool, not a complete ECMAScript parser, control-flow analyzer, or authorization proof. It does not prove that a guard dominates every path, resolve dynamic dispatch/aliases, or establish side-effect/data-flow safety. It must not be used as a reason to enable a global RPC gateway or to certify an endpoint. Unsupported/ambiguous results remain blockers and require syntax-aware tooling or manual review.
+
+Fixture tests cover multi-hop helper reachability, visibility of a wrong permission literal, template interpolation fail-closed reporting, duplicate declarations, and unbalanced bodies. CI must pass before this branch can be treated as CI-verified.
