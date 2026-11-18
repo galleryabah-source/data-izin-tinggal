@@ -1949,5 +1949,5 @@ assert(!['private@example.gov.id','DO NOT EXPOSE','PRIVATE LOCATION NOTE','PRIVA
   'Public M-Paspor quota endpoint strips unrelated private reference fields and location notes');
 assert(Object.keys(publicQuota.offices[0]).sort().join(',')==='kantor_imigrasi,mpaspor,overall,rank,ratio',
   'Public M-Paspor office payload is restricted to the explicit aggregate allowlist');
-assert(Object.keys(publicQuota.markers[0]).sort().join(',')==='address,kantor_imigrasi,latitude,longitude,office_key,metricValue,quotaIndex,rows,source_url,total',
+assert(Object.keys(publicQuota.markers[0]).sort().join(',')==='address,kantor_imigrasi,latitude,longitude,metricValue,office_key,quotaIndex,rows,source_url,total',
   'Public M-Paspor map marker payload is restricted to the explicit public reference allowlist');
