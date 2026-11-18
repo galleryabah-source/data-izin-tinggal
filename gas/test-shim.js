@@ -1983,7 +1983,7 @@ quotaRuntime.MPASPOR_QUOTA_SNAPSHOT.offices.forEach((office,index)=>{
 });
 const quotaEndpoint=quotaRuntime.getPublicTvMpasporQuota;
 const publicQuota=quotaEndpoint();
-assert(Object.keys(publicQuota).sort().join('|')==='datasetKey|officeCount|offices|period|periodLabel|totals|markers',
+assert(Object.keys(publicQuota).sort().join('|')==='datasetKey|markers|officeCount|offices|period|periodLabel|totals',
   'Public M-Paspor quota response uses an explicit top-level contract');
 assert(publicQuota.offices.every(row=>Object.keys(row).sort().join('|')==='kantor_imigrasi|mpaspor|overall|rank|ratio'),
   'Public M-Paspor quota office records use an explicit field allowlist');
