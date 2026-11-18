@@ -2255,7 +2255,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     'requirePermission_','parseDelimited_','detectSchema_','LockService','validateRows_',
     'DATASET_CONTRACTS','assertPeriodsOpenForImport_','ensureDataset_','getDb_','Utilities',
     'updateDatasetRowCount_','bumpReadCacheGeneration_','appendAudit_','nowIso_','SpreadsheetApp','APP',
-    read('ImportService.gs')+'\\nreturn {commitImport};'
+    read('ImportService.gs')+'\nreturn {commitImport};'
   )(
     ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
     (text)=>{importParseCount++;return [['periode','kantor_imigrasi'],['2026-09',importParseCount===3?'KANIM CLOSED':'KANIM TEST']];},
