@@ -2067,3 +2067,42 @@ const adminAdminCreate=adminCreateRuntime('admin@example.gov.id');
 const adminCreateResult=adminAdminCreate.adminCreateUser('new@example.gov.id','New User','VIEWER');
 assert(adminCreateResult.ok===true&&adminCreateWrites===1,
   'Protected adminCreateUser RPC permits an authorized administrator and performs the expected write');
+
+
+/* Protected RPC negative matrix: Daily Input provisioning must reject before acquiring a write lock. */
+const dailyProvisionUsers=[
+  ['user_id','email','display_name','role','status'],
+  ['u-viewer','viewer@example.gov.id','Viewer','VIEWER','ACTIVE']
+];
+const dailyProvisionPermissions=[
+  ['role','permission'],
+  ['VIEWER','dashboard.read'],['VIEWER','daily.read']
+];
+let dailyProvisionLockRequests=0,dailyProvisionSheetWrites=0,dailyProvisionOpens=0,dailyProvisionPropertyWrites=0;
+const dailyProvisionDb=()=>({
+  getSheetByName:(name)=>name==='USERS'
+    ?makeSheet(dailyProvisionUsers)
+    :name==='PERMISSIONS'?makeSheet(dailyProvisionPermissions):null
+});
+const dailyProvisionProperties={
+  getProperty:(key)=>key==='INTAL_DAILY_PERMISSIONS_MIGRATED_V1'?'true':null,
+  setProperty:()=>{dailyProvisionPropertyWrites++;}
+};
+const dailyProvisionRuntime=new Function(
+  'Session','getDb_','SHEETS','DEFAULT_ROLES','PropertiesService','LockService','SpreadsheetApp',
+  authCode+'\\n'+read('DailyInputService.gs')+'\\nreturn {provisionDailyInputStorageV1};'
+)(
+  {getActiveUser:()=>({getEmail:()=>'viewer@example.gov.id'})},
+  dailyProvisionDb,
+  SHEETS,
+  {ADMIN:['admin.config','dashboard.read'],VIEWER:['dashboard.read','daily.read']},
+  {getScriptProperties:()=>dailyProvisionProperties},
+  {getScriptLock:()=>{dailyProvisionLockRequests++;return {waitLock:()=>{},releaseLock:()=>{}};}},
+  {openById:()=>{dailyProvisionOpens++;throw new Error('UNEXPECTED_SPREADSHEET_OPEN');}}
+);
+let dailyProvisionDenied=false;
+try{dailyProvisionRuntime.provisionDailyInputStorageV1();}
+catch(e){dailyProvisionDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+assert(dailyProvisionDenied,'Daily Input storage provisioning rejects a VIEWER without admin.config');
+assert(dailyProvisionLockRequests===0&&dailyProvisionOpens===0&&dailyProvisionSheetWrites===0&&dailyProvisionPropertyWrites===0,
+  'Daily Input provisioning denial occurs before lock acquisition, spreadsheet access, sheet writes, or property mutation');
