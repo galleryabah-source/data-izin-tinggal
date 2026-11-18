@@ -1793,16 +1793,16 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
   const reachableBodies=reachable.names.map(fnName=>rpcGraph.functions.get(fnName).bodyText).join('\n');
   if(entry.access==='protected'){
     const hasGuard=entry.permission==='backoffice.access'
-      ? /requireBackOfficeAccess_\s*\(\s*\)/.test(reachableBodies)
+      ? reachableBodies.includes('requireBackOfficeAccess_(')
       : reachableBodies.includes("requirePermission_('"+entry.permission+"')") ||
         reachableBodies.includes('requirePermission_("'+entry.permission+'")');
     assert(hasGuard,
       'RPC reachable call graph contains exact server permission guard '+entry.permission+': '+name);
   }else if(entry.access==='public_read_only'){
-    assert(!/requirePermission_\s*\(/.test(reachableBodies),
+    assert(!reachableBodies.includes('requirePermission_('),
       'Public read-only RPC reachable helpers do not add an interactive permission dependency: '+name);
   }else if(entry.access==='self_scope'){
-    assert(/getCurrentUser_\s*\(/.test(reachableBodies),
+    assert(reachableBodies.includes('getCurrentUser_('),
       'Self-scope RPC reachable call graph resolves the current user: '+name);
   }
 }
