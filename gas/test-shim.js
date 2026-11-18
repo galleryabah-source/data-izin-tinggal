@@ -352,7 +352,7 @@ assert(tvUi.includes('service-point-marker') && tvUi.includes('point.pointTypeLa
 assert(publicTv.includes('maps.app.goo.gl/sxyHQwNwzs3i75fY8'), 'Depok service point preserves supplied Google Maps source');
 assert(publicTv.includes('function getPublicTvResidenceDashboard') && publicTv.includes('function getPublicTvPassportDashboard'), 'Public TV dashboard adapters exist');
 assert(publicTv.includes('function getPublicTvResidenceMap') && publicTv.includes('function getPublicTvPassportMap'), 'Public TV GIS adapters exist');
-assert(publicTv.includes('function getPublicTvRunningTexts') && publicTv.includes('getActiveRunningTexts_()'), 'Public TV running text uses non-mutating core');
+assert(publicTv.includes('function getPublicTvRunningTexts') && publicTv.includes('return [];') && publicTv.includes('no explicit public-approval field or review'), 'Public TV manual running text fails closed without approval');
 assert(publicTv.includes('function getPublicTvAnalyticalRunningTexts'), 'Public TV exposes canonical analytical running-text adapter');
 assert(publicTv.includes('const monthly=(report.monthly||[]).map'), 'Analytical running text derives monthly trend from canonical cross-service monthly data');
 assert(publicTv.includes('signedPct(x.combined-prev.combined,prev.combined)'), 'Analytical running text calculates month-to-month combined change');
