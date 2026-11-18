@@ -140,3 +140,10 @@ GitHub Actions `RPC Security Contract` run #65 completed SUCCESS for head `3215a
 The follow-up lexer now treats recognized regular-expression literals as opaque tokens so source text such as `/function fake(){}/` cannot be mistaken for a function declaration. It also reports computed calls such as `target[method]()` and dynamic code execution through `eval` / `Function` as unsupported blockers. Regression fixtures cover these cases.
 
 The regular-expression start heuristic is intentionally conservative but is not a standards-complete JavaScript lexer. This tool remains an inventory aid; it does not establish control-flow dominance, alias resolution, or complete Apps Script semantics. CI execution is still required to validate the changes.
+
+
+### Transitive side-effect inventory
+
+The analyzer now classifies selected mutation calls and external-I/O calls across every statically reachable helper. The CI contract uses this inventory to reject public-read-only RPCs that transitively reach known mutation or external-I/O calls, and to reject stateless validators with those effects. Fixtures cover a safe read-only path, a hidden helper mutation (`appendRow`), and a pure validation path.
+
+This remains a bounded sink list, not a complete side-effect/data-flow proof. Dynamic aliases, indirect APIs, unrecognized mutator methods, Apps Script services not in the list, and unsupported syntax can evade this inventory. Public TV certification still requires response-schema review, sensitive-field checks, and runtime verification.
