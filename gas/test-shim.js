@@ -1778,6 +1778,27 @@ Object.entries(rpcManifest.RPC_MANIFEST_V1).forEach(([name,entry])=>{
 });
 
 const rpcAudit=require('./rpc-audit.js');
+const effectFixture=rpcAudit.analyzeCallGraph({
+  'effects.gs': `
+    function publicEntry(){ return readHelper(); }
+    function readHelper(){ return []; }
+    function unsafeEntry(){ return writeHelper(); }
+    function writeHelper(){ sheet.appendRow(['x']); return true; }
+    function pureValidator(){ return validateShape_(); }
+    function validateShape_(){ return {ok:true}; }
+  `
+});
+const publicEffects=rpcAudit.collectReachableEffects(effectFixture,'publicEntry');
+assert(publicEffects.mutations.length===0 && publicEffects.externalIo.length===0,
+  'RPC effect inventory recognizes a transitive read-only path');
+const unsafeEffects=rpcAudit.collectReachableEffects(effectFixture,'unsafeEntry');
+assert(unsafeEffects.mutations.some(effect=>effect.call==='appendRow' && effect.functionName==='writeHelper'),
+  'RPC effect inventory detects a mutation hidden in a transitive helper');
+const pureEffects=rpcAudit.collectReachableEffects(effectFixture,'pureValidator');
+assert(pureEffects.mutations.length===0 && pureEffects.externalIo.length===0,
+  'RPC effect inventory recognizes a pure validation path');
+
+
 /* Manifest authorization metadata: inspect transitive statically named helper reachability. */
 const rpcSources=new Map();
 for(const sourceFile of fs.readdirSync(__dirname).filter(name=>name.endsWith('.gs'))){
@@ -1801,6 +1822,15 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
   }else if(entry.access==='public_read_only'){
     assert(!reachableBodies.includes('requirePermission_('),
       'Public read-only RPC reachable helpers do not add an interactive permission dependency: '+name);
+    const effects=rpcAudit.collectReachableEffects(rpcGraph,name);
+    assert(effects.mutations.length===0,
+      'Public read-only RPC has no transitive mutation calls: '+name+' '+JSON.stringify(effects.mutations));
+    assert(effects.externalIo.length===0,
+      'Public read-only RPC has no transitive external IO calls: '+name+' '+JSON.stringify(effects.externalIo));
+  }else if(entry.access==='stateless_validation'){
+    const effects=rpcAudit.collectReachableEffects(rpcGraph,name);
+    assert(effects.mutations.length===0 && effects.externalIo.length===0,
+      'Stateless validation RPC has no transitive mutation or external IO calls: '+name);
   }else if(entry.access==='self_scope'){
     assert(reachableBodies.includes('getCurrentUser_('),
       'Self-scope RPC reachable call graph resolves the current user: '+name);
