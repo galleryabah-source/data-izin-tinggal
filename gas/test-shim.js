@@ -1921,7 +1921,7 @@ const mpasporQuotaSource=read('MpasporQuotaService.gs');
 const publicQuotaEndpoint=new Function(
   'buildMpasporQuotaDashboard_',
   'getDb_',
-  mpasporQuotaSource+'\\nreturn getPublicTvMpasporQuota;'
+  mpasporQuotaSource+'\nreturn getPublicTvMpasporQuota;'
 )(
   ()=>({
     datasetKey:'PASSPORT_MPASPOR_QUOTA',period:'2026-10',periodLabel:'Oktober 2026',
