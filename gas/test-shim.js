@@ -893,6 +893,72 @@ assert(appCode.includes('function setupApp_()') && !appCode.includes('function s
 const bootstrapCode=read('Bootstrap.gs');
 assert(bootstrapCode.includes('function bootstrapCurrentUser_()') && !bootstrapCode.includes('function bootstrapCurrentUser(){'), 'Current-user bootstrap helper is private to the Apps Script editor and not callable as a browser RPC');
 assert(bootstrapCode.includes("return bootstrapAdmin_(email,'Administrator')"), 'Editor-only bootstrap delegates to the guarded private admin bootstrap helper');
+
+/* Setup/bootstrap callable-surface and editor-bootstrap safety contracts. */
+const privateSetupDeclarations=[
+  ['setupApp_',appCode],
+  ['initializeSchema_',appCode],
+  ['seedSecurity_',appCode],
+  ['seedDictionary_',appCode],
+  ['bootstrapCurrentUser_',bootstrapCode],
+  ['bootstrapAdmin_',authCode]
+];
+for(const [name,source] of privateSetupDeclarations){
+  assert(new RegExp('function\\s+'+name+'\\s*\\(').test(source),'Internal setup/bootstrap declaration remains private by underscore suffix: '+name);
+  assert(!new RegExp('function\\s+'+name.slice(0,-1)+'\\s*\\(').test(source),'No browser-callable alias exists for internal setup/bootstrap function: '+name);
+}
+
+/* The editor bootstrap must refuse to overwrite an existing USERS table before generating an ID. */
+let bootstrapUuidCalls=0,bootstrapWrites=0;
+const populatedUsers={getLastRow:()=>2,appendRow:()=>{bootstrapWrites++;}};
+const populatedBootstrap=new Function('getDb_','SHEETS','Utilities','nowIso_',authCode+'\\nreturn {bootstrapAdmin_};')(
+  ()=>({getSheetByName:()=>populatedUsers}),{USERS:'USERS'},{getUuid:()=>{bootstrapUuidCalls++;return 'unexpected';}},()=> '2026-11-18T00:00:00.000Z'
+);
+let populatedBootstrapRejected=false;
+try{populatedBootstrap.bootstrapAdmin_('owner@example.gov.id','Administrator');}
+catch(e){populatedBootstrapRejected=String(e&&e.message||e)==='Bootstrap admin hanya boleh dijalankan pada USERS yang masih kosong.';}
+assert(populatedBootstrapRejected&&bootstrapUuidCalls===0&&bootstrapWrites===0,'Editor bootstrap refuses populated USERS before UUID generation or write');
+
+let emptyBootstrapRows=[],emptyBootstrapUuidCalls=0;
+const emptyUsers={getLastRow:()=>emptyBootstrapRows.length,appendRow:(row)=>emptyBootstrapRows.push(row)};
+const emptyBootstrap=new Function('getDb_','SHEETS','Utilities','nowIso_',authCode+'\\nreturn {bootstrapAdmin_};')(
+  ()=>({getSheetByName:()=>emptyUsers}),{USERS:'USERS'},{getUuid:()=>{emptyBootstrapUuidCalls++;return 'bootstrap-user-1';}},()=> '2026-11-18T00:00:00.000Z'
+);
+const emptyBootstrapResult=emptyBootstrap.bootstrapAdmin_('Owner@Example.Gov.Id','Administrator');
+assert(emptyBootstrapResult.ok&&emptyBootstrapRows.length===1&&emptyBootstrapRows[0][1]==='owner@example.gov.id'&&emptyBootstrapRows[0][3]==='ADMIN','Editor bootstrap creates one normalized ADMIN row only on an empty USERS sheet');
+
+/* Web entrypoint authorization matrix: only the two TV views are anonymous. */
+const doGetCode=read('Code.gs');
+const doGetFixture=(permissionError,backOfficeError,currentUser)=> {
+  const calls={permission:[],backOffice:0,template:null};
+  const htmlService={
+    createTemplateFromFile:(name)=>{calls.template=name;return {evaluate:()=>({setTitle:()=>({setXFrameOptionsMode:()=>({ok:true})})})};}
+  };
+  const fn=new Function('requirePermission_','requireBackOfficeAccess_','getCurrentUser_','HtmlService','APP',
+    doGetCode+'\\nreturn {doGet};'
+  )(
+    (permission)=>{calls.permission.push(permission);if(permissionError)throw new Error(permissionError);return {};},
+    ()=>{calls.backOffice++;if(backOfficeError)throw new Error(backOfficeError);return {};},
+    ()=>currentUser||{authenticated:false,permissions:[],role:null},
+    htmlService,{NAME:'INTAL',VERSION:'1',TZ:'Asia/Jakarta'}
+  );
+  return {calls,doGet:fn.doGet};
+};
+const publicTv=doGetFixture(null,null);
+assert(publicTv.doGet({parameter:{view:'tv'}}).ok&&publicTv.calls.template==='tv'&&publicTv.calls.permission.length===0&&publicTv.calls.backOffice===0,'Only explicit TV view is served without an RPC permission gate');
+const publicTvMobile=doGetFixture(null,null);
+assert(publicTvMobile.doGet({parameter:{view:'tv-mobile'}}).ok&&publicTvMobile.calls.template==='tv-mobile'&&publicTvMobile.calls.permission.length===0&&publicTvMobile.calls.backOffice===0,'Only explicit TV Mobile view is served without an RPC permission gate');
+const dailyDenied=doGetFixture('FORBIDDEN: daily.read',null);
+let dailyDeniedResult=false;
+try{dailyDenied.doGet({parameter:{view:'daily'}});}catch(e){dailyDeniedResult=String(e&&e.message||e)==='FORBIDDEN: daily.read';}
+assert(dailyDeniedResult&&dailyDenied.calls.permission[0]==='daily.read'&&dailyDenied.calls.template===null,'Daily view is denied before template rendering without daily.read');
+const unknownViewDenied=doGetFixture(null,'BACKOFFICE_AUTH_REQUIRED');
+let unknownViewDeniedResult=false;
+try{unknownViewDenied.doGet({parameter:{view:'unexpected'}});}catch(e){unknownViewDeniedResult=String(e&&e.message||e)==='BACKOFFICE_AUTH_REQUIRED';}
+assert(unknownViewDeniedResult&&unknownViewDenied.calls.backOffice===1&&unknownViewDenied.calls.template===null,'Unknown view values fail closed behind back-office authorization');
+const dailyRoleView=doGetFixture(null,null,{authenticated:true,permissions:['daily.read'],role:'OPERATOR'});
+assert(dailyRoleView.doGet({parameter:{view:'home'}}).ok&&dailyRoleView.calls.template==='index','Daily-only operator view is routed to the authenticated workspace shell');
+
 const dailyService=read('DailyInputService.gs');
 assert(dailyService.includes('enabled:false') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily input code-level kill switch remains closed until a separately reviewed release');
 assert(dailyService.includes("c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'false'") && !dailyService.includes('DAILY_INPUT_OWNER_OVERRIDE'), 'Daily input uses its feature flag and contains no owner-override bypass');
