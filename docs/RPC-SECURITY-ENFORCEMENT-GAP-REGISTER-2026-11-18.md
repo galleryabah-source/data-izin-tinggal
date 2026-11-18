@@ -131,3 +131,10 @@ The analyzer:
 **Important limitation:** this is a constrained inventory tool, not a complete ECMAScript parser, control-flow analyzer, or authorization proof. It does not prove that a guard dominates every path, resolve dynamic dispatch/aliases, or establish side-effect/data-flow safety. It must not be used as a reason to enable a global RPC gateway or to certify an endpoint. Unsupported/ambiguous results remain blockers and require syntax-aware tooling or manual review.
 
 Fixture tests cover multi-hop helper reachability, visibility of a wrong permission literal, template interpolation fail-closed reporting, duplicate declarations, and unbalanced bodies. CI must pass before this branch can be treated as CI-verified.
+
+
+### Analyzer hardening note
+
+The follow-up lexer now treats recognized regular-expression literals as opaque tokens so source text such as `/function fake(){}/` cannot be mistaken for a function declaration. It also reports computed calls such as `target[method]()` and dynamic code execution through `eval` / `Function` as unsupported blockers. Regression fixtures cover these cases.
+
+The regular-expression start heuristic is intentionally conservative but is not a standards-complete JavaScript lexer. This tool remains an inventory aid; it does not establish control-flow dominance, alias resolution, or complete Apps Script semantics. CI execution is still required to validate the changes.
