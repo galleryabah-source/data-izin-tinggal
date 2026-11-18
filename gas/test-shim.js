@@ -1777,6 +1777,7 @@ Object.entries(rpcManifest.RPC_MANIFEST_V1).forEach(([name,entry])=>{
   else assert(entry.permission===null,'Non-protected RPC has no fabricated permission: '+name);
 });
 
+const rpcAudit=require('./rpc-audit.js');
 /* Manifest authorization metadata: inspect transitive statically named helper reachability. */
 const rpcSources=new Map();
 for(const sourceFile of fs.readdirSync(__dirname).filter(name=>name.endsWith('.gs'))){
