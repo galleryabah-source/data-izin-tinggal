@@ -2132,3 +2132,66 @@ catch(e){reopenDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
 assert(closeDenied&&reopenDenied,'closePeriod and reopenPeriod reject callers without admin.config');
 assert(periodLockRequests===0,'period close/reopen denial occurs before script-lock acquisition');
 
+/* Protected RPC denial matrix: Google import, derived-total repair, running-text admin, and backup config. */
+let googleAdaptCalls=0,googleCommitCalls=0,googleAuditCalls=0;
+const googleImportDeniedRuntime=new Function(
+  'requirePermission_','adaptGoogleSourceMatrix_','detectSchema_','commitImport','appendAudit_',
+  read('SourceConnectorService.gs')+'\nreturn {commitGoogleSourceImport};'
+)(
+  ()=>{throw new Error('FORBIDDEN: dataset.import');},
+  ()=>{googleAdaptCalls++;throw new Error('UNEXPECTED_GOOGLE_SOURCE_READ');},
+  ()=>{throw new Error('UNEXPECTED_SCHEMA_DETECTION');},
+  ()=>{googleCommitCalls++;},
+  ()=>{googleAuditCalls++;}
+);
+let googleImportDenied=false;
+try{googleImportDeniedRuntime.commitGoogleSourceImport({datasetKey:'PASSPORT_SERVICE_MONTHLY'});}
+catch(e){googleImportDenied=String(e&&e.message||e)==='FORBIDDEN: dataset.import';}
+assert(googleImportDenied,'commitGoogleSourceImport rejects a caller without dataset.import');
+assert(googleAdaptCalls===0&&googleCommitCalls===0&&googleAuditCalls===0,
+  'Google-source import denial occurs before source read, canonical commit, or audit side effect');
+
+let repairLockRequests=0;
+const repairDeniedRuntime=new Function('requirePermission_','LockService',read('PassportGovernanceService.gs')+'\nreturn {repairPassportServiceMonthly2025DerivedTotal};')(
+  ()=>{throw new Error('FORBIDDEN: dataset.write');},
+  {getScriptLock:()=>{repairLockRequests++;return {waitLock:()=>{},releaseLock:()=>{}};}}
+);
+let repairDenied=false;
+try{repairDeniedRuntime.repairPassportServiceMonthly2025DerivedTotal();}
+catch(e){repairDenied=String(e&&e.message||e)==='FORBIDDEN: dataset.write';}
+assert(repairDenied&&repairLockRequests===0,
+  'Derived-total repair denies callers without dataset.write before lock acquisition');
+
+let runningTextSheetRequests=0,runningTextAuditCalls=0;
+const runningTextDeniedRuntime=new Function('requirePermission_','ensureRunningTextSheet_','appendAudit_',read('Code.gs')+'\nreturn {saveRunningText,deleteRunningText};')(
+  ()=>{throw new Error('FORBIDDEN: admin.config');},
+  ()=>{runningTextSheetRequests++;throw new Error('UNEXPECTED_RUNNING_TEXT_SHEET_ACCESS');},
+  ()=>{runningTextAuditCalls++;}
+);
+let saveRunningTextDenied=false,deleteRunningTextDenied=false;
+try{runningTextDeniedRuntime.saveRunningText({content:'test'});}
+catch(e){saveRunningTextDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+try{runningTextDeniedRuntime.deleteRunningText('running-text-id');}
+catch(e){deleteRunningTextDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+assert(saveRunningTextDenied&&deleteRunningTextDenied,
+  'Running-text save and delete reject callers without admin.config');
+assert(runningTextSheetRequests===0&&runningTextAuditCalls===0,
+  'Running-text denial occurs before sheet access or audit side effects');
+
+let backupFolderNormalizeCalls=0,backupDriveCalls=0,backupPropertyWrites=0;
+const backupDeniedRuntime=new Function(
+  'requirePermission_','normalizeDriveFolderId_','DriveApp','PropertiesService',
+  read('BackupService.gs')+'\nreturn {setBackupFolder};'
+)(
+  ()=>{throw new Error('FORBIDDEN: admin.config');},
+  ()=>{backupFolderNormalizeCalls++;return 'folder-id';},
+  {getFolderById:()=>{backupDriveCalls++;return {getName:()=> 'Backup'};}},
+  {getScriptProperties:()=>({setProperty:()=>{backupPropertyWrites++;}})}
+);
+let backupDenied=false;
+try{backupDeniedRuntime.setBackupFolder('folder-id');}
+catch(e){backupDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+assert(backupDenied,'setBackupFolder rejects callers without admin.config');
+assert(backupFolderNormalizeCalls===0&&backupDriveCalls===0&&backupPropertyWrites===0,
+  'Backup folder denial occurs before ID processing, Drive access, or Script Properties mutation');
+
