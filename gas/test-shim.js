@@ -2416,9 +2416,9 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   }
   const deniedOfficeSheet=new OfficeFakeSheet(officeRows());
   let deniedOfficeLockRequests=0;
-  const deniedOfficeRuntime=new Function('requirePermission_','LockService','getDb_','nowIso_','appendAudit_',read('OfficeReferenceService.gs')+'\\nreturn {verifyOfficeReferenceCoordinatesV1};')(
+  const deniedOfficeRuntime=new Function('requirePermission_','LockService','getDb_','nowIso_','appendAudit_',read('OfficeReferenceService.gs')+'\nreturn {verifyOfficeReferenceCoordinatesV1};')(
     ()=>{throw new Error('FORBIDDEN: admin.config');},
-    {getScriptLock:()=>{deniedOfficeLockRequests++;return {tryLock:()=>true,releaseLock:()=>{};}}},
+    {getScriptLock:()=>{deniedOfficeLockRequests++;return {tryLock:()=>true,releaseLock:()=>{}}}},
     ()=>({getSheetByName:()=>deniedOfficeSheet}),
     ()=> '2026-11-18T03:00:00.000Z',
     ()=>{}
@@ -2431,7 +2431,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
 
   const invalidOfficeSheet=new OfficeFakeSheet(officeRows(true));
   let invalidOfficeLockReleases=0,invalidOfficeAudits=0;
-  const invalidOfficeRuntime=new Function('requirePermission_','LockService','getDb_','nowIso_','appendAudit_',read('OfficeReferenceService.gs')+'\\nreturn {verifyOfficeReferenceCoordinatesV1};')(
+  const invalidOfficeRuntime=new Function('requirePermission_','LockService','getDb_','nowIso_','appendAudit_',read('OfficeReferenceService.gs')+'\nreturn {verifyOfficeReferenceCoordinatesV1};')(
     ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
     {getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{invalidOfficeLockReleases++;}})},
     ()=>({getSheetByName:()=>invalidOfficeSheet}),
@@ -2448,7 +2448,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
 
   const validOfficeSheet=new OfficeFakeSheet(officeRows(false));
   let validOfficeLockReleases=0,validOfficeAudits=0;
-  const validOfficeRuntime=new Function('requirePermission_','LockService','getDb_','nowIso_','appendAudit_',read('OfficeReferenceService.gs')+'\\nreturn {verifyOfficeReferenceCoordinatesV1};')(
+  const validOfficeRuntime=new Function('requirePermission_','LockService','getDb_','nowIso_','appendAudit_',read('OfficeReferenceService.gs')+'\nreturn {verifyOfficeReferenceCoordinatesV1};')(
     ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
     {getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{validOfficeLockReleases++;}})},
     ()=>({getSheetByName:()=>validOfficeSheet}),
