@@ -122,7 +122,7 @@ function extractFunctions(source) {
       if (token.type === 'id' && next.value === '(' && !CONTROL_CALLS.has(token.value)) calls.add(token.value);
     }
     for (let j = 0; j < bodyTokens.length - 2; j++) {
-      if (bodyTokens[j].value === '[' && bodyTokens[j + 1].value === ']' && bodyTokens[j + 2].value === '(')
+      if (bodyTokens[j].value === ']' && bodyTokens[j + 1].value === '(')
         unsupported.push('COMPUTED_CALL_NOT_ANALYZED:' + nameToken.value);
     }
     for (const call of calls) {
