@@ -147,3 +147,10 @@ The regular-expression start heuristic is intentionally conservative but is not 
 The analyzer now classifies selected mutation calls and external-I/O calls across every statically reachable helper. The CI contract uses this inventory to reject public-read-only RPCs that transitively reach known mutation or external-I/O calls, and to reject stateless validators with those effects. Fixtures cover a safe read-only path, a hidden helper mutation (`appendRow`), and a pure validation path.
 
 This remains a bounded sink list, not a complete side-effect/data-flow proof. Dynamic aliases, indirect APIs, unrecognized mutator methods, Apps Script services not in the list, and unsupported syntax can evade this inventory. Public TV certification still requires response-schema review, sensitive-field checks, and runtime verification.
+
+
+### Dynamic syntax blockers in exposed read-only paths
+
+The transitive effect collector now emits explicit blockers for computed member invocation (for example, `target[method]()`), dynamic code execution through `eval` / `Function`, template interpolation, and malformed function syntax. Public-read-only and stateless-validation CI contracts reject these blockers in their reachable helper paths. A regression fixture initially exposed that the effect collector did not carry the computed-call finding from the function extractor; the collector was corrected to detect the pattern directly in each reachable function body, and the next CI run passed.
+
+This reduces known blind spots but does not prove complete absence of side effects. The sink inventory and lexical parser remain intentionally bounded.
