@@ -1812,6 +1812,18 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
 }
 
 
+/* Public manual running text is fail-closed until explicit approval exists. */
+const publicRunningTextSource=read('PublicTvService.gs');
+const publicRunningTextEndpoint=new Function(
+  'getActiveRunningTexts_',
+  publicRunningTextSource+'\\nreturn getPublicTvRunningTexts;'
+)(()=>['NAMA PEMOHON','NO PASPOR X1234567','konten administrasi internal']);
+assert(JSON.stringify(publicRunningTextEndpoint())==='[]',
+  'Public TV does not expose administrator-authored running text without explicit public approval');
+assert(publicRunningTextSource.includes('no explicit public-approval field or review') &&
+       publicRunningTextSource.includes('getPublicTvAnalyticalRunningTexts()'),
+  'Public running text fail-closed policy preserves aggregate analytical narratives');
+
 /* Public INTAL TV projection must be aggregate-only, even if private cores return extra fields. */
 const publicTvSource=read('PublicTvService.gs');
 const publicTvSanitizers=new Function(publicTvSource+'\nreturn {sanitizePublicTvDashboard_,sanitizePublicTvMap_};')();
