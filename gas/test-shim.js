@@ -2483,7 +2483,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   const sourceSchema={contractKey:'PASSPORT_SERVICE_MONTHLY',datasetKey:'PASSPORT_SERVICE_MONTHLY',signature:'passport-source-test',contractVersion:'1'};
   const sourceRuntime=new Function(
     'requirePermission_','adaptGoogleSourceMatrix_','detectSchema_','commitImport','appendAudit_',
-    read('SourceConnectorService.gs')+'\\nreturn {commitGoogleSourceImport};'
+    read('SourceConnectorService.gs')+'\nreturn {commitGoogleSourceImport};'
   )(
     ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
     ()=>({spreadsheetId:'source-spreadsheet-id-1234567890',spreadsheetName:'Source Fixture',sheetName:'September',sourceHeaders:['Periode','Kantor Imigrasi'],sourceColumns:['periode','kantor_imigrasi'],rows:[['2026-09','KANIM TEST']]}),
