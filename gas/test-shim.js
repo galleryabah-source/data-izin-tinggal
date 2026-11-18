@@ -2582,7 +2582,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   }
   let deniedOfficeDbCalls=0,deniedOfficeMapsCalls=0;
   const deniedOfficeDraft=new Function('requirePermission_','getDb_','Maps',
-    officeDraftCode+'\\nreturn {ensureOfficeReferenceSheet,seedOfficeReferenceDraft,prepareOfficeReferenceDraftMetadata,previewOfficeReferenceGeocoding};'
+    officeDraftCode+'\nreturn {ensureOfficeReferenceSheet,seedOfficeReferenceDraft,prepareOfficeReferenceDraftMetadata,previewOfficeReferenceGeocoding};'
   )(
     ()=>{throw new Error('FORBIDDEN: admin.config');},
     ()=>{deniedOfficeDbCalls++;throw new Error('DB_SHOULD_NOT_BE_TOUCHED');},
@@ -2601,7 +2601,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     insertSheet:()=>{draftSheet=new OfficeDraftSheet();return draftSheet;}
   };
   const authorizedOfficeDraft=new Function('requirePermission_','getDb_','appendAudit_',
-    officeDraftCode+'\\nreturn {ensureOfficeReferenceSheet,seedOfficeReferenceDraft,prepareOfficeReferenceDraftMetadata};'
+    officeDraftCode+'\nreturn {ensureOfficeReferenceSheet,seedOfficeReferenceDraft,prepareOfficeReferenceDraftMetadata};'
   )(
     ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
     ()=>draftSpreadsheet,
