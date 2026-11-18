@@ -2008,7 +2008,7 @@ const selfScopePermissions=[
 const selfScopeDb=()=>({
   getSheetByName:(name)=>makeSheet(name==='USERS'?selfScopeUsers:selfScopePermissions)
 });
-const selfScopeRuntime=(email)=>new Function('Session','getDb_','SHEETS',authCode+'\\n'+rbacCode+'\\nreturn {hasPermission,getMyPermissions,getCurrentUser_};')(
+const selfScopeRuntime=(email)=>new Function('Session','getDb_','SHEETS',authCode+'\n'+rbacCode+'\nreturn {hasPermission,getMyPermissions,getCurrentUser_};')(
   {getActiveUser:()=>({getEmail:()=>email})},
   selfScopeDb,
   SHEETS
