@@ -911,7 +911,7 @@ for(const [name,source] of privateSetupDeclarations){
 /* The editor bootstrap must refuse to overwrite an existing USERS table before generating an ID. */
 let bootstrapUuidCalls=0,bootstrapWrites=0;
 const populatedUsers={getLastRow:()=>2,appendRow:()=>{bootstrapWrites++;}};
-const populatedBootstrap=new Function('getDb_','SHEETS','Utilities','nowIso_',authCode+'\\nreturn {bootstrapAdmin_};')(
+const populatedBootstrap=new Function('getDb_','SHEETS','Utilities','nowIso_',authCode+'\nreturn {bootstrapAdmin_};')(
   ()=>({getSheetByName:()=>populatedUsers}),{USERS:'USERS'},{getUuid:()=>{bootstrapUuidCalls++;return 'unexpected';}},()=> '2026-11-18T00:00:00.000Z'
 );
 let populatedBootstrapRejected=false;
@@ -921,7 +921,7 @@ assert(populatedBootstrapRejected&&bootstrapUuidCalls===0&&bootstrapWrites===0,'
 
 let emptyBootstrapRows=[],emptyBootstrapUuidCalls=0;
 const emptyUsers={getLastRow:()=>emptyBootstrapRows.length,appendRow:(row)=>emptyBootstrapRows.push(row)};
-const emptyBootstrap=new Function('getDb_','SHEETS','Utilities','nowIso_',authCode+'\\nreturn {bootstrapAdmin_};')(
+const emptyBootstrap=new Function('getDb_','SHEETS','Utilities','nowIso_',authCode+'\nreturn {bootstrapAdmin_};')(
   ()=>({getSheetByName:()=>emptyUsers}),{USERS:'USERS'},{getUuid:()=>{emptyBootstrapUuidCalls++;return 'bootstrap-user-1';}},()=> '2026-11-18T00:00:00.000Z'
 );
 const emptyBootstrapResult=emptyBootstrap.bootstrapAdmin_('Owner@Example.Gov.Id','Administrator');
@@ -935,7 +935,7 @@ const doGetFixture=(permissionError,backOfficeError,currentUser)=> {
     createTemplateFromFile:(name)=>{calls.template=name;return {evaluate:()=>({setTitle:()=>({setXFrameOptionsMode:()=>({ok:true})})})};}
   };
   const fn=new Function('requirePermission_','requireBackOfficeAccess_','getCurrentUser_','HtmlService','APP',
-    doGetCode+'\\nreturn {doGet};'
+    doGetCode+'\nreturn {doGet};'
   )(
     (permission)=>{calls.permission.push(permission);if(permissionError)throw new Error(permissionError);return {};},
     ()=>{calls.backOffice++;if(backOfficeError)throw new Error(backOfficeError);return {};},
