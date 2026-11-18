@@ -2026,3 +2026,44 @@ assert(adminSelfScope.getCurrentUser_().userId==='u-admin'&&viewerSelfScope.getC
 const unknownSelfScope=selfScopeRuntime('unknown@example.gov.id');
 assert(unknownSelfScope.hasPermission('dashboard.read')===false&&unknownSelfScope.getMyPermissions().authenticated===false,
   'Self-scope endpoints fail closed for an email without an active application user');
+
+
+/* Protected RPC negative test: endpoint authorization must stop writes before side effects. */
+const adminCreateUsers=[
+  ['user_id','email','display_name','role','status'],
+  ['u-viewer','viewer@example.gov.id','Viewer','VIEWER','ACTIVE'],
+  ['u-admin','admin@example.gov.id','Admin','ADMIN','ACTIVE']
+];
+const adminCreatePermissions=[
+  ['role','permission'],
+  ['VIEWER','dashboard.read'],
+  ['ADMIN','dashboard.read'],['ADMIN','admin.users']
+];
+let adminCreateWrites=0,generatedIds=0;
+const adminCreateUsersSheet={
+  getDataRange:()=>({getValues:()=>adminCreateUsers}),
+  appendRow:(row)=>{adminCreateWrites++;adminCreateUsers.push(row);}
+};
+const adminCreateDb=()=>({
+  getSheetByName:(name)=>name==='USERS'?adminCreateUsersSheet:makeSheet(adminCreatePermissions)
+});
+const adminCreateRuntime=(email)=>new Function('Session','getDb_','SHEETS','DEFAULT_ROLES','Utilities','nowIso_','appendAudit_',authCode+'\nreturn {adminCreateUser};')(
+  {getActiveUser:()=>({getEmail:()=>email})},
+  adminCreateDb,
+  SHEETS,
+  {ADMIN:['dashboard.read','admin.users'],VIEWER:['dashboard.read']},
+  {getUuid:()=>{generatedIds++;return 'generated-user-id';}},
+  ()=>'2026-11-18T00:00:00.000Z',
+  ()=>{}
+);
+const viewerAdminCreate=adminCreateRuntime('viewer@example.gov.id');
+let protectedRpcDenied=false;
+try{viewerAdminCreate.adminCreateUser('new@example.gov.id','New User','VIEWER');}
+catch(e){protectedRpcDenied=String(e.message)==='FORBIDDEN: admin.users';}
+assert(protectedRpcDenied,'Protected adminCreateUser RPC rejects a caller without admin.users');
+assert(adminCreateWrites===0&&generatedIds===0,
+  'Protected adminCreateUser denial occurs before ID generation or persistent writes');
+const adminAdminCreate=adminCreateRuntime('admin@example.gov.id');
+const adminCreateResult=adminAdminCreate.adminCreateUser('new@example.gov.id','New User','VIEWER');
+assert(adminCreateResult.ok===true&&adminCreateWrites===1,
+  'Protected adminCreateUser RPC permits an authorized administrator and performs the expected write');
