@@ -1921,3 +1921,73 @@ assert(servicePoints.points.every(point=>Object.keys(point).every(key=>allowedSe
   'Public service-point records stay within the approved structural field allowlist');
 assert(servicePoints.points.every(point=>point.coordinateStatus||point.status==='REFERENCE'),
   'Public service-point records carry explicit coordinate or reference status');
+
+
+/* Remaining Public TV Passport intelligence and quota response contracts. */
+const passportReportFixture={
+  contract:'PASSPORT_YOY_V1',
+  period:{monthCount:1,comparePeriodsAvailable:['2026-01']},
+  totals:{base2025:100,compare2026:120,delta:20,growthPct:20,comparableOfficeDelta:15,newOfficeContribution2026:5},
+  monthly:[{periode2025:'2025-01',periode2026:'2026-01',base2025:100,compare2026:120,delta:20,growthPct:20,raw:['private']}],
+  offices:{rows:[{kantor_imigrasi:'Kanim Contoh',base2025:100,compare2026:120,delta:20,growthPct:20,status:'COMPARABLE',email:'private@example.gov.id'}],comparableCount:1,new2026:[]},
+  users:[{email:'private@example.gov.id'}],rawRows:[['private']]
+};
+const passportYoYRuntime=new Function('getPassportYearOverYearAnalytics_',publicTvCode+'\nreturn {getPublicTvPassportYoYContext,getPublicTvPassportOfficeYoYContext};')(
+  ()=>passportReportFixture
+);
+const passportYoY=passportYoYRuntime.getPublicTvPassportYoYContext();
+const passportYoYKeys=new Set(['contract','readOnly','baseYear','compareYear','monthCount','latestPeriod','base2025','compare2026','delta','growthPct','comparableOfficeDelta','newOfficeContribution2026','monthly','offices','comparableCount','new2026Count']);
+assert(Object.keys(passportYoY).every(key=>passportYoYKeys.has(key))&&passportYoY.readOnly===true,
+  'Public Passport YoY response stays within the approved top-level contract');
+assert(passportYoY.monthly.every(row=>Object.keys(row).sort().join('|')==='base2025|compare2026|delta|growthPct|periode2025|periode2026') &&
+  passportYoY.offices.every(row=>Object.keys(row).sort().join('|')==='base2025|compare2026|delta|growthPct|kantor_imigrasi|status'),
+  'Public Passport YoY monthly and office rows use explicit field allowlists');
+assert(!JSON.stringify(passportYoY).includes('private@example.gov.id')&&!JSON.stringify(passportYoY).includes('rawRows'),
+  'Public Passport YoY projection excludes identity and raw source fields');
+
+const officeYoYRuntime=new Function('getPassportYearOverYearAnalytics_','getServiceDashboard_',publicTvCode+'\nreturn getPublicTvPassportOfficeYoYContext;')(
+  ()=>passportReportFixture,
+  (datasetKey)=>datasetKey==='PASSPORT_SERVICE_MONTHLY_2025'
+    ?{monthly:[{periode:'2025-01',total:100}]}
+    :{monthly:[{periode:'2026-01',total:120}]}
+);
+let missingOfficeRejected=false;
+try{officeYoYRuntime({});}catch(e){missingOfficeRejected=String(e.message)==='PASSPORT_YOY_OFFICE_REQUIRED';}
+assert(missingOfficeRejected,'Public office-level Passport YoY rejects a missing office filter');
+const officeYoY=officeYoYRuntime({kantor_imigrasi:'Kanim Contoh',periodEnd:'2026-01'});
+const officeYoYKeys=new Set(['contract','readOnly','kantor_imigrasi','baseYear','compareYear','status','monthCount','latestPeriod','base2025','compare2026','delta','growthPct','monthly']);
+assert(Object.keys(officeYoY).every(key=>officeYoYKeys.has(key))&&officeYoY.readOnly===true,
+  'Public office-level Passport YoY response stays within the approved top-level contract');
+assert(officeYoY.monthly.every(row=>Object.keys(row).sort().join('|')==='base2025|compare2026|delta|growthPct|periode2025|periode2026'),
+  'Public office-level Passport YoY monthly rows use an explicit field allowlist');
+
+const serviceYoYRuntime=new Function('getServiceDashboard_',publicTvCode+'\nreturn getPublicTvPassportServiceYoYContext;')(()=>({
+  services:[{key:'biasa_24',total:40,raw:['private']}],grandTotal:40,users:[{email:'private@example.gov.id'}]
+}));
+const serviceYoY=serviceYoYRuntime();
+assert(Object.keys(serviceYoY).sort().join('|')==='base2025|baseYear|compare2026|compareYear|comparisonReason|comparisonStatus|contract|delta|growthPct|readOnly|services',
+  'Public Passport service YoY response uses an explicit top-level contract');
+assert(serviceYoY.comparisonStatus==='NOT_COMPARABLE'&&serviceYoY.readOnly===true,
+  'Public Passport service YoY preserves the non-comparable taxonomy decision');
+assert(serviceYoY.services.every(row=>Object.keys(row).sort().join('|')==='base2025|compare2026|delta|growthPct|key|label') &&
+  !JSON.stringify(serviceYoY).includes('private@example.gov.id'),
+  'Public Passport service YoY records use an explicit field allowlist without identity leakage');
+
+const quotaCode=read('MpasporQuotaService.gs');
+const quotaRows=[
+  ['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status'],
+  ['OFFICE_1','Kanim Contoh','Jl. Contoh',-6.2,106.8,'https://example.gov.id/source','2026-11-18T00:00:00Z','VERIFIED']
+];
+const quotaRuntime=new Function('buildMpasporQuotaDashboard_','getDb_',quotaCode+'\nreturn getPublicTvMpasporQuota;')(
+  ()=>({datasetKey:'MPASPOR_QUOTA',period:'2026-01',periodLabel:'Januari 2026',totals:{mpaspor:40,overall:100,ratio:0.4},officeCount:1,offices:[{rank:1,kantor_imigrasi:'Kanim Contoh',mpaspor:40,overall:100,ratio:0.4,privateField:'secret'}]}),
+  ()=>({getSheetByName:()=>({getDataRange:()=>({getValues:()=>quotaRows})})})
+);
+const publicQuota=quotaRuntime();
+assert(Object.keys(publicQuota).sort().join('|')==='datasetKey|officeCount|offices|period|periodLabel|totals|markers',
+  'Public M-Paspor quota response uses an explicit top-level contract');
+assert(publicQuota.offices.every(row=>Object.keys(row).sort().join('|')==='kantor_imigrasi|mpaspor|overall|rank|ratio'),
+  'Public M-Paspor quota office records use an explicit field allowlist');
+assert(publicQuota.markers.every(row=>Object.keys(row).sort().join('|')==='address|latitude|longitude|kantor_imigrasi|metricValue|office_key|quotaIndex|rows|source_url|total'),
+  'Public M-Paspor quota GIS markers use an explicit field allowlist');
+assert(!JSON.stringify(publicQuota).includes('verified_at')&&!JSON.stringify(publicQuota).includes('privateField'),
+  'Public M-Paspor quota excludes verification timestamps and unapproved fields');
