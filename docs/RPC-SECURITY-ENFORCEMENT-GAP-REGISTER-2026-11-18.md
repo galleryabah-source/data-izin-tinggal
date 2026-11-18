@@ -231,3 +231,16 @@ Each must deny with `FORBIDDEN: admin.config` before reading backup configuratio
 
 This confirms denial ordering for the tested unauthorized path only. It does not test authorized snapshot creation, snapshot integrity, retention, restore execution, or real Drive/Spreadsheet ACL behavior.
 
+
+
+### Authorized canonical import lifecycle fixture
+
+A controlled runtime fixture now exercises the authorized `commitImport()` path against the actual import service implementation and isolated in-memory Spreadsheet doubles. It verifies:
+- An authorized ADMIN import writes one canonical dataset row, one import-log row, and one audit event, and returns the batch result.
+- Repeating the same business key is rejected without adding another dataset row, import-log row, or audit event.
+- A new row targeting a closed period is rejected before dataset creation or canonical writes.
+- The script lock is released after success, duplicate rejection, and closed-period rejection.
+
+GitHub Actions `RPC Security Contract` run #108 (run ID `44247760964`) completed SUCCESS for code head `e80cf564296df7934d098e284a7ffc0755c232c8`; the full `npm test` command passed.
+
+**Scope limitation:** these are deterministic fixture tests with controlled services and a minimal contract fixture. They do not establish production Spreadsheet atomicity, rollback after a downstream audit/log failure, real lock contention behavior, Google Workspace identity, or real Drive/Spreadsheet ACL behavior. The import pipeline still requires failure-injection tests for partial-write recovery and idempotent batch identity before production certification.
