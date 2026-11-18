@@ -208,3 +208,15 @@ The tests invoke the actual service function declarations in controlled V8 fixtu
 
 These fixtures prove only the tested unauthorized-denial ordering. They do not yet test authorized import/period mutation success, downstream transactional behavior, all import variants, or deployed Apps Script runtime behavior. The protected RPC matrix remains incomplete.
 
+### Extended protected RPC denial-before-side-effect fixtures
+
+The controlled runtime fixture matrix now includes five additional checks:
+- `commitGoogleSourceImport()`: missing `dataset.import` must deny before Google-source adaptation/read, canonical import commit, or audit append.
+- `repairPassportServiceMonthly2025DerivedTotal()`: missing `dataset.write` must deny before script-lock acquisition.
+- `saveRunningText()` and `deleteRunningText()`: missing `admin.config` must deny before running-text sheet access or audit append.
+- `setBackupFolder()`: missing `admin.config` must deny before folder-ID normalization, Drive lookup, or Script Properties mutation.
+
+GitHub Actions `RPC Security Contract` run #98 (run ID `44246418632`) completed SUCCESS for code head `14cfed826f17b040147a0aae2632becbb91b83d8`; the full `npm test` command passed.
+
+These are unauthorized-path fixture results only. Authorized mutation success, persistence semantics, idempotency, rollback behavior, real Apps Script service permissions, and full backup/restore safety remain unverified. The backup/recovery center's read-only policy is not a substitute for testing each backup or recovery mutation endpoint.
+
