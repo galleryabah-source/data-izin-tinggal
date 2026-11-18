@@ -1987,7 +1987,7 @@ assert(Object.keys(publicQuota).sort().join('|')==='datasetKey|markers|officeCou
   'Public M-Paspor quota response uses an explicit top-level contract');
 assert(publicQuota.offices.every(row=>Object.keys(row).sort().join('|')==='kantor_imigrasi|mpaspor|overall|rank|ratio'),
   'Public M-Paspor quota office records use an explicit field allowlist');
-assert(publicQuota.markers.every(row=>Object.keys(row).sort().join('|')==='address|latitude|longitude|kantor_imigrasi|metricValue|office_key|quotaIndex|rows|source_url|total'),
+assert(publicQuota.markers.every(row=>Object.keys(row).sort().join('|')==='address|kantor_imigrasi|latitude|longitude|metricValue|office_key|quotaIndex|rows|source_url|total'),
   'Public M-Paspor quota GIS markers use an explicit field allowlist');
 assert(!JSON.stringify(publicQuota).includes('verified_at')&&!JSON.stringify(publicQuota).includes('privateField'),
   'Public M-Paspor quota excludes verification timestamps and unapproved fields');
