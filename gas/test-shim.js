@@ -1921,8 +1921,8 @@ const mpasporQuotaSource=read('MpasporQuotaService.gs');
 const publicQuotaEndpoint=new Function(
   'getDb_',
   'quotaFixture',
-  mpasporQuotaSource+"\\n"+
-    "buildMpasporQuotaDashboard_=()=>quotaFixture;\\n"+
+  mpasporQuotaSource+"\n"+
+    "buildMpasporQuotaDashboard_=()=>quotaFixture;\n"+
     'return getPublicTvMpasporQuota;'
 )(
   ()=>({getSheetByName:()=>({
