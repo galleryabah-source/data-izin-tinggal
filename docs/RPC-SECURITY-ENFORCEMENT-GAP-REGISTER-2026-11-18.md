@@ -287,3 +287,14 @@ GitHub Actions `RPC Security Contract` run #114 (run ID `44248167227`) completed
 **Required remediation before production certification:** move immutable source provenance into the same durable batch lifecycle as the canonical import, so the batch record contains source type, spreadsheet ID, spreadsheet name, sheet name, source schema signature, and contract version before/with commit finalization. Provide an idempotent reconciliation path for a committed batch whose provenance record is incomplete. A separate post-commit audit call must not be the sole source-provenance record.
 
 **Classification:** both findings are P0 integrity gaps. The characterization fixtures demonstrate the failure ordering in controlled dependencies; they do not establish production rollback behavior, nor do they modify production data. No runtime fix, deployment, or canonical baseline change is included in this audit-only change.
+
+
+### Import partial-commit failure characterization evidence
+
+Two deterministic failure-injection fixtures now characterize the non-atomic failure ordering described above:
+- `commitImport()` fixture forces `appendAudit_()` to throw after the canonical dataset row, registry row-count update, cache-generation bump, and import-log append. It confirms the RPC returns `AUDIT_WRITE_FAILED` while the canonical row and import-log entry remain written; the script lock is still released.
+- `commitGoogleSourceImport()` fixture extracts and invokes the actual RPC implementation with isolated dependencies. It forces the separate provenance `appendAudit_()` to throw after `commitImport()` returns success, confirming that the RPC returns `SOURCE_PROVENANCE_AUDIT_FAILED` although the canonical import has already completed.
+
+GitHub Actions `RPC Security Contract` run #126 (run ID `44256950504`) completed SUCCESS for code head `deac5cf041febc43798fe8c605672e9f955a52bb`; the full `npm test` suite passed.
+
+**Important interpretation:** these are characterization tests that intentionally assert the currently observed unsafe partial-commit behavior. They make the P0 failure modes reproducible; they do not represent a fix. The next code change must replace these assertions with safe recovery/idempotency assertions once a durable batch lifecycle is implemented. Until then, the two import paths remain uncertified for production failure recovery.
