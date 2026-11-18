@@ -2106,3 +2106,29 @@ catch(e){dailyProvisionDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config
 assert(dailyProvisionDenied,'Daily Input storage provisioning rejects a VIEWER without admin.config');
 assert(dailyProvisionLockRequests===0&&dailyProvisionOpens===0&&dailyProvisionSheetWrites===0&&dailyProvisionPropertyWrites===0,
   'Daily Input provisioning denial occurs before lock acquisition, spreadsheet access, sheet writes, or property mutation');
+
+/* Protected RPC denial matrix: import and period mutations reject before lock acquisition. */
+let importLockRequests=0;
+const importDeniedRuntime=new Function('requirePermission_','LockService',read('ImportService.gs')+'\\nreturn {commitImport};')(
+  ()=>{throw new Error('FORBIDDEN: dataset.import');},
+  {getScriptLock:()=>{importLockRequests++;return {waitLock:()=>{},releaseLock:()=>{};}}
+);
+let importDenied=false;
+try{importDeniedRuntime.commitImport('');}
+catch(e){importDenied=String(e&&e.message||e)==='FORBIDDEN: dataset.import';}
+assert(importDenied,'commitImport rejects a caller without dataset.import before parsing or locking');
+assert(importLockRequests===0,'commitImport denial occurs before script-lock acquisition');
+
+let periodLockRequests=0;
+const periodDeniedRuntime=new Function('requirePermission_','LockService',read('PeriodClosingService.gs')+'\\nreturn {closePeriod,reopenPeriod};')(
+  ()=>{throw new Error('FORBIDDEN: admin.config');},
+  {getScriptLock:()=>{periodLockRequests++;return {waitLock:()=>{},releaseLock:()=>{};}}
+);
+let closeDenied=false,reopenDenied=false;
+try{periodDeniedRuntime.closePeriod('RESIDENCE_PERMIT_MONTHLY','2026-01','test');}
+catch(e){closeDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+try{periodDeniedRuntime.reopenPeriod('RESIDENCE_PERMIT_MONTHLY','2026-01','test');}
+catch(e){reopenDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+assert(closeDenied&&reopenDenied,'closePeriod and reopenPeriod reject callers without admin.config');
+assert(periodLockRequests===0,'period close/reopen denial occurs before script-lock acquisition');
+
