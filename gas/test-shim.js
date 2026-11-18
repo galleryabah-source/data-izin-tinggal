@@ -2090,7 +2090,7 @@ const dailyProvisionProperties={
 };
 const dailyProvisionRuntime=new Function(
   'Session','getDb_','SHEETS','DEFAULT_ROLES','PropertiesService','LockService','SpreadsheetApp',
-  authCode+'\\n'+read('DailyInputService.gs')+'\\nreturn {provisionDailyInputStorageV1};'
+  authCode+'\n'+read('DailyInputService.gs')+'\\nreturn {provisionDailyInputStorageV1};'
 )(
   {getActiveUser:()=>({getEmail:()=>'viewer@example.gov.id'})},
   dailyProvisionDb,
