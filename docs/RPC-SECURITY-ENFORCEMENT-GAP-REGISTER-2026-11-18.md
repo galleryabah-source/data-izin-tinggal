@@ -244,3 +244,17 @@ A controlled runtime fixture now exercises the authorized `commitImport()` path 
 GitHub Actions `RPC Security Contract` run #108 (run ID `44247760964`) completed SUCCESS for code head `e80cf564296df7934d098e284a7ffc0755c232c8`; the full `npm test` command passed.
 
 **Scope limitation:** these are deterministic fixture tests with controlled services and a minimal contract fixture. They do not establish production Spreadsheet atomicity, rollback after a downstream audit/log failure, real lock contention behavior, Google Workspace identity, or real Drive/Spreadsheet ACL behavior. The import pipeline still requires failure-injection tests for partial-write recovery and idempotent batch identity before production certification.
+
+
+### Authorized period close/reopen lifecycle fixture
+
+The controlled runtime fixture now invokes the actual `closePeriod()` and `reopenPeriod()` implementations against an isolated in-memory closure sheet. It verifies:
+- Authorized close creates one `CLOSED` record with the source row count and an audit event.
+- Repeating close on an already closed period is idempotent and does not append another record or audit event.
+- Authorized reopen changes the status to `OPEN`, stores the correction reason, and appends a separate audit event.
+- Re-closing after controlled correction clears stale reopen actor, timestamp, and reason metadata.
+- The script lock is released after each of the four calls.
+
+GitHub Actions `RPC Security Contract` run #111 (run ID `44247962096`) completed SUCCESS for code head `2171cc36703a33c26bac532c2dc47dd070aad7d9`; the full `npm test` command passed.
+
+**Scope limitation:** the fixture validates the service's state transitions against an in-memory sheet and mocked dashboard/audit dependencies. It does not prove real Sheets API atomicity, rollback on audit failure, contention across concurrent Apps Script executions, or production authorization identity. Failure-injection and live isolated Workspace tests remain release gates.
