@@ -258,3 +258,17 @@ The controlled runtime fixture now invokes the actual `closePeriod()` and `reope
 GitHub Actions `RPC Security Contract` run #111 (run ID `44247962096`) completed SUCCESS for code head `2171cc36703a33c26bac532c2dc47dd070aad7d9`; the full `npm test` command passed.
 
 **Scope limitation:** the fixture validates the service's state transitions against an in-memory sheet and mocked dashboard/audit dependencies. It does not prove real Sheets API atomicity, rollback on audit failure, contention across concurrent Apps Script executions, or production authorization identity. Failure-injection and live isolated Workspace tests remain release gates.
+
+
+### Office-reference verification authorization and integrity fixture
+
+A controlled runtime fixture now exercises `verifyOfficeReferenceCoordinatesV1()` against isolated office-reference rows. It verifies:
+- A caller without `admin.config` is denied before lock acquisition or sheet mutation.
+- An incomplete office address causes the all-row preflight to reject before any bulk coordinate write or success audit event.
+- An authorized verification updates the ten expected office rows in one bulk write, setting numeric coordinates, verification timestamp, and `VERIFIED` status.
+- Replaying verification leaves already verified coordinates unchanged (`changed: 0`) and still releases the lock.
+- Lock release is verified for preflight rejection and both authorized calls.
+
+GitHub Actions `RPC Security Contract` run #114 (run ID `44248167227`) completed SUCCESS for code head `bfc3bd79978324f7ebdb1022b608ddb743075d9e`; the full `npm test` command passed.
+
+**Scope limitation:** coordinate values are fixture inputs from the existing service implementation. This test does not independently validate the geographic correctness of those coordinates, the source URLs, or the real office-reference sheet ACL. Those remain separate data-owner and deployment verification tasks.
