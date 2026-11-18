@@ -2111,7 +2111,7 @@ assert(dailyProvisionLockRequests===0&&dailyProvisionOpens===0&&dailyProvisionSh
 let importLockRequests=0;
 const importDeniedRuntime=new Function('requirePermission_','LockService',read('ImportService.gs')+'\\nreturn {commitImport};')(
   ()=>{throw new Error('FORBIDDEN: dataset.import');},
-  {getScriptLock:()=>{importLockRequests++;return {waitLock:()=>{},releaseLock:()=>{};}}
+  {getScriptLock:()=>{importLockRequests++;return {waitLock:()=>{},releaseLock:()=>{}}}
 );
 let importDenied=false;
 try{importDeniedRuntime.commitImport('');}
@@ -2122,7 +2122,7 @@ assert(importLockRequests===0,'commitImport denial occurs before script-lock acq
 let periodLockRequests=0;
 const periodDeniedRuntime=new Function('requirePermission_','LockService',read('PeriodClosingService.gs')+'\\nreturn {closePeriod,reopenPeriod};')(
   ()=>{throw new Error('FORBIDDEN: admin.config');},
-  {getScriptLock:()=>{periodLockRequests++;return {waitLock:()=>{},releaseLock:()=>{};}}
+  {getScriptLock:()=>{periodLockRequests++;return {waitLock:()=>{},releaseLock:()=>{}}}
 );
 let closeDenied=false,reopenDenied=false;
 try{periodDeniedRuntime.closePeriod('RESIDENCE_PERMIT_MONTHLY','2026-01','test');}
