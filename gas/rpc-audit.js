@@ -166,4 +166,35 @@ function reachableFunctions(graph, entryName) {
   }
   return { names: [...seen], unresolved: [...unresolved] };
 }
-module.exports = { tokenize, extractFunctions, analyzeCallGraph, reachableFunctions };
+
+const MUTATION_CALLS = new Set([
+  'appendRow','appendRows','setValue','setValues','clear','clearContent','clearContents',
+  'deleteRow','deleteRows','insertRow','insertRows','insertSheet','deleteSheet',
+  'setProperty','deleteProperty','createFile','createFolder','moveTo','remove',
+  'setSharing','addEditor','addEditors','removeEditor','removeEditors','sendEmail'
+]);
+const EXTERNAL_IO_CALLS = new Set(['fetch','fetchAll','sendEmail']);
+
+function collectReachableEffects(graph, entryName) {
+  const reachable = reachableFunctions(graph, entryName);
+  const mutations = [], externalIo = [], unresolved = reachable.unresolved.slice();
+  for (const name of reachable.names) {
+    const fn = graph.functions.get(name);
+    const parsed = tokenize(fn.bodyText);
+    for (let i = 0; i < parsed.tokens.length - 1; i++) {
+      const token = parsed.tokens[i], next = parsed.tokens[i + 1];
+      if (token.type !== 'id' || next.value !== '(') continue;
+      if (MUTATION_CALLS.has(token.value)) mutations.push({ functionName: name, call: token.value, file: fn.file });
+      if (EXTERNAL_IO_CALLS.has(token.value)) externalIo.push({ functionName: name, call: token.value, file: fn.file });
+    }
+    unresolved.push(...parsed.unsupported.map(reason => name + ':' + reason));
+  }
+  return {
+    reachable: reachable.names,
+    unresolved: [...new Set(unresolved)],
+    mutations,
+    externalIo
+  };
+}
+
+module.exports = { tokenize, extractFunctions, analyzeCallGraph, reachableFunctions, collectReachableEffects };
