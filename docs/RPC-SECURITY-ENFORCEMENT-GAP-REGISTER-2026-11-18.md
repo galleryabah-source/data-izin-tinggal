@@ -376,3 +376,22 @@ The office-reference admin surface now has additional controlled runtime tests:
 GitHub Actions RPC Security Contract run #136 (run ID `44260592002`) completed SUCCESS; `npm test` passed on PR #262 head `c895ca785046d1d2878f77073ea2600b98ff5b8f`.
 
 **Scope limitation:** controlled fixtures do not prove geographic correctness of the draft addresses or coordinates, live Google Maps geocoder results, real sheet ACLs, or production deployment behavior. Draft records remain `PENDING`; these tests do not certify or publish the reference data.
+
+### Deployment execution-identity boundary (appsscript manifest)
+
+The Apps Script manifest at `gas/appsscript.json` currently declares:
+
+- `webapp.executeAs = USER_DEPLOYING`
+- `webapp.access = ANYONE_ANONYMOUS`
+
+This is a high-impact trust boundary: requests may originate from anonymous web users while server-side Apps Script services execute with the deploying user's authority. Consequently, an RPC authorization omission can expose data or privileged Drive/Spreadsheet operations available to the deployment identity. Client-side visibility, hidden UI controls, and a Node.js fixture are not authorization boundaries.
+
+**Required release controls:**
+
+1. Treat every browser-callable RPC as externally invocable, regardless of whether its UI is hidden or its intended audience is internal.
+2. Prove authentication and permission checks occur before every privileged read, write, Drive operation, external service call, and lock acquisition where applicable.
+3. For public TV RPCs, enforce explicit field projections and bounded read scope; do not expose general-purpose data access.
+4. In an isolated deployment, verify actual Apps Script callable exposure, execution identity, active-user identity behavior, and real Spreadsheet/Drive ACL outcomes using anonymous, authenticated-but-unauthorized, and authorized test principals.
+5. Reassess whether `USER_DEPLOYING` plus `ANYONE_ANONYMOUS` remains appropriate after the RPC authorization audit. Any manifest/deployment change requires a separate approved change and deployment verification.
+
+**Evidence limitation:** this finding is based on the checked-in manifest, not a live deployment inspection. It does not establish which deployment version is currently active or prove its effective access configuration. No manifest, deployment, Workspace identity flag, ACL, Script Properties, or production runtime was changed.
