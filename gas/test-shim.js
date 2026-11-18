@@ -893,6 +893,73 @@ assert(appCode.includes('function setupApp_()') && !appCode.includes('function s
 const bootstrapCode=read('Bootstrap.gs');
 assert(bootstrapCode.includes('function bootstrapCurrentUser_()') && !bootstrapCode.includes('function bootstrapCurrentUser(){'), 'Current-user bootstrap helper is private to the Apps Script editor and not callable as a browser RPC');
 assert(bootstrapCode.includes("return bootstrapAdmin_(email,'Administrator')"), 'Editor-only bootstrap delegates to the guarded private admin bootstrap helper');
+
+/* Setup/bootstrap callable-surface and editor-bootstrap safety contracts. */
+const privateSetupDeclarations=[
+  ['setupApp_',appCode],
+  ['initializeSchema_',appCode],
+  ['seedSecurity_',appCode],
+  ['seedDictionary_',appCode],
+  ['bootstrapCurrentUser_',bootstrapCode],
+  ['bootstrapAdmin_',authCode]
+];
+for(const [name,source] of privateSetupDeclarations){
+  assert(new RegExp('function\\s+'+name+'\\s*\\(').test(source),'Internal setup/bootstrap declaration remains private by underscore suffix: '+name);
+  assert(!new RegExp('function\\s+'+name.slice(0,-1)+'\\s*\\(').test(source),'No browser-callable alias exists for internal setup/bootstrap function: '+name);
+}
+
+/* The editor bootstrap must refuse to overwrite an existing USERS table before generating an ID. */
+let bootstrapUuidCalls=0,bootstrapWrites=0;
+const populatedUsers={getLastRow:()=>2,appendRow:()=>{bootstrapWrites++;}};
+const populatedBootstrap=new Function('getDb_','SHEETS','Utilities','nowIso_',authCode+'\nreturn {bootstrapAdmin_};')(
+  ()=>({getSheetByName:()=>populatedUsers}),{USERS:'USERS'},{getUuid:()=>{bootstrapUuidCalls++;return 'unexpected';}},()=> '2026-11-18T00:00:00.000Z'
+);
+let populatedBootstrapRejected=false;
+try{populatedBootstrap.bootstrapAdmin_('owner@example.gov.id','Administrator');}
+catch(e){populatedBootstrapRejected=String(e&&e.message||e)==='Bootstrap admin hanya boleh dijalankan pada USERS yang masih kosong.';}
+assert(populatedBootstrapRejected&&bootstrapUuidCalls===0&&bootstrapWrites===0,'Editor bootstrap refuses populated USERS before UUID generation or write');
+
+let emptyBootstrapRows=[],emptyBootstrapUuidCalls=0;
+const emptyUsers={getLastRow:()=>emptyBootstrapRows.length,appendRow:(row)=>emptyBootstrapRows.push(row)};
+const emptyBootstrap=new Function('getDb_','SHEETS','Utilities','nowIso_',authCode+'\nreturn {bootstrapAdmin_};')(
+  ()=>({getSheetByName:()=>emptyUsers}),{USERS:'USERS'},{getUuid:()=>{emptyBootstrapUuidCalls++;return 'bootstrap-user-1';}},()=> '2026-11-18T00:00:00.000Z'
+);
+const emptyBootstrapResult=emptyBootstrap.bootstrapAdmin_('Owner@Example.Gov.Id','Administrator');
+assert(emptyBootstrapResult.ok&&emptyBootstrapRows.length===1&&emptyBootstrapRows[0][1]==='owner@example.gov.id'&&emptyBootstrapRows[0][3]==='ADMIN','Editor bootstrap creates one normalized ADMIN row only on an empty USERS sheet');
+
+/* Web entrypoint authorization matrix: only the two TV views are anonymous. */
+const doGetCode=read('Code.gs');
+const doGetFixture=(permissionError,backOfficeError,currentUser)=> {
+  const calls={permission:[],backOffice:0,template:null};
+  const htmlService={
+    XFrameOptionsMode:{ALLOWALL:'ALLOWALL'},
+    createTemplateFromFile:(name)=>{calls.template=name;return {evaluate:()=>({setTitle:()=>({setXFrameOptionsMode:()=>({ok:true})})})};}
+  };
+  const fn=new Function('requirePermission_','requireBackOfficeAccess_','getCurrentUser_','HtmlService','APP',
+    doGetCode+'\nreturn {doGet};'
+  )(
+    (permission)=>{calls.permission.push(permission);if(permissionError)throw new Error(permissionError);return {};},
+    ()=>{calls.backOffice++;if(backOfficeError)throw new Error(backOfficeError);return {};},
+    ()=>currentUser||{authenticated:false,permissions:[],role:null},
+    htmlService,{NAME:'INTAL',VERSION:'1',TZ:'Asia/Jakarta'}
+  );
+  return {calls,doGet:fn.doGet};
+};
+const entrypointPublicTv=doGetFixture(null,null);
+assert(entrypointPublicTv.doGet({parameter:{view:'tv'}}).ok&&entrypointPublicTv.calls.template==='tv'&&entrypointPublicTv.calls.permission.length===0&&entrypointPublicTv.calls.backOffice===0,'Only explicit TV view is served without an RPC permission gate');
+const entrypointPublicTvMobile=doGetFixture(null,null);
+assert(entrypointPublicTvMobile.doGet({parameter:{view:'tv-mobile'}}).ok&&entrypointPublicTvMobile.calls.template==='tv-mobile'&&entrypointPublicTvMobile.calls.permission.length===0&&entrypointPublicTvMobile.calls.backOffice===0,'Only explicit TV Mobile view is served without an RPC permission gate');
+const entrypointDailyDenied=doGetFixture('FORBIDDEN: daily.read',null);
+let dailyDeniedResult=false;
+try{entrypointDailyDenied.doGet({parameter:{view:'daily'}});}catch(e){dailyDeniedResult=String(e&&e.message||e)==='FORBIDDEN: daily.read';}
+assert(dailyDeniedResult&&entrypointDailyDenied.calls.permission[0]==='daily.read'&&entrypointDailyDenied.calls.template===null,'Daily view is denied before template rendering without daily.read');
+const entrypointUnknownDenied=doGetFixture(null,'BACKOFFICE_AUTH_REQUIRED');
+let entrypointUnknownDeniedResult=false;
+try{entrypointUnknownDenied.doGet({parameter:{view:'unexpected'}});}catch(e){entrypointUnknownDeniedResult=String(e&&e.message||e)==='BACKOFFICE_AUTH_REQUIRED';}
+assert(entrypointUnknownDeniedResult&&entrypointUnknownDenied.calls.backOffice===1&&entrypointUnknownDenied.calls.template===null,'Unknown view values fail closed behind back-office authorization');
+const entrypointDailyRole=doGetFixture(null,null,{authenticated:true,permissions:['daily.read'],role:'OPERATOR'});
+assert(entrypointDailyRole.doGet({parameter:{view:'home'}}).ok&&entrypointDailyRole.calls.template==='index','Daily-only operator view is routed to the authenticated workspace shell');
+
 const dailyService=read('DailyInputService.gs');
 assert(dailyService.includes('enabled:false') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily input code-level kill switch remains closed until a separately reviewed release');
 assert(dailyService.includes("c[DAILY_INPUT_GUARD_V1.featureFlagKey]||'false'") && !dailyService.includes('DAILY_INPUT_OWNER_OVERRIDE'), 'Daily input uses its feature flag and contains no owner-override bypass');
@@ -1777,37 +1844,939 @@ Object.entries(rpcManifest.RPC_MANIFEST_V1).forEach(([name,entry])=>{
   else assert(entry.permission===null,'Non-protected RPC has no fabricated permission: '+name);
 });
 
-/* Manifest authorization metadata must agree with the endpoint's own server guard. */
-function rpcDeclarationSegment_(source,name){
-  const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const start=source.search(new RegExp('^function\\s+'+escaped+'\\s*\\(','m'));
-  if(start<0)return '';
-  const next=source.slice(start+1).search(/^function\s+[A-Za-z$][\w$]*\s*\(/m);
-  return source.slice(start,next<0?source.length:start+1+next);
-}
+const rpcAudit=require('./rpc-audit.js');
+const effectFixture=rpcAudit.analyzeCallGraph({
+  'effects.gs': `
+    function publicEntry(){ return readHelper(); }
+    function readHelper(){ return []; }
+    function unsafeEntry(){ return writeHelper(); }
+    function writeHelper(){ sheet.appendRow(['x']); return true; }
+    function pureValidator(){ return validateShape_(); }
+    function validateShape_(){ return {ok:true}; }
+  `
+});
+const publicEffects=rpcAudit.collectReachableEffects(effectFixture,'publicEntry');
+assert(publicEffects.mutations.length===0 && publicEffects.externalIo.length===0,
+  'RPC effect inventory recognizes a transitive read-only path');
+const unsafeEffects=rpcAudit.collectReachableEffects(effectFixture,'unsafeEntry');
+assert(unsafeEffects.mutations.some(effect=>effect.call==='appendRow' && effect.functionName==='writeHelper'),
+  'RPC effect inventory detects a mutation hidden in a transitive helper');
+const pureEffects=rpcAudit.collectReachableEffects(effectFixture,'pureValidator');
+assert(pureEffects.mutations.length===0 && pureEffects.externalIo.length===0,
+  'RPC effect inventory recognizes a pure validation path');
+
+const dynamicEffectFixture=rpcAudit.analyzeCallGraph({
+  'dynamic-effects.gs': 'function exposed(){ return sheet[method](); }'
+});
+const dynamicEffects=rpcAudit.collectReachableEffects(dynamicEffectFixture,'exposed');
+assert(dynamicEffects.blockers.some(reason=>reason.includes('COMPUTED_CALL_NOT_ANALYZED')),
+  'RPC effect inventory exposes computed calls as blockers rather than treating them as side-effect free');
+
+
+/* Manifest authorization metadata: inspect transitive statically named helper reachability. */
 const rpcSources=new Map();
 for(const sourceFile of fs.readdirSync(__dirname).filter(name=>name.endsWith('.gs'))){
   rpcSources.set(sourceFile,read(sourceFile));
 }
+const rpcGraph=rpcAudit.analyzeCallGraph(Object.fromEntries(rpcSources));
+assert(!rpcGraph.unsupported.some(reason=>reason.startsWith('AMBIGUOUS_FUNCTION:')),
+  'RPC source graph has no ambiguous global function declarations: '+rpcGraph.unsupported.filter(reason=>reason.startsWith('AMBIGUOUS_FUNCTION:')).join(', '));
+
 for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
-  const source=[...rpcSources.values()].find(text=>new RegExp('^function\\s+'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*\\(','m').test(text));
-  assert(!!source,'RPC manifest declaration has source: '+name);
-  const segment=rpcDeclarationSegment_(source,name);
+  assert(rpcGraph.functions.has(name),'RPC manifest declaration exists in the global source graph: '+name);
+  const reachable=rpcAudit.reachableFunctions(rpcGraph,name);
+  const reachableBodies=reachable.names.map(fnName=>rpcGraph.functions.get(fnName).bodyText).join('\n');
   if(entry.access==='protected'){
-    const guard=entry.permission==='backoffice.access'
-      ? /requireBackOfficeAccess_\s*\(\s*\)/
-      : new RegExp("requirePermission_\\s*\\(\\s*['\\\"]"+entry.permission.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"['\\\"]\\s*\\)");
-    const directGuard=guard.test(segment);
-    const delegatedGuard=!directGuard&&[...segment.matchAll(/\b([A-Za-z$][\w$]*)\s*\(/g)].some(call=>{
-      const helperName=call[1];
-      if(helperName===name)return false;
-      const helperSource=[...rpcSources.values()].find(text=>new RegExp('^function\\s+'+helperName+'\\s*\\(','m').test(text));
-      return !!helperSource&&guard.test(rpcDeclarationSegment_(helperSource,helperName));
-    });
-    assert(directGuard||delegatedGuard,'RPC guard matches manifest permission '+entry.permission+' directly or through a guarded function: '+name);
+    const hasGuard=entry.permission==='backoffice.access'
+      ? reachableBodies.includes('requireBackOfficeAccess_(')
+      : reachableBodies.includes("requirePermission_('"+entry.permission+"')") ||
+        reachableBodies.includes('requirePermission_("'+entry.permission+'")');
+    assert(hasGuard,
+      'RPC reachable call graph contains exact server permission guard '+entry.permission+': '+name);
   }else if(entry.access==='public_read_only'){
-    assert(!/requirePermission_\s*\(/.test(segment),'Public read-only RPC has no permission guard: '+name);
+    assert(!reachableBodies.includes('requirePermission_('),
+      'Public read-only RPC reachable helpers do not add an interactive permission dependency: '+name);
+    const effects=rpcAudit.collectReachableEffects(rpcGraph,name);
+    assert(effects.mutations.length===0,
+      'Public read-only RPC has no transitive mutation calls: '+name+' '+JSON.stringify(effects.mutations));
+    assert(effects.externalIo.length===0,
+      'Public read-only RPC has no transitive external IO calls: '+name+' '+JSON.stringify(effects.externalIo));
+    assert(effects.blockers.length===0,
+      'Public read-only RPC has no unsupported dynamic or malformed syntax blockers: '+name+' '+JSON.stringify(effects.blockers));
+  }else if(entry.access==='stateless_validation'){
+    const effects=rpcAudit.collectReachableEffects(rpcGraph,name);
+    assert(effects.mutations.length===0 && effects.externalIo.length===0 && effects.blockers.length===0,
+      'Stateless validation RPC has no transitive mutation, external IO, or unsupported syntax blockers: '+name+' '+JSON.stringify(effects.blockers));
   }else if(entry.access==='self_scope'){
-    assert(/getCurrentUser_\s*\(/.test(segment),'Self-scope RPC resolves current user: '+name);
+    assert(reachableBodies.includes('getCurrentUser_('),
+      'Self-scope RPC reachable call graph resolves the current user: '+name);
   }
+}
+
+
+/* Public TV response projection and running-text privacy regressions. */
+const publicTvCode=read('PublicTvService.gs');
+const publicTvRuntime=new Function('getActiveRunningTexts_',publicTvCode+'\nreturn {getPublicTvRunningTexts,sanitizePublicTvDashboard_,sanitizePublicTvMap_};')(()=>['Informasi layanan']);
+const runningTextRows=[
+  ['content_id','content','status','priority','start_at','end_at','created_by','created_at','updated_at'],
+  ['secret-id-1','Informasi layanan publik','ACTIVE',1,'','','admin@example.gov.id','2026-11-18T00:00:00Z','2026-11-18T00:00:00Z'],
+  ['secret-id-2','Teks tidak aktif','INACTIVE',2,'','','operator@example.gov.id','','']
+];
+const runningTextSheet={getDataRange:()=>({getValues:()=>runningTextRows})};
+const codeRuntime=new Function('getDb_','SHEETS','readCacheKey_','readCacheGet_','readCachePut_',read('Code.gs')+'\nreturn {getActiveRunningTexts_};')(
+  ()=>({getSheetByName:()=>runningTextSheet}),
+  {RUNNING_TEXTS:'RUNNING_TEXTS'},
+  ()=> 'running-text-test',
+  ()=> null,
+  (_key,value)=>value
+);
+const publicRunningTexts=new Function('getActiveRunningTexts_',publicTvCode+'\nreturn getPublicTvRunningTexts;')(codeRuntime.getActiveRunningTexts_)();
+assert(Array.isArray(publicRunningTexts)&&publicRunningTexts.length===1&&publicRunningTexts[0]==='Informasi layanan publik',
+  'Anonymous running-text RPC returns active content strings only');
+assert(!JSON.stringify(publicRunningTexts).includes('secret-id-1')&&!JSON.stringify(publicRunningTexts).includes('admin@example.gov.id'),
+  'Anonymous running-text RPC does not expose IDs or creator identity');
+
+const projectedDashboard=publicTvRuntime.sanitizePublicTvDashboard_({
+  datasetKey:'SAFE_DATASET',rowCount:1,metric:'total',grandTotal:5,
+  monthly:[{periode:'2026-01',total:5,rows:1,email:'private@example.gov.id'}],
+  offices:[{kantor_imigrasi:'Kanim Contoh',total:5,rows:1,rawRow:['private']}],
+  services:[{key:'biasa_24',total:5,userId:'private'}],
+  filters:{periode:'',kantor_imigrasi:'',metric:'total',availablePeriods:['2026-01'],availableOffices:['Kanim Contoh'],permissions:['admin.config']},
+  users:[{email:'private@example.gov.id'}],rawRows:[['private']]
+});
+assert(Object.keys(projectedDashboard).sort().join('|')==='datasetKey|filters|grandTotal|metric|monthly|offices|rowCount|services',
+  'Public dashboard response uses an explicit top-level allowlist');
+assert(Object.keys(projectedDashboard.monthly[0]).sort().join('|')==='periode|rows|total' &&
+  Object.keys(projectedDashboard.offices[0]).sort().join('|')==='kantor_imigrasi|rows|total' &&
+  Object.keys(projectedDashboard.services[0]).sort().join('|')==='key|total',
+  'Public dashboard nested records use explicit allowlists');
+assert(!JSON.stringify(projectedDashboard).includes('private@example.gov.id')&&!JSON.stringify(projectedDashboard).includes('admin.config'),
+  'Public dashboard projection removes identity and permission fields');
+
+const projectedMap=publicTvRuntime.sanitizePublicTvMap_({
+  datasetKey:'SAFE_DATASET',rowCount:1,metric:'total',
+  filters:{periode:'2026-01',kantor_imigrasi:'',metric:'total',email:'private@example.gov.id'},
+  markers:[{kantor_imigrasi:'Kanim Contoh',latitude:-6.2,longitude:106.8,total:5,metricValue:5,rows:1,rawRow:['private'],userId:'private'}],
+  rawRows:[['private']]
+});
+assert(Object.keys(projectedMap).sort().join('|')==='datasetKey|filters|markers|metric|rowCount',
+  'Public map response uses an explicit top-level allowlist');
+assert(Object.keys(projectedMap.markers[0]).sort().join('|')==='kantor_imigrasi|latitude|longitude|metricValue|rows|total',
+  'Public map markers use an explicit field allowlist');
+assert(!JSON.stringify(projectedMap).includes('private@example.gov.id')&&!JSON.stringify(projectedMap).includes('rawRow'),
+  'Public map projection removes identity and raw-row fields');
+
+
+const publicTvAnalyticsRuntime=new Function('getCrossServiceReporting_',publicTvCode+'\nreturn {getPublicTvAnalyticalRunningTexts,getPublicTvServicePoints};')(()=>({
+  monthly:[{periode:'2026-01',residenceTotal:10,passportTotal:20,combinedTotal:30}],
+  offices:[{kantor_imigrasi:'Kanim Contoh',residenceTotal:10,passportTotal:20,combinedTotal:30,residenceRows:1,passportRows:1}],
+  totals:{residence:10,passport:20,combined:30},
+  users:[{email:'private@example.gov.id'}],rawRows:[['private']]
+}));
+const analyticalTexts=publicTvAnalyticsRuntime.getPublicTvAnalyticalRunningTexts();
+const allowedAnalyticalKeys=new Set(['type','periode','text','rank','kantor_imigrasi','residence','passport','combined','residenceRows','passportRows']);
+assert(Array.isArray(analyticalTexts)&&analyticalTexts.length>0&&analyticalTexts.every(item=>Object.keys(item).every(key=>allowedAnalyticalKeys.has(key))),
+  'Public analytical running-text records stay within an explicit field allowlist');
+assert(analyticalTexts.every(item=>typeof item.text==='string')&&!JSON.stringify(analyticalTexts).includes('private@example.gov.id'),
+  'Public analytical running-text output contains narrative text and no caller identity');
+
+const servicePoints=publicTvAnalyticsRuntime.getPublicTvServicePoints();
+const allowedServicePointKeys=new Set(['pointId','parentOffice','pointType','pointTypeLabel','name','location','latitude','longitude','dailyCapacity','boothCount','mapsUrl','hours','status','statusLabel','coordinateStatus','coordinateStatusLabel']);
+assert(servicePoints&&servicePoints.readOnly===true&&Array.isArray(servicePoints.points)&&servicePoints.points.length>0,
+  'Public service-point endpoint declares a read-only reference contract');
+assert(servicePoints.points.every(point=>Object.keys(point).every(key=>allowedServicePointKeys.has(key))),
+  'Public service-point records stay within the approved structural field allowlist');
+assert(servicePoints.points.every(point=>point.coordinateStatus||point.status==='REFERENCE'),
+  'Public service-point records carry explicit coordinate or reference status');
+
+
+/* Remaining Public TV Passport intelligence and quota response contracts. */
+const passportReportFixture={
+  contract:'PASSPORT_YOY_V1',
+  period:{monthCount:1,comparePeriodsAvailable:['2026-01']},
+  totals:{base2025:100,compare2026:120,delta:20,growthPct:20,comparableOfficeDelta:15,newOfficeContribution2026:5},
+  monthly:[{periode2025:'2025-01',periode2026:'2026-01',base2025:100,compare2026:120,delta:20,growthPct:20,raw:['private']}],
+  offices:{rows:[{kantor_imigrasi:'Kanim Contoh',base2025:100,compare2026:120,delta:20,growthPct:20,status:'COMPARABLE',email:'private@example.gov.id'}],comparableCount:1,new2026:[]},
+  users:[{email:'private@example.gov.id'}],rawRows:[['private']]
+};
+const passportYoYRuntime=new Function('getPassportYearOverYearAnalytics_',publicTvCode+'\nreturn {getPublicTvPassportYoYContext,getPublicTvPassportOfficeYoYContext};')(
+  ()=>passportReportFixture
+);
+const passportYoY=passportYoYRuntime.getPublicTvPassportYoYContext();
+const passportYoYKeys=new Set(['contract','readOnly','baseYear','compareYear','monthCount','latestPeriod','base2025','compare2026','delta','growthPct','comparableOfficeDelta','newOfficeContribution2026','monthly','offices','comparableCount','new2026Count']);
+assert(Object.keys(passportYoY).every(key=>passportYoYKeys.has(key))&&passportYoY.readOnly===true,
+  'Public Passport YoY response stays within the approved top-level contract');
+assert(passportYoY.monthly.every(row=>Object.keys(row).sort().join('|')==='base2025|compare2026|delta|growthPct|periode2025|periode2026') &&
+  passportYoY.offices.every(row=>Object.keys(row).sort().join('|')==='base2025|compare2026|delta|growthPct|kantor_imigrasi|status'),
+  'Public Passport YoY monthly and office rows use explicit field allowlists');
+assert(!JSON.stringify(passportYoY).includes('private@example.gov.id')&&!JSON.stringify(passportYoY).includes('rawRows'),
+  'Public Passport YoY projection excludes identity and raw source fields');
+
+const officeYoYRuntime=new Function('getPassportYearOverYearAnalytics_','getServiceDashboard_',publicTvCode+'\nreturn getPublicTvPassportOfficeYoYContext;')(
+  ()=>passportReportFixture,
+  (datasetKey)=>datasetKey==='PASSPORT_SERVICE_MONTHLY_2025'
+    ?{monthly:[{periode:'2025-01',total:100}]}
+    :{monthly:[{periode:'2026-01',total:120}]}
+);
+let missingOfficeRejected=false;
+try{officeYoYRuntime({});}catch(e){missingOfficeRejected=String(e.message)==='PASSPORT_YOY_OFFICE_REQUIRED';}
+assert(missingOfficeRejected,'Public office-level Passport YoY rejects a missing office filter');
+const officeYoY=officeYoYRuntime({kantor_imigrasi:'Kanim Contoh',periodEnd:'2026-01'});
+const officeYoYKeys=new Set(['contract','readOnly','kantor_imigrasi','baseYear','compareYear','status','monthCount','latestPeriod','base2025','compare2026','delta','growthPct','monthly']);
+assert(Object.keys(officeYoY).every(key=>officeYoYKeys.has(key))&&officeYoY.readOnly===true,
+  'Public office-level Passport YoY response stays within the approved top-level contract');
+assert(officeYoY.monthly.every(row=>Object.keys(row).sort().join('|')==='base2025|compare2026|delta|growthPct|periode2025|periode2026'),
+  'Public office-level Passport YoY monthly rows use an explicit field allowlist');
+
+const serviceYoYRuntime=new Function('getServiceDashboard_',publicTvCode+'\nreturn getPublicTvPassportServiceYoYContext;')(()=>({
+  services:[{key:'biasa_24',total:40,raw:['private']}],grandTotal:40,users:[{email:'private@example.gov.id'}]
+}));
+const serviceYoY=serviceYoYRuntime();
+assert(Object.keys(serviceYoY).sort().join('|')==='base2025|baseYear|compare2026|compareYear|comparisonReason|comparisonStatus|contract|delta|growthPct|readOnly|services',
+  'Public Passport service YoY response uses an explicit top-level contract');
+assert(serviceYoY.comparisonStatus==='NOT_COMPARABLE'&&serviceYoY.readOnly===true,
+  'Public Passport service YoY preserves the non-comparable taxonomy decision');
+assert(serviceYoY.services.every(row=>Object.keys(row).sort().join('|')==='base2025|compare2026|delta|growthPct|key|label') &&
+  !JSON.stringify(serviceYoY).includes('private@example.gov.id'),
+  'Public Passport service YoY records use an explicit field allowlist without identity leakage');
+
+const quotaCode=read('MpasporQuotaService.gs');
+let quotaRows=[['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status']];
+const quotaRuntime=new Function('getDb_',quotaCode+'\nreturn {getPublicTvMpasporQuota,MPASPOR_QUOTA_SNAPSHOT};')(
+  ()=>({getSheetByName:()=>({getDataRange:()=>({getValues:()=>quotaRows})})})
+);
+quotaRuntime.MPASPOR_QUOTA_SNAPSHOT.offices.forEach((office,index)=>{
+  quotaRows.push(['OFFICE_'+index,office.office,'Alamat referensi',-6.2+index*0.01,106.8+index*0.01,'https://example.gov.id/source','2026-11-18T00:00:00Z','VERIFIED']);
+});
+const quotaEndpoint=quotaRuntime.getPublicTvMpasporQuota;
+const publicQuota=quotaEndpoint();
+assert(Object.keys(publicQuota).sort().join('|')==='datasetKey|markers|officeCount|offices|period|periodLabel|totals',
+  'Public M-Paspor quota response uses an explicit top-level contract');
+assert(publicQuota.offices.every(row=>Object.keys(row).sort().join('|')==='kantor_imigrasi|mpaspor|overall|rank|ratio'),
+  'Public M-Paspor quota office records use an explicit field allowlist');
+assert(publicQuota.markers.every(row=>Object.keys(row).sort().join('|')==='address|kantor_imigrasi|latitude|longitude|metricValue|office_key|quotaIndex|rows|source_url|total'),
+  'Public M-Paspor quota GIS markers use an explicit field allowlist');
+assert(!JSON.stringify(publicQuota).includes('verified_at')&&!JSON.stringify(publicQuota).includes('privateField'),
+  'Public M-Paspor quota excludes verification timestamps and unapproved fields');
+
+
+/* Self-scope RPC runtime isolation: each call is bound to the active caller identity. */
+const rbacCode=read('Rbac.gs');
+const selfScopeUsers=[
+  ['user_id','email','display_name','role','status'],
+  ['u-admin','admin@example.gov.id','Admin','ADMIN','ACTIVE'],
+  ['u-viewer','viewer@example.gov.id','Viewer','VIEWER','ACTIVE']
+];
+const selfScopePermissions=[
+  ['role','permission'],
+  ['ADMIN','admin.config'],['ADMIN','dashboard.read'],
+  ['VIEWER','dashboard.read']
+];
+const selfScopeDb=()=>({
+  getSheetByName:(name)=>makeSheet(name==='USERS'?selfScopeUsers:selfScopePermissions)
+});
+const selfScopeRuntime=(email)=>new Function('Session','getDb_','SHEETS',authCode+'\n'+rbacCode+'\nreturn {hasPermission,getMyPermissions,getCurrentUser_};')(
+  {getActiveUser:()=>({getEmail:()=>email})},
+  selfScopeDb,
+  SHEETS
+);
+const adminSelfScope=selfScopeRuntime('admin@example.gov.id');
+const viewerSelfScope=selfScopeRuntime('viewer@example.gov.id');
+assert(adminSelfScope.hasPermission('admin.config')===true&&viewerSelfScope.hasPermission('admin.config')===false,
+  'Self-scope hasPermission evaluates permissions for the active caller only');
+assert(adminSelfScope.getMyPermissions().role==='ADMIN'&&adminSelfScope.getMyPermissions().permissions.includes('admin.config'),
+  'Self-scope getMyPermissions returns the active administrator permissions');
+assert(viewerSelfScope.getMyPermissions().role==='VIEWER'&&!viewerSelfScope.getMyPermissions().permissions.includes('admin.config'),
+  'Self-scope getMyPermissions does not expose another user permission set');
+assert(adminSelfScope.getCurrentUser_().userId==='u-admin'&&viewerSelfScope.getCurrentUser_().userId==='u-viewer',
+  'Self-scope identity resolution binds each request to its own active-user record');
+const unknownSelfScope=selfScopeRuntime('unknown@example.gov.id');
+assert(unknownSelfScope.hasPermission('dashboard.read')===false&&unknownSelfScope.getMyPermissions().authenticated===false,
+  'Self-scope endpoints fail closed for an email without an active application user');
+
+
+/* Protected RPC negative test: endpoint authorization must stop writes before side effects. */
+const adminCreateUsers=[
+  ['user_id','email','display_name','role','status'],
+  ['u-viewer','viewer@example.gov.id','Viewer','VIEWER','ACTIVE'],
+  ['u-admin','admin@example.gov.id','Admin','ADMIN','ACTIVE']
+];
+const adminCreatePermissions=[
+  ['role','permission'],
+  ['VIEWER','dashboard.read'],
+  ['ADMIN','dashboard.read'],['ADMIN','admin.users']
+];
+let adminCreateWrites=0,generatedIds=0;
+const adminCreateUsersSheet={
+  getDataRange:()=>({getValues:()=>adminCreateUsers}),
+  appendRow:(row)=>{adminCreateWrites++;adminCreateUsers.push(row);}
+};
+const adminCreateDb=()=>({
+  getSheetByName:(name)=>name==='USERS'?adminCreateUsersSheet:makeSheet(adminCreatePermissions)
+});
+const adminCreateRuntime=(email)=>new Function('Session','getDb_','SHEETS','DEFAULT_ROLES','Utilities','nowIso_','appendAudit_',authCode+'\nreturn {adminCreateUser};')(
+  {getActiveUser:()=>({getEmail:()=>email})},
+  adminCreateDb,
+  SHEETS,
+  {ADMIN:['dashboard.read','admin.users'],VIEWER:['dashboard.read']},
+  {getUuid:()=>{generatedIds++;return 'generated-user-id';}},
+  ()=>'2026-11-18T00:00:00.000Z',
+  ()=>{}
+);
+const viewerAdminCreate=adminCreateRuntime('viewer@example.gov.id');
+let protectedRpcDenied=false;
+try{viewerAdminCreate.adminCreateUser('new@example.gov.id','New User','VIEWER');}
+catch(e){protectedRpcDenied=String(e.message)==='FORBIDDEN: admin.users';}
+assert(protectedRpcDenied,'Protected adminCreateUser RPC rejects a caller without admin.users');
+assert(adminCreateWrites===0&&generatedIds===0,
+  'Protected adminCreateUser denial occurs before ID generation or persistent writes');
+const adminAdminCreate=adminCreateRuntime('admin@example.gov.id');
+const adminCreateResult=adminAdminCreate.adminCreateUser('new@example.gov.id','New User','VIEWER');
+assert(adminCreateResult.ok===true&&adminCreateWrites===1,
+  'Protected adminCreateUser RPC permits an authorized administrator and performs the expected write');
+
+
+/* Protected RPC negative matrix: Daily Input provisioning must reject before acquiring a write lock. */
+const dailyProvisionUsers=[
+  ['user_id','email','display_name','role','status'],
+  ['u-viewer','viewer@example.gov.id','Viewer','VIEWER','ACTIVE']
+];
+const dailyProvisionPermissions=[
+  ['role','permission'],
+  ['VIEWER','dashboard.read'],['VIEWER','daily.read']
+];
+let dailyProvisionLockRequests=0,dailyProvisionSheetWrites=0,dailyProvisionOpens=0,dailyProvisionPropertyWrites=0;
+const dailyProvisionDb=()=>({
+  getSheetByName:(name)=>name==='USERS'
+    ?makeSheet(dailyProvisionUsers)
+    :name==='PERMISSIONS'?makeSheet(dailyProvisionPermissions):null
+});
+const dailyProvisionProperties={
+  getProperty:(key)=>key==='INTAL_DAILY_PERMISSIONS_MIGRATED_V1'?'true':null,
+  setProperty:()=>{dailyProvisionPropertyWrites++;}
+};
+const dailyProvisionRuntime=new Function(
+  'Session','getDb_','SHEETS','DEFAULT_ROLES','PropertiesService','LockService','SpreadsheetApp',
+  authCode+'\n'+read('DailyInputService.gs')+'\nreturn {provisionDailyInputStorageV1};'
+)(
+  {getActiveUser:()=>({getEmail:()=>'viewer@example.gov.id'})},
+  dailyProvisionDb,
+  SHEETS,
+  {ADMIN:['admin.config','dashboard.read'],VIEWER:['dashboard.read','daily.read']},
+  {getScriptProperties:()=>dailyProvisionProperties},
+  {getScriptLock:()=>{dailyProvisionLockRequests++;return {waitLock:()=>{},releaseLock:()=>{}};}},
+  {openById:()=>{dailyProvisionOpens++;throw new Error('UNEXPECTED_SPREADSHEET_OPEN');}}
+);
+let dailyProvisionDenied=false;
+try{dailyProvisionRuntime.provisionDailyInputStorageV1();}
+catch(e){dailyProvisionDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+assert(dailyProvisionDenied,'Daily Input storage provisioning rejects a VIEWER without admin.config');
+assert(dailyProvisionLockRequests===0&&dailyProvisionOpens===0&&dailyProvisionSheetWrites===0&&dailyProvisionPropertyWrites===0,
+  'Daily Input provisioning denial occurs before lock acquisition, spreadsheet access, sheet writes, or property mutation');
+
+/* Protected RPC denial matrix: import and period mutations reject before lock acquisition. */
+let importLockRequests=0;
+const importDeniedRuntime=new Function('requirePermission_','LockService',read('ImportService.gs')+'\nreturn {commitImport};')(
+  ()=>{throw new Error('FORBIDDEN: dataset.import');},
+  {getScriptLock:()=>{importLockRequests++;return {waitLock:()=>{},releaseLock:()=>{}};}}
+);
+let importDenied=false;
+try{importDeniedRuntime.commitImport('');}
+catch(e){importDenied=String(e&&e.message||e)==='FORBIDDEN: dataset.import';}
+assert(importDenied,'commitImport rejects a caller without dataset.import before parsing or locking');
+assert(importLockRequests===0,'commitImport denial occurs before script-lock acquisition');
+
+let periodLockRequests=0;
+const periodDeniedRuntime=new Function('requirePermission_','LockService',read('PeriodClosingService.gs')+'\nreturn {closePeriod,reopenPeriod};')(
+  ()=>{throw new Error('FORBIDDEN: admin.config');},
+  {getScriptLock:()=>{periodLockRequests++;return {waitLock:()=>{},releaseLock:()=>{}};}}
+);
+let closeDenied=false,reopenDenied=false;
+try{periodDeniedRuntime.closePeriod('RESIDENCE_PERMIT_MONTHLY','2026-01','test');}
+catch(e){closeDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+try{periodDeniedRuntime.reopenPeriod('RESIDENCE_PERMIT_MONTHLY','2026-01','test');}
+catch(e){reopenDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+assert(closeDenied&&reopenDenied,'closePeriod and reopenPeriod reject callers without admin.config');
+assert(periodLockRequests===0,'period close/reopen denial occurs before script-lock acquisition');
+
+/* Protected RPC denial matrix: Google import, derived-total repair, running-text admin, and backup config. */
+let googleAdaptCalls=0,googleCommitCalls=0,googleAuditCalls=0;
+const googleImportDeniedRuntime=new Function(
+  'requirePermission_','adaptGoogleSourceMatrix_','detectSchema_','commitImport','appendAudit_',
+  read('SourceConnectorService.gs')+'\nreturn {commitGoogleSourceImport};'
+)(
+  ()=>{throw new Error('FORBIDDEN: dataset.import');},
+  ()=>{googleAdaptCalls++;throw new Error('UNEXPECTED_GOOGLE_SOURCE_READ');},
+  ()=>{throw new Error('UNEXPECTED_SCHEMA_DETECTION');},
+  ()=>{googleCommitCalls++;},
+  ()=>{googleAuditCalls++;}
+);
+let googleImportDenied=false;
+try{googleImportDeniedRuntime.commitGoogleSourceImport({datasetKey:'PASSPORT_SERVICE_MONTHLY'});}
+catch(e){googleImportDenied=String(e&&e.message||e)==='FORBIDDEN: dataset.import';}
+assert(googleImportDenied,'commitGoogleSourceImport rejects a caller without dataset.import');
+assert(googleAdaptCalls===0&&googleCommitCalls===0&&googleAuditCalls===0,
+  'Google-source import denial occurs before source read, canonical commit, or audit side effect');
+
+let repairLockRequests=0;
+const repairDeniedRuntime=new Function('requirePermission_','LockService',read('PassportGovernanceService.gs')+'\nreturn {repairPassportServiceMonthly2025DerivedTotal};')(
+  ()=>{throw new Error('FORBIDDEN: dataset.write');},
+  {getScriptLock:()=>{repairLockRequests++;return {waitLock:()=>{},releaseLock:()=>{}};}}
+);
+let repairDenied=false;
+try{repairDeniedRuntime.repairPassportServiceMonthly2025DerivedTotal();}
+catch(e){repairDenied=String(e&&e.message||e)==='FORBIDDEN: dataset.write';}
+assert(repairDenied&&repairLockRequests===0,
+  'Derived-total repair denies callers without dataset.write before lock acquisition');
+
+let runningTextSheetRequests=0,runningTextAuditCalls=0;
+const runningTextDeniedRuntime=new Function('requirePermission_','ensureRunningTextSheet_','appendAudit_',read('Code.gs')+'\nreturn {saveRunningText,deleteRunningText};')(
+  ()=>{throw new Error('FORBIDDEN: admin.config');},
+  ()=>{runningTextSheetRequests++;throw new Error('UNEXPECTED_RUNNING_TEXT_SHEET_ACCESS');},
+  ()=>{runningTextAuditCalls++;}
+);
+let saveRunningTextDenied=false,deleteRunningTextDenied=false;
+try{runningTextDeniedRuntime.saveRunningText({content:'test'});}
+catch(e){saveRunningTextDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+try{runningTextDeniedRuntime.deleteRunningText('running-text-id');}
+catch(e){deleteRunningTextDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+assert(saveRunningTextDenied&&deleteRunningTextDenied,
+  'Running-text save and delete reject callers without admin.config');
+assert(runningTextSheetRequests===0&&runningTextAuditCalls===0,
+  'Running-text denial occurs before sheet access or audit side effects');
+
+let backupFolderNormalizeCalls=0,backupDriveCalls=0,backupPropertyWrites=0;
+const backupDeniedRuntime=new Function(
+  'requirePermission_','normalizeDriveFolderId_','DriveApp','PropertiesService',
+  read('BackupService.gs')+'\nreturn {setBackupFolder};'
+)(
+  ()=>{throw new Error('FORBIDDEN: admin.config');},
+  ()=>{backupFolderNormalizeCalls++;return 'folder-id';},
+  {getFolderById:()=>{backupDriveCalls++;return {getName:()=> 'Backup'};}},
+  {getScriptProperties:()=>({setProperty:()=>{backupPropertyWrites++;}})}
+);
+let backupDenied=false;
+try{backupDeniedRuntime.setBackupFolder('folder-id');}
+catch(e){backupDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+assert(backupDenied,'setBackupFolder rejects callers without admin.config');
+assert(backupFolderNormalizeCalls===0&&backupDriveCalls===0&&backupPropertyWrites===0,
+  'Backup folder denial occurs before ID processing, Drive access, or Script Properties mutation');
+
+/* Backup snapshot creation must enforce admin.config before reading backup or dataset state. */
+let backupConfigReads=0,backupDatasetReads=0;
+const backupSnapshotDeniedRuntime=new Function(
+  'requirePermission_','backupConfig_','getDb_','getActiveDatasetContract_',
+  'APP','SHEETS','Utilities','DriveApp','SpreadsheetApp',
+  read('BackupService.gs')+'\n'+read('PassportGovernanceService.gs')+
+  '\nreturn {createResidencePermitSnapshot,createPassportServiceSnapshot,createPassportServiceMonthly2025Snapshot};'
+)(
+  ()=>{throw new Error('FORBIDDEN: admin.config');},
+  ()=>{backupConfigReads++;return {folderId:'folder-id'};},
+  ()=>{backupDatasetReads++;throw new Error('UNEXPECTED_DATASET_ACCESS');},
+  ()=>{backupDatasetReads++;throw new Error('UNEXPECTED_DATASET_ACCESS');},
+  {TZ:'Asia/Jakarta',SHEET_PREFIX:'DATA_'},
+  {DATASET_REGISTRY:'DATASET_REGISTRY'},
+  {formatDate:()=>''},
+  {},
+  {}
+);
+let residenceSnapshotDenied=false,passportSnapshotDenied=false,passport2025SnapshotDenied=false;
+try{backupSnapshotDeniedRuntime.createResidencePermitSnapshot();}
+catch(e){residenceSnapshotDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+try{backupSnapshotDeniedRuntime.createPassportServiceSnapshot();}
+catch(e){passportSnapshotDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+try{backupSnapshotDeniedRuntime.createPassportServiceMonthly2025Snapshot();}
+catch(e){passport2025SnapshotDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+assert(residenceSnapshotDenied&&passportSnapshotDenied&&passport2025SnapshotDenied,
+  'Residence and Passport snapshot creation RPCs reject callers without admin.config');
+assert(backupConfigReads===0&&backupDatasetReads===0,
+  'Snapshot creation denial occurs before backup configuration or canonical dataset reads');
+
+
+
+/* Authorized canonical import path: success, duplicate retry rejection, and period gate. */
+{
+  class ImportFakeRange {
+    constructor(sheet,row,col,numRows=1,numCols=1){this.sheet=sheet;this.row=row;this.col=col;this.numRows=numRows;this.numCols=numCols;}
+    setValues(values){
+      for(let r=0;r<values.length;r++){
+        while(this.sheet.rows.length<this.row+r)this.sheet.rows.push([]);
+        this.sheet.rows[this.row-1+r]=values[r].slice();
+      }
+      return this;
+    }
+  }
+  class ImportFakeSheet {
+    constructor(rows=[]){this.rows=rows.map(r=>r.slice());}
+    getLastRow(){return this.rows.length;}
+    getDataRange(){return {getValues:()=>this.rows.map(r=>r.slice())};}
+    getRange(row,col,numRows=1,numCols=1){return new ImportFakeRange(this,row,col,numRows,numCols);}
+    appendRow(row){this.rows.push(row.slice());return this;}
+  }
+  const dataSheet=new ImportFakeSheet([['periode','kantor_imigrasi']]);
+  const importLog=new ImportFakeSheet([['batch_id','timestamp','actor','dataset_key','contract_version','source_rows','accepted','rejected','duplicates','status','errors']]);
+  const importDb={getSheetByName:(name)=>name==='DATA_PASSPORT_SERVICE_MONTHLY'?dataSheet:name==='IMPORT_LOG'?importLog:null};
+  let importLockWaits=0,importLockReleases=0,importDatasetCreates=0,importAudits=0,importPeriodChecks=0;
+  let importPeriodClosed=false,importUuid=0,importParseCount=0,failImportAudit=false;
+  const importSchema={signature:'passport-test-v1',contractKey:'PASSPORT_SERVICE_MONTHLY',contractVersion:'1',datasetKey:'PASSPORT_SERVICE_MONTHLY',columns:['periode','kantor_imigrasi']};
+  const importRuntime=new Function(
+    'requirePermission_','parseDelimited_','detectSchema_','LockService','getDatasetBySignature_','DATASET_CONTRACTS',
+    'assertPeriodsOpenForImport_','ensureDataset_','getDb_','Utilities',
+    'updateDatasetRowCount_','bumpReadCacheGeneration_','appendAudit_','nowIso_','SpreadsheetApp','APP','SHEETS',
+    read('ImportService.gs')+'\nreturn {commitImport};'
+  )(
+    ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    (text)=>{const row=String(text).split(String.fromCharCode(10))[1]||'';return [['periode','kantor_imigrasi'],['2026-09',(row.split(String.fromCharCode(9))[1]||'').trim()]];},
+    ()=>importSchema,
+    {getScriptLock:()=>({waitLock:()=>{importLockWaits++;},releaseLock:()=>{importLockReleases++;}})},
+    (signature)=>({datasetKey:'PASSPORT_SERVICE_MONTHLY',sheetName:'DATA_PASSPORT_SERVICE_MONTHLY'}),
+    {PASSPORT_SERVICE_MONTHLY:{columns:importSchema.columns,required:importSchema.columns,derived:[],businessKey:importSchema.columns,measures:[]}},
+    ()=>{importPeriodChecks++;if(importPeriodClosed)throw new Error('PERIOD_CLOSED: PASSPORT_SERVICE_MONTHLY 2026-09.');return true;},
+    (schema,user)=>{importDatasetCreates++;return {datasetKey:schema.datasetKey,sheetName:'DATA_PASSPORT_SERVICE_MONTHLY',rowCount:0};},
+    ()=>importDb,
+    {getUuid:()=>{importUuid++;return 'batch-'+importUuid;}},
+    ()=>{},
+    ()=> 'cache-generation-1',
+    ()=>{if(failImportAudit)throw new Error('AUDIT_WRITE_FAILED');importAudits++;},
+    ()=> '2026-11-18T02:00:00.000Z',
+    {flush:()=>{}},
+    {MAX_IMPORT_ROWS:1000,TZ:'Asia/Jakarta'},
+    {IMPORT_LOG:'IMPORT_LOG'}
+  );
+  const first=importRuntime.commitImport('periode\tkantor_imigrasi\n2026-09\tKANIM TEST');
+  assert(first.ok&&first.inserted===1&&first.datasetKey==='PASSPORT_SERVICE_MONTHLY',
+    'Authorized commitImport writes the accepted canonical row and returns the batch result');
+  assert(dataSheet.rows.length===2&&importLog.rows.length===2&&importAudits===1,
+    'Authorized commitImport writes one dataset row, one import-log row, and one audit event');
+  assert(importLockWaits===1&&importLockReleases===1,
+    'Authorized import releases the script lock after a successful commit');
+  const beforeRetry={data:dataSheet.rows.length,log:importLog.rows.length,audit:importAudits};
+  let duplicateRetryRejected=false;
+  try{importRuntime.commitImport('periode\tkantor_imigrasi\n2026-09\tKANIM TEST');}
+  catch(e){duplicateRetryRejected=String(e&&e.message||e)==='Tidak ada baris valid untuk diimpor.';}
+  assert(duplicateRetryRejected&&dataSheet.rows.length===beforeRetry.data&&importLog.rows.length===beforeRetry.log&&importAudits===beforeRetry.audit,
+    'A repeated business-key import is rejected without duplicating canonical rows or appending another batch/audit');
+  assert(importLockWaits===2&&importLockReleases===2,
+    'Duplicate retry rejection still releases the script lock');
+  importPeriodClosed=true;
+  let closedPeriodRejected=false;
+  try{importRuntime.commitImport('periode\tkantor_imigrasi\n2026-09\tKANIM CLOSED');}
+  catch(e){closedPeriodRejected=String(e&&e.message||e).startsWith('PERIOD_CLOSED:');}
+  assert(closedPeriodRejected&&dataSheet.rows.length===2&&importDatasetCreates===1,
+    'A closed-period import is rejected before dataset creation or canonical writes');
+  assert(importLockWaits===3&&importLockReleases===3,
+    'Closed-period rejection releases the script lock');
+  assert(importPeriodChecks===2,
+    'Period closure policy is evaluated for first commit and duplicate retry, but not for an empty valid-row set');
+  importPeriodClosed=false;
+  failImportAudit=true;
+  let downstreamAuditFailed=false;
+  try{importRuntime.commitImport(['periode','kantor_imigrasi'].join(String.fromCharCode(9))+String.fromCharCode(10)+['2026-09','KANIM AUDIT FAIL'].join(String.fromCharCode(9)));}
+  catch(e){downstreamAuditFailed=String(e&&e.message||e)==='AUDIT_WRITE_FAILED';}
+  assert(downstreamAuditFailed&&dataSheet.rows.length===3&&importLog.rows.length===3&&importAudits===1,
+    'Characterization: audit failure is returned after canonical row and import-log have already been written (known non-atomicity gap)');
+  assert(importLockWaits===4&&importLockReleases===4,
+    'Script lock is released even when the downstream audit append fails');
+}
+
+
+/* Authorized period-close lifecycle: close, idempotent retry, reopen, and clean re-close. */
+{
+  class PeriodFakeRange {
+    constructor(sheet,row,col,numRows=1,numCols=1){this.sheet=sheet;this.row=row;this.col=col;this.numRows=numRows;this.numCols=numCols;}
+    getValues(){
+      const out=[];
+      for(let r=0;r<this.numRows;r++){
+        const row=[];
+        for(let c=0;c<this.numCols;c++)row.push((this.sheet.rows[this.row-1+r]||[])[this.col-1+c]??'');
+        out.push(row);
+      }
+      return out;
+    }
+    setValues(values){
+      for(let r=0;r<values.length;r++){
+        while(this.sheet.rows.length<this.row+r)this.sheet.rows.push([]);
+        for(let c=0;c<values[r].length;c++)this.sheet.rows[this.row-1+r][this.col-1+c]=values[r][c];
+      }
+      return this;
+    }
+    setValue(value){return this.setValues([[value]]);}
+    clearContent(){return this.setValue('');}
+  }
+  class PeriodFakeSheet {
+    constructor(rows=[]){this.rows=rows.map(r=>r.slice());}
+    getDataRange(){return new PeriodFakeRange(this,1,1,Math.max(1,this.getLastRow()),Math.max(1,this.getLastColumn()));}
+    getRange(row,col,numRows=1,numCols=1){return new PeriodFakeRange(this,row,col,numRows,numCols);}
+    getLastRow(){return this.rows.length;}
+    getLastColumn(){return this.rows.reduce((n,r)=>Math.max(n,r.length),0);}
+    appendRow(row){this.rows.push(row.slice());return this;}
+    setFrozenRows(n){this.frozenRows=n;return this;}
+  }
+  const closureHeaders=['closure_id','dataset_key','periode','status','closed_by','closed_at','reason','reopened_by','reopened_at','reopen_reason'];
+  const closureSheet=new PeriodFakeSheet([closureHeaders]);
+  const periodDb={getSheetByName:(name)=>name==='PERIOD_CLOSURES'?closureSheet:null,insertSheet:()=>closureSheet};
+  let periodLockWaits=0,periodLockReleases=0,periodAuditEvents=0;
+  const periodRuntime=new Function(
+    'requirePermission_','LockService','DATASET_CONTRACTS','getDb_','SHEETS',
+    'getServiceDashboard_','nowIso_','Utilities','appendAudit_',
+    read('PeriodClosingService.gs')+'\nreturn {closePeriod,reopenPeriod};'
+  )(
+    ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    {getScriptLock:()=>({waitLock:()=>{periodLockWaits++;},releaseLock:()=>{periodLockReleases++;}})},
+    {PASSPORT_SERVICE_MONTHLY:{measures:['biasa_24','biasa_48']}},
+    ()=>periodDb,
+    {PERIOD_CLOSURES:'PERIOD_CLOSURES'},
+    ()=>({rowCount:80,grandTotal:327088}),
+    ()=> '2026-11-18T02:30:00.000Z',
+    {getUuid:()=> 'closure-test-001'},
+    ()=>{periodAuditEvents++;}
+  );
+  const closed=periodRuntime.closePeriod('PASSPORT_SERVICE_MONTHLY','2026-09','Rekonsiliasi selesai');
+  assert(closed.ok&&closed.status==='CLOSED'&&closed.rowCount===80,
+    'Authorized closePeriod records a CLOSED period with source row count');
+  assert(closureSheet.rows.length===2&&closureSheet.rows[1][3]==='CLOSED'&&periodAuditEvents===1,
+    'Period close writes one closure record and one audit event');
+  const repeatedClose=periodRuntime.closePeriod('PASSPORT_SERVICE_MONTHLY','2026-09','Rekonsiliasi selesai');
+  assert(repeatedClose.alreadyClosed===true&&closureSheet.rows.length===2&&periodAuditEvents===1,
+    'Repeated close is idempotent and does not append another closure or audit event');
+  const reopened=periodRuntime.reopenPeriod('PASSPORT_SERVICE_MONTHLY','2026-09','Koreksi terkontrol');
+  assert(reopened.status==='OPEN'&&reopened.correctionRequired===true,
+    'Authorized reopenPeriod records an OPEN period and requires controlled correction');
+  assert(closureSheet.rows[1][3]==='OPEN'&&closureSheet.rows[1][9]==='Koreksi terkontrol'&&periodAuditEvents===2,
+    'Period reopen stores its reason and appends a separate audit event');
+  const reclosed=periodRuntime.closePeriod('PASSPORT_SERVICE_MONTHLY','2026-09','Koreksi selesai');
+  assert(reclosed.status==='CLOSED'&&closureSheet.rows[1][3]==='CLOSED',
+    'A reopened period can be formally closed again after correction');
+  assert(closureSheet.rows[1][7]===''&&closureSheet.rows[1][8]===''&&closureSheet.rows[1][9]==='',
+    'Re-closing clears stale reopen actor, timestamp, and reason metadata');
+  assert(periodAuditEvents===3&&periodLockWaits===4&&periodLockReleases===4,
+    'Close/reopen audit counts and script-lock release counts match all four authorized calls');
+}
+
+
+/* Office-reference canonical verification: authorization, all-row preflight, and idempotent replay. */
+{
+  const officeHeaders=['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status'];
+  const officeKeys=[
+    'KANIM_KELAS_I_NON_TPI_BEKASI','KANIM_KELAS_I_NON_TPI_BOGOR','KANIM_KELAS_I_NON_TPI_DEPOK',
+    'KANIM_KELAS_I_NON_TPI_KARAWANG','KANIM_KELAS_I_NON_TPI_TASIKMALAYA','KANIM_KELAS_I_TPI_BANDUNG',
+    'KANIM_KELAS_I_TPI_CIREBON','KANIM_KELAS_II_NON_TPI_GARUT','KANIM_KELAS_II_NON_TPI_SUKABUMI',
+    'KANIM_KELAS_III_NON_TPI_CIANJUR'
+  ];
+  const officeRows=(missingAddress=false)=>[officeHeaders].concat(officeKeys.map((key,index)=>[
+    key,'KANIM TEST '+(index+1),missingAddress&&index===4?'':'Alamat uji '+(index+1),'','','https://example.gov.id/office/'+(index+1),'','PENDING'
+  ]));
+  class OfficeFakeRange {
+    constructor(sheet,row,col,numRows=1,numCols=1){this.sheet=sheet;this.row=row;this.col=col;this.numRows=numRows;this.numCols=numCols;}
+    getValues(){
+      const out=[];
+      for(let r=0;r<this.numRows;r++){
+        const row=[];
+        for(let c=0;c<this.numCols;c++)row.push((this.sheet.rows[this.row-1+r]||[])[this.col-1+c]??'');
+        out.push(row);
+      }
+      return out;
+    }
+    setValues(values){
+      this.sheet.writeCalls++;
+      for(let r=0;r<values.length;r++){
+        while(this.sheet.rows.length<this.row+r)this.sheet.rows.push([]);
+        this.sheet.rows[this.row-1+r]=values[r].slice();
+      }
+      return this;
+    }
+  }
+  class OfficeFakeSheet {
+    constructor(rows){this.rows=rows.map(r=>r.slice());this.writeCalls=0;}
+    getDataRange(){return new OfficeFakeRange(this,1,1,this.rows.length,officeHeaders.length);}
+    getRange(row,col,numRows=1,numCols=1){return new OfficeFakeRange(this,row,col,numRows,numCols);}
+  }
+  const deniedOfficeSheet=new OfficeFakeSheet(officeRows());
+  let deniedOfficeLockRequests=0;
+  const deniedOfficeRuntime=new Function('requirePermission_','LockService','getDb_','nowIso_','appendAudit_',read('OfficeReferenceService.gs')+'\nreturn {verifyOfficeReferenceCoordinatesV1};')(
+    ()=>{throw new Error('FORBIDDEN: admin.config');},
+    {getScriptLock:()=>{deniedOfficeLockRequests++;return {tryLock:()=>true,releaseLock:()=>{}}}},
+    ()=>({getSheetByName:()=>deniedOfficeSheet}),
+    ()=> '2026-11-18T03:00:00.000Z',
+    ()=>{}
+  );
+  let officeUnauthorized=false;
+  try{deniedOfficeRuntime.verifyOfficeReferenceCoordinatesV1();}
+  catch(e){officeUnauthorized=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+  assert(officeUnauthorized&&deniedOfficeLockRequests===0&&deniedOfficeSheet.writeCalls===0,
+    'Office-reference verification denies unauthorized callers before lock acquisition or sheet mutation');
+
+  const invalidOfficeSheet=new OfficeFakeSheet(officeRows(true));
+  let invalidOfficeLockReleases=0,invalidOfficeAudits=0;
+  const invalidOfficeRuntime=new Function('requirePermission_','LockService','getDb_','nowIso_','appendAudit_',read('OfficeReferenceService.gs')+'\nreturn {verifyOfficeReferenceCoordinatesV1};')(
+    ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    {getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{invalidOfficeLockReleases++;}})},
+    ()=>({getSheetByName:()=>invalidOfficeSheet}),
+    ()=> '2026-11-18T03:00:00.000Z',
+    ()=>{invalidOfficeAudits++;}
+  );
+  let officePreflightRejected=false;
+  try{invalidOfficeRuntime.verifyOfficeReferenceCoordinatesV1();}
+  catch(e){officePreflightRejected=String(e&&e.message||e).startsWith('OFFICE_REFERENCE_VERIFICATION_REJECTED:');}
+  assert(officePreflightRejected&&invalidOfficeSheet.writeCalls===0&&invalidOfficeAudits===0,
+    'Office-reference preflight rejects an incomplete address before bulk coordinate writes or audit success');
+  assert(invalidOfficeLockReleases===1,
+    'Office-reference verification releases its lock after preflight rejection');
+
+  const validOfficeSheet=new OfficeFakeSheet(officeRows(false));
+  let validOfficeLockReleases=0,validOfficeAudits=0;
+  const validOfficeRuntime=new Function('requirePermission_','LockService','getDb_','nowIso_','appendAudit_',read('OfficeReferenceService.gs')+'\nreturn {verifyOfficeReferenceCoordinatesV1};')(
+    ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    {getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{validOfficeLockReleases++;}})},
+    ()=>({getSheetByName:()=>validOfficeSheet}),
+    ()=> '2026-11-18T03:00:00.000Z',
+    ()=>{validOfficeAudits++;}
+  );
+  const verifiedOffice=validOfficeRuntime.verifyOfficeReferenceCoordinatesV1();
+  assert(verifiedOffice.ok&&verifiedOffice.changed===10&&validOfficeSheet.writeCalls===1,
+    'Authorized office-reference verification updates all ten expected offices in one bulk sheet write');
+  assert(validOfficeSheet.rows.slice(1).every(row=>row[7]==='VERIFIED'&&Number.isFinite(Number(row[3]))&&Number.isFinite(Number(row[4]))&&row[6]==='2026-11-18T03:00:00.000Z'),
+    'Verified office rows contain numeric coordinates, timestamp, and VERIFIED status');
+  const officeReplay=validOfficeRuntime.verifyOfficeReferenceCoordinatesV1();
+  assert(officeReplay.ok&&officeReplay.changed===0&&validOfficeSheet.writeCalls===1,
+    'Replaying office-reference verification does not rewrite already verified canonical coordinates');
+  assert(validOfficeAudits===2&&validOfficeLockReleases===2,
+    'Office-reference verification records each authorized result and releases the lock on both calls');
+}
+
+/* Office-reference setup and draft RPCs: denial ordering, idempotent seed, and metadata repair. */
+{
+  const officeDraftCode=read('OfficeReferenceService.gs');
+  const draftHeaders=['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status'];
+  class OfficeDraftSheet {
+    constructor(){this.rows=[];this.writeCalls=0;}
+    getName(){return 'OFFICE_REFERENCE';}
+    getLastRow(){return this.rows.length;}
+    setFrozenRows(){return this;}
+    getDataRange(){return {getValues:()=>this.rows.map(r=>r.slice())};}
+    getRange(row,col,numRows=1,numCols=1){
+      const sheet=this;
+      return {
+        setValues(values){
+          sheet.writeCalls++;
+          for(let r=0;r<values.length;r++){
+            while(sheet.rows.length<row+r)sheet.rows.push([]);
+            sheet.rows[row-1+r]=values[r].slice();
+          }
+        },
+        setValue(value){
+          while(sheet.rows.length<row)sheet.rows.push([]);
+          while(sheet.rows[row-1].length<col)sheet.rows[row-1].push('');
+          sheet.rows[row-1][col-1]=value;
+        },
+        getValues(){
+          const out=[];
+          for(let r=0;r<numRows;r++){
+            const source=sheet.rows[row-1+r]||[];
+            out.push(Array.from({length:numCols},(_,c)=>source[col-1+c]??''));
+          }
+          return out;
+        }
+      };
+    }
+  }
+  let deniedOfficeDbCalls=0,deniedOfficeMapsCalls=0;
+  const deniedOfficeDraft=new Function('requirePermission_','getDb_','Maps',
+    officeDraftCode+'\nreturn {ensureOfficeReferenceSheet,seedOfficeReferenceDraft,prepareOfficeReferenceDraftMetadata,previewOfficeReferenceGeocoding};'
+  )(
+    ()=>{throw new Error('FORBIDDEN: admin.config');},
+    ()=>{deniedOfficeDbCalls++;throw new Error('DB_SHOULD_NOT_BE_TOUCHED');},
+    {newGeocoder:()=>{deniedOfficeMapsCalls++;throw new Error('MAPS_SHOULD_NOT_BE_TOUCHED');}}
+  );
+  for(const name of ['ensureOfficeReferenceSheet','seedOfficeReferenceDraft','prepareOfficeReferenceDraftMetadata','previewOfficeReferenceGeocoding']){
+    let rejected=false;
+    try{deniedOfficeDraft[name]();}catch(e){rejected=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+    assert(rejected,'Office-reference admin RPC denies unauthorized caller before service access: '+name);
+  }
+  assert(deniedOfficeDbCalls===0&&deniedOfficeMapsCalls===0,'Unauthorized office-reference draft calls do not access Sheets or Maps');
+
+  let draftSheet=null,draftAudits=[];
+  const draftSpreadsheet={
+    getSheetByName:()=>draftSheet,
+    insertSheet:()=>{draftSheet=new OfficeDraftSheet();return draftSheet;}
+  };
+  const authorizedOfficeDraft=new Function('requirePermission_','getDb_','appendAudit_',
+    officeDraftCode+'\nreturn {ensureOfficeReferenceSheet,seedOfficeReferenceDraft,prepareOfficeReferenceDraftMetadata};'
+  )(
+    ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    ()=>draftSpreadsheet,
+    (...args)=>draftAudits.push(args)
+  );
+  const ensuredOffice=authorizedOfficeDraft.ensureOfficeReferenceSheet();
+  assert(ensuredOffice.ok&&ensuredOffice.columns.length===8&&draftSheet.rows[0].join('|')===draftHeaders.join('|'),
+    'Authorized office-reference setup creates the exact eight-column header contract');
+  const seededOffice=authorizedOfficeDraft.seedOfficeReferenceDraft();
+  assert(seededOffice.ok&&seededOffice.inserted===10&&seededOffice.skipped===0&&draftSheet.rows.length===11,
+    'Authorized office-reference seed inserts the ten configured PENDING draft rows');
+  const seededOfficeReplay=authorizedOfficeDraft.seedOfficeReferenceDraft();
+  assert(seededOfficeReplay.ok&&seededOfficeReplay.inserted===0&&seededOfficeReplay.skipped===10&&draftSheet.rows.length===11,
+    'Office-reference draft seeding is idempotent by office name');
+  const repairedOffice=authorizedOfficeDraft.prepareOfficeReferenceDraftMetadata();
+  const garutDraft=draftSheet.rows.find(row=>row[0]==='KANIM_KELAS_II_NON_TPI_GARUT');
+  assert(repairedOffice.ok&&repairedOffice.updated===1&&String(garutDraft[2]).trim()!==''&&String(garutDraft[5]).trim()!=='',
+    'Office-reference metadata preparation fills the known Garut address and source URL while retaining draft status');
+  const repairedOfficeReplay=authorizedOfficeDraft.prepareOfficeReferenceDraftMetadata();
+  assert(repairedOfficeReplay.ok&&repairedOfficeReplay.updated===0&&garutDraft[7]==='PENDING',
+    'Office-reference metadata repair replay is a no-op and does not mark coordinates verified');
+  assert(draftAudits.filter(x=>x[0]==='OFFICE_REFERENCE_DRAFT_SEED').length===2&&draftAudits.filter(x=>x[0]==='OFFICE_REFERENCE_DRAFT_REPAIR').length===1,
+    'Office-reference draft seed and metadata repair emit the expected audit events');
+}
+
+
+
+/* Characterize Google Sheets provenance audit failure after canonical import commit. */
+{
+  let sourceImportCommits=0,sourceAuditAttempts=0;
+  const sourceSchema={contractKey:'PASSPORT_SERVICE_MONTHLY',datasetKey:'PASSPORT_SERVICE_MONTHLY',signature:'passport-source-test',contractVersion:'1'};
+  const sourceServiceCode=read('SourceConnectorService.gs');
+  const sourceFunctionStart=sourceServiceCode.indexOf('function commitGoogleSourceImport(');
+  const sourceFunction=sourceServiceCode.slice(sourceFunctionStart);
+  const sourceRuntime=new Function(
+    'requirePermission_','adaptGoogleSourceMatrix_','detectSchema_','commitImport','appendAudit_','sourceMatrixToTsv_',
+    sourceFunction+'; return {commitGoogleSourceImport};'
+  )(
+    ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    ()=>({spreadsheetId:'source-spreadsheet-id-1234567890',spreadsheetName:'Source Fixture',sheetName:'September',sourceHeaders:['Periode','Kantor Imigrasi'],sourceColumns:['periode','kantor_imigrasi'],rows:[['2026-09','KANIM TEST']]}),
+    ()=>sourceSchema,
+    ()=>{sourceImportCommits++;return {ok:true,batchId:'batch-source-001',datasetKey:'PASSPORT_SERVICE_MONTHLY',inserted:1};},
+    ()=>{sourceAuditAttempts++;throw new Error('SOURCE_PROVENANCE_AUDIT_FAILED');},
+    ()=> 'mock-source-tsv'
+  );
+  let provenanceFailureReturned=false,sourceFailureMessage='';
+  try{sourceRuntime.commitGoogleSourceImport({datasetKey:'PASSPORT_SERVICE_MONTHLY',sheetName:'September'});}
+  catch(e){sourceFailureMessage=String(e&&e.message||e);provenanceFailureReturned=sourceFailureMessage==='SOURCE_PROVENANCE_AUDIT_FAILED';}
+  assert(provenanceFailureReturned&&sourceImportCommits===1&&sourceAuditAttempts===1,
+    'Characterization: Google source RPC reports provenance audit failure after canonical commitImport has already succeeded (known split-commit gap); error='+sourceFailureMessage+', commits='+sourceImportCommits+', auditAttempts='+sourceAuditAttempts);
+}
+
+/* Authorized snapshot creation: controlled Spreadsheet/Drive doubles and audit-failure characterization. */
+{
+  const snapshotAuditEvents=[];
+  const snapshotArtifacts=[];
+  let snapshotSequence=0;
+  class SnapshotFakeRange {
+    constructor(sheet,row,col){this.sheet=sheet;this.row=row;this.col=col;}
+    setValues(values){
+      for(let r=0;r<values.length;r++){
+        while(this.sheet.rows.length<this.row-1+r)this.sheet.rows.push([]);
+        const target=this.sheet.rows[this.row-1+r]||(this.sheet.rows[this.row-1+r]=[]);
+        for(let c=0;c<values[r].length;c++)target[this.col-1+c]=values[r][c];
+      }
+      return this;
+    }
+  }
+  class SnapshotFakeSheet {
+    constructor(name){this.name=name;this.rows=[];this.frozenRows=0;}
+    setName(name){this.name=name;return this;}
+    getRange(row,col){return new SnapshotFakeRange(this,row,col);}
+    setFrozenRows(count){this.frozenRows=count;return this;}
+    getDataRange(){return {getValues:()=>this.rows.map(row=>row.slice())};}
+  }
+  const snapshotSourceRows=[
+    ['periode','kantor_imigrasi','layanan_a','total'],
+    ['2026-09','KANIM TEST',4,4]
+  ];
+  const snapshotSourceSheet={
+    getDataRange:()=>({getValues:()=>snapshotSourceRows.map(row=>row.slice())})
+  };
+  const snapshotRegistry={
+    getDataRange:()=>({getValues:()=>[
+      ['dataset_key','status','sheet_name','schema_signature'],
+      ['RESIDENCE_PERMIT_SERVICE_MONTHLY','ACTIVE','DATA_RESIDENCE','residence-signature'],
+      ['PASSPORT_SERVICE_MONTHLY','ACTIVE','DATA_PASSPORT_SERVICE_MONTHLY','passport-signature'],
+      ['PASSPORT_SERVICE_MONTHLY_2025','ACTIVE','DATA_PASSPORT_SERVICE_MONTHLY_2025','passport-2025-signature']
+    ]})
+  };
+  const snapshotSource={
+    getId:()=> 'source-spreadsheet-123456',
+    getSheetByName:name=>name==='DATASET_REGISTRY'?snapshotRegistry:(name==='DATA_RESIDENCE'||name==='DATA_PASSPORT_SERVICE_MONTHLY'||name==='DATA_PASSPORT_SERVICE_MONTHLY_2025'?snapshotSourceSheet:null)
+  };
+  const snapshotContract={
+    version:'1',
+    derived:['total'],
+    measures:['layanan_a']
+  };
+  const snapshotDataset={
+    contract:snapshotContract,
+    registryRow:{schema_signature:'passport-signature'},
+    registryIndex:{schema_signature:0},
+    sheetName:'DATA_PASSPORT',
+    sheet:snapshotSourceSheet
+  };
+  function makeSnapshotRuntime(auditShouldFail){
+    const created=[];
+    const runtime=new Function(
+      'requirePermission_','backupConfig_','getDb_','APP','SHEETS','DATASET_CONTRACTS','Utilities','SpreadsheetApp','DriveApp','PropertiesService',
+      'appendAudit_','nowIso_','LockService','Logger',
+      read('BackupService.gs')+'\n'+read('PassportGovernanceService.gs')+
+      '\nreturn {createResidencePermitSnapshot,createPassportServiceSnapshot,createPassportServiceMonthly2025Snapshot};'
+    )(
+      ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+      ()=>({folderId:'backup-folder-123456'}),
+      ()=>snapshotSource,
+      {TZ:'Asia/Jakarta',SHEET_PREFIX:'DATA_'},
+      {DATASET_REGISTRY:'DATASET_REGISTRY'},
+      {
+        RESIDENCE_PERMIT_SERVICE_MONTHLY:{version:'1',derived:['total'],measures:['layanan_a']},
+        PASSPORT_SERVICE_MONTHLY:{version:'1',derived:['total'],measures:['layanan_a']},
+        PASSPORT_SERVICE_MONTHLY_2025:{version:'1',derived:['total'],measures:['layanan_a']}
+      },
+      {
+        DigestAlgorithm:{SHA_256:'SHA_256'},Charset:{UTF_8:'UTF_8'},
+        computeDigest:()=>[1,2,3,4],
+        formatDate:()=> '20261118_000000',
+        getUuid:()=> 'snapshot-uuid-'+(++snapshotSequence)
+      },
+      {
+        create(name){
+          const data=new SnapshotFakeSheet('Sheet1');
+          const artifact={id:'snapshot-file-'+(++snapshotSequence),name,sheets:[data]};
+          artifact.getId=()=>artifact.id;
+          artifact.getSheets=()=>artifact.sheets;
+          artifact.insertSheet=sheetName=>{const sheet=new SnapshotFakeSheet(sheetName);artifact.sheets.push(sheet);return sheet;};
+          created.push(artifact);snapshotArtifacts.push(artifact);
+          return artifact;
+        }
+      },
+      {
+        getFolderById:id=>({addFile:file=>{file.folderId=id;file.inFolder=true;}}),
+        getFileById:id=>created.find(file=>file.id===id)||({id,getParents:()=>({hasNext:()=>false}),getName:()=> 'snapshot'}),
+        getRootFolder:()=>({removeFile:()=>{}})
+      },
+      {getScriptProperties:()=>({getProperty:()=> 'backup-folder-123456'})},
+      (...args)=>{snapshotAuditEvents.push(args);if(auditShouldFail)throw new Error('SNAPSHOT_AUDIT_FAILED');},
+      ()=> '2026-11-18T08:00:00.000Z',
+      {},
+      {log:()=>{}}
+    );
+    return {runtime,created};
+  }
+  const successRuntime=makeSnapshotRuntime(false);
+  const createdResidence=successRuntime.runtime.createResidencePermitSnapshot();
+  const createdPassport=successRuntime.runtime.createPassportServiceSnapshot();
+  const createdPassport2025=successRuntime.runtime.createPassportServiceMonthly2025Snapshot();
+  assert(createdResidence.ok&&createdPassport.ok&&createdPassport2025.ok,
+    'Authorized snapshot creation succeeds for Residence, Passport, and Passport 2025 using isolated service doubles');
+  assert(successRuntime.created.length===3&&successRuntime.created.every(file=>file.sheets.length===2),
+    'Each authorized snapshot creates a data sheet and manifest artifact in the controlled Spreadsheet double');
+  assert(successRuntime.created.every(file=>file.sheets[1].rows.length===11&&file.sheets[1].rows[1][0]==='snapshot_id'),
+    'Each snapshot manifest writes the declared ten metadata rows after its header');
+  assert(successRuntime.created.every(file=>file.sheets[0].rows.length===2&&file.sheets[0].rows[1][0]==='2026-09'),
+    'Each snapshot copies the controlled source header and data row without mutating source fixtures');
+  assert(snapshotAuditEvents.length===3&&snapshotAuditEvents.every(event=>event[0]==='BACKUP_SNAPSHOT_CREATE'&&event[4]==='SUCCESS'),
+    'Authorized snapshot creation appends one success audit event per completed artifact');
+  assert(snapshotArtifacts.every(file=>file.inFolder===true&&file.folderId==='backup-folder-123456'),
+    'Each created snapshot is placed in the configured backup folder through the Drive double');
+
+  const failingRuntime=makeSnapshotRuntime(true);
+  let snapshotAuditFailureReturned=false;
+  try{failingRuntime.runtime.createResidencePermitSnapshot();}
+  catch(e){snapshotAuditFailureReturned=String(e&&e.message||e)==='SNAPSHOT_AUDIT_FAILED';}
+  assert(snapshotAuditFailureReturned&&failingRuntime.created.length===1&&failingRuntime.created[0].inFolder===true,
+    'Characterization: audit failure is returned after a snapshot artifact has already been created and placed in Drive; this is a known reconciliation gap');
 }

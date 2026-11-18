@@ -115,3 +115,304 @@ Required remediation:
 ## Non-impact boundary
 
 This gap register is documentation only. It does not activate Workspace identity enforcement, change the active Apps Script deployment, modify Script Properties or Drive/Spreadsheet ACLs, enable Daily Input, change Gate 9.1, or mutate canonical monthly Residence Permit / Passport datasets.
+
+
+## Follow-up implementation — constrained call-graph inventory
+
+Branch `security/rpc-callgraph-audit-v1-2026-11-18` adds `gas/rpc-audit.js` and fixture coverage in `gas/test-shim.js`.
+
+The analyzer:
+- tokenizes source while skipping line/block comments and quoted strings;
+- extracts classic named function declarations using balanced parameter/body delimiters;
+- records statically named calls and computes transitive reachability across supplied source files;
+- reports duplicate global function names, malformed declarations/bodies, and template interpolation as unsupported;
+- preserves reachable helper bodies so a reviewer/test can compare the actual permission literal against the manifest.
+
+**Important limitation:** this is a constrained inventory tool, not a complete ECMAScript parser, control-flow analyzer, or authorization proof. It does not prove that a guard dominates every path, resolve dynamic dispatch/aliases, or establish side-effect/data-flow safety. It must not be used as a reason to enable a global RPC gateway or to certify an endpoint. Unsupported/ambiguous results remain blockers and require syntax-aware tooling or manual review.
+
+Fixture tests cover multi-hop helper reachability, visibility of a wrong permission literal, template interpolation fail-closed reporting, duplicate declarations, and unbalanced bodies. The repository test harness also builds a cross-file graph for the manifest and checks that each protected endpoint has a reachable exact permission guard; public-read-only and self-scope classifications receive corresponding reachable-call checks. This remains a static, name-based check and is not proof of guard dominance or side-effect purity.
+
+GitHub Actions `RPC Security Contract` run #65 completed SUCCESS for head `3215acfc459340315a46aa9f0062ffc35a184c3e`. Earlier iterations failed on fixture and regular-expression assertions; those failures were corrected before run #65. This CI result applies to the tested commit only.
+
+
+### Analyzer hardening note
+
+The follow-up lexer now treats recognized regular-expression literals as opaque tokens so source text such as `/function fake(){}/` cannot be mistaken for a function declaration. It also reports computed calls such as `target[method]()` and dynamic code execution through `eval` / `Function` as unsupported blockers. Regression fixtures cover these cases.
+
+The regular-expression start heuristic is intentionally conservative but is not a standards-complete JavaScript lexer. This tool remains an inventory aid; it does not establish control-flow dominance, alias resolution, or complete Apps Script semantics. CI execution is still required to validate the changes.
+
+
+### Transitive side-effect inventory
+
+The analyzer now classifies selected mutation calls and external-I/O calls across every statically reachable helper. The CI contract uses this inventory to reject public-read-only RPCs that transitively reach known mutation or external-I/O calls, and to reject stateless validators with those effects. Fixtures cover a safe read-only path, a hidden helper mutation (`appendRow`), and a pure validation path.
+
+This remains a bounded sink list, not a complete side-effect/data-flow proof. Dynamic aliases, indirect APIs, unrecognized mutator methods, Apps Script services not in the list, and unsupported syntax can evade this inventory. Public TV certification still requires response-schema review, sensitive-field checks, and runtime verification.
+
+
+### Dynamic syntax blockers in exposed read-only paths
+
+The transitive effect collector now emits explicit blockers for computed member invocation (for example, `target[method]()`), dynamic code execution through `eval` / `Function`, template interpolation, and malformed function syntax. Public-read-only and stateless-validation CI contracts reject these blockers in their reachable helper paths. A regression fixture initially exposed that the effect collector did not carry the computed-call finding from the function extractor; the collector was corrected to detect the pattern directly in each reachable function body, and the next CI run passed.
+
+This reduces known blind spots but does not prove complete absence of side effects. The sink inventory and lexical parser remain intentionally bounded.
+
+
+### Public TV projection regression coverage
+
+The CI harness now executes the public dashboard and map sanitizers against deliberately contaminated fixtures containing identity, permission, user, and raw-row fields. It asserts exact top-level and nested response keys. It also exercises the running-text data path with active and inactive rows and verifies that the anonymous endpoint returns only active content strings, not content IDs or creator metadata.
+
+Coverage is intentionally partial: the current executable projection tests cover dashboard, map, and running-text responses. Analytical running text, Passport YoY responses, office-level YoY, service-point references, and M-Paspor quota still require their own exact response-schema and data-publication review before Public TV can be production-certified.
+
+
+Additional Public TV contract coverage now executes the analytical running-text adapter against a controlled reporting fixture and enforces an allowlist of narrative fields. The service-point reference endpoint is also exercised and its point records are constrained to the declared public reference fields, including explicit coordinate/reference status.
+
+The remaining public response contracts still needing dedicated executable fixtures are Passport YoY, office-level Passport YoY, Passport service YoY, and M-Paspor quota. Their publication approval and live response verification remain separate release gates.
+
+
+### Completion of Public TV Passport and M-Paspor response fixtures
+
+The test harness now executes the four previously outstanding public response adapters using controlled fixtures:
+- Passport Year-over-Year: exact top-level contract and monthly/office row allowlists.
+- Passport office Year-over-Year: required office filter rejection, exact response contract, and monthly row allowlist.
+- Passport service Year-over-Year: exact response contract and preservation of the `NOT_COMPARABLE` taxonomy decision.
+- M-Paspor quota: exercises the actual quota snapshot office list with a matching verified-reference fixture, then checks office and GIS marker field allowlists and excludes verification timestamps / unapproved fields.
+
+The latest passing CI run is RPC Security Contract #85 (run ID `44244245984`) on commit `475da2768ffe6854c15f26f4b9d2d783122b79b6`. This is automated fixture evidence only; it does not approve public publication of every reference field or replace a live deployment/UAT review.
+
+### Self-scope caller isolation regression
+
+The harness also exercises `hasPermission` and `getMyPermissions` with separate active-user identities against the same controlled USERS/PERMISSIONS fixtures. It verifies that the administrator receives only the administrator's permission set, the viewer does not inherit administrator permissions, and an unknown active email is unauthenticated. This tests caller identity binding in the current runtime path; it does not replace Workspace `USER_ACCESSING` deployment verification.
+
+
+### Protected RPC runtime denial-before-side-effect fixture
+
+A runtime fixture now invokes the protected `adminCreateUser` RPC under both VIEWER and ADMIN identities. The VIEWER request must fail with `FORBIDDEN: admin.users` before UUID generation or persistent writes; the ADMIN request is permitted and produces the expected single user-row write. This is a focused negative/positive endpoint test, not yet an exhaustive runtime test of every protected manifest RPC.
+
+The fixture passed in RPC Security Contract #87 (run ID `44244365008`), tested commit `d7df431505e4b8777a475ecf7f2598a352064f50`.
+
+### Daily Input provisioning denial-before-side-effect fixture
+
+The protected RPC fixture now also invokes the real `provisionDailyInputStorageV1()` implementation with a VIEWER identity and controlled Apps Script service doubles. The caller has `daily.read` but not `admin.config`. The fixture asserts the exact `FORBIDDEN: admin.config` denial and verifies that denial occurs before script-lock acquisition, Spreadsheet access, sheet writes, or Script Properties mutation.
+
+GitHub Actions `RPC Security Contract` run #91 (run ID `44245421444`) completed SUCCESS for PR #262 head `9dce820577d69750847ae455540ce0d4d6b2c62e`; the full repository `npm test` command passed. Run #90 had failed because the fixture source concatenation contained an over-escaped newline; this was corrected in the subsequent commit before run #91.
+
+This is a controlled fixture-level authorization test. It does not certify deployed Apps Script behavior, Workspace identity enforcement, real Drive/Spreadsheet ACLs, or the complete Daily Input lifecycle. Gate 9.1 remains BLOCKED and Daily Input remains disabled.
+
+### Import and period-mutation denial-before-lock fixtures
+
+The protected RPC negative matrix now includes three additional entrypoints:
+- `commitImport()`: a caller without `dataset.import` must receive the exact `FORBIDDEN: dataset.import` denial before parsing input or requesting the script lock.
+- `closePeriod()`: a caller without `admin.config` must be denied before requesting the script lock.
+- `reopenPeriod()`: a caller without `admin.config` must be denied before requesting the script lock.
+
+The tests invoke the actual service function declarations in controlled V8 fixtures and count lock requests. RPC Security Contract run #96 (run ID `44245796901`) completed SUCCESS with `npm test` on code head `1f5e69157059afbc87877b5e24416981c441cb76`.
+
+These fixtures prove only the tested unauthorized-denial ordering. They do not yet test authorized import/period mutation success, downstream transactional behavior, all import variants, or deployed Apps Script runtime behavior. The protected RPC matrix remains incomplete.
+
+### Extended protected RPC denial-before-side-effect fixtures
+
+The controlled runtime fixture matrix now includes five additional checks:
+- `commitGoogleSourceImport()`: missing `dataset.import` must deny before Google-source adaptation/read, canonical import commit, or audit append.
+- `repairPassportServiceMonthly2025DerivedTotal()`: missing `dataset.write` must deny before script-lock acquisition.
+- `saveRunningText()` and `deleteRunningText()`: missing `admin.config` must deny before running-text sheet access or audit append.
+- `setBackupFolder()`: missing `admin.config` must deny before folder-ID normalization, Drive lookup, or Script Properties mutation.
+
+GitHub Actions `RPC Security Contract` run #98 (run ID `44246418632`) completed SUCCESS for code head `14cfed826f17b040147a0aae2632becbb91b83d8`; the full `npm test` command passed.
+
+These are unauthorized-path fixture results only. Authorized mutation success, persistence semantics, idempotency, rollback behavior, real Apps Script service permissions, and full backup/restore safety remain unverified. The backup/recovery center's read-only policy is not a substitute for testing each backup or recovery mutation endpoint.
+
+### Backup snapshot creation denial-before-read fixtures
+
+The runtime fixture matrix now invokes the three snapshot-creation RPCs with an unauthorized caller:
+- `createResidencePermitSnapshot()`
+- `createPassportServiceSnapshot()`
+- `createPassportServiceMonthly2025Snapshot()`
+
+Each must deny with `FORBIDDEN: admin.config` before reading backup configuration or canonical dataset state. RPC Security Contract run #100 (run ID `44246560867`) completed SUCCESS; `npm test` passed on code head `18115175e871a85a09b0e23a9acd54cf2a2dd702`.
+
+This confirms denial ordering for the tested unauthorized path only. It does not test authorized snapshot creation, snapshot integrity, retention, restore execution, or real Drive/Spreadsheet ACL behavior.
+
+
+
+### Authorized canonical import lifecycle fixture
+
+A controlled runtime fixture now exercises the authorized `commitImport()` path against the actual import service implementation and isolated in-memory Spreadsheet doubles. It verifies:
+- An authorized ADMIN import writes one canonical dataset row, one import-log row, and one audit event, and returns the batch result.
+- Repeating the same business key is rejected without adding another dataset row, import-log row, or audit event.
+- A new row targeting a closed period is rejected before dataset creation or canonical writes.
+- The script lock is released after success, duplicate rejection, and closed-period rejection.
+
+GitHub Actions `RPC Security Contract` run #108 (run ID `44247760964`) completed SUCCESS for code head `e80cf564296df7934d098e284a7ffc0755c232c8`; the full `npm test` command passed.
+
+**Scope limitation:** these are deterministic fixture tests with controlled services and a minimal contract fixture. They do not establish production Spreadsheet atomicity, rollback after a downstream audit/log failure, real lock contention behavior, Google Workspace identity, or real Drive/Spreadsheet ACL behavior. The import pipeline still requires failure-injection tests for partial-write recovery and idempotent batch identity before production certification.
+
+
+### Authorized period close/reopen lifecycle fixture
+
+The controlled runtime fixture now invokes the actual `closePeriod()` and `reopenPeriod()` implementations against an isolated in-memory closure sheet. It verifies:
+- Authorized close creates one `CLOSED` record with the source row count and an audit event.
+- Repeating close on an already closed period is idempotent and does not append another record or audit event.
+- Authorized reopen changes the status to `OPEN`, stores the correction reason, and appends a separate audit event.
+- Re-closing after controlled correction clears stale reopen actor, timestamp, and reason metadata.
+- The script lock is released after each of the four calls.
+
+GitHub Actions `RPC Security Contract` run #111 (run ID `44247962096`) completed SUCCESS for code head `2171cc36703a33c26bac532c2dc47dd070aad7d9`; the full `npm test` command passed.
+
+**Scope limitation:** the fixture validates the service's state transitions against an in-memory sheet and mocked dashboard/audit dependencies. It does not prove real Sheets API atomicity, rollback on audit failure, contention across concurrent Apps Script executions, or production authorization identity. Failure-injection and live isolated Workspace tests remain release gates.
+
+
+### Office-reference verification authorization and integrity fixture
+
+A controlled runtime fixture now exercises `verifyOfficeReferenceCoordinatesV1()` against isolated office-reference rows. It verifies:
+- A caller without `admin.config` is denied before lock acquisition or sheet mutation.
+- An incomplete office address causes the all-row preflight to reject before any bulk coordinate write or success audit event.
+- An authorized verification updates the ten expected office rows in one bulk write, setting numeric coordinates, verification timestamp, and `VERIFIED` status.
+- Replaying verification leaves already verified coordinates unchanged (`changed: 0`) and still releases the lock.
+- Lock release is verified for preflight rejection and both authorized calls.
+
+GitHub Actions `RPC Security Contract` run #114 (run ID `44248167227`) completed SUCCESS for code head `bfc3bd79978324f7ebdb1022b608ddb743075d9e`; the full `npm test` command passed.
+
+**Scope limitation:** coordinate values are fixture inputs from the existing service implementation. This test does not independently validate the geographic correctness of those coordinates, the source URLs, or the real office-reference sheet ACL. Those remain separate data-owner and deployment verification tasks.
+
+
+### P0 — Import commit is not failure-atomic across canonical data, registry/cache, log, and audit
+
+**Source evidence:** `gas/ImportService.gs` `commitImport()` appends accepted rows to the canonical dataset first, updates the registry row count, bumps the read-cache generation, appends `IMPORT_LOG`, then appends `AUDIT_LOG`. The `finally` block releases the script lock, but there is no compensating rollback or durable recovery state for a failure after the canonical write. A failure at the import-log or audit stage can therefore return an RPC error while some earlier side effects remain committed. The existing success fixture verifies the normal path only; the new failure-injection characterization fixture deliberately throws from `appendAudit_()` after the canonical row and import-log append and records the resulting partial-success state.
+
+**Required remediation before production certification:** introduce a durable import lifecycle/recovery contract (for example, a batch state with PREPARING/COMMITTED/FAILED and deterministic recovery/reconciliation), or a carefully verified compensating-write protocol. Define which side effects are authoritative, how row-count/cache generation are reconciled, how an audit append failure is surfaced, and how retries avoid duplicate business keys and duplicate batch effects. Do not claim cross-sheet atomicity from `LockService`; it serializes cooperating script executions but does not provide a multi-sheet transaction.
+
+### P0 — Google Sheets source provenance is committed separately from canonical import
+
+**Source evidence:** `gas/SourceConnectorService.gs` `commitGoogleSourceImport()` adapts the external source, calls `commitImport()` (which completes its canonical/import-log/audit sequence), and only afterwards calls `appendAudit_('IMPORT_SOURCE_COMMIT', ...)` with source spreadsheet and sheet provenance. If this second audit append fails, the RPC throws after the canonical import has already succeeded. The source adapter is read-only against the external spreadsheet, but provenance and canonical commit are not one atomic lifecycle.
+
+**Required remediation before production certification:** move immutable source provenance into the same durable batch lifecycle as the canonical import, so the batch record contains source type, spreadsheet ID, spreadsheet name, sheet name, source schema signature, and contract version before/with commit finalization. Provide an idempotent reconciliation path for a committed batch whose provenance record is incomplete. A separate post-commit audit call must not be the sole source-provenance record.
+
+**Classification:** both findings are P0 integrity gaps. The characterization fixtures demonstrate the failure ordering in controlled dependencies; they do not establish production rollback behavior, nor do they modify production data. No runtime fix, deployment, or canonical baseline change is included in this audit-only change.
+
+
+### Import partial-commit failure characterization evidence
+
+Two deterministic failure-injection fixtures now characterize the non-atomic failure ordering described above:
+- `commitImport()` fixture forces `appendAudit_()` to throw after the canonical dataset row, registry row-count update, cache-generation bump, and import-log append. It confirms the RPC returns `AUDIT_WRITE_FAILED` while the canonical row and import-log entry remain written; the script lock is still released.
+- `commitGoogleSourceImport()` fixture extracts and invokes the actual RPC implementation with isolated dependencies. It forces the separate provenance `appendAudit_()` to throw after `commitImport()` returns success, confirming that the RPC returns `SOURCE_PROVENANCE_AUDIT_FAILED` although the canonical import has already completed.
+
+GitHub Actions `RPC Security Contract` run #126 (run ID `44256950504`) completed SUCCESS for code head `deac5cf041febc43798fe8c605672e9f955a52bb`; the full `npm test` suite passed.
+
+**Important interpretation:** these are characterization tests that intentionally assert the currently observed unsafe partial-commit behavior. They make the P0 failure modes reproducible; they do not represent a fix. The next code change must replace these assertions with safe recovery/idempotency assertions once a durable batch lifecycle is implemented. Until then, the two import paths remain uncertified for production failure recovery.
+
+
+### Required transactional-import remediation contract (design gate; not implemented here)
+
+The current import RPCs do not accept a durable caller idempotency key. `commitImport()` generates a new UUID batch ID inside the commit path, after validation, while `commitGoogleSourceImport()` has no source checksum/range identity in the canonical batch record. Therefore, after a canonical commit followed by provenance-audit failure, a caller retry is likely to be treated as a duplicate business key rather than reconciling the incomplete provenance record.
+
+Before changing runtime code, the remediation must define and test these invariants:
+1. **Stable request identity:** derive/accept a request idempotency key bound to dataset key, contract/schema version, normalized payload checksum, and (for Google Sheets) source spreadsheet ID, sheet ID/name, selected source range or bounded source snapshot, and source checksum. Reuse with different content must fail closed.
+2. **Durable batch state:** persist a batch record with explicit states such as `PREPARED`, `DATA_WRITTEN`, `FINALIZED`, `FAILED_REQUIRES_RECONCILIATION`, and `RECONCILED`. State transitions must be monotonic and auditable.
+3. **Commit authority:** define exactly when the batch is considered committed. The API must not report a generic failure after durable commit without returning a stable batch identity and a machine-readable `committed`/`reconciliationRequired` state.
+4. **Recoverability:** a retry with the same idempotency key must resume/reconcile the existing batch, not append a second dataset row, log, or provenance event. A recovery operation must verify the expected canonical row set and reconcile registry row count/cache generation from physical data.
+5. **Provenance coupling:** source metadata/checksum must be persisted as part of the batch record before finalization; a post-commit best-effort audit append cannot be the only provenance store.
+6. **Failure injection:** test throws after each side-effect boundary (batch prepare, dataset append, registry count, cache generation, import log, audit/provenance, flush), process interruption/retry, duplicate request concurrency, and lock release. Assert no silent partial commit and deterministic reconciliation.
+7. **Operational controls:** recovery must be admin-authorized, separately audited, dry-run capable, and unable to rewrite historical monthly baselines without explicit governed correction. Do not enable automatic deletion/rollback of canonical rows until collision and concurrent-write safety are proven.
+
+**Design constraint:** Apps Script `LockService` serializes cooperating executions; it is not a database transaction across Spreadsheet tabs, Drive files, and Script Properties. A durable state machine plus idempotent reconciliation is required; a `try/finally` lock release alone is insufficient.
+
+
+### Backup and recovery forensic review — authorized paths remain uncertified
+
+**Reviewed source:** `gas/BackupService.gs`, `gas/PassportGovernanceService.gs`, `gas/BackupRecoveryService.gs`, `gas/RpcManifest.js`, and the current `gas/test-shim.js` fixtures at the PR #262 head.
+
+**Confirmed controls:**
+- Snapshot creation entrypoints require `admin.config`: `createResidencePermitSnapshot()`, `createPassportServiceSnapshot()`, and `createPassportServiceMonthly2025Snapshot()`.
+- Snapshot verification entrypoints require `audit.read`.
+- The backup recovery center reports `restoreEnabled:false` and `RESTORE_DISABLED_P0_3_READ_ONLY`; the reviewed recovery-center service exposes listing/verification rather than a restore mutation.
+- Existing runtime fixtures prove unauthorized snapshot creation is denied before backup configuration or canonical dataset reads. They do not exercise the authorized create/verify paths.
+
+**P0 — Snapshot creation can leave orphaned/partial artifacts or report failure after a completed snapshot.**
+
+The three snapshot creation implementations follow the same non-transactional sequence: create a new Spreadsheet, write the dataset copy, write the manifest, move the file into the configured Drive folder, then append the audit event. There is no encompassing failure-state record or cleanup/reconciliation path around those steps. If a write or folder operation fails after `SpreadsheetApp.create()`, an incomplete or misplaced spreadsheet may remain. If the final `appendAudit_()` fails, the RPC returns an error even though the snapshot file and manifest may already be complete and stored. A caller retry can create another snapshot because there is no stable request idempotency key or durable snapshot lifecycle.
+
+**Required remediation:** define a durable snapshot lifecycle and stable request identity; persist a PREPARING/COMPLETE/FAILED_REQUIRES_RECONCILIATION state; make retries discover and reconcile the same snapshot; distinguish artifact creation from audit finalization; and add failure injection after spreadsheet creation, data write, manifest write, folder placement, audit append, and flush. Any cleanup must be scoped to a snapshot created by the same request and must not touch canonical source data.
+
+**P1 — Snapshot verification opens and reads the supplied Spreadsheet before enforcing configured-folder membership.**
+
+In `verifyResidencePermitSnapshot()` and the Passport equivalents, the code calls `SpreadsheetApp.openById(snapshotId)` and reads snapshot sheets before it establishes `inConfiguredFolder` from Drive parents. The final result flags a file outside the configured backup folder, but the folder boundary is therefore a post-read validation rather than a precondition. This unnecessarily allows an `audit.read` caller to cause the deployer-executed service to open/read an arbitrary spreadsheet ID that is accessible to the deployment identity, and exposes the operation to unbounded read cost from a large spreadsheet.
+
+**Required remediation:** validate the Drive file exists, is a Google Spreadsheet, and is inside the configured backup folder before opening it with SpreadsheetApp; reject out-of-scope IDs before reading cells. Add input bounds and failure tests for unknown IDs, non-spreadsheet files, files outside the configured folder, and oversized snapshots. Verify this behavior in an isolated deployment using the actual execution identity and Drive ACLs.
+
+**P1 — Snapshot manifest identity is not fully bound to the requested file.**
+
+The verification code checks manifest status, dataset key, schema version/signature, source spreadsheet/sheet, row count, checksum, and folder membership, but does not compare manifest `snapshot_id` with the requested snapshot ID or validate the manifest's creation timestamp. The verifier therefore does not establish that the manifest's declared snapshot identity matches the Drive file being verified.
+
+**Required remediation:** require and compare the manifest snapshot ID to the request/file identity, validate timestamp format and expected metadata, and test tampered/missing/duplicated manifest keys. Keep checksum comparison and exact row/header checks.
+
+**Test gap / release gate:** add authorized-path fixtures for Residence, Passport, and Passport 2025 snapshots. Assert exact copied headers/rows, schema signature, row count, checksum, snapshot ID, configured-folder membership, audit payload, and lock/resource cleanup where applicable. Add failure injection at each side-effect boundary and verify retry/reconciliation semantics. Existing denial-before-side-effect fixtures and CI success do not prove these authorized paths or real Drive/Spreadsheet ACL behavior.
+
+**Safety boundary:** this review is documentation-only. It does not create, move, delete, or restore any Drive file; does not alter backup configuration; does not modify canonical datasets; and does not enable restore. The backup recovery center remains read-only with restore disabled.
+
+
+### Setup/bootstrap and web-entrypoint authorization fixture coverage
+
+The RPC security fixture suite now adds controlled executable contracts for the setup/bootstrap boundary and `doGet(e)` routing:
+
+- Confirms `setupApp_`, `initializeSchema_`, `seedSecurity_`, `seedDictionary_`, `bootstrapCurrentUser_`, and `bootstrapAdmin_` remain underscore-suffixed internal declarations and have no corresponding browser-callable aliases in their source files.
+- Invokes the actual `bootstrapAdmin_()` implementation with controlled dependencies. A populated USERS sheet is rejected before UUID generation or writes; an empty USERS sheet receives one normalized ADMIN row.
+- Invokes the actual `doGet()` implementation with controlled authorization and HtmlService doubles. Explicit `tv` and `tv-mobile` routes render without a back-office RPC guard; `daily` requires `daily.read`; unknown view values fail closed behind back-office authorization; an authenticated daily-only operator is routed to the workspace shell.
+
+GitHub Actions RPC Security Contract run #133 (run ID `44260229090`) completed SUCCESS; `npm test` passed on PR #262 head `c013ae2805e44905aae02e45280868390f9ffac0`.
+
+**Scope limitation:** these tests establish source-level callable naming and behavior under controlled Node.js doubles. They do not prove Apps Script's deployed RPC exposure semantics, editor-only execution policy, deployment execution identity, Workspace session behavior, or real HTML-service access behavior. The underscore convention is the Apps Script client-callability boundary assumed by this source contract and must still be confirmed in an isolated deployed environment. No setup, bootstrap, Script Properties, user table, production deployment, or ACL was changed by these fixtures.
+
+
+### Office-reference administration RPC fixture coverage
+
+The office-reference admin surface now has additional controlled runtime tests:
+
+- `ensureOfficeReferenceSheet()`, `seedOfficeReferenceDraft()`, `prepareOfficeReferenceDraftMetadata()`, and `previewOfficeReferenceGeocoding()` all reject callers without `admin.config` before database or Maps access.
+- Authorized sheet setup creates the exact eight-column `OFFICE_REFERENCE` header.
+- Authorized draft seeding inserts the ten configured office rows as `PENDING`; replay skips all ten and does not duplicate rows.
+- Metadata preparation fills the configured Garut address and source URL while leaving the record `PENDING`; replay is a no-op.
+- Audit fixtures confirm seed and metadata-repair events are emitted for the tested operations.
+- Existing coordinate-verification fixtures remain in place: all-row preflight, one bulk write for ten rows, no-op replay, and lock release.
+
+GitHub Actions RPC Security Contract run #136 (run ID `44260592002`) completed SUCCESS; `npm test` passed on PR #262 head `c895ca785046d1d2878f77073ea2600b98ff5b8f`.
+
+**Scope limitation:** controlled fixtures do not prove geographic correctness of the draft addresses or coordinates, live Google Maps geocoder results, real sheet ACLs, or production deployment behavior. Draft records remain `PENDING`; these tests do not certify or publish the reference data.
+
+### Deployment execution-identity boundary (appsscript manifest)
+
+The Apps Script manifest at `gas/appsscript.json` currently declares:
+
+- `webapp.executeAs = USER_DEPLOYING`
+- `webapp.access = ANYONE_ANONYMOUS`
+
+This is a high-impact trust boundary: requests may originate from anonymous web users while server-side Apps Script services execute with the deploying user's authority. Consequently, an RPC authorization omission can expose data or privileged Drive/Spreadsheet operations available to the deployment identity. Client-side visibility, hidden UI controls, and a Node.js fixture are not authorization boundaries.
+
+**Required release controls:**
+
+1. Treat every browser-callable RPC as externally invocable, regardless of whether its UI is hidden or its intended audience is internal.
+2. Prove authentication and permission checks occur before every privileged read, write, Drive operation, external service call, and lock acquisition where applicable.
+3. For public TV RPCs, enforce explicit field projections and bounded read scope; do not expose general-purpose data access.
+4. In an isolated deployment, verify actual Apps Script callable exposure, execution identity, active-user identity behavior, and real Spreadsheet/Drive ACL outcomes using anonymous, authenticated-but-unauthorized, and authorized test principals.
+5. Reassess whether `USER_DEPLOYING` plus `ANYONE_ANONYMOUS` remains appropriate after the RPC authorization audit. Any manifest/deployment change requires a separate approved change and deployment verification.
+
+**Evidence limitation:** this finding is based on the checked-in manifest, not a live deployment inspection. It does not establish which deployment version is currently active or prove its effective access configuration. No manifest, deployment, Workspace identity flag, ACL, Script Properties, or production runtime was changed.
+
+### Authorized snapshot creation fixture and audit-failure characterization
+
+The controlled Node.js runtime suite now exercises the authorized creation paths for:
+- `createResidencePermitSnapshot()`
+- `createPassportServiceSnapshot()`
+- `createPassportServiceMonthly2025Snapshot()`
+
+Using isolated Spreadsheet/Drive service doubles, the fixture verifies:
+- Each RPC creates a snapshot artifact with a dataset sheet and `SNAPSHOT_MANIFEST`.
+- The manifest contains the header and ten declared metadata entries, including `snapshot_id`, creation time, dataset identity, schema signature, source identity, row count, checksum, and COMPLETE status.
+- The data sheet receives the controlled source header and row.
+- Each artifact is moved into the configured backup folder through the Drive double.
+- One successful `BACKUP_SNAPSHOT_CREATE` audit event is emitted per artifact.
+- The source fixture is unchanged.
+
+A separate failure-injection case forces `appendAudit_()` to throw after Residence snapshot creation and folder placement. The RPC returns `SNAPSHOT_AUDIT_FAILED` while the artifact remains created and placed in the folder. This confirms the already documented P0 reconciliation gap; it is a characterization test, not a runtime fix.
+
+GitHub Actions RPC Security Contract run #144 (run ID `44268796387`) passed the repository test suite on code head `4cb85d5b3d01a6d3831c736bdadbdad0b1678311`.
+
+**Limitations:** These tests use controlled doubles only. They do not validate real Drive file type/parents, actual Spreadsheet writes/flush behavior, concurrent requests, quota/timeouts, cleanup/reconciliation, real ACLs, or production deployment identity. No real backup artifact was created; no Drive configuration, canonical source data, restore capability, or deployment was changed.
