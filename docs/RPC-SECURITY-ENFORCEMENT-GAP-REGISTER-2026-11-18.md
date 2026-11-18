@@ -181,3 +181,10 @@ The latest passing CI run is RPC Security Contract #85 (run ID `44244245984`) on
 ### Self-scope caller isolation regression
 
 The harness also exercises `hasPermission` and `getMyPermissions` with separate active-user identities against the same controlled USERS/PERMISSIONS fixtures. It verifies that the administrator receives only the administrator's permission set, the viewer does not inherit administrator permissions, and an unknown active email is unauthenticated. This tests caller identity binding in the current runtime path; it does not replace Workspace `USER_ACCESSING` deployment verification.
+
+
+### Protected RPC runtime denial-before-side-effect fixture
+
+A runtime fixture now invokes the protected `adminCreateUser` RPC under both VIEWER and ADMIN identities. The VIEWER request must fail with `FORBIDDEN: admin.users` before UUID generation or persistent writes; the ADMIN request is permitted and produces the expected single user-row write. This is a focused negative/positive endpoint test, not yet an exhaustive runtime test of every protected manifest RPC.
+
+The fixture passed in RPC Security Contract #87 (run ID `44244365008`), tested commit `d7df431505e4b8777a475ecf7f2598a352064f50`.
