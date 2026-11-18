@@ -1991,3 +1991,38 @@ assert(publicQuota.markers.every(row=>Object.keys(row).sort().join('|')==='addre
   'Public M-Paspor quota GIS markers use an explicit field allowlist');
 assert(!JSON.stringify(publicQuota).includes('verified_at')&&!JSON.stringify(publicQuota).includes('privateField'),
   'Public M-Paspor quota excludes verification timestamps and unapproved fields');
+
+
+/* Self-scope RPC runtime isolation: each call is bound to the active caller identity. */
+const rbacCode=read('Rbac.gs');
+const selfScopeUsers=[
+  ['user_id','email','display_name','role','status'],
+  ['u-admin','admin@example.gov.id','Admin','ADMIN','ACTIVE'],
+  ['u-viewer','viewer@example.gov.id','Viewer','VIEWER','ACTIVE']
+];
+const selfScopePermissions=[
+  ['role','permission'],
+  ['ADMIN','admin.config'],['ADMIN','dashboard.read'],
+  ['VIEWER','dashboard.read']
+];
+const selfScopeDb=()=>({
+  getSheetByName:(name)=>makeSheet(name==='USERS'?selfScopeUsers:selfScopePermissions)
+});
+const selfScopeRuntime=(email)=>new Function('Session','getDb_','SHEETS',authCode+'\\n'+rbacCode+'\\nreturn {hasPermission,getMyPermissions,getCurrentUser_};')(
+  {getActiveUser:()=>({getEmail:()=>email})},
+  selfScopeDb,
+  SHEETS
+);
+const adminSelfScope=selfScopeRuntime('admin@example.gov.id');
+const viewerSelfScope=selfScopeRuntime('viewer@example.gov.id');
+assert(adminSelfScope.hasPermission('admin.config')===true&&viewerSelfScope.hasPermission('admin.config')===false,
+  'Self-scope hasPermission evaluates permissions for the active caller only');
+assert(adminSelfScope.getMyPermissions().role==='ADMIN'&&adminSelfScope.getMyPermissions().permissions.includes('admin.config'),
+  'Self-scope getMyPermissions returns the active administrator permissions');
+assert(viewerSelfScope.getMyPermissions().role==='VIEWER'&&!viewerSelfScope.getMyPermissions().permissions.includes('admin.config'),
+  'Self-scope getMyPermissions does not expose another user permission set');
+assert(adminSelfScope.getCurrentUser_().userId==='u-admin'&&viewerSelfScope.getCurrentUser_().userId==='u-viewer',
+  'Self-scope identity resolution binds each request to its own active-user record');
+const unknownSelfScope=selfScopeRuntime('unknown@example.gov.id');
+assert(unknownSelfScope.hasPermission('dashboard.read')===false&&unknownSelfScope.getMyPermissions().authenticated===false,
+  'Self-scope endpoints fail closed for an email without an active application user');
