@@ -102,7 +102,7 @@ function reachable(root){
   const seen=new Set(),queue=[root];
   while(queue.length){
     const n=queue.shift();if(seen.has(n)||!funcs.has(n))continue;seen.add(n);
-    for(const m of funcs.get(n).body.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g))
+    for(const m of stripStrings(funcs.get(n).body).matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g))
       if(funcs.has(m[1])&&!seen.has(m[1]))queue.push(m[1]);
   }
   return [...seen].map(n=>({name:n,...funcs.get(n)}));
@@ -110,6 +110,7 @@ function reachable(root){
 for(const [name,policy] of Object.entries(manifest)){
   const graph=reachable(name);assert(graph.length,'RPC function body exists: '+name);
   const code=graph.map(x=>x.body).join('\n');
+  const executableCode=graph.map(x=>stripStrings(x.body)).join('\n');
   if(policy.access==='protected'){
     const p=policy.permission.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&');
     const re=policy.permission==='backoffice.access'?/\brequireBackOfficeAccess_\s*\(\s*\)/:new RegExp("\\brequirePermission_\\s*\\(\\s*(['\\\"])"+p+"\\1\\s*\\)");
@@ -119,8 +120,8 @@ for(const [name,policy] of Object.entries(manifest)){
     const writePattern=/\.(?:appendRow|setValue|setValues|deleteRow|insertRow|insertSheet|deleteSheet|clear|clearContent|clearContents|setFormula|setFormulas|copyTo|moveTo)\s*\(/;
     const writeHits=graph.filter(item=>writePattern.test(item.body)).map(item=>item.name+': '+(item.body.match(writePattern)||[])[0]);
     assert(writeHits.length===0,'Public RPC call graph has no known Spreadsheet mutation: '+name+'; hits='+writeHits.join(', '));
-    assert(!/\b(?:commitImport|appendAudit_|adminCreateUser|saveRunningText|deleteRunningText|closePeriod|reopenPeriod)\s*\(/.test(code),'Public RPC does not reach known mutation services: '+name);
+    assert(!/\b(?:commitImport|appendAudit_|adminCreateUser|saveRunningText|deleteRunningText|closePeriod|reopenPeriod)\s*\(/.test(executableCode),'Public RPC does not reach known mutation services: '+name);
   }
-  if(policy.access==='self_scope')assert(/\bgetCurrentUser_\s*\(/.test(code),'Self-scope RPC resolves current principal: '+name);
+  if(policy.access==='self_scope')assert(/\bgetCurrentUser_\s*\(/.test(executableCode),'Self-scope RPC resolves current principal: '+name);
 }
 console.log('RPC security contract passed: '+declared.size+' callable functions, '+Object.keys(manifest).length+' manifest entries.');
