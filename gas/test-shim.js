@@ -1845,3 +1845,56 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
       'Self-scope RPC reachable call graph resolves the current user: '+name);
   }
 }
+
+
+/* Public TV response projection and running-text privacy regressions. */
+const publicTvCode=read('PublicTvService.gs');
+const publicTvRuntime=new Function('getActiveRunningTexts_',publicTvCode+'\\nreturn {getPublicTvRunningTexts,sanitizePublicTvDashboard_,sanitizePublicTvMap_};')(()=>['Informasi layanan']);
+const runningTextRows=[
+  ['content_id','content','status','priority','start_at','end_at','created_by','created_at','updated_at'],
+  ['secret-id-1','Informasi layanan publik','ACTIVE',1,'','','admin@example.gov.id','2026-11-18T00:00:00Z','2026-11-18T00:00:00Z'],
+  ['secret-id-2','Teks tidak aktif','INACTIVE',2,'','','operator@example.gov.id','','']
+];
+const runningTextSheet={getDataRange:()=>({getValues:()=>runningTextRows})};
+const codeRuntime=new Function('getDb_','SHEETS','readCacheKey_','readCacheGet_','readCachePut_',read('Code.gs')+'\\nreturn {getActiveRunningTexts_};')(
+  ()=>({getSheetByName:()=>runningTextSheet}),
+  {RUNNING_TEXTS:'RUNNING_TEXTS'},
+  ()=> 'running-text-test',
+  ()=> null,
+  (_key,value)=>value
+);
+const publicRunningTexts=new Function('getActiveRunningTexts_',publicTvCode+'\\nreturn getPublicTvRunningTexts;')(codeRuntime.getActiveRunningTexts_)();
+assert(Array.isArray(publicRunningTexts)&&publicRunningTexts.length===1&&publicRunningTexts[0]==='Informasi layanan publik',
+  'Anonymous running-text RPC returns active content strings only');
+assert(!JSON.stringify(publicRunningTexts).includes('secret-id-1')&&!JSON.stringify(publicRunningTexts).includes('admin@example.gov.id'),
+  'Anonymous running-text RPC does not expose IDs or creator identity');
+
+const projectedDashboard=publicTvRuntime.sanitizePublicTvDashboard_({
+  datasetKey:'SAFE_DATASET',rowCount:1,metric:'total',grandTotal:5,
+  monthly:[{periode:'2026-01',total:5,rows:1,email:'private@example.gov.id'}],
+  offices:[{kantor_imigrasi:'Kanim Contoh',total:5,rows:1,rawRow:['private']}],
+  services:[{key:'biasa_24',total:5,userId:'private'}],
+  filters:{periode:'',kantor_imigrasi:'',metric:'total',availablePeriods:['2026-01'],availableOffices:['Kanim Contoh'],permissions:['admin.config']},
+  users:[{email:'private@example.gov.id'}],rawRows:[['private']]
+});
+assert(Object.keys(projectedDashboard).sort().join('|')==='datasetKey|filters|grandTotal|metric|monthly|offices|rowCount|services',
+  'Public dashboard response uses an explicit top-level allowlist');
+assert(Object.keys(projectedDashboard.monthly[0]).sort().join('|')==='periode|rows|total' &&
+  Object.keys(projectedDashboard.offices[0]).sort().join('|')==='kantor_imigrasi|rows|total' &&
+  Object.keys(projectedDashboard.services[0]).sort().join('|')==='key|total',
+  'Public dashboard nested records use explicit allowlists');
+assert(!JSON.stringify(projectedDashboard).includes('private@example.gov.id')&&!JSON.stringify(projectedDashboard).includes('admin.config'),
+  'Public dashboard projection removes identity and permission fields');
+
+const projectedMap=publicTvRuntime.sanitizePublicTvMap_({
+  datasetKey:'SAFE_DATASET',rowCount:1,metric:'total',
+  filters:{periode:'2026-01',kantor_imigrasi:'',metric:'total',email:'private@example.gov.id'},
+  markers:[{kantor_imigrasi:'Kanim Contoh',latitude:-6.2,longitude:106.8,total:5,metricValue:5,rows:1,rawRow:['private'],userId:'private'}],
+  rawRows:[['private']]
+});
+assert(Object.keys(projectedMap).sort().join('|')==='datasetKey|filters|markers|metric|rowCount',
+  'Public map response uses an explicit top-level allowlist');
+assert(Object.keys(projectedMap.markers[0]).sort().join('|')==='kantor_imigrasi|latitude|longitude|metricValue|rows|total',
+  'Public map markers use an explicit field allowlist');
+assert(!JSON.stringify(projectedMap).includes('private@example.gov.id')&&!JSON.stringify(projectedMap).includes('rawRow'),
+  'Public map projection removes identity and raw-row fields');
