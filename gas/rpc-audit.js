@@ -2,23 +2,28 @@
 
 /**
  * Constrained source inventory for Apps Script RPC review.
- *
- * This is deliberately NOT an authorization proof or a complete ECMAScript AST.
- * It tokenizes comments/strings safely, extracts classic function declarations,
- * balances function bodies, and records statically named calls to declared functions.
- * Unsupported constructs are reported so callers can fail closed rather than infer safety.
+ * Not a complete ECMAScript parser or authorization proof.
+ * Unsupported syntax is surfaced rather than treated as safe.
  */
-
 const CONTROL_CALLS = new Set([
   'if','for','while','switch','catch','with','function','return','typeof','new',
   'throw','delete','void','await','yield','super'
 ]);
+const REGEX_PREFIX_KEYWORDS = new Set([
+  'return','throw','case','delete','void','typeof','instanceof','in','of','yield','await'
+]);
 
 function tokenize(source) {
-  const tokens = [];
-  const unsupported = [];
+  const tokens = [], unsupported = [];
   let i = 0;
   const push = (type, value, start, end) => tokens.push({ type, value, start, end });
+  const regexMayStart = () => {
+    const prev = tokens[tokens.length - 1];
+    if (!prev) return true;
+    if (prev.type === 'id') return REGEX_PREFIX_KEYWORDS.has(prev.value);
+    if (prev.type === 'punct') return ['(','{','[',',',':','=','!','?',';','&','|','+','-','*','%','~'].includes(prev.value);
+    return false;
+  };
   while (i < source.length) {
     const ch = source[i];
     if (/\s/.test(ch)) { i++; continue; }
@@ -30,13 +35,28 @@ function tokenize(source) {
       if (end < 0) { unsupported.push('UNTERMINATED_BLOCK_COMMENT'); break; }
       i = end + 2; continue;
     }
+    if (ch === '/' && regexMayStart()) {
+      const start = i++;
+      let inClass = false, closed = false;
+      while (i < source.length) {
+        if (source[i] === '\\') { i += 2; continue; }
+        if (source[i] === '[') inClass = true;
+        else if (source[i] === ']') inClass = false;
+        else if (source[i] === '/' && !inClass) { i++; closed = true; break; }
+        else if (source[i] === '\n') break;
+        i++;
+      }
+      if (!closed) unsupported.push('UNTERMINATED_OR_AMBIGUOUS_REGEX_LITERAL');
+      while (i < source.length && /[A-Za-z]/.test(source[i])) i++;
+      push('regex', '<regex>', start, i); continue;
+    }
     if (ch === '"' || ch === "'") {
       const quote = ch, start = i++;
       let closed = false;
       while (i < source.length) {
         if (source[i] === '\\') { i += 2; continue; }
         if (source[i] === quote) { i++; closed = true; break; }
-        if (source[i] === '\n' && quote !== '`') break;
+        if (source[i] === '\n') break;
         i++;
       }
       if (!closed) unsupported.push('UNTERMINATED_STRING');
@@ -94,23 +114,23 @@ function extractFunctions(source) {
     if (closeParen < 0 || !tokens[closeParen + 1] || tokens[closeParen + 1].value !== '{') {
       unsupported.push('FUNCTION_BODY_NOT_STATIC:' + nameToken.value); continue;
     }
-    const openBrace = closeParen + 1;
-    const closeBrace = matching(openBrace, '{', '}');
+    const openBrace = closeParen + 1, closeBrace = matching(openBrace, '{', '}');
     if (closeBrace < 0) { unsupported.push('UNBALANCED_FUNCTION_BODY:' + nameToken.value); continue; }
-    const bodyTokens = tokens.slice(openBrace + 1, closeBrace);
-    const calls = new Set();
+    const bodyTokens = tokens.slice(openBrace + 1, closeBrace), calls = new Set();
     for (let j = 0; j < bodyTokens.length - 1; j++) {
       const token = bodyTokens[j], next = bodyTokens[j + 1];
-      if (token.type === 'id' && next.value === '(' && !CONTROL_CALLS.has(token.value)) {
-        calls.add(token.value);
-      }
+      if (token.type === 'id' && next.value === '(' && !CONTROL_CALLS.has(token.value)) calls.add(token.value);
     }
-    const bodyText = source.slice(tokens[openBrace].end, tokens[closeBrace].start);
+    for (let j = 0; j < bodyTokens.length - 2; j++) {
+      if (bodyTokens[j].value === '[' && bodyTokens[j + 1].value === ']' && bodyTokens[j + 2].value === '(')
+        unsupported.push('COMPUTED_CALL_NOT_ANALYZED:' + nameToken.value);
+    }
+    for (const call of calls) {
+      if (call === 'eval' || call === 'Function') unsupported.push('DYNAMIC_CODE_EXECUTION:' + nameToken.value + ':' + call);
+    }
     functions.set(nameToken.value, {
-      name: nameToken.value,
-      start: tokens[i].start,
-      end: tokens[closeBrace].end,
-      bodyText,
+      name: nameToken.value, start: tokens[i].start, end: tokens[closeBrace].end,
+      bodyText: source.slice(tokens[openBrace].end, tokens[closeBrace].start),
       calls: [...calls]
     });
     i = closeBrace;
@@ -119,8 +139,7 @@ function extractFunctions(source) {
 }
 
 function analyzeCallGraph(sources) {
-  const functions = new Map();
-  const unsupported = [];
+  const functions = new Map(), unsupported = [];
   for (const [file, source] of Object.entries(sources)) {
     const parsed = extractFunctions(source);
     unsupported.push(...parsed.unsupported.map(reason => file + ':' + reason));
@@ -129,9 +148,7 @@ function analyzeCallGraph(sources) {
       else functions.set(name, { ...fn, file });
     }
   }
-  for (const fn of functions.values()) {
-    fn.edges = fn.calls.filter(name => functions.has(name));
-  }
+  for (const fn of functions.values()) fn.edges = fn.calls.filter(name => functions.has(name));
   return { functions, unsupported: [...new Set(unsupported)] };
 }
 
@@ -142,13 +159,11 @@ function reachableFunctions(graph, entryName) {
     const name = queue.shift();
     if (seen.has(name)) continue;
     seen.add(name);
-    const fn = graph.functions.get(name);
-    for (const call of fn.calls) {
+    for (const call of graph.functions.get(name).calls) {
       if (graph.functions.has(call)) queue.push(call);
       else if (!CONTROL_CALLS.has(call)) unresolved.add(call);
     }
   }
   return { names: [...seen], unresolved: [...unresolved] };
 }
-
 module.exports = { tokenize, extractFunctions, analyzeCallGraph, reachableFunctions };
