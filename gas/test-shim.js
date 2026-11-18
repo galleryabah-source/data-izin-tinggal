@@ -2249,7 +2249,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   const importLog=new ImportFakeSheet([['batch_id','timestamp','actor','dataset_key','contract_version','source_rows','accepted','rejected','duplicates','status','errors']]);
   const importDb={getSheetByName:(name)=>name==='DATA_PASSPORT_SERVICE_MONTHLY'?dataSheet:name==='IMPORT_LOG'?importLog:null};
   let importLockWaits=0,importLockReleases=0,importDatasetCreates=0,importAudits=0,importPeriodChecks=0;
-  let importPeriodClosed=false,importUuid=0;
+  let importPeriodClosed=false,importUuid=0,importParseCount=0;
   const importSchema={signature:'passport-test-v1',contractKey:'PASSPORT_SERVICE_MONTHLY',contractVersion:'1',datasetKey:'PASSPORT_SERVICE_MONTHLY',columns:['periode','kantor_imigrasi']};
   const importRuntime=new Function(
     'requirePermission_','parseDelimited_','detectSchema_','LockService','validateRows_',
@@ -2258,15 +2258,15 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     read('ImportService.gs')+'\\nreturn {commitImport};'
   )(
     ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
-    (text)=>[['periode','kantor_imigrasi'],['2026-09','KANIM TEST']],
+    (text)=>{importParseCount++;return [['periode','kantor_imigrasi'],['2026-09',importParseCount===3?'KANIM CLOSED':'KANIM TEST']];},
     ()=>importSchema,
     {getScriptLock:()=>({waitLock:()=>{importLockWaits++;},releaseLock:()=>{importLockReleases++;}})},
     (schema,rows)=>{
-      const key=rows[0][0]+'|'+rows[0][1].trim().toUpperCase();
+      const candidate=rows[0],key=candidate[0]+'|'+candidate[1].trim().toUpperCase();
       const exists=dataSheet.rows.slice(1).some(r=>String(r[0])+'|'+String(r[1]).trim().toUpperCase()===key);
       return exists
         ?{valid:[],errors:[{row:2,error:'Duplikat business key: '+key}],duplicates:1}
-        :{valid:[['2026-09','KANIM TEST']],errors:[],duplicates:0};
+        :{valid:[candidate],errors:[],duplicates:0};
     },
     {PASSPORT_SERVICE_MONTHLY:{columns:importSchema.columns}},
     ()=>{importPeriodChecks++;if(importPeriodClosed)throw new Error('PERIOD_CLOSED: PASSPORT_SERVICE_MONTHLY 2026-09.');return true;},
