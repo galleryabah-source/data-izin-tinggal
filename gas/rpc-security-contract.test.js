@@ -37,7 +37,8 @@ function bodyAt(s,start){
     if(c==='/'){
       const prefix=s.slice(0,i).trimEnd();
       const previous=prefix.slice(-1);
-      if(/[=(:,;!?{[|&]/.test(previous)||/\\b(?:return|throw|case|delete|void|typeof|instanceof|in|of|yield|await)\\s*$/.test(prefix)){
+      const regexCanStart="=(:,;!?{[|&".includes(previous)||["return","throw","case","delete","void","typeof","instanceof","in","of","yield","await"].some(keyword=>prefix.endsWith(keyword));
+      if(regexCanStart){
         state='regex';inClass=false;continue;
       }
     }
