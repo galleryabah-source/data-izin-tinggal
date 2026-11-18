@@ -1974,15 +1974,15 @@ assert(serviceYoY.services.every(row=>Object.keys(row).sort().join('|')==='base2
   'Public Passport service YoY records use an explicit field allowlist without identity leakage');
 
 const quotaCode=read('MpasporQuotaService.gs');
-const quotaRows=[
-  ['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status'],
-  ['OFFICE_1','Kanim Contoh','Jl. Contoh',-6.2,106.8,'https://example.gov.id/source','2026-11-18T00:00:00Z','VERIFIED']
-];
-const quotaRuntime=new Function('buildMpasporQuotaDashboard_','getDb_',quotaCode+'\nreturn getPublicTvMpasporQuota;')(
-  ()=>({datasetKey:'MPASPOR_QUOTA',period:'2026-01',periodLabel:'Januari 2026',totals:{mpaspor:40,overall:100,ratio:0.4},officeCount:1,offices:[{rank:1,kantor_imigrasi:'Kanim Contoh',mpaspor:40,overall:100,ratio:0.4,privateField:'secret'}]}),
+let quotaRows=[['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status']];
+const quotaRuntime=new Function('getDb_',quotaCode+'\\nreturn {getPublicTvMpasporQuota,MPASPOR_QUOTA_SNAPSHOT};')(
   ()=>({getSheetByName:()=>({getDataRange:()=>({getValues:()=>quotaRows})})})
 );
-const publicQuota=quotaRuntime();
+quotaRuntime.MPASPOR_QUOTA_SNAPSHOT.offices.forEach((office,index)=>{
+  quotaRows.push(['OFFICE_'+index,office.office,'Alamat referensi',-6.2+index*0.01,106.8+index*0.01,'https://example.gov.id/source','2026-11-18T00:00:00Z','VERIFIED']);
+});
+const quotaEndpoint=quotaRuntime.getPublicTvMpasporQuota;
+const publicQuota=quotaEndpoint();
 assert(Object.keys(publicQuota).sort().join('|')==='datasetKey|officeCount|offices|period|periodLabel|totals|markers',
   'Public M-Paspor quota response uses an explicit top-level contract');
 assert(publicQuota.offices.every(row=>Object.keys(row).sort().join('|')==='kantor_imigrasi|mpaspor|overall|rank|ratio'),
