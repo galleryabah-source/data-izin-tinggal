@@ -2259,7 +2259,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     read('ImportService.gs')+'\nreturn {commitImport};'
   )(
     ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
-    (text)=>{const row=String(text).split('\\n')[1]||'';return [['periode','kantor_imigrasi'],['2026-09',(row.split('\\t')[1]||'').trim()]];},
+    (text)=>{const row=String(text).split(String.fromCharCode(10))[1]||'';return [['periode','kantor_imigrasi'],['2026-09',(row.split(String.fromCharCode(9))[1]||'').trim()]];},
     ()=>importSchema,
     {getScriptLock:()=>({waitLock:()=>{importLockWaits++;},releaseLock:()=>{importLockReleases++;}})},
     (signature)=>({datasetKey:'PASSPORT_SERVICE_MONTHLY',sheetName:'DATA_PASSPORT_SERVICE_MONTHLY'}),
