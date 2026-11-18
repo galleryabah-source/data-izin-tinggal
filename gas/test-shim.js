@@ -1919,23 +1919,25 @@ assert(!JSON.stringify(kanwilWorkspace).includes('RAHASIA A'),'Kanwil analytics 
 /* Public M-Paspor quota endpoint must expose only its documented public projection. */
 const mpasporQuotaSource=read('MpasporQuotaService.gs');
 const publicQuotaEndpoint=new Function(
-  'buildMpasporQuotaDashboard_',
   'getDb_',
-  mpasporQuotaSource+'\nreturn getPublicTvMpasporQuota;'
+  'quotaFixture',
+  mpasporQuotaSource+"\\n"+
+    "buildMpasporQuotaDashboard_=()=>quotaFixture;\\n"+
+    'return getPublicTvMpasporQuota;'
 )(
-  ()=>({
-    datasetKey:'PASSPORT_MPASPOR_QUOTA',period:'2026-10',periodLabel:'Oktober 2026',
-    sourceDocument:'public quota source',officeCount:1,
-    totals:{mpaspor:3205,overall:3760,ratio:3205/3760},
-    offices:[{rank:1,kantor_imigrasi:'KANIM UJI',mpaspor:320,overall:440,ratio:320/440,
-      locations:[{name:'PRIVATE LOCATION NOTE',note:'PRIVATE NOTE'}]}]
-  }),
   ()=>({getSheetByName:()=>({
     getDataRange:()=>({getValues:()=>[
       ['office_key','kantor_imigrasi','address','latitude','longitude','source_url','contact_email','private_note','status'],
       ['KANIM-UJI','KANIM UJI','Alamat kantor publik',-6.9,107.6,'https://example.test/source','private@example.gov.id','DO NOT EXPOSE','VERIFIED']
     ]})
-  })})
+  })}),
+  {
+    datasetKey:'PASSPORT_MPASPOR_QUOTA',period:'2026-10',periodLabel:'Oktober 2026',
+    sourceDocument:'public quota source',officeCount:1,
+    totals:{mpaspor:3205,overall:3760,ratio:3205/3760},
+    offices:[{rank:1,kantor_imigrasi:'KANIM UJI',mpaspor:320,overall:440,ratio:320/440,
+      locations:[{name:'PRIVATE LOCATION NOTE',note:'PRIVATE NOTE'}]}]
+  }
 );
 const publicQuota=publicQuotaEndpoint();
 const publicQuotaJson=JSON.stringify(publicQuota);
