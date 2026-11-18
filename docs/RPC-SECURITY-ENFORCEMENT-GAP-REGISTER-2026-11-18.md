@@ -314,3 +314,36 @@ Before changing runtime code, the remediation must define and test these invaria
 7. **Operational controls:** recovery must be admin-authorized, separately audited, dry-run capable, and unable to rewrite historical monthly baselines without explicit governed correction. Do not enable automatic deletion/rollback of canonical rows until collision and concurrent-write safety are proven.
 
 **Design constraint:** Apps Script `LockService` serializes cooperating executions; it is not a database transaction across Spreadsheet tabs, Drive files, and Script Properties. A durable state machine plus idempotent reconciliation is required; a `try/finally` lock release alone is insufficient.
+
+
+### Backup and recovery forensic review — authorized paths remain uncertified
+
+**Reviewed source:** `gas/BackupService.gs`, `gas/PassportGovernanceService.gs`, `gas/BackupRecoveryService.gs`, `gas/RpcManifest.js`, and the current `gas/test-shim.js` fixtures at the PR #262 head.
+
+**Confirmed controls:**
+- Snapshot creation entrypoints require `admin.config`: `createResidencePermitSnapshot()`, `createPassportServiceSnapshot()`, and `createPassportServiceMonthly2025Snapshot()`.
+- Snapshot verification entrypoints require `audit.read`.
+- The backup recovery center reports `restoreEnabled:false` and `RESTORE_DISABLED_P0_3_READ_ONLY`; the reviewed recovery-center service exposes listing/verification rather than a restore mutation.
+- Existing runtime fixtures prove unauthorized snapshot creation is denied before backup configuration or canonical dataset reads. They do not exercise the authorized create/verify paths.
+
+**P0 — Snapshot creation can leave orphaned/partial artifacts or report failure after a completed snapshot.**
+
+The three snapshot creation implementations follow the same non-transactional sequence: create a new Spreadsheet, write the dataset copy, write the manifest, move the file into the configured Drive folder, then append the audit event. There is no encompassing failure-state record or cleanup/reconciliation path around those steps. If a write or folder operation fails after `SpreadsheetApp.create()`, an incomplete or misplaced spreadsheet may remain. If the final `appendAudit_()` fails, the RPC returns an error even though the snapshot file and manifest may already be complete and stored. A caller retry can create another snapshot because there is no stable request idempotency key or durable snapshot lifecycle.
+
+**Required remediation:** define a durable snapshot lifecycle and stable request identity; persist a PREPARING/COMPLETE/FAILED_REQUIRES_RECONCILIATION state; make retries discover and reconcile the same snapshot; distinguish artifact creation from audit finalization; and add failure injection after spreadsheet creation, data write, manifest write, folder placement, audit append, and flush. Any cleanup must be scoped to a snapshot created by the same request and must not touch canonical source data.
+
+**P1 — Snapshot verification opens and reads the supplied Spreadsheet before enforcing configured-folder membership.**
+
+In `verifyResidencePermitSnapshot()` and the Passport equivalents, the code calls `SpreadsheetApp.openById(snapshotId)` and reads snapshot sheets before it establishes `inConfiguredFolder` from Drive parents. The final result flags a file outside the configured backup folder, but the folder boundary is therefore a post-read validation rather than a precondition. This unnecessarily allows an `audit.read` caller to cause the deployer-executed service to open/read an arbitrary spreadsheet ID that is accessible to the deployment identity, and exposes the operation to unbounded read cost from a large spreadsheet.
+
+**Required remediation:** validate the Drive file exists, is a Google Spreadsheet, and is inside the configured backup folder before opening it with SpreadsheetApp; reject out-of-scope IDs before reading cells. Add input bounds and failure tests for unknown IDs, non-spreadsheet files, files outside the configured folder, and oversized snapshots. Verify this behavior in an isolated deployment using the actual execution identity and Drive ACLs.
+
+**P1 — Snapshot manifest identity is not fully bound to the requested file.**
+
+The verification code checks manifest status, dataset key, schema version/signature, source spreadsheet/sheet, row count, checksum, and folder membership, but does not compare manifest `snapshot_id` with the requested snapshot ID or validate the manifest's creation timestamp. The verifier therefore does not establish that the manifest's declared snapshot identity matches the Drive file being verified.
+
+**Required remediation:** require and compare the manifest snapshot ID to the request/file identity, validate timestamp format and expected metadata, and test tampered/missing/duplicated manifest keys. Keep checksum comparison and exact row/header checks.
+
+**Test gap / release gate:** add authorized-path fixtures for Residence, Passport, and Passport 2025 snapshots. Assert exact copied headers/rows, schema signature, row count, checksum, snapshot ID, configured-folder membership, audit payload, and lock/resource cleanup where applicable. Add failure injection at each side-effect boundary and verify retry/reconciliation semantics. Existing denial-before-side-effect fixtures and CI success do not prove these authorized paths or real Drive/Spreadsheet ACL behavior.
+
+**Safety boundary:** this review is documentation-only. It does not create, move, delete, or restore any Drive file; does not alter backup configuration; does not modify canonical datasets; and does not enable restore. The backup recovery center remains read-only with restore disabled.
