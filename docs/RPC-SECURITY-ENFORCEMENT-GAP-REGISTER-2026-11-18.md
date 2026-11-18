@@ -347,3 +347,16 @@ The verification code checks manifest status, dataset key, schema version/signat
 **Test gap / release gate:** add authorized-path fixtures for Residence, Passport, and Passport 2025 snapshots. Assert exact copied headers/rows, schema signature, row count, checksum, snapshot ID, configured-folder membership, audit payload, and lock/resource cleanup where applicable. Add failure injection at each side-effect boundary and verify retry/reconciliation semantics. Existing denial-before-side-effect fixtures and CI success do not prove these authorized paths or real Drive/Spreadsheet ACL behavior.
 
 **Safety boundary:** this review is documentation-only. It does not create, move, delete, or restore any Drive file; does not alter backup configuration; does not modify canonical datasets; and does not enable restore. The backup recovery center remains read-only with restore disabled.
+
+
+### Setup/bootstrap and web-entrypoint authorization fixture coverage
+
+The RPC security fixture suite now adds controlled executable contracts for the setup/bootstrap boundary and `doGet(e)` routing:
+
+- Confirms `setupApp_`, `initializeSchema_`, `seedSecurity_`, `seedDictionary_`, `bootstrapCurrentUser_`, and `bootstrapAdmin_` remain underscore-suffixed internal declarations and have no corresponding browser-callable aliases in their source files.
+- Invokes the actual `bootstrapAdmin_()` implementation with controlled dependencies. A populated USERS sheet is rejected before UUID generation or writes; an empty USERS sheet receives one normalized ADMIN row.
+- Invokes the actual `doGet()` implementation with controlled authorization and HtmlService doubles. Explicit `tv` and `tv-mobile` routes render without a back-office RPC guard; `daily` requires `daily.read`; unknown view values fail closed behind back-office authorization; an authenticated daily-only operator is routed to the workspace shell.
+
+GitHub Actions RPC Security Contract run #133 (run ID `44260229090`) completed SUCCESS; `npm test` passed on PR #262 head `c013ae2805e44905aae02e45280868390f9ffac0`.
+
+**Scope limitation:** these tests establish source-level callable naming and behavior under controlled Node.js doubles. They do not prove Apps Script's deployed RPC exposure semantics, editor-only execution policy, deployment execution identity, Workspace session behavior, or real HTML-service access behavior. The underscore convention is the Apps Script client-callability boundary assumed by this source contract and must still be confirmed in an isolated deployed environment. No setup, bootstrap, Script Properties, user table, production deployment, or ACL was changed by these fixtures.
