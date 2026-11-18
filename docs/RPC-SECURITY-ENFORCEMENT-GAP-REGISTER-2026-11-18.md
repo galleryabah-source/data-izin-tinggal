@@ -220,3 +220,14 @@ GitHub Actions `RPC Security Contract` run #98 (run ID `44246418632`) completed 
 
 These are unauthorized-path fixture results only. Authorized mutation success, persistence semantics, idempotency, rollback behavior, real Apps Script service permissions, and full backup/restore safety remain unverified. The backup/recovery center's read-only policy is not a substitute for testing each backup or recovery mutation endpoint.
 
+### Backup snapshot creation denial-before-read fixtures
+
+The runtime fixture matrix now invokes the three snapshot-creation RPCs with an unauthorized caller:
+- `createResidencePermitSnapshot()`
+- `createPassportServiceSnapshot()`
+- `createPassportServiceMonthly2025Snapshot()`
+
+Each must deny with `FORBIDDEN: admin.config` before reading backup configuration or canonical dataset state. RPC Security Contract run #100 (run ID `44246560867`) completed SUCCESS; `npm test` passed on code head `18115175e871a85a09b0e23a9acd54cf2a2dd702`.
+
+This confirms denial ordering for the tested unauthorized path only. It does not test authorized snapshot creation, snapshot integrity, retention, restore execution, or real Drive/Spreadsheet ACL behavior.
+
