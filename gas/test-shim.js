@@ -2492,9 +2492,9 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     ()=>{sourceImportCommits++;return {ok:true,batchId:'batch-source-001',datasetKey:'PASSPORT_SERVICE_MONTHLY',inserted:1};},
     ()=>{sourceAuditAttempts++;throw new Error('SOURCE_PROVENANCE_AUDIT_FAILED');}
   );
-  let provenanceFailureReturned=false;
+  let provenanceFailureReturned=false,sourceFailureMessage='';
   try{sourceRuntime.commitGoogleSourceImport({datasetKey:'PASSPORT_SERVICE_MONTHLY',sheetName:'September'});}
-  catch(e){provenanceFailureReturned=String(e&&e.message||e)==='SOURCE_PROVENANCE_AUDIT_FAILED';}
+  catch(e){sourceFailureMessage=String(e&&e.message||e);provenanceFailureReturned=sourceFailureMessage==='SOURCE_PROVENANCE_AUDIT_FAILED';}
   assert(provenanceFailureReturned&&sourceImportCommits===1&&sourceAuditAttempts===1,
-    'Characterization: Google source RPC reports provenance audit failure after canonical commitImport has already succeeded (known split-commit gap)');
+    'Characterization: Google source RPC reports provenance audit failure after canonical commitImport has already succeeded (known split-commit gap); error='+sourceFailureMessage+', commits='+sourceImportCommits+', auditAttempts='+sourceAuditAttempts);
 }
