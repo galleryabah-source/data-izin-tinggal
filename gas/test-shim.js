@@ -2195,3 +2195,33 @@ assert(backupDenied,'setBackupFolder rejects callers without admin.config');
 assert(backupFolderNormalizeCalls===0&&backupDriveCalls===0&&backupPropertyWrites===0,
   'Backup folder denial occurs before ID processing, Drive access, or Script Properties mutation');
 
+/* Backup snapshot creation must enforce admin.config before reading backup or dataset state. */
+let backupConfigReads=0,backupDatasetReads=0;
+const backupSnapshotDeniedRuntime=new Function(
+  'requirePermission_','backupConfig_','getDb_','getActiveDatasetContract_',
+  'APP','SHEETS','Utilities','DriveApp','SpreadsheetApp',
+  read('BackupService.gs')+'\n'+read('PassportGovernanceService.gs')+
+  '\nreturn {createResidencePermitSnapshot,createPassportServiceSnapshot,createPassportServiceMonthly2025Snapshot};'
+)(
+  ()=>{throw new Error('FORBIDDEN: admin.config');},
+  ()=>{backupConfigReads++;return {folderId:'folder-id'};},
+  ()=>{backupDatasetReads++;throw new Error('UNEXPECTED_DATASET_ACCESS');},
+  ()=>{backupDatasetReads++;throw new Error('UNEXPECTED_DATASET_ACCESS');},
+  {TZ:'Asia/Jakarta',SHEET_PREFIX:'DATA_'},
+  {DATASET_REGISTRY:'DATASET_REGISTRY'},
+  {formatDate:()=>''},
+  {},
+  {}
+);
+let residenceSnapshotDenied=false,passportSnapshotDenied=false,passport2025SnapshotDenied=false;
+try{backupSnapshotDeniedRuntime.createResidencePermitSnapshot();}
+catch(e){residenceSnapshotDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+try{backupSnapshotDeniedRuntime.createPassportServiceSnapshot();}
+catch(e){passportSnapshotDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+try{backupSnapshotDeniedRuntime.createPassportServiceMonthly2025Snapshot();}
+catch(e){passport2025SnapshotDenied=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+assert(residenceSnapshotDenied&&passportSnapshotDenied&&passport2025SnapshotDenied,
+  'Residence and Passport snapshot creation RPCs reject callers without admin.config');
+assert(backupConfigReads===0&&backupDatasetReads===0,
+  'Snapshot creation denial occurs before backup configuration or canonical dataset reads');
+
