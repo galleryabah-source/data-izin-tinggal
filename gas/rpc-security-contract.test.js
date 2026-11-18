@@ -20,15 +20,27 @@ function stripComments(s) {
   return o;
 }
 function bodyAt(s,start){
-  let d=0,state='code',q='';
+  let d=0,state='code',q='',inClass=false;
   for(let i=start;i<s.length;i++){
     const c=s[i],n=s[i+1];
     if(state==='line'){if(c==='\n')state='code';continue;}
     if(state==='block'){if(c==='*'&&n==='/'){i++;state='code';}continue;}
     if(state==='str'){if(c==='\\'){i++;continue;}if(c===q)state='code';continue;}
+    if(state==='regex'){
+      if(c==='\\'){i++;continue;}
+      if(c==='[')inClass=true;else if(c===']')inClass=false;else if(c==='/'&&!inClass)state='code';
+      continue;
+    }
     if(c==='/'&&n==='/'){i++;state='line';continue;}
     if(c==='/'&&n==='*'){i++;state='block';continue;}
     if(c==="'"||c==='"'||c.charCodeAt(0)===96){q=c;state='str';continue;}
+    if(c==='/'){
+      const prefix=s.slice(0,i).trimEnd();
+      const previous=prefix.slice(-1);
+      if(/[=(:,;!?{[|&]/.test(previous)||/\\b(?:return|throw|case|delete|void|typeof|instanceof|in|of|yield|await)\\s*$/.test(prefix)){
+        state='regex';inClass=false;continue;
+      }
+    }
     if(c==='{')d++;
     if(c==='}'&&--d===0)return s.slice(start+1,i);
   }
