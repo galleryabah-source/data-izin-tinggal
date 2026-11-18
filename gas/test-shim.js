@@ -2304,7 +2304,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   importPeriodClosed=false;
   failImportAudit=true;
   let downstreamAuditFailed=false;
-  try{importRuntime.commitImport('periode\\tkantor_imigrasi\\n2026-09\\tKANIM AUDIT FAIL');}
+  try{importRuntime.commitImport(['periode','kantor_imigrasi'].join(String.fromCharCode(9))+String.fromCharCode(10)+['2026-09','KANIM AUDIT FAIL'].join(String.fromCharCode(9)));}
   catch(e){downstreamAuditFailed=String(e&&e.message||e)==='AUDIT_WRITE_FAILED';}
   assert(downstreamAuditFailed&&dataSheet.rows.length===3&&importLog.rows.length===3&&importAudits===1,
     'Characterization: audit failure is returned after canonical row and import-log have already been written (known non-atomicity gap)');
