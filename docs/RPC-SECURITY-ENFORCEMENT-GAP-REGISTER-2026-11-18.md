@@ -166,3 +166,18 @@ Coverage is intentionally partial: the current executable projection tests cover
 Additional Public TV contract coverage now executes the analytical running-text adapter against a controlled reporting fixture and enforces an allowlist of narrative fields. The service-point reference endpoint is also exercised and its point records are constrained to the declared public reference fields, including explicit coordinate/reference status.
 
 The remaining public response contracts still needing dedicated executable fixtures are Passport YoY, office-level Passport YoY, Passport service YoY, and M-Paspor quota. Their publication approval and live response verification remain separate release gates.
+
+
+### Completion of Public TV Passport and M-Paspor response fixtures
+
+The test harness now executes the four previously outstanding public response adapters using controlled fixtures:
+- Passport Year-over-Year: exact top-level contract and monthly/office row allowlists.
+- Passport office Year-over-Year: required office filter rejection, exact response contract, and monthly row allowlist.
+- Passport service Year-over-Year: exact response contract and preservation of the `NOT_COMPARABLE` taxonomy decision.
+- M-Paspor quota: exercises the actual quota snapshot office list with a matching verified-reference fixture, then checks office and GIS marker field allowlists and excludes verification timestamps / unapproved fields.
+
+The latest passing CI run is RPC Security Contract #85 (run ID `44244245984`) on commit `475da2768ffe6854c15f26f4b9d2d783122b79b6`. This is automated fixture evidence only; it does not approve public publication of every reference field or replace a live deployment/UAT review.
+
+### Self-scope caller isolation regression
+
+The harness also exercises `hasPermission` and `getMyPermissions` with separate active-user identities against the same controlled USERS/PERMISSIONS fixtures. It verifies that the administrator receives only the administrator's permission set, the viewer does not inherit administrator permissions, and an unknown active email is unauthenticated. This tests caller identity binding in the current runtime path; it does not replace Workspace `USER_ACCESSING` deployment verification.
