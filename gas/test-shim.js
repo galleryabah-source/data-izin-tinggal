@@ -944,20 +944,20 @@ const doGetFixture=(permissionError,backOfficeError,currentUser)=> {
   );
   return {calls,doGet:fn.doGet};
 };
-const publicTv=doGetFixture(null,null);
-assert(publicTv.doGet({parameter:{view:'tv'}}).ok&&publicTv.calls.template==='tv'&&publicTv.calls.permission.length===0&&publicTv.calls.backOffice===0,'Only explicit TV view is served without an RPC permission gate');
-const publicTvMobile=doGetFixture(null,null);
-assert(publicTvMobile.doGet({parameter:{view:'tv-mobile'}}).ok&&publicTvMobile.calls.template==='tv-mobile'&&publicTvMobile.calls.permission.length===0&&publicTvMobile.calls.backOffice===0,'Only explicit TV Mobile view is served without an RPC permission gate');
-const dailyDenied=doGetFixture('FORBIDDEN: daily.read',null);
+const entrypointPublicTv=doGetFixture(null,null);
+assert(entrypointPublicTv.doGet({parameter:{view:'tv'}}).ok&&entrypointPublicTv.calls.template==='tv'&&entrypointPublicTv.calls.permission.length===0&&entrypointPublicTv.calls.backOffice===0,'Only explicit TV view is served without an RPC permission gate');
+const entrypointPublicTvMobile=doGetFixture(null,null);
+assert(entrypointPublicTvMobile.doGet({parameter:{view:'tv-mobile'}}).ok&&entrypointPublicTvMobile.calls.template==='tv-mobile'&&entrypointPublicTvMobile.calls.permission.length===0&&entrypointPublicTvMobile.calls.backOffice===0,'Only explicit TV Mobile view is served without an RPC permission gate');
+const entrypointDailyDenied=doGetFixture('FORBIDDEN: daily.read',null);
 let dailyDeniedResult=false;
-try{dailyDenied.doGet({parameter:{view:'daily'}});}catch(e){dailyDeniedResult=String(e&&e.message||e)==='FORBIDDEN: daily.read';}
-assert(dailyDeniedResult&&dailyDenied.calls.permission[0]==='daily.read'&&dailyDenied.calls.template===null,'Daily view is denied before template rendering without daily.read');
-const unknownViewDenied=doGetFixture(null,'BACKOFFICE_AUTH_REQUIRED');
-let unknownViewDeniedResult=false;
-try{unknownViewDenied.doGet({parameter:{view:'unexpected'}});}catch(e){unknownViewDeniedResult=String(e&&e.message||e)==='BACKOFFICE_AUTH_REQUIRED';}
-assert(unknownViewDeniedResult&&unknownViewDenied.calls.backOffice===1&&unknownViewDenied.calls.template===null,'Unknown view values fail closed behind back-office authorization');
-const dailyRoleView=doGetFixture(null,null,{authenticated:true,permissions:['daily.read'],role:'OPERATOR'});
-assert(dailyRoleView.doGet({parameter:{view:'home'}}).ok&&dailyRoleView.calls.template==='index','Daily-only operator view is routed to the authenticated workspace shell');
+try{entrypointDailyDenied.doGet({parameter:{view:'daily'}});}catch(e){dailyDeniedResult=String(e&&e.message||e)==='FORBIDDEN: daily.read';}
+assert(dailyDeniedResult&&entrypointDailyDenied.calls.permission[0]==='daily.read'&&entrypointDailyDenied.calls.template===null,'Daily view is denied before template rendering without daily.read');
+const entrypointUnknownDenied=doGetFixture(null,'BACKOFFICE_AUTH_REQUIRED');
+let entrypointUnknownDeniedResult=false;
+try{entrypointUnknownDenied.doGet({parameter:{view:'unexpected'}});}catch(e){entrypointUnknownDeniedResult=String(e&&e.message||e)==='BACKOFFICE_AUTH_REQUIRED';}
+assert(entrypointUnknownDeniedResult&&entrypointUnknownDenied.calls.backOffice===1&&entrypointUnknownDenied.calls.template===null,'Unknown view values fail closed behind back-office authorization');
+const entrypointDailyRole=doGetFixture(null,null,{authenticated:true,permissions:['daily.read'],role:'OPERATOR'});
+assert(entrypointDailyRole.doGet({parameter:{view:'home'}}).ok&&entrypointDailyRole.calls.template==='index','Daily-only operator view is routed to the authenticated workspace shell');
 
 const dailyService=read('DailyInputService.gs');
 assert(dailyService.includes('enabled:false') && dailyService.includes("gateKey:'DAILY_INPUT_GATE_9_1'") && dailyService.includes("featureFlagKey:'DAILY_INPUT_ENABLED'"), 'Daily input code-level kill switch remains closed until a separately reviewed release');
