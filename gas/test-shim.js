@@ -1798,6 +1798,13 @@ const pureEffects=rpcAudit.collectReachableEffects(effectFixture,'pureValidator'
 assert(pureEffects.mutations.length===0 && pureEffects.externalIo.length===0,
   'RPC effect inventory recognizes a pure validation path');
 
+const dynamicEffectFixture=rpcAudit.analyzeCallGraph({
+  'dynamic-effects.gs': 'function exposed(){ return sheet[method](); }'
+});
+const dynamicEffects=rpcAudit.collectReachableEffects(dynamicEffectFixture,'exposed');
+assert(dynamicEffects.blockers.some(reason=>reason.includes('COMPUTED_CALL_NOT_ANALYZED')),
+  'RPC effect inventory exposes computed calls as blockers rather than treating them as side-effect free');
+
 
 /* Manifest authorization metadata: inspect transitive statically named helper reachability. */
 const rpcSources=new Map();
@@ -1827,10 +1834,12 @@ for(const [name,entry] of Object.entries(rpcManifest.RPC_MANIFEST_V1)){
       'Public read-only RPC has no transitive mutation calls: '+name+' '+JSON.stringify(effects.mutations));
     assert(effects.externalIo.length===0,
       'Public read-only RPC has no transitive external IO calls: '+name+' '+JSON.stringify(effects.externalIo));
+    assert(effects.blockers.length===0,
+      'Public read-only RPC has no unsupported dynamic or malformed syntax blockers: '+name+' '+JSON.stringify(effects.blockers));
   }else if(entry.access==='stateless_validation'){
     const effects=rpcAudit.collectReachableEffects(rpcGraph,name);
-    assert(effects.mutations.length===0 && effects.externalIo.length===0,
-      'Stateless validation RPC has no transitive mutation or external IO calls: '+name);
+    assert(effects.mutations.length===0 && effects.externalIo.length===0 && effects.blockers.length===0,
+      'Stateless validation RPC has no transitive mutation, external IO, or unsupported syntax blockers: '+name+' '+JSON.stringify(effects.blockers));
   }else if(entry.access==='self_scope'){
     assert(reachableBodies.includes('getCurrentUser_('),
       'Self-scope RPC reachable call graph resolves the current user: '+name);
