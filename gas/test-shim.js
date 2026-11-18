@@ -2653,3 +2653,122 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   assert(provenanceFailureReturned&&sourceImportCommits===1&&sourceAuditAttempts===1,
     'Characterization: Google source RPC reports provenance audit failure after canonical commitImport has already succeeded (known split-commit gap); error='+sourceFailureMessage+', commits='+sourceImportCommits+', auditAttempts='+sourceAuditAttempts);
 }
+
+/* Authorized snapshot creation: controlled Spreadsheet/Drive doubles and audit-failure characterization. */
+{
+  const snapshotAuditEvents=[];
+  const snapshotArtifacts=[];
+  let snapshotSequence=0;
+  class SnapshotFakeRange {
+    constructor(sheet){this.sheet=sheet;}
+    setValues(values){this.sheet.rows=values.map(row=>row.slice());return this;}
+  }
+  class SnapshotFakeSheet {
+    constructor(name){this.name=name;this.rows=[];this.frozenRows=0;}
+    setName(name){this.name=name;return this;}
+    getRange(){return new SnapshotFakeRange(this);}
+    setFrozenRows(count){this.frozenRows=count;return this;}
+    getDataRange(){return {getValues:()=>this.rows.map(row=>row.slice())};}
+  }
+  const snapshotSourceRows=[
+    ['periode','kantor_imigrasi','layanan_a','total'],
+    ['2026-09','KANIM TEST',4,4]
+  ];
+  const snapshotSourceSheet={
+    getDataRange:()=>({getValues:()=>snapshotSourceRows.map(row=>row.slice())})
+  };
+  const snapshotRegistry={
+    getDataRange:()=>({getValues:()=>[
+      ['dataset_key','status','sheet_name','schema_signature'],
+      ['RESIDENCE_PERMIT_SERVICE_MONTHLY','ACTIVE','DATA_RESIDENCE','residence-signature']
+    ]})
+  };
+  const snapshotSource={
+    getId:()=> 'source-spreadsheet-123456',
+    getSheetByName:name=>name==='DATASET_REGISTRY'?snapshotRegistry:(name==='DATA_RESIDENCE'?snapshotSourceSheet:null)
+  };
+  const snapshotContract={
+    version:'1',
+    derived:['total'],
+    measures:['layanan_a']
+  };
+  const snapshotDataset={
+    contract:snapshotContract,
+    registryRow:{schema_signature:'passport-signature'},
+    registryIndex:{schema_signature:0},
+    sheetName:'DATA_PASSPORT',
+    sheet:snapshotSourceSheet
+  };
+  function makeSnapshotRuntime(auditShouldFail){
+    const created=[];
+    const runtime=new Function(
+      'requirePermission_','backupConfig_','getDb_','getActiveDatasetContract_',
+      'APP','SHEETS','Utilities','SpreadsheetApp','DriveApp','PropertiesService',
+      'appendAudit_','nowIso_','LockService','Logger',
+      read('BackupService.gs')+'\\n'+read('PassportGovernanceService.gs')+
+      '\\nreturn {createResidencePermitSnapshot,createPassportServiceSnapshot,createPassportServiceMonthly2025Snapshot};'
+    )(
+      ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+      ()=>({folderId:'backup-folder-123456'}),
+      ()=>snapshotSource,
+      key=>Object.assign({},snapshotDataset,{
+        contract:Object.assign({},snapshotContract,{version:key==='PASSPORT_SERVICE_MONTHLY_2025'?'1':'1'}),
+        sheetName:'DATA_'+key,
+        registryRow:{schema_signature:key==='PASSPORT_SERVICE_MONTHLY_2025'?'passport-2025-signature':'passport-signature'}
+      }),
+      {TZ:'Asia/Jakarta',SHEET_PREFIX:'DATA_'},
+      {DATASET_REGISTRY:'DATASET_REGISTRY'},
+      {
+        DigestAlgorithm:{SHA_256:'SHA_256'},Charset:{UTF_8:'UTF_8'},
+        computeDigest:()=>[1,2,3,4],
+        formatDate:()=> '20261118_000000',
+        getUuid:()=> 'snapshot-uuid-'+(++snapshotSequence)
+      },
+      {
+        create(name){
+          const data=new SnapshotFakeSheet('Sheet1');
+          const artifact={id:'snapshot-file-'+(++snapshotSequence),name,sheets:[data]};
+          artifact.getId=()=>artifact.id;
+          artifact.getSheets=()=>artifact.sheets;
+          artifact.insertSheet=sheetName=>{const sheet=new SnapshotFakeSheet(sheetName);artifact.sheets.push(sheet);return sheet;};
+          created.push(artifact);snapshotArtifacts.push(artifact);
+          return artifact;
+        }
+      },
+      {
+        getFolderById:id=>({addFile:file=>{file.folderId=id;file.inFolder=true;}}),
+        getFileById:id=>({id,getParents:()=>({hasNext:()=>false}),getName:()=> 'snapshot'}),
+        getRootFolder:()=>({removeFile:()=>{}})
+      },
+      {getScriptProperties:()=>({getProperty:()=> 'backup-folder-123456'})},
+      (...args)=>{snapshotAuditEvents.push(args);if(auditShouldFail)throw new Error('SNAPSHOT_AUDIT_FAILED');},
+      ()=> '2026-11-18T08:00:00.000Z',
+      {},
+      {log:()=>{}}
+    );
+    return {runtime,created};
+  }
+  const successRuntime=makeSnapshotRuntime(false);
+  const createdResidence=successRuntime.runtime.createResidencePermitSnapshot();
+  const createdPassport=successRuntime.runtime.createPassportServiceSnapshot();
+  const createdPassport2025=successRuntime.runtime.createPassportServiceMonthly2025Snapshot();
+  assert(createdResidence.ok&&createdPassport.ok&&createdPassport2025.ok,
+    'Authorized snapshot creation succeeds for Residence, Passport, and Passport 2025 using isolated service doubles');
+  assert(successRuntime.created.length===3&&successRuntime.created.every(file=>file.sheets.length===2),
+    'Each authorized snapshot creates a data sheet and manifest artifact in the controlled Spreadsheet double');
+  assert(successRuntime.created.every(file=>file.sheets[1].rows.length===11&&file.sheets[1].rows[1][0]==='snapshot_id'),
+    'Each snapshot manifest writes the declared ten metadata rows after its header');
+  assert(successRuntime.created.every(file=>file.sheets[0].rows.length===2&&file.sheets[0].rows[1][0]==='2026-09'),
+    'Each snapshot copies the controlled source header and data row without mutating source fixtures');
+  assert(snapshotAuditEvents.length===3&&snapshotAuditEvents.every(event=>event[0]==='BACKUP_SNAPSHOT_CREATE'&&event[4]==='SUCCESS'),
+    'Authorized snapshot creation appends one success audit event per completed artifact');
+  assert(snapshotArtifacts.every(file=>file.inFolder===true&&file.folderId==='backup-folder-123456'),
+    'Each created snapshot is placed in the configured backup folder through the Drive double');
+
+  const failingRuntime=makeSnapshotRuntime(true);
+  let snapshotAuditFailureReturned=false;
+  try{failingRuntime.runtime.createResidencePermitSnapshot();}
+  catch(e){snapshotAuditFailureReturned=String(e&&e.message||e)==='SNAPSHOT_AUDIT_FAILED';}
+  assert(snapshotAuditFailureReturned&&failingRuntime.created.length===1&&failingRuntime.created[0].inFolder===true,
+    'Characterization: audit failure is returned after a snapshot artifact has already been created and placed in Drive; this is a known reconciliation gap');
+}
