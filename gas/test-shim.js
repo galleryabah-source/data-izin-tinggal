@@ -2250,7 +2250,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
   const importLog=new ImportFakeSheet([['batch_id','timestamp','actor','dataset_key','contract_version','source_rows','accepted','rejected','duplicates','status','errors']]);
   const importDb={getSheetByName:(name)=>name==='DATA_PASSPORT_SERVICE_MONTHLY'?dataSheet:name==='IMPORT_LOG'?importLog:null};
   let importLockWaits=0,importLockReleases=0,importDatasetCreates=0,importAudits=0,importPeriodChecks=0;
-  let importPeriodClosed=false,importUuid=0,importParseCount=0;
+  let importPeriodClosed=false,importUuid=0,importParseCount=0,failImportAudit=false;
   const importSchema={signature:'passport-test-v1',contractKey:'PASSPORT_SERVICE_MONTHLY',contractVersion:'1',datasetKey:'PASSPORT_SERVICE_MONTHLY',columns:['periode','kantor_imigrasi']};
   const importRuntime=new Function(
     'requirePermission_','detectSchema_','LockService','getDatasetBySignature_','DATASET_CONTRACTS',
@@ -2269,7 +2269,7 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     {getUuid:()=>{importUuid++;return 'batch-'+importUuid;}},
     ()=>{},
     ()=> 'cache-generation-1',
-    ()=>{importAudits++;},
+    ()=>{if(failImportAudit)throw new Error('AUDIT_WRITE_FAILED');importAudits++;},
     ()=> '2026-11-18T02:00:00.000Z',
     {flush:()=>{}},
     {MAX_IMPORT_ROWS:1000,TZ:'Asia/Jakarta'},
@@ -2300,6 +2300,15 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     'Closed-period rejection releases the script lock');
   assert(importPeriodChecks===2,
     'Period closure policy is evaluated for first commit and duplicate retry, but not for an empty valid-row set');
+  importPeriodClosed=false;
+  failImportAudit=true;
+  let downstreamAuditFailed=false;
+  try{importRuntime.commitImport('periode\\tkantor_imigrasi\\n2026-09\\tKANIM AUDIT FAIL');}
+  catch(e){downstreamAuditFailed=String(e&&e.message||e)==='AUDIT_WRITE_FAILED';}
+  assert(downstreamAuditFailed&&dataSheet.rows.length===3&&importLog.rows.length===3&&importAudits===1,
+    'Characterization: audit failure is returned after canonical row and import-log have already been written (known non-atomicity gap)');
+  assert(importLockWaits===4&&importLockReleases===4,
+    'Script lock is released even when the downstream audit append fails');
 }
 
 
