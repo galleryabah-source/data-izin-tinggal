@@ -189,9 +189,14 @@ function collectReachableEffects(graph, entryName) {
     }
     unresolved.push(...parsed.unsupported.map(reason => name + ':' + reason));
   }
+  const uniqueUnresolved = [...new Set(unresolved)];
+  const blockers = uniqueUnresolved.filter(reason =>
+    /COMPUTED_CALL_NOT_ANALYZED|DYNAMIC_CODE_EXECUTION|TEMPLATE_INTERPOLATION_NOT_ANALYZED|UNTERMINATED_|UNBALANCED_|FUNCTION_BODY_NOT_STATIC/.test(reason)
+  );
   return {
     reachable: reachable.names,
-    unresolved: [...new Set(unresolved)],
+    unresolved: uniqueUnresolved,
+    blockers,
     mutations,
     externalIo
   };
