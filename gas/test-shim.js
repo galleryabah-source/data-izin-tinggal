@@ -2544,6 +2544,90 @@ assert(backupConfigReads===0&&backupDatasetReads===0,
     'Office-reference verification records each authorized result and releases the lock on both calls');
 }
 
+/* Office-reference setup and draft RPCs: denial ordering, idempotent seed, and metadata repair. */
+{
+  const officeDraftCode=read('OfficeReferenceService.gs');
+  const draftHeaders=['office_key','kantor_imigrasi','address','latitude','longitude','source_url','verified_at','status'];
+  class OfficeDraftSheet {
+    constructor(){this.rows=[];this.writeCalls=0;}
+    getName(){return 'OFFICE_REFERENCE';}
+    getLastRow(){return this.rows.length;}
+    setFrozenRows(){return this;}
+    getDataRange(){return {getValues:()=>this.rows.map(r=>r.slice())};}
+    getRange(row,col,numRows=1,numCols=1){
+      const sheet=this;
+      return {
+        setValues(values){
+          sheet.writeCalls++;
+          for(let r=0;r<values.length;r++){
+            while(sheet.rows.length<row+r)sheet.rows.push([]);
+            sheet.rows[row-1+r]=values[r].slice();
+          }
+        },
+        setValue(value){
+          while(sheet.rows.length<row)sheet.rows.push([]);
+          while(sheet.rows[row-1].length<col)sheet.rows[row-1].push('');
+          sheet.rows[row-1][col-1]=value;
+        },
+        getValues(){
+          const out=[];
+          for(let r=0;r<numRows;r++){
+            const source=sheet.rows[row-1+r]||[];
+            out.push(Array.from({length:numCols},(_,c)=>source[col-1+c]??''));
+          }
+          return out;
+        }
+      };
+    }
+  }
+  let deniedOfficeDbCalls=0,deniedOfficeMapsCalls=0;
+  const deniedOfficeDraft=new Function('requirePermission_','getDb_','Maps',
+    officeDraftCode+'\\nreturn {ensureOfficeReferenceSheet,seedOfficeReferenceDraft,prepareOfficeReferenceDraftMetadata,previewOfficeReferenceGeocoding};'
+  )(
+    ()=>{throw new Error('FORBIDDEN: admin.config');},
+    ()=>{deniedOfficeDbCalls++;throw new Error('DB_SHOULD_NOT_BE_TOUCHED');},
+    {newGeocoder:()=>{deniedOfficeMapsCalls++;throw new Error('MAPS_SHOULD_NOT_BE_TOUCHED');}}
+  );
+  for(const name of ['ensureOfficeReferenceSheet','seedOfficeReferenceDraft','prepareOfficeReferenceDraftMetadata','previewOfficeReferenceGeocoding']){
+    let rejected=false;
+    try{deniedOfficeDraft[name]();}catch(e){rejected=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
+    assert(rejected,'Office-reference admin RPC denies unauthorized caller before service access: '+name);
+  }
+  assert(deniedOfficeDbCalls===0&&deniedOfficeMapsCalls===0,'Unauthorized office-reference draft calls do not access Sheets or Maps');
+
+  let draftSheet=null,draftAudits=[];
+  const draftSpreadsheet={
+    getSheetByName:()=>draftSheet,
+    insertSheet:()=>{draftSheet=new OfficeDraftSheet();return draftSheet;}
+  };
+  const authorizedOfficeDraft=new Function('requirePermission_','getDb_','appendAudit_',
+    officeDraftCode+'\\nreturn {ensureOfficeReferenceSheet,seedOfficeReferenceDraft,prepareOfficeReferenceDraftMetadata};'
+  )(
+    ()=>({email:'admin@example.gov.id',role:'ADMIN'}),
+    ()=>draftSpreadsheet,
+    (...args)=>draftAudits.push(args)
+  );
+  const ensuredOffice=authorizedOfficeDraft.ensureOfficeReferenceSheet();
+  assert(ensuredOffice.ok&&ensuredOffice.columns.length===8&&draftSheet.rows[0].join('|')===draftHeaders.join('|'),
+    'Authorized office-reference setup creates the exact eight-column header contract');
+  const seededOffice=authorizedOfficeDraft.seedOfficeReferenceDraft();
+  assert(seededOffice.ok&&seededOffice.inserted===10&&seededOffice.skipped===0&&draftSheet.rows.length===11,
+    'Authorized office-reference seed inserts the ten configured PENDING draft rows');
+  const seededOfficeReplay=authorizedOfficeDraft.seedOfficeReferenceDraft();
+  assert(seededOfficeReplay.ok&&seededOfficeReplay.inserted===0&&seededOfficeReplay.skipped===10&&draftSheet.rows.length===11,
+    'Office-reference draft seeding is idempotent by office name');
+  const repairedOffice=authorizedOfficeDraft.prepareOfficeReferenceDraftMetadata();
+  const garutDraft=draftSheet.rows.find(row=>row[0]==='KANIM_KELAS_II_NON_TPI_GARUT');
+  assert(repairedOffice.ok&&repairedOffice.updated===1&&String(garutDraft[2]).trim()!==''&&String(garutDraft[5]).trim()!=='',
+    'Office-reference metadata preparation fills the known Garut address and source URL while retaining draft status');
+  const repairedOfficeReplay=authorizedOfficeDraft.prepareOfficeReferenceDraftMetadata();
+  assert(repairedOfficeReplay.ok&&repairedOfficeReplay.updated===0&&garutDraft[7]==='PENDING',
+    'Office-reference metadata repair replay is a no-op and does not mark coordinates verified');
+  assert(draftAudits.filter(x=>x[0]==='OFFICE_REFERENCE_DRAFT_SEED').length===2&&draftAudits.filter(x=>x[0]==='OFFICE_REFERENCE_DRAFT_REPAIR').length===1,
+    'Office-reference draft seed and metadata repair emit the expected audit events');
+}
+
+
 
 /* Characterize Google Sheets provenance audit failure after canonical import commit. */
 {
