@@ -1858,24 +1858,79 @@ assert(kanwilRouteSource.includes("view==='kanwil'?'KanwilEntry'"),'Kanwil entry
 const kanwilNavSource=read('index.html');
 assert(kanwilNavSource.includes('href="?view=kanwil"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace');
 const kanwilPageSource=read('KanwilEntry.html');
-assert(kanwilPageSource.includes('Mode REVIEW-ONLY aktif'),'Kanwil entry page explicitly discloses review-only mode');
-assert(!kanwilPageSource.includes('google.script.run')&&!kanwilPageSource.includes('FormData')&&!kanwilPageSource.includes('XMLHttpRequest'),'Kanwil review-only workspace has no RPC or upload transport');
+assert(kanwilPageSource.includes('staging terpisah')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
+assert(kanwilPageSource.includes('saveKanwilApplication')&&kanwilPageSource.includes('saveKanwilImportBatch')&&kanwilPageSource.includes('listKanwilApplications'),'Kanwil UI persists manual and parsed file records and loads the staging queue');
+assert(kanwilPageSource.includes('reviewKanwilApplication')&&kanwilPageSource.includes('commitKanwilApplication'),'Kanwil UI exposes guarded review and isolated finalization actions');
 const kanwilReviewContract=require('./KanwilStagingContract.js');
-assert(kanwilReviewContract.KANWIL_REVIEW_ONLY_V1===true,'Kanwil staging contract is locked to review-only');
-assert(!kanwilReviewContract.transitionKanwilStagingV1('APPROVED','COMMITTED','').ok,'Kanwil contract blocks commit from approved state');
-assert(!kanwilReviewContract.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Kanwil review-only contract blocks direct commit');
-assert(!kanwilReviewContract.transitionKanwilStagingV1('APPROVED','COMMITTED','approved').ok,'Kanwil review-only contract blocks commit even after approval');
-assert(kanwilPageSource.includes('kpeManualForm') && kanwilPageSource.includes('Tambahkan ke daftar review'),'Kanwil page exposes a manual application-entry form');
+assert(kanwilReviewContract.KANWIL_REVIEW_ONLY_V1===true,'Kanwil parser evidence remains review-only until human validation');
+assert(!kanwilReviewContract.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Parser staging contract blocks direct commit without approval');
+assert(kanwilPageSource.includes('kpeManualForm') && kanwilPageSource.includes('Simpan ke staging Kanwil'),'Kanwil page exposes a manual application-entry form');
 const kanwilManualKeys=['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','layanan','kategori_produk','nomor_permohonan','tanggal_permohonan','penjamin','nama','jenis_kelamin','tanggal_lahir','kebangsaan','no_passport','jenis_produk','tujuan','posisi_permohonan','status_permohonan'];
 assert(kanwilManualKeys.every(key=>kanwilPageSource.includes("['"+key+"'")),'Manual Kanwil form enumerates all 17 source columns');
 assert(kanwilPageSource.includes("input.type=type") && kanwilPageSource.includes("input.inputMode='text'"),'Kanwil manual fields preserve identifiers as text inputs');
-assert(kanwilPageSource.includes('BELUM_DISIMPAN'),'Manual Kanwil entry clearly labels records as not persisted');
+assert(kanwilPageSource.includes('Data tidak masuk ke dataset bulanan kanonik'),'Manual Kanwil entry discloses isolated persistence boundary');
 const kanwilServiceSource=read('KanwilStagingService.gs');
-assert(kanwilServiceSource.includes("enabled:false") && kanwilServiceSource.includes("writeEndpointsExposed:false"),'Kanwil staging foundation remains disabled with no write RPC exposed');
+assert(kanwilServiceSource.includes("enabled:false") && kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID"),'Kanwil staging foundation requires explicit isolated storage configuration');
 assert(kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID") && kanwilServiceSource.includes("KANWIL_STAGING_MUST_BE_SEPARATE_FROM_CANONICAL"),'Kanwil staging requires a separate spreadsheet identity');
 assert(kanwilServiceSource.includes("requireBackOfficeAccess_()") && kanwilServiceSource.includes("function provisionKanwilStagingSchema_"),'Kanwil schema provisioning is a private back-office guarded helper');
+assert(kanwilServiceSource.indexOf('Preflight every existing tab before creating or modifying any schema')>=0&&kanwilServiceSource.indexOf('Preflight every existing tab before creating or modifying any schema')<kanwilServiceSource.indexOf('if(!sh)sh=ss.insertSheet(name)'),'Kanwil provisioning preflights all existing schemas before creating missing tabs');
 assert(kanwilServiceSource.includes("reviewOnlyScreenshot:true"),'Kanwil screenshot intake remains explicitly review-only');
-assert(!kanwilServiceSource.includes("function saveKanwil") && !kanwilServiceSource.includes("function commitKanwil"),'Kanwil staging foundation exposes no record persistence or commit endpoint');
+assert(kanwilServiceSource.includes("'review_state','state','revision'"),'Kanwil staging schema persists the lifecycle state used by queue and review RPCs');
+const kanwilPersistenceSource=read('KanwilPersistenceService.gs');
+assert(kanwilPersistenceSource.includes("function saveKanwilApplication(payload)")&&kanwilPersistenceSource.includes("function saveKanwilImportBatch(payload)")&&kanwilPersistenceSource.includes("function commitKanwilApplication(stagingId,reason)"),'Kanwil isolated staging persistence and finalization endpoints exist');
+assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
+assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil persistence endpoints require authenticated back-office access');
+function assertKanwilGuardBeforeEffects(source,name){
+  const start=source.indexOf('function '+name+'(');
+  assert(start>=0,'Kanwil RPC source exists: '+name);
+  const next=source.indexOf('\\nfunction ',start+1);
+  const segment=source.slice(start,next<0?source.length:next);
+  const guard=segment.indexOf('requireBackOfficeAccess_()');
+  assert(guard>=0,'Kanwil RPC has direct back-office authorization: '+name);
+  const effects=['getDb_()','SpreadsheetApp.','PropertiesService.','.getDataRange()','.getRange(','.appendRow(','.setValue(','.setValues(','.deleteRow(','insertSheet('];
+  const firstEffect=Math.min(...effects.map(token=>{const at=segment.indexOf(token);return at<0?Infinity:at;}));
+  assert(guard<firstEffect,'Kanwil RPC authorizes before direct storage effects: '+name);
+}
+['saveKanwilApplication','saveKanwilImportBatch','listKanwilApplications','reviewKanwilApplication','commitKanwilApplication','getKanwilEntryStatus'].forEach(name=>assertKanwilGuardBeforeEffects(kanwilPersistenceSource,name));
+
+const kanwilStagingServiceSource=read('KanwilStagingService.gs');
+const kanwilRpcManifestSource=read('RpcManifest.js');
+assert(kanwilStagingServiceSource.includes('function provisionKanwilStagingFromConfiguredId()')&&kanwilStagingServiceSource.includes('requireBackOfficeAccess_()')&&kanwilStagingServiceSource.includes("requirePermission_('admin.config')"),'Owner provisioning entrypoint is argument-free and guarded by back-office and admin.config authorization');
+assert(kanwilStagingServiceSource.includes("getProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty)"),'Owner provisioning reads the dedicated staging target from Script Properties');
+assert(kanwilRpcManifestSource.includes("provisionKanwilStagingFromConfiguredId:{access:'protected',permission:'admin.config'}"),'Owner provisioning RPC is explicitly classified as admin.config protected');
+
+const kanwilBatchScopeResolver=new Function(kanwilPersistenceSource+'\nreturn kanwilResolveBatchScopeV1_;')();
+const kanwilBatchHeader={batch_id:0,kanwil_scope_id:1};
+assert(kanwilBatchScopeResolver([['batch_id','kanwil_scope_id'],['BATCH-1','KANWIL-JABAR']],kanwilBatchHeader,'BATCH-1','KANWIL-JABAR')==='KANWIL-JABAR','Kanwil finalization resolves scope from the persisted intake batch');
+let kanwilScopeMismatchRejected=false;try{kanwilBatchScopeResolver([['batch_id','kanwil_scope_id'],['BATCH-1','KANWIL-JABAR']],kanwilBatchHeader,'BATCH-1','KANWIL-BALI');}catch(e){kanwilScopeMismatchRejected=/KANWIL_BATCH_SCOPE_MISMATCH/.test(e.message);}
+assert(kanwilScopeMismatchRejected,'Kanwil finalization rejects a batch if the configured scope changed after intake');
+let kanwilMissingBatchRejected=false;try{kanwilBatchScopeResolver([['batch_id','kanwil_scope_id'],['OTHER','KANWIL-JABAR']],kanwilBatchHeader,'BATCH-1','KANWIL-JABAR');}catch(e){kanwilMissingBatchRejected=/KANWIL_BATCH_NOT_FOUND/.test(e.message);}
+assert(kanwilMissingBatchRejected,'Kanwil finalization rejects staging rows without exactly one persisted parent batch');
+assert(kanwilPersistenceSource.includes('kanwilResolveBatchScopeV1_(batchValues,batchHeader,String(row[h.batch_id]),configuredScope)'),'Kanwil commit binds the finalized record to its original batch scope');
+assert(kanwilPersistenceSource.includes('kanwilResolveBatchScopeV1_(persistedBatches,persistedBatchHeader,String(existing[h.batch_id]),scope)'),'Manual intake idempotent retries remain bound to their original persisted scope');
+assert(kanwilPersistenceSource.includes("String(parent[batchHeader.kanwil_scope_id]||'').trim()!==scope||")&&kanwilPersistenceSource.includes("String(parent[batchHeader.source_channel]||'').toUpperCase()!==channel"),'File-level idempotency is isolated by persisted Kanwil scope and source channel');
+assert(kanwilPersistenceSource.includes('if(priorFileMatches.length>1)throw new Error(\'KANWIL_FILE_IDENTITY_NOT_UNIQUE\')')&&kanwilPersistenceSource.includes('if(parentMatches.length!==1)throw new Error(\'KANWIL_FILE_PARENT_BATCH_INVALID\')'),'File idempotency fails closed for duplicate file identities and orphan/missing parent batches');
+assert(kanwilPersistenceSource.includes('KANWIL_FILE_IDENTITY_SCOPE_OR_CHANNEL_CONFLICT'),'File idempotency rejects reuse across Kanwil scope or source channel');
+assert(kanwilPersistenceSource.includes("sheets.staging.getRange(index+1,h.updated_at+1).setValue(now)")&&kanwilPersistenceSource.includes("setValue(previousUpdatedAt)"),'Kanwil finalization timestamps COMMITTED state and restores timestamp during rollback');
+
+
+assert(kanwilPersistenceSource.includes("review_state:'PENDING',state:'REVIEW_REQUIRED'"),'Manual Kanwil intake persists an explicit review lifecycle state');
+assert(kanwilPersistenceSource.includes("review_state:'PENDING',state,payload_sha256:hash"),'File imports persist validation/review state with the staged row');
+assert(kanwilPersistenceSource.includes('normalized=kanwilPayloadV1_({values:normalized})'),'File imports store server-canonicalized fields after validation');
+assert(kanwilPersistenceSource.includes('seenSourceRows.has(sourceRow)'),'File import rejects duplicate physical source row numbers');
+assert(kanwilPersistenceSource.includes('validationErrors:JSON.parse'),'Kanwil queue exposes server-side validation errors for operator review');
+assert(kanwilPersistenceSource.includes("correlationId,fileId)"),'Kanwil file-import audit event retains its source file identity');
+const kanwilPayloadValidator=new Function(kanwilPersistenceSource+'\nreturn kanwilPayloadV1_;')();
+const validKanwilPayload=kanwilPayloadValidator({values:{nomor_permohonan:'001-ABC',nama:'UJI',jenis_kelamin:'MALE',tanggal_lahir:'1980-01-01'}});
+assert(validKanwilPayload.nomor_permohonan==='001-ABC'&&validKanwilPayload.nama==='UJI','Kanwil server payload validator preserves application identifiers and required fields');
+let kanwilDateRejected=false;try{kanwilPayloadValidator({values:{nomor_permohonan:'002',nama:'UJI',tanggal_lahir:'31/12/1980'}});}catch(e){kanwilDateRejected=/KANWIL_DATE_INVALID/.test(e.message);}
+assert(kanwilDateRejected,'Kanwil server payload validator rejects ambiguous birth dates');
+let impossibleKanwilDateRejected=false;try{kanwilPayloadValidator({values:{nomor_permohonan:'003',nama:'UJI',tanggal_lahir:'2026-99-99'}});}catch(e){impossibleKanwilDateRejected=/KANWIL_DATE_INVALID/.test(e.message);}
+assert(impossibleKanwilDateRejected,'Kanwil server payload validator rejects impossible calendar dates');
+let impossibleKanwilDateTimeRejected=false;try{kanwilPayloadValidator({values:{nomor_permohonan:'004',nama:'UJI',tanggal_permohonan:'2026-02-31T10:00'}});}catch(e){impossibleKanwilDateTimeRejected=/KANWIL_DATETIME_INVALID/.test(e.message);}
+assert(impossibleKanwilDateTimeRejected,'Kanwil server payload validator rejects impossible calendar datetimes');
+const kanwilCellSanitizer=new Function(kanwilPersistenceSource+String.fromCharCode(10)+'return kanwilSafeCellTextV1_;')();
+assert(kanwilCellSanitizer('=IMPORTXML(1)')==="'=IMPORTXML(1)",'Kanwil audit and file metadata cell text is protected from spreadsheet formula injection');
 const kanwilAnalytics=require('./KanwilAnalyticsContract.js');
 const kanwilSampleRows=[
  {layanan:'CONVERSION',kategori_produk:'ITAP',jenis_produk:'ITASITAP5Y_GENINVEST',kebangsaan:'SAUDI ARABIA',tujuan:'INVESTMENT',posisi_permohonan:'Produk sudah Terbit',status_permohonan:'TERBIT',nama:'RAHASIA A',tanggal_lahir:'1980-01-01',no_passport:'P123',nomor_permohonan:'001',penjamin:'RAHASIA'},

@@ -1,7 +1,8 @@
 /**
  * Kanwil isolated staging foundation.
- * Private helpers only: no google.script.run endpoint is exposed in this phase.
- * Screenshot/OCR remains browser-local review-only and is not accepted here.
+ * Storage provisioning/readiness helpers for the isolated Kanwil staging store.
+ * RPC persistence endpoints live in KanwilPersistenceService.gs; screenshot OCR
+ * is performed locally and its extracted candidate rows require human review.
  */
 const KANWIL_STAGING_GUARD_V1=Object.freeze({
   enabled:false,
@@ -13,7 +14,7 @@ const KANWIL_STAGING_GUARD_V1=Object.freeze({
 const KANWIL_STAGING_SHEETS_V1=Object.freeze({
   batches:['batch_id','kanwil_scope_id','source_channel','contract_version','parser_version','source_exported_at','source_authorization_ref','created_by','created_at','state','file_count','record_count','correlation_id'],
   files:['file_id','batch_id','source_filename','source_file_sha256','source_file_mime','source_file_size','source_row_count','parser_version','processing_state','created_by','created_at'],
-  staging:['staging_id','batch_id','file_id','source_row_number','idempotency_key','contract_version','raw_values_json','normalized_values_json','validation_errors_json','validation_warnings_json','review_state','revision','payload_sha256','created_by','created_at','updated_at'],
+  staging:['staging_id','batch_id','file_id','source_row_number','idempotency_key','contract_version','raw_values_json','normalized_values_json','validation_errors_json','validation_warnings_json','review_state','state','revision','payload_sha256','created_by','created_at','updated_at'],
   records:['record_id','kanwil_scope_id','application_number','current_revision','current_payload_sha256','current_payload_json','committed_at','committed_by','source_staging_id','correlation_id'],
   events:['event_id','record_id','staging_id','event_sequence','event_type','from_state','to_state','revision','payload_sha256','actor_id','reason','correlation_id','occurred_at'],
   audit:['audit_id','batch_id','file_id','record_id','staging_id','actor_id','action','reason','correlation_id','occurred_at']
@@ -40,7 +41,7 @@ function kanwilStagingReadinessV1_(){
       const actual=sh.getRange(1,1,1,headers.length).getValues()[0].map(String);
       if(actual.join('|')!==headers.join('|')||sh.getFrozenRows()!==1)return {ready:false,reason:'KANWIL_SCHEMA_MISSING_OR_MISMATCH',sheet:name};
     }
-    return {ready:true,spreadsheetId:id,enabled:false,writeEndpointsExposed:false};
+    return {ready:true,enabled:kanwilEntryEnabled_(),writeEndpointsExposed:true};
   }catch(error){return {ready:false,reason:String(error&&error.message||error)};}
 }
 /**
@@ -56,6 +57,15 @@ function provisionKanwilStagingSchema_(stagingSpreadsheetId){
   if(!canonical||id===canonical)throw new Error('KANWIL_STAGING_MUST_BE_SEPARATE_FROM_CANONICAL');
   const ss=SpreadsheetApp.openById(id);
   if(!ss||String(ss.getId())!==id)throw new Error('KANWIL_STAGING_IDENTITY_MISMATCH');
+  // Preflight every existing tab before creating or modifying any schema.
+  // A mismatch in a later tab must not leave earlier missing tabs partially provisioned.
+  Object.entries(KANWIL_STAGING_SHEETS_V1).forEach(([key,headers])=>{
+    const name='KANWIL_'+key.toUpperCase(),sh=ss.getSheetByName(name);
+    if(!sh||sh.getLastRow()===0)return;
+    if(sh.getLastColumn()!==headers.length)throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
+    const actual=sh.getRange(1,1,1,headers.length).getValues()[0].map(String);
+    if(actual.join('|')!==headers.join('|'))throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
+  });
   Object.entries(KANWIL_STAGING_SHEETS_V1).forEach(([key,headers])=>{
     const name='KANWIL_'+key.toUpperCase();
     let sh=ss.getSheetByName(name);
@@ -69,4 +79,16 @@ function provisionKanwilStagingSchema_(stagingSpreadsheetId){
   // This function must be run explicitly by an authorized back-office owner.
   PropertiesService.getScriptProperties().setProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty,id);
   return kanwilStagingReadinessV1_();
+}
+/**
+ * Owner-run provisioning entrypoint. Reads the dedicated spreadsheet ID from
+ * Script Properties so the Apps Script editor can invoke this without arguments.
+ * Protected by the same back-office guard as the internal provisioning helper.
+ */
+function provisionKanwilStagingFromConfiguredId(){
+  requireBackOfficeAccess_();
+  requirePermission_('admin.config');
+  const id=String(PropertiesService.getScriptProperties().getProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty)||'').trim();
+  if(!id)throw new Error('KANWIL_STAGING_SPREADSHEET_NOT_CONFIGURED');
+  return provisionKanwilStagingSchema_(id);
 }
