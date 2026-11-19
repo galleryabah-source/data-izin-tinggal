@@ -148,7 +148,8 @@ $('kpeRun').addEventListener('click',async()=>{
    }catch(e){state.log.push(file.name+': ERROR '+(e.message||String(e)));}
    $('kpeProgress').style.width=Math.round((i+1)/files.length*100)+'%';render();
   }
-  say('Parsing selesai. Periksa hasil, lalu simpan data terstruktur ke staging Kanwil. File sumber tetap berada di browser.');\n  $('kpePersistFiles').disabled=!state.enabled||!state.imports.length;
+  say('Parsing selesai. Periksa hasil, lalu simpan data terstruktur ke staging Kanwil. File sumber tetap berada di browser.');
+  $('kpePersistFiles').disabled=!state.enabled||!state.imports.length;
  }catch(e){say('Gagal memulai: '+(e.message||String(e)));}
  finally{state.busy=false;$('kpeRun').disabled=false;render();}
 });
