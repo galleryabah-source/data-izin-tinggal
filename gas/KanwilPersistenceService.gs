@@ -40,10 +40,10 @@ function kanwilPayloadV1_(input){
     throw new Error('KANWIL_GENDER_INVALID');
   normalized.jenis_kelamin=normalized.jenis_kelamin?String(normalized.jenis_kelamin).toUpperCase():null;
   ['tanggal_lahir'].forEach(key=>{
-    if(normalized[key]&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(normalized[key]))throw new Error('KANWIL_DATE_INVALID: '+key);
+    if(normalized[key]&&!/^\d{4}-\d{2}-\d{2}$/.test(normalized[key]))throw new Error('KANWIL_DATE_INVALID: '+key);
   });
   ['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','tanggal_permohonan'].forEach(key=>{
-    if(normalized[key]&&!/^\\d{4}-\\d{2}-\\d{2}(?:[ T]\\d{2}:\\d{2}(?::\\d{2})?)?$/.test(normalized[key]))
+    if(normalized[key]&&!/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/.test(normalized[key]))
       throw new Error('KANWIL_DATETIME_INVALID: '+key);
   });
   return normalized;
