@@ -235,7 +235,7 @@ function reviewKanwilApplication(stagingId,decision,reason){
     const index=v.findIndex((r,i)=>i>0&&String(r[h.staging_id])===id);if(index<1)throw new Error('KANWIL_STAGING_NOT_FOUND');
     const row=v[index],state=String(row[h.state]),next=action==='APPROVE'?'APPROVED':'REJECTED';
     if(state===next)return {ok:true,stagingId:id,state:next,idempotent:true};
-    if(state!=='REVIEW_REQUIRED')throw new Error('KANWIL_STAGING_NOT_REVIEWABLE');
+    if(state!=='REVIEW_REQUIRED'&&!(state==='VALIDATION_REQUIRED'&&action==='REJECT'))throw new Error('KANWIL_STAGING_NOT_REVIEWABLE');
     if(String(row[h.created_by]||'').toLowerCase()===String(user.email||'').toLowerCase())throw new Error('KANWIL_SEPARATION_OF_DUTIES');
     const now=nowIso_(),oldReview=String(row[h.review_state]||'PENDING'),checkpoint=kanwilCheckpointV1_(sheets,['events','audit']);
     sheets.staging.getRange(index+1,h.review_state+1).setValue(next);
