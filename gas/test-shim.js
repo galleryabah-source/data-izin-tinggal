@@ -154,10 +154,56 @@ const backupCode=read('BackupService.gs');
 const pureBackup=new Function(backupCode+'\nreturn {normalizeDriveFolderId_};')();
 assert(pureBackup.normalizeDriveFolderId_('1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg')==='1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg','raw Drive folder ID');
 assert(pureBackup.normalizeDriveFolderId_('https://drive.google.com/drive/folders/1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg?usp=sharing')==='1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg','Drive folder URL normalization');
+assert(backupCode.indexOf("appendAudit_('BACKUP_SNAPSHOT_FINALIZE'")<backupCode.indexOf("setSnapshotManifestStatusV1_(x.manifest,'COMPLETE')"),'Snapshot manifest cannot become COMPLETE before the final audit append succeeds');
 assert(backupCode.includes('function verifyResidencePermitSnapshot(snapshotSpreadsheetId)'), 'snapshot verification endpoint exists');
 assert(backupCode.includes('SNAPSHOT_NOT_FOUND'), 'snapshot verification handles missing snapshot');
 assert(backupCode.includes('content_sha256'), 'snapshot verification checks manifest checksum');
 assert(backupCode.includes('inConfiguredFolder'), 'snapshot verification checks configured backup folder');
+assert(backupCode.includes("['status','AUDIT_PENDING']")&&backupCode.includes("finalizeSnapshotCreationV1_({manifest,backupId"),'Residence snapshots remain unverified until their creation audit is durable');
+const passportGovernanceBackup=read('PassportGovernanceService.gs');
+assert((passportGovernanceBackup.match(/\['status','AUDIT_PENDING'\]/g)||[]).length===2,'Both Passport snapshot creators start in AUDIT_PENDING');
+assert((passportGovernanceBackup.match(/finalizeSnapshotCreationV1_\(/g)||[]).length===2,'Both Passport snapshot creators use the shared audit finalizer');
+function snapshotFinalizeFixture(options){
+  const state=[['key','value'],['status','AUDIT_PENDING']],auditEvents=[];
+  let trashed=false;
+  const manifest={
+    getDataRange:()=>({getValues:()=>state}),
+    getRange:(row,column)=>({setValue:value=>{
+      if(options&&options.failComplete&&value==='COMPLETE')throw new Error('MANIFEST_FINALIZE_FAILED');
+      state[row-1][column-1]=value;
+    }})
+  };
+  const api=new Function('appendAudit_','DriveApp','SpreadsheetApp',backupCode+'\nreturn finalizeSnapshotCreationV1_;')(
+    (action,dataset,snapshot,count,status,details)=>{
+      auditEvents.push({action,status,details,manifestStatus:state[1][1]});
+      if(options&&options.failAudit&&action==='BACKUP_SNAPSHOT_CREATE')throw new Error('AUDIT_WRITE_FAILED');
+      if(options&&options.failFinalAudit&&action==='BACKUP_SNAPSHOT_FINALIZE'&&status==='SUCCESS')throw new Error('FINAL_AUDIT_WRITE_FAILED');
+    },
+    {getFileById:()=>({setTrashed:()=>{if(options&&options.failTrash)throw new Error('TRASH_FAILED');trashed=true;}})},
+    {flush:()=>{}}
+  );
+  return {run:()=>api({manifest,backupId:'snapshot-test-id',datasetKey:'TEST',snapshotId:'snapshot-id',rowCount:1,details:{}}),state,trashed:()=>trashed,auditEvents};
+}
+const snapshotFinalizeOk=snapshotFinalizeFixture({});
+snapshotFinalizeOk.run();
+assert(snapshotFinalizeOk.state[1][1]==='COMPLETE'&&!snapshotFinalizeOk.trashed(),'Snapshot becomes COMPLETE only after creation and finalization audit events succeed');
+assert(snapshotFinalizeOk.auditEvents[0].status==='PENDING_FINALIZATION'&&snapshotFinalizeOk.auditEvents[1].status==='SUCCESS','Snapshot audit distinguishes prepared creation from completed finalization');
+assert(snapshotFinalizeOk.auditEvents[1].manifestStatus==='FINALIZING','Finalization audit is durable while manifest is still non-COMPLETE');
+const snapshotAuditFailure=snapshotFinalizeFixture({failAudit:true});
+let snapshotAuditRollback=false;try{snapshotAuditFailure.run();}catch(e){snapshotAuditRollback=e.message==='SNAPSHOT_AUDIT_FAILED_ROLLED_BACK';}
+assert(snapshotAuditRollback&&snapshotAuditFailure.trashed()&&snapshotAuditFailure.state[1][1]==='AUDIT_FAILED_RECONCILIATION_REQUIRED','Creation audit failure invalidates and trashes the artifact');
+const snapshotAuditOrphan=snapshotFinalizeFixture({failAudit:true,failTrash:true});
+let snapshotReconciliationRequired=false;try{snapshotAuditOrphan.run();}catch(e){snapshotReconciliationRequired=e.message==='SNAPSHOT_AUDIT_FAILED_RECONCILIATION_REQUIRED:snapshot-test-id';}
+assert(snapshotReconciliationRequired&&!snapshotAuditOrphan.trashed()&&snapshotAuditOrphan.state[1][1]==='AUDIT_FAILED_RECONCILIATION_REQUIRED','Failed cleanup leaves an explicitly invalid artifact and returns its reconciliation ID');
+const snapshotManifestFailure=snapshotFinalizeFixture({failComplete:true});
+let snapshotFinalizeRollback=false;try{snapshotManifestFailure.run();}catch(e){snapshotFinalizeRollback=e.message==='SNAPSHOT_FINALIZE_FAILED_ROLLED_BACK';}
+assert(snapshotFinalizeRollback&&snapshotManifestFailure.trashed()&&snapshotManifestFailure.state[1][1]==='FINALIZATION_FAILED_RECONCILIATION_REQUIRED','Manifest finalization failure writes a compensating failure event and rolls back the artifact');
+const snapshotFinalAuditFailure=snapshotFinalizeFixture({failFinalAudit:true});
+let snapshotFinalAuditRollback=false;try{snapshotFinalAuditFailure.run();}catch(e){snapshotFinalAuditRollback=e.message==='SNAPSHOT_FINAL_AUDIT_FAILED_ROLLED_BACK';}
+assert(snapshotFinalAuditRollback&&snapshotFinalAuditFailure.trashed()&&snapshotFinalAuditFailure.state[1][1]==='FINAL_AUDIT_FAILED_RECONCILIATION_REQUIRED','Final audit failure invalidates and rolls back a manifest already marked complete');
+const snapshotFinalAuditOrphan=snapshotFinalizeFixture({failFinalAudit:true,failTrash:true});
+let snapshotFinalAuditReconciliation=false;try{snapshotFinalAuditOrphan.run();}catch(e){snapshotFinalAuditReconciliation=e.message==='SNAPSHOT_FINAL_AUDIT_FAILED_RECONCILIATION_REQUIRED:snapshot-test-id';}
+assert(snapshotFinalAuditReconciliation&&!snapshotFinalAuditOrphan.trashed()&&snapshotFinalAuditOrphan.state[1][1]==='FINAL_AUDIT_FAILED_RECONCILIATION_REQUIRED','Final audit and cleanup failures expose an explicit reconciliation identity');
 
 const configPerf=read('Config.gs');
 assert(configPerf.includes('CacheService.getScriptCache()'),'Backend read cache uses Apps Script CacheService');
