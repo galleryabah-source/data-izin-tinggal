@@ -1902,6 +1902,8 @@ const validKanwilPayload=kanwilPayloadValidator({values:{nomor_permohonan:'001-A
 assert(validKanwilPayload.nomor_permohonan==='001-ABC'&&validKanwilPayload.nama==='UJI','Kanwil server payload validator preserves application identifiers and required fields');
 let kanwilDateRejected=false;try{kanwilPayloadValidator({values:{nomor_permohonan:'002',nama:'UJI',tanggal_lahir:'31/12/1980'}});}catch(e){kanwilDateRejected=/KANWIL_DATE_INVALID/.test(e.message);}
 assert(kanwilDateRejected,'Kanwil server payload validator rejects ambiguous birth dates');
+let impossibleKanwilDateRejected=false;try{kanwilPayloadValidator({values:{nomor_permohonan:'003',nama:'UJI',tanggal_lahir:'2026-99-99'}});}catch(e){impossibleKanwilDateRejected=/KANWIL_DATE_INVALID/.test(e.message);}
+assert(impossibleKanwilDateRejected,'Kanwil server payload validator rejects impossible calendar dates');
 const kanwilAnalytics=require('./KanwilAnalyticsContract.js');
 const kanwilSampleRows=[
  {layanan:'CONVERSION',kategori_produk:'ITAP',jenis_produk:'ITASITAP5Y_GENINVEST',kebangsaan:'SAUDI ARABIA',tujuan:'INVESTMENT',posisi_permohonan:'Produk sudah Terbit',status_permohonan:'TERBIT',nama:'RAHASIA A',tanggal_lahir:'1980-01-01',no_passport:'P123',nomor_permohonan:'001',penjamin:'RAHASIA'},
