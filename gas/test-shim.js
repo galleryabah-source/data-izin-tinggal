@@ -1888,6 +1888,18 @@ assert(duplicateKanwilKeyRejected,'Kanwil import fails closed when persisted ide
 assert(kanwilPersistenceSource.includes("sourceRowRaw=row.sourceRowNumber===undefined||row.sourceRowNumber===null||row.sourceRowNumber===''?index+1:row.sourceRowNumber"),'Kanwil import does not silently replace an explicitly supplied invalid source row number');
 
 assert(kanwilPersistenceSource.includes("function saveKanwilApplication(payload)")&&kanwilPersistenceSource.includes("function saveKanwilImportBatch(payload)")&&kanwilPersistenceSource.includes("function commitKanwilApplication(stagingId,reason)"),'Kanwil isolated staging persistence and finalization endpoints exist');
+assert(kanwilServiceSource.includes("revisions:['revision_id','staging_id','revision','prior_payload_sha256','payload_sha256','prior_payload_json','payload_json','reason','actor_id','created_at','correlation_id']"),'Kanwil storage provisions an append-only revision history sheet');
+assert(kanwilPersistenceSource.includes('function reviseKanwilApplication(stagingId,expectedRevision,payload,reason)'),'Kanwil revision endpoint requires an expected revision and reason');
+assert(kanwilPersistenceSource.includes("if(!['REJECTED','VALIDATION_REQUIRED'].includes(state))throw new Error('KANWIL_REVISION_STATE_NOT_ALLOWED')"),'Kanwil corrections are limited to rejected or validation-required submissions');
+assert(kanwilPersistenceSource.includes("throw new Error('KANWIL_REVISION_CONFLICT')"),'Kanwil revision endpoint rejects stale concurrent edits');
+assert(kanwilPersistenceSource.includes("kanwilAppendEventV1_(sheets,'',id,'REVISION_SUBMITTED'")&&kanwilPersistenceSource.includes("user.email,'REVISION_SUBMITTED',why"),'Every Kanwil revision records a lifecycle event and audit entry');
+assert(kanwilPersistenceSource.includes("throw new Error('KANWIL_APPROVAL_EVIDENCE_MISSING')")&&kanwilPersistenceSource.includes("latestReview[eventHeader.actor_id]"),'Kanwil finalization requires persisted approval evidence and a distinct reviewer');
+const kanwilRevisionHelpers=new Function(kanwilPersistenceSource+'\\nreturn {kanwilLatestReviewEventV1_};')();
+const kanwilEventHeaders=['event_id','record_id','staging_id','event_sequence','event_type','from_state','to_state','revision','payload_sha256','actor_id','reason','correlation_id','occurred_at'];
+const kanwilEventRows=[kanwilEventHeaders,['E1','','S1',1,'REVIEW_REJECT','REVIEW_REQUIRED','REJECTED',1,'H1','reviewer@example.gov.id','','C1','T1'],['E2','','S1',2,'REVISION_SUBMITTED','REJECTED','REVIEW_REQUIRED',2,'H2','operator@example.gov.id','','C2','T2'],['E3','','S1',3,'REVIEW_APPROVE','REVIEW_REQUIRED','APPROVED',2,'H2','reviewer2@example.gov.id','','C3','T3']];
+const kanwilLatestReview=kanwilRevisionHelpers.kanwilLatestReviewEventV1_({events:{getDataRange:()=>({getValues:()=>kanwilEventRows})}},'S1');
+assert(kanwilLatestReview[3]===3&&kanwilLatestReview[9]==='reviewer2@example.gov.id','Kanwil reviewer identity resolves from the latest persisted review event');
+
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
 assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil persistence endpoints require authenticated back-office access');
 function assertKanwilGuardBeforeEffects(source,name){
