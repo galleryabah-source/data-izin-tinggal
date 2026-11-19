@@ -52,6 +52,13 @@ function kanwilHashV1_(value){
   const bytes=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,JSON.stringify(value),Utilities.Charset.UTF_8);
   return bytes.map(b=>(b<0?b+256:b).toString(16).padStart(2,'0')).join('');
 }
+function kanwilCheckpointV1_(sheets,names){const out={};names.forEach(name=>out[name]=sheets[name].getLastRow());return out;}
+function kanwilRollbackV1_(sheets,checkpoint){
+  Object.keys(checkpoint).reverse().forEach(name=>{
+    const extra=sheets[name].getLastRow()-checkpoint[name];
+    if(extra>0)sheets[name].deleteRows(checkpoint[name]+1,extra);
+  });
+}
 function kanwilAppendEventV1_(sheets,recordId,stagingId,eventType,fromState,toState,revision,hash,actor,reason,correlationId){
   const rows=sheets.events.getDataRange().getValues(),header=kanwilHeader_(sheets.events);
   const sequence=rows.slice(1).filter(r=>(stagingId&&String(r[header.staging_id])===stagingId)||(recordId&&String(r[header.record_id])===recordId)).reduce((max,r)=>Math.max(max,Number(r[header.event_sequence])||0),0)+1;
@@ -98,14 +105,14 @@ function saveKanwilApplication(payload){
     }[k]??''));
     const duplicate=values.slice(1).some(r=>{let saved={};try{saved=JSON.parse(String(r[h.normalized_values_json]||'{}'));}catch(e){}return String(saved.nomor_permohonan||'')===p.nomor_permohonan&&String(r[h.state]||'')!=='REJECTED';});
     if(duplicate)throw new Error('KANWIL_DUPLICATE_APPLICATION_NUMBER');
-    const appended=[];
+    const checkpoint=kanwilCheckpointV1_(sheets,['batches','staging','events','audit']);
     try{
-      sheets.batches.appendRow(batchRow);appended.push([sheets.batches,sheets.batches.getLastRow()]);
-      sheets.staging.appendRow(stagingRow);appended.push([sheets.staging,sheets.staging.getLastRow()]);
+      sheets.batches.appendRow(batchRow);
+      sheets.staging.appendRow(stagingRow);
       kanwilAppendEventV1_(sheets,'',stagingId,'INTAKE_CREATED','', 'REVIEW_REQUIRED',1,hash,user.email,reason,correlationId);
       kanwilAppendAuditV1_(sheets,batchId,'',stagingId,user.email,'INTAKE_CREATED',reason,correlationId);
     }catch(error){
-      for(let i=appended.length-1;i>=0;i--)try{appended[i][0].deleteRow(appended[i][1]);}catch(rollbackError){}
+      try{kanwilRollbackV1_(sheets,checkpoint);}catch(rollbackError){}
       throw new Error('KANWIL_STAGING_WRITE_FAILED: '+String(error&&error.message||error));
     }
     return {ok:true,batchId,stagingId,state:'REVIEW_REQUIRED',idempotent:false};
@@ -135,7 +142,7 @@ function reviewKanwilApplication(stagingId,decision,reason){
     if(state===next)return {ok:true,stagingId:id,state:next,idempotent:true};
     if(state!=='REVIEW_REQUIRED')throw new Error('KANWIL_STAGING_NOT_REVIEWABLE');
     if(String(row[h.created_by]||'').toLowerCase()===String(user.email||'').toLowerCase())throw new Error('KANWIL_SEPARATION_OF_DUTIES');
-    const now=nowIso_(),oldReview=String(row[h.review_state]||'PENDING');
+    const now=nowIso_(),oldReview=String(row[h.review_state]||'PENDING'),checkpoint=kanwilCheckpointV1_(sheets,['events','audit']);
     sheets.staging.getRange(index+1,h.review_state+1).setValue(next);
     sheets.staging.getRange(index+1,h.state+1).setValue(next);
     sheets.staging.getRange(index+1,h.updated_at+1).setValue(now);
@@ -147,6 +154,7 @@ function reviewKanwilApplication(stagingId,decision,reason){
       sheets.staging.getRange(index+1,h.review_state+1).setValue(oldReview);
       sheets.staging.getRange(index+1,h.state+1).setValue(state);
       sheets.staging.getRange(index+1,h.updated_at+1).setValue(String(row[h.updated_at]||''));
+      try{kanwilRollbackV1_(sheets,checkpoint);}catch(rollbackError){}
       throw new Error('KANWIL_AUDIT_WRITE_FAILED: '+String(error&&error.message||error));
     }
     return {ok:true,stagingId:id,state:next};
@@ -172,14 +180,14 @@ function commitKanwilApplication(stagingId,reason){
       current_payload_sha256:hash,current_payload_json:JSON.stringify(payload),committed_at:now,committed_by:user.email,
       source_staging_id:id,correlation_id:correlationId
     }[k]??''));
-    const appended=[];
+    const checkpoint=kanwilCheckpointV1_(sheets,['records','events','audit']);
     try{
-      sheets.records.appendRow(recordRow);appended.push([sheets.records,sheets.records.getLastRow()]);
+      sheets.records.appendRow(recordRow);
       sheets.staging.getRange(index+1,h.state+1).setValue('COMMITTED');
       kanwilAppendEventV1_(sheets,recordId,id,'COMMIT','APPROVED','COMMITTED',Number(row[h.revision]),hash,user.email,why,correlationId);
       kanwilAppendAuditV1_(sheets,String(row[h.batch_id]),recordId,id,user.email,'COMMIT',why,correlationId);
     }catch(error){
-      for(let i=appended.length-1;i>=0;i--)try{appended[i][0].deleteRow(appended[i][1]);}catch(rollbackError){}
+      try{kanwilRollbackV1_(sheets,checkpoint);}catch(rollbackError){}
       sheets.staging.getRange(index+1,h.state+1).setValue(state);
       throw new Error('KANWIL_COMMIT_RECOVERY_REQUIRED: '+String(error&&error.message||error));
     }
