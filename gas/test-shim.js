@@ -1892,6 +1892,7 @@ const kanwilServiceSource=read('KanwilStagingService.gs');
 assert(kanwilServiceSource.includes("enabled:false") && kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID"),'Kanwil staging foundation requires explicit isolated storage configuration');
 assert(kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID") && kanwilServiceSource.includes("KANWIL_STAGING_MUST_BE_SEPARATE_FROM_CANONICAL"),'Kanwil staging requires a separate spreadsheet identity');
 assert(kanwilServiceSource.includes("requireBackOfficeAccess_()") && kanwilServiceSource.includes("function provisionKanwilStagingSchema_"),'Kanwil schema provisioning is a private back-office guarded helper');
+assert(kanwilServiceSource.indexOf('Preflight every existing tab before creating or modifying any schema')>=0&&kanwilServiceSource.indexOf('Preflight every existing tab before creating or modifying any schema')<kanwilServiceSource.indexOf('if(!sh)sh=ss.insertSheet(name)'),'Kanwil provisioning preflights all existing schemas before creating missing tabs');
 assert(kanwilServiceSource.includes("reviewOnlyScreenshot:true"),'Kanwil screenshot intake remains explicitly review-only');
 assert(kanwilServiceSource.includes("'review_state','state','revision'"),'Kanwil staging schema persists the lifecycle state used by queue and review RPCs');
 const kanwilPersistenceSource=read('KanwilPersistenceService.gs');
