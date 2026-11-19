@@ -46,7 +46,9 @@ function getRolePermissions_(role){
   return Array.from(new Set(assigned));
 }
 function getCurrentUser_(){
-  const email=getCurrentIdentity_(),v=getDb_().getSheetByName(SHEETS.USERS).getDataRange().getValues();
+  const email=getCurrentIdentity_();
+  if(!email)throw new Error('UNAUTHENTICATED');
+  const v=getDb_().getSheetByName(SHEETS.USERS).getDataRange().getValues();
   if(v.length<2)return {authenticated:false,email,role:null,permissions:[]};
   const h=v[0],i=Object.fromEntries(h.map((x,n)=>[x,n]));
   const matching=v.slice(1).filter(x=>String(x[i.email]||'').trim().toLowerCase()===email);
