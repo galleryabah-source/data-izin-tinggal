@@ -1901,6 +1901,9 @@ assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil pe
 assert(kanwilPersistenceSource.includes("review_state:'PENDING',state:'REVIEW_REQUIRED'"),'Manual Kanwil intake persists an explicit review lifecycle state');
 assert(kanwilPersistenceSource.includes("review_state:'PENDING',state,payload_sha256:hash"),'File imports persist validation/review state with the staged row');
 assert(kanwilPersistenceSource.includes('normalized=kanwilPayloadV1_({values:normalized})'),'File imports store server-canonicalized fields after validation');
+assert(kanwilPersistenceSource.includes('seenSourceRows.has(sourceRow)'),'File import rejects duplicate physical source row numbers');
+assert(kanwilPersistenceSource.includes('validationErrors:JSON.parse'),'Kanwil queue exposes server-side validation errors for operator review');
+assert(kanwilPersistenceSource.includes("correlationId,fileId)"),'Kanwil file-import audit event retains its source file identity');
 const kanwilPayloadValidator=new Function(kanwilPersistenceSource+'\nreturn kanwilPayloadV1_;')();
 const validKanwilPayload=kanwilPayloadValidator({values:{nomor_permohonan:'001-ABC',nama:'UJI',jenis_kelamin:'MALE',tanggal_lahir:'1980-01-01'}});
 assert(validKanwilPayload.nomor_permohonan==='001-ABC'&&validKanwilPayload.nama==='UJI','Kanwil server payload validator preserves application identifiers and required fields');
