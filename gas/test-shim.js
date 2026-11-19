@@ -1900,7 +1900,7 @@ assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersist
 assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil persistence endpoints require authenticated back-office access');
 const kanwilStagingServiceSource=read('KanwilStagingService.gs');
 const kanwilRpcManifestSource=read('RpcManifest.js');
-assert(kanwilStagingServiceSource.includes('function provisionKanwilStagingFromConfiguredId()')&&kanwilStagingServiceSource.includes('requireBackOfficeAccess_()'),'Owner provisioning entrypoint is argument-free and guarded by back-office authorization');
+assert(kanwilStagingServiceSource.includes('function provisionKanwilStagingFromConfiguredId()')&&kanwilStagingServiceSource.includes('requireBackOfficeAccess_()')&&kanwilStagingServiceSource.includes("requirePermission_('admin.config')"),'Owner provisioning entrypoint is argument-free and guarded by back-office and admin.config authorization');
 assert(kanwilStagingServiceSource.includes("getProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty)"),'Owner provisioning reads the dedicated staging target from Script Properties');
 assert(kanwilRpcManifestSource.includes("provisionKanwilStagingFromConfiguredId:{access:'protected',permission:'admin.config'}"),'Owner provisioning RPC is explicitly classified as admin.config protected');
 
