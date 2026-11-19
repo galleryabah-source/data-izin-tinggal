@@ -64,6 +64,12 @@ const authUnauth=new Function('Session','getDb_','SHEETS',authCode+'\nreturn {re
 let unauthRejected=false;
 try{authUnauth.requirePermission_('dashboard.read');}catch(e){unauthRejected=String(e&&e.message||e)==='UNAUTHENTICATED';}
 assert(unauthRejected,'RBAC rejects unauthenticated identity');
+const blankEmailUsers=[['user_id','email','display_name','role','status'],['u-empty','','Invalid Blank Identity','ADMIN','ACTIVE']];
+const blankEmailPermissions=[['role','permission'],['ADMIN','admin.config']];
+const authBlankEmail=new Function('Session','getDb_','SHEETS',authCode+'\\nreturn {requirePermission_};')(unauthSession,()=>makeDb(blankEmailUsers,blankEmailPermissions),SHEETS);
+let blankEmailRejected=false;
+try{authBlankEmail.requirePermission_('admin.config');}catch(e){blankEmailRejected=String(e&&e.message||e)==='UNAUTHENTICATED';}
+assert(blankEmailRejected,'RBAC rejects empty principal even if USERS contains an active blank-email row while Workspace enforcement is OFF');
 const authSession={getActiveUser:()=>({getEmail:()=> 'viewer@example.com'})};
 const users=[['user_id','email','display_name','role','status'],['u1','viewer@example.com','Viewer','VIEWER','ACTIVE']];
 const permissions=[['role','permission'],['VIEWER','dashboard.read'],['VIEWER','dataset.read']];
