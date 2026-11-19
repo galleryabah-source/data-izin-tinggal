@@ -53,7 +53,10 @@ function kanwilHashV1_(value){
   return bytes.map(b=>(b<0?b+256:b).toString(16).padStart(2,'0')).join('');
 }
 function kanwilAppendEventV1_(sheets,recordId,stagingId,eventType,fromState,toState,revision,hash,actor,reason,correlationId){
-  const rows=sheets.events.getDataRange().getValues(),header=kanwilHeader_(sheets.events);\n  const sequence=rows.slice(1).filter(r=>(stagingId&&String(r[header.staging_id])===stagingId)||(recordId&&String(r[header.record_id])===recordId)).reduce((max,r)=>Math.max(max,Number(r[header.event_sequence])||0),0)+1;\n  sheets.events.appendRow([Utilities.getUuid(),recordId||'',stagingId||'',sequence,eventType,fromState||'',toState,\n    revision,hash,actor,reason||'',correlationId,nowIso_()]);
+  const rows=sheets.events.getDataRange().getValues(),header=kanwilHeader_(sheets.events);
+  const sequence=rows.slice(1).filter(r=>(stagingId&&String(r[header.staging_id])===stagingId)||(recordId&&String(r[header.record_id])===recordId)).reduce((max,r)=>Math.max(max,Number(r[header.event_sequence])||0),0)+1;
+  sheets.events.appendRow([Utilities.getUuid(),recordId||'',stagingId||'',sequence,eventType,fromState||'',toState,
+    revision,hash,actor,reason||'',correlationId,nowIso_()]);
 }
 function kanwilAppendAuditV1_(sheets,batchId,recordId,stagingId,actor,action,reason,correlationId){
   sheets.audit.appendRow([Utilities.getUuid(),batchId||'', '',recordId||'',stagingId||'',actor,action,reason||'',correlationId,nowIso_()]);
@@ -131,7 +134,8 @@ function reviewKanwilApplication(stagingId,decision,reason){
     const row=v[index],state=String(row[h.state]),next=action==='APPROVE'?'APPROVED':'REJECTED';
     if(state===next)return {ok:true,stagingId:id,state:next,idempotent:true};
     if(state!=='REVIEW_REQUIRED')throw new Error('KANWIL_STAGING_NOT_REVIEWABLE');
-    if(String(row[h.created_by]||'').toLowerCase()===String(user.email||'').toLowerCase())throw new Error('KANWIL_SEPARATION_OF_DUTIES');\n    const now=nowIso_(),oldReview=String(row[h.review_state]||'PENDING');
+    if(String(row[h.created_by]||'').toLowerCase()===String(user.email||'').toLowerCase())throw new Error('KANWIL_SEPARATION_OF_DUTIES');
+    const now=nowIso_(),oldReview=String(row[h.review_state]||'PENDING');
     sheets.staging.getRange(index+1,h.review_state+1).setValue(next);
     sheets.staging.getRange(index+1,h.state+1).setValue(next);
     sheets.staging.getRange(index+1,h.updated_at+1).setValue(now);
