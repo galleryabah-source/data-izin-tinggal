@@ -163,7 +163,9 @@ function loadKanwilQueue(){
    number.textContent=row.values.nomor_permohonan||'—';name.textContent=row.values.nama||'—';status.textContent=row.state;
    if(row.state==='REVIEW_REQUIRED'){
     [['Setujui','APPROVE'],['Tolak','REJECT']].forEach(([label,decision])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',()=>actKanwil(row.stagingId,decision));actions.append(b);});
-   }else if(row.state==='VALIDATION_REQUIRED'){\n    const b=document.createElement('button');b.type='button';b.textContent='Tolak data tidak valid';b.addEventListener('click',()=>actKanwil(row.stagingId,'REJECT'));actions.append(b);\n   }else if(row.state==='APPROVED'){
+   }else if(row.state==='VALIDATION_REQUIRED'){
+    const b=document.createElement('button');b.type='button';b.textContent='Tolak data tidak valid';b.addEventListener('click',()=>actKanwil(row.stagingId,'REJECT'));actions.append(b);
+   }else if(row.state==='APPROVED'){
     const b=document.createElement('button');b.type='button';b.textContent='Finalisasi';b.addEventListener('click',()=>actKanwil(row.stagingId,'COMMIT'));actions.append(b);
    }
    tr.append(number,name,status,actions);body.append(tr);
