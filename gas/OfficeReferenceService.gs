@@ -19,6 +19,13 @@ function getOfficeReferenceStatus(){
   return getOfficeReferenceStatus_();
 }
 
+function parseOfficeCoordinate_(value,min,max){
+  if(value===null||value===undefined||String(value).trim()==='')return null;
+  const number=Number(value);
+  if(!Number.isFinite(number)||number<min||number>max)return null;
+  return number;
+}
+
 function getOfficeReferenceStatus_(){
   const cacheKey=readCacheKey_('office-reference-status');
   const cached=readCacheGet_(cacheKey);if(cached)return cached;
@@ -43,8 +50,8 @@ function getOfficeReferenceStatus_(){
   expected.forEach(name=>{
     const r=byOffice[name];
     if(!r){missingOffices.push(name);return;}
-    const lat=Number(r[ri.latitude]),lng=Number(r[ri.longitude]),address=String(r[ri.address]||'').trim(),sourceUrl=String(r[ri.source_url]||'').trim(),status=String(r[ri.status]||'').trim().toUpperCase();
-    if(!address||!Number.isFinite(lat)||!Number.isFinite(lng)||lat<-90||lat>90||lng<-180||lng>180||!sourceUrl||status!=='VERIFIED')invalidOffices.push(name);
+    const lat=parseOfficeCoordinate_(r[ri.latitude],-90,90),lng=parseOfficeCoordinate_(r[ri.longitude],-180,180),address=String(r[ri.address]||'').trim(),sourceUrl=String(r[ri.source_url]||'').trim(),status=String(r[ri.status]||'').trim().toUpperCase();
+    if(!address||lat===null||lng===null||!sourceUrl||status!=='VERIFIED')invalidOffices.push(name);
   });
   return readCachePut_(cacheKey,{ok:true,expectedOffices:expected,referenceRows:Math.max(0,rv.length-1),missingOffices,invalidOffices,ready:missingOffices.length===0&&invalidOffices.length===0},60);
 }
