@@ -48,13 +48,13 @@ All callable Kanwil RPC endpoints are classified as protected with `backoffice.a
 - `reviewKanwilApplication`
 - `commitKanwilApplication`
 
-Private provisioning, validation, hashing, checkpoint, and rollback helpers end with an underscore and are not exposed as RPC.
+The owner provisioning entrypoint `provisionKanwilStagingFromConfiguredId` is protected by `backoffice.access` plus `admin.config`. Internal validation, hashing, checkpoint, and rollback helpers end with an underscore and are not exposed as RPC.
 
 ## Operational sequence
 
 1. Create a dedicated Kanwil staging spreadsheet with restricted access.
 2. Verify the spreadsheet is not the canonical `SPREADSHEET_ID`.
-3. Run `provisionKanwilStagingSchema_('<staging-id>')` from the authorized Apps Script project context.
+3. Configure the staging spreadsheet ID in Script Properties, then run the guarded `provisionKanwilStagingFromConfiguredId` owner entrypoint from the authorized Apps Script project context. See [KANWIL-ENTRY-OWNER-ACTIVATION.md](./KANWIL-ENTRY-OWNER-ACTIVATION.md).
 4. Set a stable `KANWIL_SCOPE_ID`.
 5. Run the runtime matrix with at least two authorized back-office users: manual create, file import, retry/idempotency, duplicate application number, invalid dates, validation-required rows, independent review, rejection, approval, finalization, and audit reconciliation.
 6. Confirm no write or row-count delta occurs in canonical monthly datasets, registry, importer, or Daily Input.
