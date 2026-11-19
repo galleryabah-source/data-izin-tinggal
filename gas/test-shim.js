@@ -1878,7 +1878,7 @@ const kanwilNavSource=read('index.html');
 assert(kanwilNavSource.includes('href="?view=kanwil"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace');
 const kanwilPageSource=read('KanwilEntry.html');
 assert(kanwilPageSource.includes('staging terpisah')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
-assert(kanwilPageSource.includes('saveKanwilApplication')&&kanwilPageSource.includes('listKanwilApplications'),'Kanwil UI persists manual records and loads the staging queue');
+assert(kanwilPageSource.includes('saveKanwilApplication')&&kanwilPageSource.includes('saveKanwilImportBatch')&&kanwilPageSource.includes('listKanwilApplications'),'Kanwil UI persists manual and parsed file records and loads the staging queue');
 assert(kanwilPageSource.includes('reviewKanwilApplication')&&kanwilPageSource.includes('commitKanwilApplication'),'Kanwil UI exposes guarded review and isolated finalization actions');
 const kanwilReviewContract=require('./KanwilStagingContract.js');
 assert(kanwilReviewContract.KANWIL_REVIEW_ONLY_V1===true,'Kanwil parser evidence remains review-only until human validation');
@@ -1894,7 +1894,7 @@ assert(kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID") && kanwilSe
 assert(kanwilServiceSource.includes("requireBackOfficeAccess_()") && kanwilServiceSource.includes("function provisionKanwilStagingSchema_"),'Kanwil schema provisioning is a private back-office guarded helper');
 assert(kanwilServiceSource.includes("reviewOnlyScreenshot:true"),'Kanwil screenshot intake remains explicitly review-only');
 const kanwilPersistenceSource=read('KanwilPersistenceService.gs');
-assert(kanwilPersistenceSource.includes("function saveKanwilApplication(payload)")&&kanwilPersistenceSource.includes("function commitKanwilApplication(stagingId,reason)"),'Kanwil isolated staging persistence and finalization endpoints exist');
+assert(kanwilPersistenceSource.includes("function saveKanwilApplication(payload)")&&kanwilPersistenceSource.includes("function saveKanwilImportBatch(payload)")&&kanwilPersistenceSource.includes("function commitKanwilApplication(stagingId,reason)"),'Kanwil isolated staging persistence and finalization endpoints exist');
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
 assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil persistence endpoints require authenticated back-office access');
 const kanwilPayloadValidator=new Function(kanwilPersistenceSource+'\nreturn kanwilPayloadV1_;')();
