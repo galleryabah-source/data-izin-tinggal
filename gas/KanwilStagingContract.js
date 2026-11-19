@@ -1,6 +1,6 @@
 /**
  * Kanwil Permit v1 — shared staging envelope and guarded state transitions.
- * Pure contract helpers only. Persistence/RPC deliberately not implemented.
+ * Pure staging envelope and transition helpers. Persistence is implemented in KanwilPersistenceService.gs.
  */
 const KANWIL_REVIEW_ONLY_V1=true;
 const KANWIL_STAGING_FIELD_KEYS_V1=['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','layanan','kategori_produk','nomor_permohonan','tanggal_permohonan','penjamin','nama','jenis_kelamin','tanggal_lahir','kebangsaan','no_passport','jenis_produk','tujuan','posisi_permohonan','status_permohonan'];
