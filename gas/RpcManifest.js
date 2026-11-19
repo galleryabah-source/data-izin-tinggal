@@ -18,6 +18,7 @@ const RPC_MANIFEST_V1=Object.freeze({
   getKanwilEntryStatus:{access:'protected',permission:'backoffice.access'},
   listKanwilApplications:{access:'protected',permission:'backoffice.access'},
   saveKanwilApplication:{access:'protected',permission:'backoffice.access'},
+  saveKanwilImportBatch:{access:'protected',permission:'backoffice.access'},
   reviewKanwilApplication:{access:'protected',permission:'backoffice.access'},
   commitKanwilApplication:{access:'protected',permission:'backoffice.access'},
   listRunningTextsAdmin:{access:'protected',permission:'admin.config'},
