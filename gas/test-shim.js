@@ -1897,7 +1897,7 @@ assert(kanwilPersistenceSource.includes("throw new Error('KANWIL_APPROVAL_EVIDEN
 const kanwilRevisionHelpers=new Function(kanwilPersistenceSource+'\nreturn {kanwilLatestReviewEventV1_};')();
 const kanwilEventHeaders=['event_id','record_id','staging_id','event_sequence','event_type','from_state','to_state','revision','payload_sha256','actor_id','reason','correlation_id','occurred_at'];
 const kanwilEventRows=[kanwilEventHeaders,['E1','','S1',1,'REVIEW_REJECT','REVIEW_REQUIRED','REJECTED',1,'H1','reviewer@example.gov.id','','C1','T1'],['E2','','S1',2,'REVISION_SUBMITTED','REJECTED','REVIEW_REQUIRED',2,'H2','operator@example.gov.id','','C2','T2'],['E3','','S1',3,'REVIEW_APPROVE','REVIEW_REQUIRED','APPROVED',2,'H2','reviewer2@example.gov.id','','C3','T3']];
-const kanwilLatestReview=kanwilRevisionHelpers.kanwilLatestReviewEventV1_({events:{getDataRange:()=>({getValues:()=>kanwilEventRows})}},'S1');
+const kanwilLatestReview=kanwilRevisionHelpers.kanwilLatestReviewEventV1_({events:{getLastColumn:()=>kanwilEventHeaders.length,getRange:()=>({getValues:()=>[kanwilEventHeaders]}),getDataRange:()=>({getValues:()=>kanwilEventRows})}},'S1');
 assert(kanwilLatestReview[3]===3&&kanwilLatestReview[9]==='reviewer2@example.gov.id','Kanwil reviewer identity resolves from the latest persisted review event');
 
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
