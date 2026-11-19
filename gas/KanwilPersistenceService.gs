@@ -67,8 +67,8 @@ function kanwilAppendEventV1_(sheets,recordId,stagingId,eventType,fromState,toSt
   sheets.events.appendRow([Utilities.getUuid(),recordId||'',stagingId||'',sequence,eventType,fromState||'',toState,
     revision,hash,actor,reason||'',correlationId,nowIso_()]);
 }
-function kanwilAppendAuditV1_(sheets,batchId,recordId,stagingId,actor,action,reason,correlationId){
-  sheets.audit.appendRow([Utilities.getUuid(),batchId||'', '',recordId||'',stagingId||'',actor,action,reason||'',correlationId,nowIso_()]);
+function kanwilAppendAuditV1_(sheets,batchId,recordId,stagingId,actor,action,reason,correlationId,fileId){
+  sheets.audit.appendRow([Utilities.getUuid(),batchId||'',fileId||'',recordId||'',stagingId||'',actor,action,reason||'',correlationId,nowIso_()]);
 }
 function getKanwilEntryStatus(){
   requireBackOfficeAccess_();
@@ -141,11 +141,13 @@ function saveKanwilImportBatch(payload){
     const stagingValues=sheets.staging.getDataRange().getValues(),sh=kanwilHeader_(sheets.staging);
     const existingKeys=new Map(stagingValues.slice(1).map(r=>[String(r[sh.idempotency_key]||''),String(r[sh.payload_sha256]||'')]));
     const batchId=Utilities.getUuid(),fileId=Utilities.getUuid(),correlationId=Utilities.getUuid(),now=nowIso_();
-    const stageRows=[],eventRows=[],seenApplications=new Set();
+    const stageRows=[],eventRows=[],seenApplications=new Set(),seenSourceRows=new Set();
     let validCount=0,invalidCount=0;
     records.forEach((record,index)=>{
       const row=record&&typeof record==='object'?record:{},sourceRow=Number(row.sourceRowNumber||index+1);
       if(!Number.isInteger(sourceRow)||sourceRow<1)throw new Error('KANWIL_SOURCE_ROW_NUMBER_INVALID');
+      if(seenSourceRows.has(sourceRow))throw new Error('KANWIL_DUPLICATE_SOURCE_ROW_NUMBER');
+      seenSourceRows.add(sourceRow);
       const raw=kanwilLoosePayloadV1_(row.rawValues||row.values||row.normalizedValues||{});
       let normalized=kanwilLoosePayloadV1_(row.normalizedValues||row.values||row.rawValues||{});
       const descriptor=buildKanwilIdempotencyDescriptorV1({kanwilScopeId:scope,sourceFileSha256:sha,
@@ -197,7 +199,7 @@ function saveKanwilImportBatch(payload){
       sheets.batches.appendRow(batchRow);sheets.files.appendRow(fileRow);
       sheets.staging.getRange(sheets.staging.getLastRow()+1,1,stageRows.length,stageRows[0].length).setValues(stageRows);
       sheets.events.getRange(sheets.events.getLastRow()+1,1,eventRows.length,eventRows[0].length).setValues(eventRows);
-      kanwilAppendAuditV1_(sheets,batchId,'','',user.email,'FILE_IMPORT','Imported '+stageRows.length+' rows; '+invalidCount+' require validation',correlationId);
+      kanwilAppendAuditV1_(sheets,batchId,'','',user.email,'FILE_IMPORT','Imported '+stageRows.length+' rows; '+invalidCount+' require validation',correlationId,fileId);
     }catch(error){
       try{kanwilRollbackV1_(sheets,checkpoint);}catch(rollbackError){}
       throw new Error('KANWIL_IMPORT_WRITE_FAILED: '+String(error&&error.message||error));
@@ -223,6 +225,8 @@ function listKanwilApplications(filters){
     .slice(-limit).reverse().map(r=>({stagingId:String(r[h.staging_id]),batchId:String(r[h.batch_id]),
       sourceRowNumber:Number(r[h.source_row_number]),state:String(r[h.state]),reviewState:String(r[h.review_state]),
       revision:Number(r[h.revision]),values:JSON.parse(String(r[h.normalized_values_json]||'{}')),
+      validationErrors:JSON.parse(String(r[h.validation_errors_json]||'[]')),
+      validationWarnings:JSON.parse(String(r[h.validation_warnings_json]||'[]')),
       createdBy:String(r[h.created_by]),createdAt:String(r[h.created_at])}));
   return {ok:true,rows};
 }
