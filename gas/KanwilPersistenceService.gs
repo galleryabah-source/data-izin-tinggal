@@ -45,11 +45,12 @@ function kanwilPayloadV1_(input){
   });
   ['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','tanggal_permohonan'].forEach(key=>{
     if(normalized[key]){const value=normalized[key],iso=value.replace(' ','T'),date=new Date(iso+'Z');
-      if(!/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/.test(value)||!Number.isFinite(date.getTime()))
+      if(!/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/.test(value)||!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==value.slice(0,10))
         throw new Error('KANWIL_DATETIME_INVALID: '+key);}
   });
   return normalized;
 }
+function kanwilSafeCellTextV1_(value){const text=String(value??'');return /^[=+@-]/.test(text)?"'"+text:text;}
 function kanwilHashV1_(value){
   const bytes=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,JSON.stringify(value),Utilities.Charset.UTF_8);
   return bytes.map(b=>(b<0?b+256:b).toString(16).padStart(2,'0')).join('');
@@ -65,10 +66,10 @@ function kanwilAppendEventV1_(sheets,recordId,stagingId,eventType,fromState,toSt
   const rows=sheets.events.getDataRange().getValues(),header=kanwilHeader_(sheets.events);
   const sequence=rows.slice(1).filter(r=>(stagingId&&String(r[header.staging_id])===stagingId)||(recordId&&String(r[header.record_id])===recordId)).reduce((max,r)=>Math.max(max,Number(r[header.event_sequence])||0),0)+1;
   sheets.events.appendRow([Utilities.getUuid(),recordId||'',stagingId||'',sequence,eventType,fromState||'',toState,
-    revision,hash,actor,reason||'',correlationId,nowIso_()]);
+    revision,hash,actor,kanwilSafeCellTextV1_(reason||''),correlationId,nowIso_()]);
 }
 function kanwilAppendAuditV1_(sheets,batchId,recordId,stagingId,actor,action,reason,correlationId,fileId){
-  sheets.audit.appendRow([Utilities.getUuid(),batchId||'',fileId||'',recordId||'',stagingId||'',actor,action,reason||'',correlationId,nowIso_()]);
+  sheets.audit.appendRow([Utilities.getUuid(),batchId||'',fileId||'',recordId||'',stagingId||'',actor,action,kanwilSafeCellTextV1_(reason||''),correlationId,nowIso_()]);
 }
 function getKanwilEntryStatus(){
   requireBackOfficeAccess_();
@@ -81,7 +82,7 @@ function saveKanwilApplication(payload){
   const user=requireBackOfficeAccess_(),ss=kanwilRequireReady_(),p=kanwilPayloadV1_(payload);
   const submissionId=String(payload&&payload.submissionId||'').trim();
   if(!/^[A-Za-z0-9_-]{16,80}$/.test(submissionId))throw new Error('KANWIL_SUBMISSION_ID_INVALID');
-  const reason=String(payload&&payload.sourceReason||'MANUAL_ENTRY').trim().slice(0,250);
+  const reason=kanwilSafeCellTextV1_(String(payload&&payload.sourceReason||'MANUAL_ENTRY').trim().slice(0,250));
   const scope=String(PropertiesService.getScriptProperties().getProperty('KANWIL_SCOPE_ID')||'').trim();
   if(!scope)throw new Error('KANWIL_SCOPE_ID_NOT_CONFIGURED');
   const hash=kanwilHashV1_(p),lock=LockService.getScriptLock();lock.waitLock(30000);
@@ -124,15 +125,15 @@ function saveKanwilImportBatch(payload){
   const user=requireBackOfficeAccess_(),ss=kanwilRequireReady_(),x=payload&&typeof payload==='object'?payload:{};
   const source=x.sourceFile&&typeof x.sourceFile==='object'?x.sourceFile:{},channel=String(x.sourceChannel||'').toUpperCase();
   if(!['CSV','EXCEL','SCREENSHOT','CAMERA_PHOTO'].includes(channel))throw new Error('KANWIL_SOURCE_CHANNEL_INVALID');
-  const fileName=String(source.name||'').replace(/[\/\\]/g,'_').slice(0,255);
-  const sha=String(source.sha256||'').toLowerCase(),size=Number(source.size||0),mime=String(source.mime||'').slice(0,120);
+  const fileName=kanwilSafeCellTextV1_(String(source.name||'').replace(/[\/\\]/g,'_').slice(0,255));
+  const sha=String(source.sha256||'').toLowerCase(),size=Number(source.size||0),mime=kanwilSafeCellTextV1_(String(source.mime||'').slice(0,120));
   if(!fileName||! /^[a-f0-9]{64}$/.test(sha))throw new Error('KANWIL_SOURCE_FILE_METADATA_INVALID');
   if(!Number.isSafeInteger(size)||size<1||size>20*1024*1024)throw new Error('KANWIL_SOURCE_FILE_SIZE_INVALID');
   const records=Array.isArray(x.records)?x.records:[];
   if(!records.length||records.length>500)throw new Error('KANWIL_IMPORT_ROW_LIMIT');
   const scope=String(PropertiesService.getScriptProperties().getProperty('KANWIL_SCOPE_ID')||'').trim();
   if(!scope)throw new Error('KANWIL_SCOPE_ID_NOT_CONFIGURED');
-  const contractVersion='KANWIL_PERMIT_APPLICATION_V1',parserVersion=String(x.parserVersion||'browser-parser-v1').slice(0,80);
+  const contractVersion='KANWIL_PERMIT_APPLICATION_V1',parserVersion=kanwilSafeCellTextV1_(String(x.parserVersion||'browser-parser-v1').slice(0,80));
   const lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
     const sheets=kanwilSheets_(ss),files=sheets.files.getDataRange().getValues(),fh=kanwilHeader_(sheets.files);
@@ -185,7 +186,7 @@ function saveKanwilImportBatch(payload){
     if(!stageRows.length)return {ok:true,batchId:null,fileId:null,inserted:0,idempotent:true};
     const batchValues={
       batch_id:batchId,kanwil_scope_id:scope,source_channel:channel,contract_version:contractVersion,
-      parser_version:parserVersion,source_exported_at:String(x.sourceExportedAt||''),source_authorization_ref:'',
+      parser_version:parserVersion,source_exported_at:kanwilSafeCellTextV1_(String(x.sourceExportedAt||'')),source_authorization_ref:'',
       created_by:user.email,created_at:now,state:invalidCount?'VALIDATION_REQUIRED':'REVIEW_REQUIRED',
       file_count:1,record_count:stageRows.length,correlation_id:correlationId
     };
