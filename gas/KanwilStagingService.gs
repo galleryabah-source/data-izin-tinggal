@@ -57,6 +57,15 @@ function provisionKanwilStagingSchema_(stagingSpreadsheetId){
   if(!canonical||id===canonical)throw new Error('KANWIL_STAGING_MUST_BE_SEPARATE_FROM_CANONICAL');
   const ss=SpreadsheetApp.openById(id);
   if(!ss||String(ss.getId())!==id)throw new Error('KANWIL_STAGING_IDENTITY_MISMATCH');
+  // Preflight every existing tab before creating or modifying any schema.
+  // A mismatch in a later tab must not leave earlier missing tabs partially provisioned.
+  Object.entries(KANWIL_STAGING_SHEETS_V1).forEach(([key,headers])=>{
+    const name='KANWIL_'+key.toUpperCase(),sh=ss.getSheetByName(name);
+    if(!sh||sh.getLastRow()===0)return;
+    if(sh.getLastColumn()!==headers.length)throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
+    const actual=sh.getRange(1,1,1,headers.length).getValues()[0].map(String);
+    if(actual.join('|')!==headers.join('|'))throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
+  });
   Object.entries(KANWIL_STAGING_SHEETS_V1).forEach(([key,headers])=>{
     const name='KANWIL_'+key.toUpperCase();
     let sh=ss.getSheetByName(name);
