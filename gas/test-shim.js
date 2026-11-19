@@ -198,7 +198,7 @@ assert(officeRef.includes("readCacheKey_('office-reference-status')") && officeR
 assert(officeRef.includes('function getOfficeReferenceStatus()'), 'office reference readiness endpoint exists');
 assert(officeRef.includes("requirePermission_('map.read')"), 'map readiness is RBAC protected');
 assert(officeRef.includes("status!=='VERIFIED'"), 'map readiness requires verified reference rows');
-const parseOfficeCoordinate=new Function(officeRef+'\\nreturn parseOfficeCoordinate_;')();
+const parseOfficeCoordinate=new Function(officeRef+'\nreturn parseOfficeCoordinate_;')();
 assert(parseOfficeCoordinate('',-90,90)===null,'Blank latitude/longitude is not coerced to zero');
 assert(parseOfficeCoordinate('   ',-90,90)===null,'Whitespace coordinate is rejected');
 assert(parseOfficeCoordinate(null,-90,90)===null,'Null coordinate is rejected');
