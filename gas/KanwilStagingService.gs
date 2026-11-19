@@ -71,3 +71,14 @@ function provisionKanwilStagingSchema_(stagingSpreadsheetId){
   PropertiesService.getScriptProperties().setProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty,id);
   return kanwilStagingReadinessV1_();
 }
+/**
+ * Owner-run provisioning entrypoint. Reads the dedicated spreadsheet ID from
+ * Script Properties so the Apps Script editor can invoke this without arguments.
+ * Protected by the same back-office guard as the internal provisioning helper.
+ */
+function provisionKanwilStagingFromConfiguredId(){
+  requireBackOfficeAccess_();
+  const id=String(PropertiesService.getScriptProperties().getProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty)||'').trim();
+  if(!id)throw new Error('KANWIL_STAGING_SPREADSHEET_NOT_CONFIGURED');
+  return provisionKanwilStagingSchema_(id);
+}
