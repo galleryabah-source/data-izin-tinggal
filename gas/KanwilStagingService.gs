@@ -78,6 +78,7 @@ function provisionKanwilStagingSchema_(stagingSpreadsheetId){
  */
 function provisionKanwilStagingFromConfiguredId(){
   requireBackOfficeAccess_();
+  requirePermission_('admin.config');
   const id=String(PropertiesService.getScriptProperties().getProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty)||'').trim();
   if(!id)throw new Error('KANWIL_STAGING_SPREADSHEET_NOT_CONFIGURED');
   return provisionKanwilStagingSchema_(id);
