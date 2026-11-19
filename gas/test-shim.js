@@ -1914,6 +1914,9 @@ assert(kanwilMissingBatchRejected,'Kanwil finalization rejects staging rows with
 assert(kanwilPersistenceSource.includes('kanwilResolveBatchScopeV1_(batchValues,batchHeader,String(row[h.batch_id]),configuredScope)'),'Kanwil commit binds the finalized record to its original batch scope');
 assert(kanwilPersistenceSource.includes('kanwilResolveBatchScopeV1_(persistedBatches,persistedBatchHeader,String(existing[h.batch_id]),scope)'),'Manual intake idempotent retries remain bound to their original persisted scope');
 assert(kanwilPersistenceSource.includes("String(parent[batchHeader.kanwil_scope_id]||'').trim()===scope&&String(parent[batchHeader.source_channel]||'').toUpperCase()===channel"),'File-level idempotency is isolated by persisted Kanwil scope and source channel');
+assert(kanwilPersistenceSource.includes('if(priorFileMatches.length>1)throw new Error(\'KANWIL_FILE_IDENTITY_NOT_UNIQUE\')')&&kanwilPersistenceSource.includes('if(parentMatches.length!==1)throw new Error(\'KANWIL_FILE_PARENT_BATCH_INVALID\')'),'File idempotency fails closed for duplicate file identities and orphan/missing parent batches');
+assert(kanwilPersistenceSource.includes('KANWIL_FILE_IDENTITY_SCOPE_OR_CHANNEL_CONFLICT'),'File idempotency rejects reuse across Kanwil scope or source channel');
+assert(kanwilPersistenceSource.includes("sheets.staging.getRange(index+1,h.updated_at+1).setValue(now)")&&kanwilPersistenceSource.includes("setValue(previousUpdatedAt)"),'Kanwil finalization timestamps COMMITTED state and restores timestamp during rollback');
 
 
 assert(kanwilPersistenceSource.includes("review_state:'PENDING',state:'REVIEW_REQUIRED'"),'Manual Kanwil intake persists an explicit review lifecycle state');
