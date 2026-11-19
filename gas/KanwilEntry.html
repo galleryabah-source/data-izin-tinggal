@@ -127,7 +127,7 @@ $('kpeRun').addEventListener('click',async()=>{
  if(files.length>50){say('Batas prototipe 50 file per batch.');return;}
  state.busy=true;$('kpeRun').disabled=true;state.rows=[];state.log=[];state.imports=[];$('kpePersistFiles').disabled=true;render();
  try{
-  const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@feat/kanwil-service-entry-ui-2026-11-17/gas/';
+  const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@main/gas/';
   const [contractSrc,xlsxSrc,shotSrc,ocrSrc,policySrc]=await Promise.all(['KanwilPermitContract.js','KanwilXlsxAdapter.js','KanwilScreenshotParser.js','KanwilOcrAdapter.js','KanwilIntakePolicy.js'].map(async name=>{const response=await fetch(base+name);if(!response.ok)throw Error('Gagal memuat modul '+name);return response.text();}));
   const loadModule=source=>{const module={exports:{}};new Function('module','exports',source)(module,module.exports);return module.exports;};
   const contract=loadModule(contractSrc),xlsx=loadModule(xlsxSrc),shot=loadModule(shotSrc),ocr=loadModule(ocrSrc),policy=loadModule(policySrc);
