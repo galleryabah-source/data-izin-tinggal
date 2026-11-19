@@ -60,18 +60,28 @@ const SHEETS={USERS:'USERS',PERMISSIONS:'PERMISSIONS'};
 const makeSheet=(values)=>({getDataRange:()=>({getValues:()=>values})});
 const makeDb=(users,permissions)=>({getSheetByName:(name)=>name==='USERS'?makeSheet(users):makeSheet(permissions)});
 const unauthSession={getActiveUser:()=>({getEmail:()=>''})};
-const authUnauth=new Function('Session','getDb_','SHEETS',authCode+'\nreturn {requirePermission_};')(unauthSession,()=>makeDb([['user_id','email','display_name','role','status']],[]),SHEETS);
+const authUnauth=new Function('Session','getDb_','SHEETS',authCode+'\nreturn {requirePermission_,getCurrentUser_};')(unauthSession,()=>makeDb([['user_id','email','display_name','role','status']],[]),SHEETS);
 let unauthRejected=false;
 try{authUnauth.requirePermission_('dashboard.read');}catch(e){unauthRejected=String(e&&e.message||e)==='UNAUTHENTICATED';}
 assert(unauthRejected,'RBAC rejects unauthenticated identity');
 const authSession={getActiveUser:()=>({getEmail:()=> 'viewer@example.com'})};
 const users=[['user_id','email','display_name','role','status'],['u1','viewer@example.com','Viewer','VIEWER','ACTIVE']];
 const permissions=[['role','permission'],['VIEWER','dashboard.read'],['VIEWER','dataset.read']];
-const authViewer=new Function('Session','getDb_','SHEETS',authCode+'\nreturn {requirePermission_};')(authSession,()=>makeDb(users,permissions),SHEETS);
+const authViewer=new Function('Session','getDb_','SHEETS',authCode+'\nreturn {requirePermission_,getCurrentUser_};')(authSession,()=>makeDb(users,permissions),SHEETS);
 let forbiddenRejected=false;
 try{authViewer.requirePermission_('admin.config');}catch(e){forbiddenRejected=String(e&&e.message||e)==='FORBIDDEN: admin.config';}
 assert(forbiddenRejected,'RBAC rejects unauthorized permission');
 assert(authViewer.requirePermission_('dataset.read').role==='VIEWER','RBAC permits assigned permission');
+const duplicateUsers=[['user_id','email','display_name','role','status'],['u1','viewer@example.com','Viewer','VIEWER','ACTIVE'],['u2','viewer@example.com','Duplicate','ADMIN','ACTIVE']];
+const authDuplicate=new Function('Session','getDb_','SHEETS',authCode+'\\nreturn {getCurrentUser_};')(authSession,()=>makeDb(duplicateUsers,permissions),SHEETS);
+let duplicatePrincipalRejected=false;
+try{authDuplicate.getCurrentUser_();}catch(e){duplicatePrincipalRejected=String(e&&e.message||e)==='UNAUTHENTICATED';}
+assert(duplicatePrincipalRejected,'RBAC rejects duplicate user mappings even while Workspace enforcement is staged OFF');
+const emptyMappedUsers=[['user_id','email','display_name','role','status'],['u0','','Empty principal','ADMIN','ACTIVE']];
+const authEmptyMapping=new Function('Session','getDb_','SHEETS',authCode+'\\nreturn {getCurrentUser_};')(unauthSession,()=>makeDb(emptyMappedUsers,permissions),SHEETS);
+let emptyPrincipalRejected=false;
+try{authEmptyMapping.getCurrentUser_();}catch(e){emptyPrincipalRejected=String(e&&e.message||e)==='UNAUTHENTICATED';}
+assert(emptyPrincipalRejected,'RBAC rejects empty active-user principal even if a blank USERS row exists');
  
 // Workspace identity guard remains staged OFF and fails closed when explicitly enabled.
 const makeWorkspaceProps=(values)=>({getScriptProperties:()=>({getProperty:(key)=>values[key]||''})});
