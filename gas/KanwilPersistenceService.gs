@@ -301,7 +301,7 @@ function kanwilBuildBatchReconciliationV1_(batch,files,staging,records){
     const expected=Math.max(0,Number(file.source_row_count)||0);
     if(observed!==expected)mismatches.push({code:'FILE_STAGING_COUNT_MISMATCH',fileId:String(file.file_id||''),expected,observed});
   });
-  const orphanFileRows=stageRows.filter(row=>row.file_id&&!fileIds.has(String(row.file_id)));
+  const orphanFileRows=stageRows.filter(row=>fileRows.length?!fileIds.has(String(row.file_id||'')):!!row.file_id);
   if(orphanFileRows.length)mismatches.push({code:'STAGING_FILE_REFERENCE_ORPHAN',count:orphanFileRows.length});
   if(duplicateStagingIds.length)mismatches.push({code:'DUPLICATE_STAGING_ID',ids:duplicateStagingIds});
   if(committedStageRows!==committedRecords.length)mismatches.push({code:'COMMIT_RECORD_COUNT_MISMATCH',expected:committedStageRows,observed:committedRecords.length});
