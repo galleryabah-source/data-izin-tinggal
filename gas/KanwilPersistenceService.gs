@@ -98,6 +98,8 @@ function saveKanwilApplication(payload){
     const existing=values.slice(1).find(r=>String(r[h.idempotency_key]||'')===submissionId);
     if(existing){
       if(String(existing[h.payload_sha256]||'')!==hash)throw new Error('KANWIL_IDEMPOTENCY_CONFLICT');
+      const persistedBatches=sheets.batches.getDataRange().getValues(),persistedBatchHeader=kanwilHeader_(sheets.batches);
+      kanwilResolveBatchScopeV1_(persistedBatches,persistedBatchHeader,String(existing[h.batch_id]),scope);
       return {ok:true,stagingId:String(existing[h.staging_id]),state:String(existing[h.state]),idempotent:true};
     }
     const batchId=Utilities.getUuid(),fileId='',stagingId=Utilities.getUuid(),correlationId=Utilities.getUuid(),now=nowIso_();
@@ -144,7 +146,12 @@ function saveKanwilImportBatch(payload){
   const lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
     const sheets=kanwilSheets_(ss),files=sheets.files.getDataRange().getValues(),fh=kanwilHeader_(sheets.files);
-    const previous=files.slice(1).find(r=>String(r[fh.source_file_sha256]||'').toLowerCase()===sha&&String(r[fh.parser_version]||'')===parserVersion);
+    const batchRows=sheets.batches.getDataRange().getValues(),batchHeader=kanwilHeader_(sheets.batches);
+    const previous=files.slice(1).find(r=>{
+      if(String(r[fh.source_file_sha256]||'').toLowerCase()!==sha||String(r[fh.parser_version]||'')!==parserVersion)return false;
+      const parent=batchRows.slice(1).find(b=>String(b[batchHeader.batch_id]||'')===String(r[fh.batch_id]||''));
+      return !!parent&&String(parent[batchHeader.kanwil_scope_id]||'').trim()===scope&&String(parent[batchHeader.source_channel]||'').toUpperCase()===channel;
+    });
     if(previous)return {ok:true,batchId:String(previous[fh.batch_id]),fileId:String(previous[fh.file_id]),idempotent:true};
     const stagingValues=sheets.staging.getDataRange().getValues(),sh=kanwilHeader_(sheets.staging);
     const existingKeys=new Map(stagingValues.slice(1).map(r=>[String(r[sh.idempotency_key]||''),String(r[sh.payload_sha256]||'')]));
