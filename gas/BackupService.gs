@@ -26,9 +26,9 @@ function finalizeSnapshotCreationV1_(p){
     throw new Error('SNAPSHOT_AUDIT_FAILED_RECONCILIATION_REQUIRED:'+backupId);
   }
   try{
-    setSnapshotManifestStatusV1_(x.manifest,'COMPLETE');
+    setSnapshotManifestStatusV1_(x.manifest,'FINALIZING');
   }catch(finalizeError){
-    const rolledBack=invalidateSnapshotArtifactV1_(x,'FINALIZATION_FAILED_RECONCILIATION_REQUIRED','BACKUP_SNAPSHOT_FINALIZE',{reason:'MANIFEST_FINALIZATION_FAILED'});
+    const rolledBack=invalidateSnapshotArtifactV1_(x,'FINALIZATION_FAILED_RECONCILIATION_REQUIRED','BACKUP_SNAPSHOT_FINALIZE',{reason:'MANIFEST_FINALIZING_FAILED'});
     if(rolledBack)throw new Error('SNAPSHOT_FINALIZE_FAILED_ROLLED_BACK');
     throw new Error('SNAPSHOT_FINALIZE_FAILED_RECONCILIATION_REQUIRED:'+backupId);
   }
@@ -38,6 +38,13 @@ function finalizeSnapshotCreationV1_(p){
     const rolledBack=invalidateSnapshotArtifactV1_(x,'FINAL_AUDIT_FAILED_RECONCILIATION_REQUIRED','BACKUP_SNAPSHOT_FINALIZE',{reason:'FINAL_AUDIT_FAILED'});
     if(rolledBack)throw new Error('SNAPSHOT_FINAL_AUDIT_FAILED_ROLLED_BACK');
     throw new Error('SNAPSHOT_FINAL_AUDIT_FAILED_RECONCILIATION_REQUIRED:'+backupId);
+  }
+  try{
+    setSnapshotManifestStatusV1_(x.manifest,'COMPLETE');
+  }catch(completeError){
+    const rolledBack=invalidateSnapshotArtifactV1_(x,'FINALIZATION_FAILED_RECONCILIATION_REQUIRED','BACKUP_SNAPSHOT_FINALIZE',{reason:'MANIFEST_COMPLETE_FAILED'});
+    if(rolledBack)throw new Error('SNAPSHOT_FINALIZE_FAILED_ROLLED_BACK');
+    throw new Error('SNAPSHOT_FINALIZE_FAILED_RECONCILIATION_REQUIRED:'+backupId);
   }
 }
 function backupConfig_(){
