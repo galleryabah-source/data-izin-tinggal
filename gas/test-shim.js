@@ -1861,12 +1861,6 @@ const kanwilPageSource=read('KanwilEntry.html');
 assert(kanwilPageSource.includes('staging terpisah')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
 assert(kanwilPageSource.includes('@c89ece54851b0a0fe8c2fde50b7c145fe22affc2/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
 assert(!kanwilPageSource.includes('data-izin-tinggal@main/gas/'),'Kanwil browser parser never executes mutable main-branch code');
-const kanwilIdempotencyIndexBuilder=new Function(kanwilPersistenceSource+'\\nreturn kanwilBuildExistingIdempotencyIndexV1_;')();
-const kanwilIndex=kanwilIdempotencyIndexBuilder([['KEY-A','HASH-A'],['KEY-B','HASH-B']],0,1);
-assert(kanwilIndex.get('KEY-A')==='HASH-A','Kanwil persisted idempotency index preserves unique keys');
-let duplicateKanwilKeyRejected=false;try{kanwilIdempotencyIndexBuilder([['KEY-A','HASH-A'],['KEY-A','HASH-B']],0,1);}catch(e){duplicateKanwilKeyRejected=/KANWIL_STAGING_IDEMPOTENCY_KEY_DUPLICATE/.test(e.message);}
-assert(duplicateKanwilKeyRejected,'Kanwil import fails closed when persisted idempotency keys are duplicated');
-assert(kanwilPersistenceSource.includes("sourceRowRaw=row.sourceRowNumber===undefined||row.sourceRowNumber===null||row.sourceRowNumber===''?index+1:row.sourceRowNumber"),'Kanwil import does not silently replace an explicitly supplied invalid source row number');
 
 assert(kanwilPageSource.includes('saveKanwilApplication')&&kanwilPageSource.includes('saveKanwilImportBatch')&&kanwilPageSource.includes('listKanwilApplications'),'Kanwil UI persists manual and parsed file records and loads the staging queue');
 assert(kanwilPageSource.includes('reviewKanwilApplication')&&kanwilPageSource.includes('commitKanwilApplication'),'Kanwil UI exposes guarded review and isolated finalization actions');
@@ -1886,6 +1880,13 @@ assert(kanwilServiceSource.indexOf('Preflight every existing tab before creating
 assert(kanwilServiceSource.includes("reviewOnlyScreenshot:true"),'Kanwil screenshot intake remains explicitly review-only');
 assert(kanwilServiceSource.includes("'review_state','state','revision'"),'Kanwil staging schema persists the lifecycle state used by queue and review RPCs');
 const kanwilPersistenceSource=read('KanwilPersistenceService.gs');
+const kanwilIdempotencyIndexBuilder=new Function(kanwilPersistenceSource+'\\nreturn kanwilBuildExistingIdempotencyIndexV1_;')();
+const kanwilIndex=kanwilIdempotencyIndexBuilder([['KEY-A','HASH-A'],['KEY-B','HASH-B']],0,1);
+assert(kanwilIndex.get('KEY-A')==='HASH-A','Kanwil persisted idempotency index preserves unique keys');
+let duplicateKanwilKeyRejected=false;try{kanwilIdempotencyIndexBuilder([['KEY-A','HASH-A'],['KEY-A','HASH-B']],0,1);}catch(e){duplicateKanwilKeyRejected=/KANWIL_STAGING_IDEMPOTENCY_KEY_DUPLICATE/.test(e.message);}
+assert(duplicateKanwilKeyRejected,'Kanwil import fails closed when persisted idempotency keys are duplicated');
+assert(kanwilPersistenceSource.includes("sourceRowRaw=row.sourceRowNumber===undefined||row.sourceRowNumber===null||row.sourceRowNumber===''?index+1:row.sourceRowNumber"),'Kanwil import does not silently replace an explicitly supplied invalid source row number');
+
 assert(kanwilPersistenceSource.includes("function saveKanwilApplication(payload)")&&kanwilPersistenceSource.includes("function saveKanwilImportBatch(payload)")&&kanwilPersistenceSource.includes("function commitKanwilApplication(stagingId,reason)"),'Kanwil isolated staging persistence and finalization endpoints exist');
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
 assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil persistence endpoints require authenticated back-office access');
