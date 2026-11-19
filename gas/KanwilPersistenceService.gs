@@ -118,6 +118,101 @@ function saveKanwilApplication(payload){
     return {ok:true,batchId,stagingId,state:'REVIEW_REQUIRED',idempotent:false};
   }finally{lock.releaseLock();}
 }
+function saveKanwilImportBatch(payload){
+  const user=requireBackOfficeAccess_(),ss=kanwilRequireReady_(),x=payload&&typeof payload==='object'?payload:{};
+  const source=x.sourceFile&&typeof x.sourceFile==='object'?x.sourceFile:{},channel=String(x.sourceChannel||'').toUpperCase();
+  if(!['CSV','EXCEL','SCREENSHOT','CAMERA_PHOTO'].includes(channel))throw new Error('KANWIL_SOURCE_CHANNEL_INVALID');
+  const fileName=String(source.name||'').replace(/[\/\\]/g,'_').slice(0,255);
+  const sha=String(source.sha256||'').toLowerCase(),size=Number(source.size||0),mime=String(source.mime||'').slice(0,120);
+  if(!fileName||! /^[a-f0-9]{64}$/.test(sha))throw new Error('KANWIL_SOURCE_FILE_METADATA_INVALID');
+  if(!Number.isSafeInteger(size)||size<1||size>20*1024*1024)throw new Error('KANWIL_SOURCE_FILE_SIZE_INVALID');
+  const records=Array.isArray(x.records)?x.records:[];
+  if(!records.length||records.length>500)throw new Error('KANWIL_IMPORT_ROW_LIMIT');
+  const scope=String(PropertiesService.getScriptProperties().getProperty('KANWIL_SCOPE_ID')||'').trim();
+  if(!scope)throw new Error('KANWIL_SCOPE_ID_NOT_CONFIGURED');
+  const contractVersion='KANWIL_PERMIT_APPLICATION_V1',parserVersion=String(x.parserVersion||'browser-parser-v1').slice(0,80);
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try{
+    const sheets=kanwilSheets_(ss),files=sheets.files.getDataRange().getValues(),fh=kanwilHeader_(sheets.files);
+    const previous=files.slice(1).find(r=>String(r[fh.source_file_sha256]||'').toLowerCase()===sha&&String(r[fh.parser_version]||'')===parserVersion);
+    if(previous)return {ok:true,batchId:String(previous[fh.batch_id]),fileId:String(previous[fh.file_id]),idempotent:true};
+    const stagingValues=sheets.staging.getDataRange().getValues(),sh=kanwilHeader_(sheets.staging);
+    const existingKeys=new Map(stagingValues.slice(1).map(r=>[String(r[sh.idempotency_key]||''),String(r[sh.payload_sha256]||'')]));
+    const batchId=Utilities.getUuid(),fileId=Utilities.getUuid(),correlationId=Utilities.getUuid(),now=nowIso_();
+    const stageRows=[],eventRows=[],seenApplications=new Set();
+    let validCount=0,invalidCount=0;
+    records.forEach((record,index)=>{
+      const row=record&&typeof record==='object'?record:{},sourceRow=Number(row.sourceRowNumber||index+1);
+      if(!Number.isInteger(sourceRow)||sourceRow<1)throw new Error('KANWIL_SOURCE_ROW_NUMBER_INVALID');
+      const raw=kanwilLoosePayloadV1_(row.rawValues||row.values||row.normalizedValues||{});
+      const normalized=kanwilLoosePayloadV1_(row.normalizedValues||row.values||row.rawValues||{});
+      const descriptor=buildKanwilIdempotencyDescriptorV1({kanwilScopeId:scope,sourceFileSha256:sha,
+        contractVersion,parserVersion,sourceRowNumber:sourceRow});
+      if(!descriptor.ok)throw new Error(descriptor.reason);
+      const key=descriptor.key,hash=kanwilHashV1_(normalized);
+      if(existingKeys.has(key)){
+        if(existingKeys.get(key)!==hash)throw new Error('KANWIL_IMPORT_IDEMPOTENCY_CONFLICT');
+        return;
+      }
+      let errors=[];
+      try{kanwilPayloadV1_({values:normalized});}
+      catch(error){errors.push(String(error&&error.message||error));}
+      const appNo=String(normalized.nomor_permohonan||'').trim();
+      if(appNo&&seenApplications.has(appNo))errors.push('DUPLICATE_APPLICATION_NUMBER_IN_BATCH');
+      if(appNo)seenApplications.add(appNo);
+      if(appNo&&stagingValues.slice(1).some(r=>{
+        let saved={};try{saved=JSON.parse(String(r[sh.normalized_values_json]||'{}'));}catch(e){}
+        return String(saved.nomor_permohonan||'')===appNo&&String(r[sh.state]||'')!=='REJECTED';
+      }))errors.push('DUPLICATE_APPLICATION_NUMBER_EXISTING');
+      const warnings=Array.isArray(row.warnings)?row.warnings.slice(0,50):[];
+      const state=errors.length?'VALIDATION_REQUIRED':'REVIEW_REQUIRED';
+      if(errors.length)invalidCount++;else validCount++;
+      const stagingId=Utilities.getUuid();
+      const valuesByKey={
+        staging_id:stagingId,batch_id:batchId,file_id:fileId,source_row_number:sourceRow,idempotency_key:key,
+        contract_version:contractVersion,raw_values_json:JSON.stringify(raw),normalized_values_json:JSON.stringify(normalized),
+        validation_errors_json:JSON.stringify(errors),validation_warnings_json:JSON.stringify(warnings),
+        review_state:'PENDING',revision:1,payload_sha256:hash,created_by:user.email,created_at:now,updated_at:now
+      };
+      stageRows.push(KANWIL_STAGING_SHEETS_V1.staging.map(k=>valuesByKey[k]??''));
+      eventRows.push([Utilities.getUuid(),' ',stagingId,1,'FILE_IMPORT_ROW','',state,1,hash,user.email,
+        errors.join('; ').slice(0,500),correlationId,now]);
+    });
+    if(!stageRows.length)return {ok:true,batchId:null,fileId:null,inserted:0,idempotent:true};
+    const batchValues={
+      batch_id:batchId,kanwil_scope_id:scope,source_channel:channel,contract_version:contractVersion,
+      parser_version:parserVersion,source_exported_at:String(x.sourceExportedAt||''),source_authorization_ref:'',
+      created_by:user.email,created_at:now,state:invalidCount?'VALIDATION_REQUIRED':'REVIEW_REQUIRED',
+      file_count:1,record_count:stageRows.length,correlation_id:correlationId
+    };
+    const batchRow=KANWIL_STAGING_SHEETS_V1.batches.map(k=>batchValues[k]??'');
+    const fileValues={file_id:fileId,batch_id:batchId,source_filename:fileName,source_file_sha256:sha,
+      source_file_mime:mime,source_file_size:size,source_row_count:records.length,parser_version:parserVersion,
+      processing_state:'PARSED',created_by:user.email,created_at:now};
+    const fileRow=KANWIL_STAGING_SHEETS_V1.files.map(k=>fileValues[k]??'');
+    const checkpoint=kanwilCheckpointV1_(sheets,['batches','files','staging','events','audit']);
+    try{
+      sheets.batches.appendRow(batchRow);sheets.files.appendRow(fileRow);
+      sheets.staging.getRange(sheets.staging.getLastRow()+1,1,stageRows.length,stageRows[0].length).setValues(stageRows);
+      sheets.events.getRange(sheets.events.getLastRow()+1,1,eventRows.length,eventRows[0].length).setValues(eventRows);
+      kanwilAppendAuditV1_(sheets,batchId,'','',user.email,'FILE_IMPORT','Imported '+stageRows.length+' rows; '+invalidCount+' require validation',correlationId);
+    }catch(error){
+      try{kanwilRollbackV1_(sheets,checkpoint);}catch(rollbackError){}
+      throw new Error('KANWIL_IMPORT_WRITE_FAILED: '+String(error&&error.message||error));
+    }
+    return {ok:true,batchId,fileId,inserted:stageRows.length,validCount,invalidCount,state:invalidCount?'VALIDATION_REQUIRED':'REVIEW_REQUIRED'};
+  }finally{lock.releaseLock();}
+}
+function kanwilLoosePayloadV1_(input){
+  const x=input&&typeof input==='object'&&!Array.isArray(input)?input:{},out={};
+  KANWIL_APPLICATION_FIELDS_V1.forEach(key=>{
+    const value=x[key]===undefined||x[key]===null?'':String(x[key]).trim();
+    if(value.length>500)throw new Error('KANWIL_FIELD_TOO_LONG: '+key);
+    out[key]=value||null;
+  });
+  return out;
+}
+
 function listKanwilApplications(filters){
   requireBackOfficeAccess_();const ss=kanwilRequireReady_(),sheets=kanwilSheets_(ss),f=filters||{};
   const values=sheets.staging.getDataRange().getValues();if(values.length<2)return {ok:true,rows:[]};
