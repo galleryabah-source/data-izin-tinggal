@@ -47,14 +47,14 @@ const map=api.sanitizePublicTvMap_({
   datasetKey:'RESIDENCE_PERMIT_SERVICE_MONTHLY',
   rowCount:1,metric:'total',
   filters:{periode:'2026-01',kantor_imigrasi:'KANIM TEST',metric:'total',userEmail:'private@example.com'},
-  markers:[{kantor_imigrasi:'KANIM TEST',latitude:-6.9,longitude:107.6,total:12,metricValue:12,rows:1,address:'private address',email:'private@example.com',rawRow:['x']}],
+  markers:[{kantor_imigrasi:'KANIM TEST',latitude:-6.9,longitude:107.6,total:12,metricValue:12,rows:1,address:'private address',email:'private@example.com',rawRow:['x']},{kantor_imigrasi:'KANIM NO COORD',latitude:null,longitude:'',total:0,metricValue:0,rows:0}],
   rawRows:[['x']]
 });
 assert.deepEqual(map,{
   datasetKey:'RESIDENCE_PERMIT_SERVICE_MONTHLY',
   rowCount:1,metric:'total',
   filters:{periode:'2026-01',kantor_imigrasi:'KANIM TEST',metric:'total'},
-  markers:[{kantor_imigrasi:'KANIM TEST',latitude:-6.9,longitude:107.6,total:12,metricValue:12,rows:1}]
+  markers:[{kantor_imigrasi:'KANIM TEST',latitude:-6.9,longitude:107.6,total:12,metricValue:12,rows:1},{kantor_imigrasi:'KANIM NO COORD',latitude:null,longitude:null,total:0,metricValue:0,rows:0}]
 },'Public map projection strips unapproved marker and identity fields');
 
 assert.deepEqual(api.getPublicTvRunningTexts(),[],
