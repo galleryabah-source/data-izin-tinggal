@@ -1893,10 +1893,14 @@ assert(kanwilServiceSource.includes("enabled:false") && kanwilServiceSource.incl
 assert(kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID") && kanwilServiceSource.includes("KANWIL_STAGING_MUST_BE_SEPARATE_FROM_CANONICAL"),'Kanwil staging requires a separate spreadsheet identity');
 assert(kanwilServiceSource.includes("requireBackOfficeAccess_()") && kanwilServiceSource.includes("function provisionKanwilStagingSchema_"),'Kanwil schema provisioning is a private back-office guarded helper');
 assert(kanwilServiceSource.includes("reviewOnlyScreenshot:true"),'Kanwil screenshot intake remains explicitly review-only');
+assert(kanwilServiceSource.includes("'review_state','state','revision'"),'Kanwil staging schema persists the lifecycle state used by queue and review RPCs');
 const kanwilPersistenceSource=read('KanwilPersistenceService.gs');
 assert(kanwilPersistenceSource.includes("function saveKanwilApplication(payload)")&&kanwilPersistenceSource.includes("function saveKanwilImportBatch(payload)")&&kanwilPersistenceSource.includes("function commitKanwilApplication(stagingId,reason)"),'Kanwil isolated staging persistence and finalization endpoints exist');
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
 assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil persistence endpoints require authenticated back-office access');
+assert(kanwilPersistenceSource.includes("review_state:'PENDING',state:'REVIEW_REQUIRED'"),'Manual Kanwil intake persists an explicit review lifecycle state');
+assert(kanwilPersistenceSource.includes("review_state:'PENDING',state,payload_sha256:hash"),'File imports persist validation/review state with the staged row');
+assert(kanwilPersistenceSource.includes('normalized=kanwilPayloadV1_({values:normalized})'),'File imports store server-canonicalized fields after validation');
 const kanwilPayloadValidator=new Function(kanwilPersistenceSource+'\nreturn kanwilPayloadV1_;')();
 const validKanwilPayload=kanwilPayloadValidator({values:{nomor_permohonan:'001-ABC',nama:'UJI',jenis_kelamin:'MALE',tanggal_lahir:'1980-01-01'}});
 assert(validKanwilPayload.nomor_permohonan==='001-ABC'&&validKanwilPayload.nama==='UJI','Kanwil server payload validator preserves application identifiers and required fields');
