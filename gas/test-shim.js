@@ -1913,7 +1913,7 @@ let impossibleKanwilDateRejected=false;try{kanwilPayloadValidator({values:{nomor
 assert(impossibleKanwilDateRejected,'Kanwil server payload validator rejects impossible calendar dates');
 let impossibleKanwilDateTimeRejected=false;try{kanwilPayloadValidator({values:{nomor_permohonan:'004',nama:'UJI',tanggal_permohonan:'2026-02-31T10:00'}});}catch(e){impossibleKanwilDateTimeRejected=/KANWIL_DATETIME_INVALID/.test(e.message);}
 assert(impossibleKanwilDateTimeRejected,'Kanwil server payload validator rejects impossible calendar datetimes');
-const kanwilCellSanitizer=new Function(kanwilPersistenceSource+'\nreturn kanwilSafeCellTextV1_;')();
+const kanwilCellSanitizer=new Function(kanwilPersistenceSource+String.fromCharCode(10)+'return kanwilSafeCellTextV1_;')();')();
 assert(kanwilCellSanitizer('=IMPORTXML(1)')==="'=IMPORTXML(1)",'Kanwil audit and file metadata cell text is protected from spreadsheet formula injection');
 const kanwilAnalytics=require('./KanwilAnalyticsContract.js');
 const kanwilSampleRows=[
