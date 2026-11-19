@@ -1,7 +1,8 @@
 /**
  * Kanwil isolated staging foundation.
- * Private helpers only: no google.script.run endpoint is exposed in this phase.
- * Screenshot/OCR remains browser-local review-only and is not accepted here.
+ * Storage provisioning/readiness helpers for the isolated Kanwil staging store.
+ * RPC persistence endpoints live in KanwilPersistenceService.gs; screenshot OCR
+ * is performed locally and its extracted candidate rows require human review.
  */
 const KANWIL_STAGING_GUARD_V1=Object.freeze({
   enabled:false,
