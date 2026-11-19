@@ -1911,7 +1911,7 @@ assert(kanwilServiceSource.includes("reconciliations:['reconciliation_id','batch
 assert(kanwilPersistenceSource.includes('function reconcileKanwilBatch(batchId)'),'Kanwil exposes a batch reconciliation RPC');
 assert(kanwilPersistenceSource.includes("KANWIL_RECONCILIATION_WRITE_FAILED")&&kanwilPersistenceSource.includes("'BATCH_RECONCILIATION'"),'Kanwil reconciliation snapshots and audit are written with rollback protection');
 assert(read('RpcManifest.js').includes("reconcileKanwilBatch:{access:'protected',permission:'backoffice.access'}"),'Kanwil batch reconciliation RPC is protected by back-office permission');
-const kanwilReconcileHelpers=new Function('Utilities',kanwilPersistenceSource+'\\nreturn {kanwilBuildBatchReconciliationV1_};')({
+const kanwilReconcileHelpers=new Function('Utilities',kanwilPersistenceSource+'\nreturn {kanwilBuildBatchReconciliationV1_};')({
   DigestAlgorithm:{SHA_256:'SHA_256'},Charset:{UTF_8:'UTF_8'},computeDigest:()=>[1,2,3]
 });
 const kanwilReconBatch={batch_id:'B1',file_count:1,record_count:2};
