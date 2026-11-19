@@ -167,7 +167,7 @@ function getServiceMap_(datasetKey,filters,totalColumn){
   const markers={};
   rows.forEach(r=>{
     const office=officeOf_(r),reference=byOffice[office];if(!reference)throw new Error('OFFICE_REFERENCE_MISSING_FOR_DATASET: '+office);
-    const lat=Number(reference[ri.latitude]),lng=Number(reference[ri.longitude]);if(!Number.isFinite(lat)||!Number.isFinite(lng))throw new Error('OFFICE_REFERENCE_COORDINATE_INVALID: '+office);
+    const lat=parseOfficeCoordinate_(reference[ri.latitude],-90,90),lng=parseOfficeCoordinate_(reference[ri.longitude],-180,180);if(lat===null||lng===null)throw new Error('OFFICE_REFERENCE_COORDINATE_INVALID: '+office);
     if(!markers[office])markers[office]={office_key:String(reference[ri.office_key]||''),kantor_imigrasi:office,address:String(reference[ri.address]||''),latitude:lat,longitude:lng,source_url:String(reference[ri.source_url]||''),total:0,metricValue:0,rows:0};
     markers[office].total+=totalValueOf_(r);
     markers[office].metricValue+=Number(r[metricIndex]||0);
