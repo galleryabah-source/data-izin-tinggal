@@ -65,6 +65,7 @@ function sanitizePublicTvDashboard_(d){
 }
 
 function sanitizePublicTvMap_(m){
+  const coordinate_=value=>{if(value===null||value===undefined||String(value).trim()==='')return null;const n=Number(value);return Number.isFinite(n)?n:null;};
   return {
     datasetKey:String(m.datasetKey||''),
     rowCount:Number(m.rowCount||0),
@@ -76,8 +77,8 @@ function sanitizePublicTvMap_(m){
     },
     markers:(m.markers||[]).map(x=>({
       kantor_imigrasi:String(x.kantor_imigrasi||''),
-      latitude:Number(x.latitude),
-      longitude:Number(x.longitude),
+      latitude:coordinate_(x.latitude),
+      longitude:coordinate_(x.longitude),
       total:Number(x.total||0),
       metricValue:Number(x.metricValue||0),
       rows:Number(x.rows||0)
