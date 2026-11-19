@@ -154,6 +154,7 @@ const backupCode=read('BackupService.gs');
 const pureBackup=new Function(backupCode+'\nreturn {normalizeDriveFolderId_};')();
 assert(pureBackup.normalizeDriveFolderId_('1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg')==='1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg','raw Drive folder ID');
 assert(pureBackup.normalizeDriveFolderId_('https://drive.google.com/drive/folders/1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg?usp=sharing')==='1b6GMIv-zc10m4YTAqJRRD9tLBJu2VIVg','Drive folder URL normalization');
+assert(backupCode.indexOf("appendAudit_('BACKUP_SNAPSHOT_FINALIZE'")<backupCode.indexOf("setSnapshotManifestStatusV1_(x.manifest,'COMPLETE')"),'Snapshot manifest cannot become COMPLETE before the final audit append succeeds');
 assert(backupCode.includes('function verifyResidencePermitSnapshot(snapshotSpreadsheetId)'), 'snapshot verification endpoint exists');
 assert(backupCode.includes('SNAPSHOT_NOT_FOUND'), 'snapshot verification handles missing snapshot');
 assert(backupCode.includes('content_sha256'), 'snapshot verification checks manifest checksum');
@@ -174,7 +175,7 @@ function snapshotFinalizeFixture(options){
   };
   const api=new Function('appendAudit_','DriveApp','SpreadsheetApp',backupCode+'\nreturn finalizeSnapshotCreationV1_;')(
     (action,dataset,snapshot,count,status,details)=>{
-      auditEvents.push({action,status,details});
+      auditEvents.push({action,status,details,manifestStatus:state[1][1]});
       if(options&&options.failAudit&&action==='BACKUP_SNAPSHOT_CREATE')throw new Error('AUDIT_WRITE_FAILED');
       if(options&&options.failFinalAudit&&action==='BACKUP_SNAPSHOT_FINALIZE'&&status==='SUCCESS')throw new Error('FINAL_AUDIT_WRITE_FAILED');
     },
@@ -187,6 +188,7 @@ const snapshotFinalizeOk=snapshotFinalizeFixture({});
 snapshotFinalizeOk.run();
 assert(snapshotFinalizeOk.state[1][1]==='COMPLETE'&&!snapshotFinalizeOk.trashed(),'Snapshot becomes COMPLETE only after creation and finalization audit events succeed');
 assert(snapshotFinalizeOk.auditEvents[0].status==='PENDING_FINALIZATION'&&snapshotFinalizeOk.auditEvents[1].status==='SUCCESS','Snapshot audit distinguishes prepared creation from completed finalization');
+assert(snapshotFinalizeOk.auditEvents[1].manifestStatus==='FINALIZING','Finalization audit is durable while manifest is still non-COMPLETE');
 const snapshotAuditFailure=snapshotFinalizeFixture({failAudit:true});
 let snapshotAuditRollback=false;try{snapshotAuditFailure.run();}catch(e){snapshotAuditRollback=e.message==='SNAPSHOT_AUDIT_FAILED_ROLLED_BACK';}
 assert(snapshotAuditRollback&&snapshotAuditFailure.trashed()&&snapshotAuditFailure.state[1][1]==='AUDIT_FAILED_RECONCILIATION_REQUIRED','Creation audit failure invalidates and trashes the artifact');
