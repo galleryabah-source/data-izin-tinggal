@@ -108,9 +108,9 @@ function createPassportServiceSnapshot(){
   dataSheet.setName('PASSPORT_SERVICE_MONTHLY');
   dataSheet.getRange(1,1,values.length,values[0].length).setValues(normalized);dataSheet.setFrozenRows(1);
   const manifest=backup.insertSheet('SNAPSHOT_MANIFEST');manifest.getRange(1,1,1,2).setValues([['key','value']]);
-  manifest.getRange(2,1,10,2).setValues([['snapshot_id',snapshotId],['created_at',timestamp],['dataset_key','PASSPORT_SERVICE_MONTHLY'],['schema_version',String(d.contract.version)],['schema_signature',String(d.registryRow[d.registryIndex.schema_signature]||'')],['source_spreadsheet_id',source.getId()],['source_sheet',d.sheetName],['row_count',rowCount],['content_sha256',checksum],['status','COMPLETE']]);manifest.setFrozenRows(1);
+  manifest.getRange(2,1,10,2).setValues([['snapshot_id',snapshotId],['created_at',timestamp],['dataset_key','PASSPORT_SERVICE_MONTHLY'],['schema_version',String(d.contract.version)],['schema_signature',String(d.registryRow[d.registryIndex.schema_signature]||'')],['source_spreadsheet_id',source.getId()],['source_sheet',d.sheetName],['row_count',rowCount],['content_sha256',checksum],['status','AUDIT_PENDING']]);manifest.setFrozenRows(1);
   const folder=DriveApp.getFolderById(cfg.folderId),file=DriveApp.getFileById(backupId);folder.addFile(file);try{DriveApp.getRootFolder().removeFile(file);}catch(e){}
-  appendAudit_('BACKUP_SNAPSHOT_CREATE','PASSPORT_SERVICE_MONTHLY',snapshotId,rowCount,'SUCCESS',JSON.stringify({backupSpreadsheetId:backupId,filename,checksum,folderId:cfg.folderId}));
+  finalizeSnapshotCreationV1_({manifest,backupId,datasetKey:'PASSPORT_SERVICE_MONTHLY',snapshotId,rowCount,details:{backupSpreadsheetId:backupId,filename,checksum,folderId:cfg.folderId}});
   return {ok:true,snapshotId,backupSpreadsheetId:backupId,filename,rowCount,checksum,folderId:cfg.folderId};
 }
 
@@ -160,10 +160,10 @@ function createPassportServiceMonthly2025Snapshot(){
   manifest.getRange(2,1,10,2).setValues([
     ['snapshot_id',snapshotId],['created_at',timestamp],['dataset_key',datasetKey],['schema_version',String(d.contract.version)],
     ['schema_signature',String(d.registryRow[d.registryIndex.schema_signature]||'')],['source_spreadsheet_id',source.getId()],
-    ['source_sheet',d.sheetName],['row_count',rowCount],['content_sha256',checksum],['status','COMPLETE']
+    ['source_sheet',d.sheetName],['row_count',rowCount],['content_sha256',checksum],['status','AUDIT_PENDING']
   ]);manifest.setFrozenRows(1);
   const folder=DriveApp.getFolderById(cfg.folderId),file=DriveApp.getFileById(backupId);folder.addFile(file);try{DriveApp.getRootFolder().removeFile(file);}catch(e){}
-  appendAudit_('BACKUP_SNAPSHOT_CREATE',datasetKey,snapshotId,rowCount,'SUCCESS',JSON.stringify({backupSpreadsheetId:backupId,filename,checksum,folderId:cfg.folderId}));
+  finalizeSnapshotCreationV1_({manifest,backupId,datasetKey,snapshotId,rowCount,details:{backupSpreadsheetId:backupId,filename,checksum,folderId:cfg.folderId}});
   return {ok:true,snapshotId,backupSpreadsheetId:backupId,filename,rowCount,checksum,folderId:cfg.folderId};
 }
 
