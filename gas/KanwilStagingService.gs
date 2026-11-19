@@ -40,7 +40,7 @@ function kanwilStagingReadinessV1_(){
       const actual=sh.getRange(1,1,1,headers.length).getValues()[0].map(String);
       if(actual.join('|')!==headers.join('|')||sh.getFrozenRows()!==1)return {ready:false,reason:'KANWIL_SCHEMA_MISSING_OR_MISMATCH',sheet:name};
     }
-    return {ready:true,spreadsheetId:id,enabled:false,writeEndpointsExposed:false};
+    return {ready:true,enabled:kanwilEntryEnabled_(),writeEndpointsExposed:true};
   }catch(error){return {ready:false,reason:String(error&&error.message||error)};}
 }
 /**
