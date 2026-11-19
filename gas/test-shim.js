@@ -2026,3 +2026,26 @@ assert(!JSON.stringify(kanwilWorkspace).includes('RAHASIA A'),'Kanwil analytics 
 
 
 
+
+
+assert(kanwilPersistenceSource.includes('function inspectKanwilRecovery(batchId)'),'Kanwil exposes a protected read-only recovery inspection RPC');
+assert(read('RpcManifest.js').includes("inspectKanwilRecovery:{access:'protected',permission:'backoffice.access'}"),'Kanwil recovery inspection RPC requires back-office permission');
+assert(kanwilPersistenceSource.includes("mode:'DRY_RUN'")&&kanwilPersistenceSource.includes('mutationsApplied:false')&&kanwilPersistenceSource.includes('canonicalWrites:false'),'Kanwil recovery inspection explicitly guarantees dry-run with no canonical writes');
+const kanwilRecoveryBuilder=new Function(kanwilPersistenceSource+'\nreturn kanwilBuildRecoveryInspectionV1_;')();
+const recoveryBatch={batch_id:'RB1',file_count:1,record_count:2};
+const recoveryFiles=[{batch_id:'RB1',file_id:'RF1'}];
+const recoveryStage=[
+ {batch_id:'RB1',staging_id:'RS1',file_id:'RF1',idempotency_key:'DUP',state:'COMMITTED',revision:2},
+ {batch_id:'RB1',staging_id:'RS2',file_id:'MISSING-FILE',idempotency_key:'DUP',state:'REVIEW_REQUIRED',revision:1}
+];
+const recoveryRecords=[{record_id:'RR1',source_staging_id:'RS1'}];
+const recoveryEvents=[{event_id:'RE1',staging_id:'MISSING-STAGE',event_type:'REVIEW_APPROVE'}];
+const recoveryRevisions=[{revision_id:'RV1',staging_id:'MISSING-STAGE',revision:2}];
+const recoveryAudit=[{audit_id:'RA1',batch_id:'RB1',staging_id:'MISSING-STAGE'}];
+const recoveryInspection=kanwilRecoveryBuilder(recoveryBatch,recoveryFiles,recoveryStage,recoveryRecords,recoveryEvents,recoveryRevisions,recoveryAudit);
+assert(recoveryInspection.mode==='DRY_RUN'&&recoveryInspection.mutationsApplied===false&&recoveryInspection.canonicalWrites===false,'Kanwil recovery inspection is explicitly non-mutating');
+assert(recoveryInspection.findings.some(x=>x.code==='STAGING_FILE_REFERENCE_ORPHAN'),'Kanwil recovery inspection detects orphan file references');
+assert(recoveryInspection.findings.some(x=>x.code==='DUPLICATE_IDEMPOTENCY_KEY'),'Kanwil recovery inspection detects duplicate idempotency keys');
+assert(recoveryInspection.findings.some(x=>x.code==='COMMITTED_RECORD_CARDINALITY'),'Kanwil recovery inspection detects committed staging/record inconsistency');
+assert(recoveryInspection.findings.some(x=>x.code==='EVENT_STAGING_ORPHAN')&&recoveryInspection.findings.some(x=>x.code==='REVISION_STAGING_ORPHAN')&&recoveryInspection.findings.some(x=>x.code==='AUDIT_STAGING_ORPHAN'),'Kanwil recovery inspection detects orphan event, revision, and audit references');
+assert(recoveryInspection.recoveryPlan.every(x=>x.automatic===false&&x.requiresOwnerApproval===true),'Kanwil recovery plan contains only owner-reviewed manual actions');
