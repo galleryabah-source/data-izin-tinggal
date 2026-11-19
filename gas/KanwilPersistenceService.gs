@@ -68,6 +68,13 @@ function kanwilAppendEventV1_(sheets,recordId,stagingId,eventType,fromState,toSt
   sheets.events.appendRow([Utilities.getUuid(),recordId||'',stagingId||'',sequence,eventType,fromState||'',toState,
     revision,hash,actor,kanwilSafeCellTextV1_(reason||''),correlationId,nowIso_()]);
 }
+function kanwilResolveBatchScopeV1_(batchRows,batchHeader,batchId,configuredScope){
+  const matches=batchRows.slice(1).filter(row=>String(row[batchHeader.batch_id]||'')===String(batchId));
+  if(matches.length!==1)throw new Error(matches.length?'KANWIL_BATCH_ID_NOT_UNIQUE':'KANWIL_BATCH_NOT_FOUND');
+  const persistedScope=String(matches[0][batchHeader.kanwil_scope_id]||'').trim();
+  if(!persistedScope||persistedScope!==String(configuredScope||'').trim())throw new Error('KANWIL_BATCH_SCOPE_MISMATCH');
+  return persistedScope;
+}
 function kanwilAppendAuditV1_(sheets,batchId,recordId,stagingId,actor,action,reason,correlationId,fileId){
   sheets.audit.appendRow([Utilities.getUuid(),batchId||'',fileId||'',recordId||'',stagingId||'',actor,action,kanwilSafeCellTextV1_(reason||''),correlationId,nowIso_()]);
 }
@@ -270,8 +277,10 @@ function commitKanwilApplication(stagingId,reason){
     const sheets=kanwilSheets_(ss),v=sheets.staging.getDataRange().getValues(),h=kanwilHeader_(sheets.staging);
     const index=v.findIndex((r,i)=>i>0&&String(r[h.staging_id])===id);if(index<1)throw new Error('KANWIL_STAGING_NOT_FOUND');
     const row=v[index],state=String(row[h.state]),payload=JSON.parse(String(row[h.normalized_values_json]||'{}'));
-    const scope=String(PropertiesService.getScriptProperties().getProperty('KANWIL_SCOPE_ID')||'').trim();
-    if(!scope)throw new Error('KANWIL_SCOPE_ID_NOT_CONFIGURED');
+    const configuredScope=String(PropertiesService.getScriptProperties().getProperty('KANWIL_SCOPE_ID')||'').trim();
+    if(!configuredScope)throw new Error('KANWIL_SCOPE_ID_NOT_CONFIGURED');
+    const batchValues=sheets.batches.getDataRange().getValues(),batchHeader=kanwilHeader_(sheets.batches);
+    const scope=kanwilResolveBatchScopeV1_(batchValues,batchHeader,String(row[h.batch_id]),configuredScope);
     if(state==='COMMITTED')return {ok:true,stagingId:id,state:'COMMITTED',idempotent:true};
     if(state!=='APPROVED')throw new Error('KANWIL_APPROVAL_REQUIRED');
     const records=sheets.records.getDataRange().getValues(),rh=kanwilHeader_(sheets.records);
