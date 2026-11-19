@@ -1890,6 +1890,11 @@ assert(kanwilPersistenceSource.includes("sourceRowRaw=row.sourceRowNumber===unde
 assert(kanwilPersistenceSource.includes("function saveKanwilApplication(payload)")&&kanwilPersistenceSource.includes("function saveKanwilImportBatch(payload)")&&kanwilPersistenceSource.includes("function commitKanwilApplication(stagingId,reason)"),'Kanwil isolated staging persistence and finalization endpoints exist');
 assert(kanwilServiceSource.includes("revisions:['revision_id','staging_id','revision','prior_payload_sha256','payload_sha256','prior_payload_json','payload_json','reason','actor_id','created_at','correlation_id']"),'Kanwil storage provisions an append-only revision history sheet');
 assert(kanwilPersistenceSource.includes('function reviseKanwilApplication(stagingId,expectedRevision,payload,reason)'),'Kanwil revision endpoint requires an expected revision and reason');
+assert(kanwilPersistenceSource.includes("KANWIL_REVISION_ACTOR_NOT_ORIGINAL_SUBMITTER"),'Only the original submitter may apply a correction revision');
+assert(kanwilPageSource.includes("reviseKanwilApplication(target.stagingId,target.revision,{values},reason.trim())"),'Kanwil UI submits corrections against the exact expected revision');
+assert(kanwilPageSource.includes("function startKanwilRevision(row)")&&kanwilPageSource.includes("Koreksi / revisi"),'Kanwil queue exposes correction mode for rejected or validation-required rows');
+assert(kanwilPageSource.includes("Simpan revisi v"),'Kanwil UI labels the next revision number before submission');
+
 assert(kanwilPersistenceSource.includes("if(!['REJECTED','VALIDATION_REQUIRED'].includes(state))throw new Error('KANWIL_REVISION_STATE_NOT_ALLOWED')"),'Kanwil corrections are limited to rejected or validation-required submissions');
 assert(kanwilPersistenceSource.includes("throw new Error('KANWIL_REVISION_CONFLICT')"),'Kanwil revision endpoint rejects stale concurrent edits');
 assert(kanwilPersistenceSource.includes("kanwilAppendEventV1_(sheets,'',id,'REVISION_SUBMITTED'")&&kanwilPersistenceSource.includes("user.email,'REVISION_SUBMITTED',why"),'Every Kanwil revision records a lifecycle event and audit entry');
