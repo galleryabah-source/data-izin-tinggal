@@ -189,14 +189,16 @@ function saveKanwilImportBatch(payload){
       const descriptor=buildKanwilIdempotencyDescriptorV1({kanwilScopeId:scope,sourceFileSha256:sha,
         contractVersion,parserVersion,sourceRowNumber:sourceRow});
       if(!descriptor.ok)throw new Error(descriptor.reason);
-      const key=descriptor.key,hash=kanwilHashV1_(normalized);
+      const key=descriptor.key;
+      let errors=[];
+      try{normalized=kanwilPayloadV1_({values:normalized});}
+      catch(error){errors.push(String(error&&error.message||error));}
+      // Hash the exact server-normalized payload that is persisted below.
+      const hash=kanwilHashV1_(normalized);
       if(existingKeys.has(key)){
         if(existingKeys.get(key)!==hash)throw new Error('KANWIL_IMPORT_IDEMPOTENCY_CONFLICT');
         return;
       }
-      let errors=[];
-      try{normalized=kanwilPayloadV1_({values:normalized});}
-      catch(error){errors.push(String(error&&error.message||error));}
       const appNo=String(normalized.nomor_permohonan||'').trim();
       if(appNo&&seenApplications.has(appNo))errors.push('DUPLICATE_APPLICATION_NUMBER_IN_BATCH');
       if(appNo)seenApplications.add(appNo);
