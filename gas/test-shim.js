@@ -1894,7 +1894,7 @@ assert(kanwilPersistenceSource.includes("if(!['REJECTED','VALIDATION_REQUIRED'].
 assert(kanwilPersistenceSource.includes("throw new Error('KANWIL_REVISION_CONFLICT')"),'Kanwil revision endpoint rejects stale concurrent edits');
 assert(kanwilPersistenceSource.includes("kanwilAppendEventV1_(sheets,'',id,'REVISION_SUBMITTED'")&&kanwilPersistenceSource.includes("user.email,'REVISION_SUBMITTED',why"),'Every Kanwil revision records a lifecycle event and audit entry');
 assert(kanwilPersistenceSource.includes("throw new Error('KANWIL_APPROVAL_EVIDENCE_MISSING')")&&kanwilPersistenceSource.includes("latestReview[eventHeader.actor_id]"),'Kanwil finalization requires persisted approval evidence and a distinct reviewer');
-const kanwilRevisionHelpers=new Function(kanwilPersistenceSource+'\\nreturn {kanwilLatestReviewEventV1_};')();
+const kanwilRevisionHelpers=new Function(kanwilPersistenceSource+'\nreturn {kanwilLatestReviewEventV1_};')();
 const kanwilEventHeaders=['event_id','record_id','staging_id','event_sequence','event_type','from_state','to_state','revision','payload_sha256','actor_id','reason','correlation_id','occurred_at'];
 const kanwilEventRows=[kanwilEventHeaders,['E1','','S1',1,'REVIEW_REJECT','REVIEW_REQUIRED','REJECTED',1,'H1','reviewer@example.gov.id','','C1','T1'],['E2','','S1',2,'REVISION_SUBMITTED','REJECTED','REVIEW_REQUIRED',2,'H2','operator@example.gov.id','','C2','T2'],['E3','','S1',3,'REVIEW_APPROVE','REVIEW_REQUIRED','APPROVED',2,'H2','reviewer2@example.gov.id','','C3','T3']];
 const kanwilLatestReview=kanwilRevisionHelpers.kanwilLatestReviewEventV1_({events:{getDataRange:()=>({getValues:()=>kanwilEventRows})}},'S1');
