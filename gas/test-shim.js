@@ -2038,7 +2038,7 @@ const recoveryStage=[
  {batch_id:'RB1',staging_id:'RS1',file_id:'RF1',idempotency_key:'DUP',state:'COMMITTED',revision:2},
  {batch_id:'RB1',staging_id:'RS2',file_id:'MISSING-FILE',idempotency_key:'DUP',state:'REVIEW_REQUIRED',revision:1}
 ];
-const recoveryRecords=[{record_id:'RR1',source_staging_id:'RS1'}];
+const recoveryRecords=[];
 const recoveryEvents=[{event_id:'RE1',staging_id:'MISSING-STAGE',event_type:'REVIEW_APPROVE'}];
 const recoveryRevisions=[{revision_id:'RV1',staging_id:'MISSING-STAGE',revision:2}];
 const recoveryAudit=[{audit_id:'RA1',batch_id:'RB1',staging_id:'MISSING-STAGE'}];
