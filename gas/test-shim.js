@@ -1898,7 +1898,7 @@ const kanwilPersistenceSource=read('KanwilPersistenceService.gs');
 assert(kanwilPersistenceSource.includes("function saveKanwilApplication(payload)")&&kanwilPersistenceSource.includes("function saveKanwilImportBatch(payload)")&&kanwilPersistenceSource.includes("function commitKanwilApplication(stagingId,reason)"),'Kanwil isolated staging persistence and finalization endpoints exist');
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
 assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil persistence endpoints require authenticated back-office access');
-const kanwilBatchScopeResolver=new Function(kanwilPersistenceSource+'\\nreturn kanwilResolveBatchScopeV1_;')();
+const kanwilBatchScopeResolver=new Function(kanwilPersistenceSource+'\nreturn kanwilResolveBatchScopeV1_;')();
 const kanwilBatchHeader={batch_id:0,kanwil_scope_id:1};
 assert(kanwilBatchScopeResolver([['BATCH-1','KANWIL-JABAR']],kanwilBatchHeader,'BATCH-1','KANWIL-JABAR')==='KANWIL-JABAR','Kanwil finalization resolves scope from the persisted intake batch');
 let kanwilScopeMismatchRejected=false;try{kanwilBatchScopeResolver([['BATCH-1','KANWIL-JABAR']],kanwilBatchHeader,'BATCH-1','KANWIL-BALI');}catch(e){kanwilScopeMismatchRejected=/KANWIL_BATCH_SCOPE_MISMATCH/.test(e.message);}
