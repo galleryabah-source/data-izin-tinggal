@@ -118,15 +118,15 @@ function getPublicTvMpasporQuota(){
         office_key:String(r[ri.office_key]||''),
         kantor_imigrasi:name,
         address:String(r[ri.address]||''),
-        latitude:Number(r[ri.latitude]),
-        longitude:Number(r[ri.longitude]),
+        latitude:parseOfficeCoordinate_(r[ri.latitude],-90,90),
+        longitude:parseOfficeCoordinate_(r[ri.longitude],-180,180),
         source_url:String(r[ri.source_url]||'')
       };
     }
   });
   const markers=d.offices.map((o,index)=>{
     const ref=byOffice[o.kantor_imigrasi];
-    if(!ref||!Number.isFinite(ref.latitude)||!Number.isFinite(ref.longitude)){
+    if(!ref||ref.latitude===null||ref.longitude===null){
       throw new Error('OFFICE_REFERENCE_MISSING_FOR_QUOTA: '+o.kantor_imigrasi);
     }
     return Object.assign({},ref,{
