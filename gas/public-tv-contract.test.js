@@ -14,7 +14,7 @@ const filters=api.sanitizePublicTvFilters_({
   spreadsheetId:'private-sheet'
 });
 assert.deepEqual(filters,{
-  periode:'2026-11-',
+  periode:'2026-11',
   kantor_imigrasi:'X'.repeat(200),
   metric:'Y'.repeat(80)
 },'Public TV filters are bounded and only supported fields survive');
