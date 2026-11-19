@@ -9,7 +9,8 @@ The Kanwil workspace is an application-intake workflow based on the existing 17-
 - Manual entry sends the 17 whitelisted fields to authenticated Apps Script RPC.
 - CSV/XLSX and browser OCR results can be explicitly saved as structured rows after local parsing and operator review.
 - Original file bytes are not uploaded. Only file metadata, SHA-256, parser output, source row number, and validation evidence are stored.
-- Each imported row enters `REVIEW_REQUIRED` or `VALIDATION_REQUIRED`.
+- Each imported row enters `REVIEW_REQUIRED` or `VALIDATION_REQUIRED`; the lifecycle `state` is persisted independently from `review_state` so queue, review, and finalization do not infer state from an unrelated column.
+- Import rows are normalized again on the server; impossible calendar dates, duplicate physical source-row numbers, and duplicate application numbers are rejected or routed to validation.
 - A different back-office user must approve/reject the row.
 - Finalization writes to `KANWIL_RECORDS` in the dedicated Kanwil spreadsheet only.
 - No Residence/Passport monthly dataset, registry, importer, Daily Input, or historical baseline is modified.
@@ -29,7 +30,7 @@ The staging spreadsheet must contain six sheets with exact headers provisioned b
 
 - `KANWIL_BATCHES`
 - `KANWIL_FILES`
-- `KANWIL_STAGING`
+- `KANWIL_STAGING` (includes explicit `review_state`, `state`, and `revision` columns)
 - `KANWIL_RECORDS`
 - `KANWIL_EVENTS`
 - `KANWIL_AUDIT`
@@ -64,6 +65,7 @@ Private provisioning, validation, hashing, checkpoint, and rollback helpers end 
 
 - This PR does not set production Script Properties, create a Drive spreadsheet, modify Drive ACLs, or deploy Apps Script.
 - Screenshot/OCR values remain machine-extracted candidates and require human review. Each file import request is limited to 500 parsed rows and each source file is limited to 20 MB; larger source files must be split before intake.
-- Original file bytes remain in the user's browser; only the extracted structured fields and file checksum/metadata are sent to staging.
+- Original file bytes remain in the user's browser; only extracted structured fields and client-calculated file checksum/metadata are sent to staging. Because bytes are not uploaded, the checksum is an idempotency hint, not server-side proof that the source file bytes match the claimed digest.
+- User-controlled file metadata and audit reasons are neutralized before being written into spreadsheet cells to prevent formula injection.
 - Google Sheets does not provide cross-sheet ACID transactions. Writes use Script Lock, checkpoints, rollback attempts, idempotency keys, and audit events; consistency verification is still required after partial failures.
 - The feature flag remains OFF by default. A green CI result is not runtime UAT or production certification.
