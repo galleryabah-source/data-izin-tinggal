@@ -1969,3 +1969,40 @@ assert(!JSON.stringify(kanwilWorkspace).includes('RAHASIA A'),'Kanwil analytics 
 
 
 
+
+
+/* Public M-Paspor quota endpoint must expose only its documented public projection. */
+const mpasporQuotaSource=read('MpasporQuotaService.gs');
+const publicQuotaEndpoint=new Function(
+  'getDb_',
+  'quotaFixture',
+  mpasporQuotaSource+"\n"+
+    "buildMpasporQuotaDashboard_=()=>quotaFixture;\n"+
+    'return getPublicTvMpasporQuota;'
+)(
+  ()=>({getSheetByName:()=>({
+    getDataRange:()=>({getValues:()=>[
+      ['office_key','kantor_imigrasi','address','latitude','longitude','source_url','contact_email','private_note','status'],
+      ['KANIM-UJI','KANIM UJI','Alamat kantor publik',-6.9,107.6,'https://example.test/source','private@example.gov.id','DO NOT EXPOSE','VERIFIED']
+    ]})
+  })}),
+  {
+    datasetKey:'PASSPORT_MPASPOR_QUOTA',period:'2026-10',periodLabel:'Oktober 2026',
+    sourceDocument:'public quota source',officeCount:1,
+    totals:{mpaspor:3205,overall:3760,ratio:3205/3760},
+    offices:[{rank:1,kantor_imigrasi:'KANIM UJI',mpaspor:320,overall:440,ratio:320/440,
+      locations:[{name:'PRIVATE LOCATION NOTE',note:'PRIVATE NOTE'}]}]
+  }
+);
+const publicQuota=publicQuotaEndpoint();
+const publicQuotaJson=JSON.stringify(publicQuota);
+assert(publicQuota.offices.length===1&&publicQuota.offices[0].mpaspor===320,
+  'Public M-Paspor quota endpoint retains approved office-level quota aggregates');
+assert(publicQuota.markers.length===1&&publicQuota.markers[0].latitude===-6.9,
+  'Public M-Paspor quota endpoint retains verified public GIS coordinates');
+assert(!['private@example.gov.id','DO NOT EXPOSE','PRIVATE LOCATION NOTE','PRIVATE NOTE'].some(x=>publicQuotaJson.includes(x)),
+  'Public M-Paspor quota endpoint strips unrelated private reference fields and location notes');
+assert(Object.keys(publicQuota.offices[0]).sort().join(',')==='kantor_imigrasi,mpaspor,overall,rank,ratio',
+  'Public M-Paspor office payload is restricted to the explicit aggregate allowlist');
+assert(Object.keys(publicQuota.markers[0]).sort().join(',')==='address,kantor_imigrasi,latitude,longitude,metricValue,office_key,quotaIndex,rows,source_url,total',
+  'Public M-Paspor map marker payload is restricted to the explicit public reference allowlist');
