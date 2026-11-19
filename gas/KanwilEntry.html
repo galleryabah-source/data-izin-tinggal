@@ -177,10 +177,11 @@ function loadKanwilQueue(){
    number.textContent=row.values.nomor_permohonan||'—';name.textContent=row.values.nama||'—';status.textContent=row.state+(row.validationErrors&&row.validationErrors.length?' — '+row.validationErrors.join('; '):'');
    if(row.state==='REVIEW_REQUIRED'){
     [['Setujui','APPROVE'],['Tolak','REJECT']].forEach(([label,decision])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',()=>actKanwil(row.stagingId,decision));actions.append(b);});
-   }else if(row.state==='VALIDATION_REQUIRED'){
-    const b=document.createElement('button');b.type='button';b.textContent='Tolak data tidak valid';b.addEventListener('click',()=>actKanwil(row.stagingId,'REJECT'));actions.append(b);
    }else if(row.state==='REJECTED'||row.state==='VALIDATION_REQUIRED'){
     const b=document.createElement('button');b.type='button';b.textContent='Koreksi / revisi';b.addEventListener('click',()=>startKanwilRevision(row));actions.append(b);
+    if(row.state==='VALIDATION_REQUIRED'){
+     const reject=document.createElement('button');reject.type='button';reject.textContent='Tolak data tidak valid';reject.addEventListener('click',()=>actKanwil(row.stagingId,'REJECT'));actions.append(reject);
+    }
    }else if(row.state==='APPROVED'){
     const b=document.createElement('button');b.type='button';b.textContent='Finalisasi';b.addEventListener('click',()=>actKanwil(row.stagingId,'COMMIT'));actions.append(b);
    }
