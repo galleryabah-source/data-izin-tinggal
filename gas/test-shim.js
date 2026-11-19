@@ -1927,6 +1927,10 @@ assert(kanwilPersistenceSource.includes("sheets.staging.getRange(index+1,h.updat
 assert(kanwilPersistenceSource.includes("review_state:'PENDING',state:'REVIEW_REQUIRED'"),'Manual Kanwil intake persists an explicit review lifecycle state');
 assert(kanwilPersistenceSource.includes("review_state:'PENDING',state,payload_sha256:hash"),'File imports persist validation/review state with the staged row');
 assert(kanwilPersistenceSource.includes('normalized=kanwilPayloadV1_({values:normalized})'),'File imports store server-canonicalized fields after validation');
+const kanwilImportNormalizeAt=kanwilPersistenceSource.indexOf('normalized=kanwilPayloadV1_({values:normalized})');
+const kanwilImportHashAt=kanwilPersistenceSource.indexOf('const hash=kanwilHashV1_(normalized)',kanwilImportNormalizeAt);
+assert(kanwilImportNormalizeAt>=0&&kanwilImportHashAt>kanwilImportNormalizeAt,'Kanwil import checksum is computed from the exact server-normalized payload that is persisted');
+
 assert(kanwilPersistenceSource.includes('seenSourceRows.has(sourceRow)'),'File import rejects duplicate physical source row numbers');
 assert(kanwilPersistenceSource.includes('validationErrors:JSON.parse'),'Kanwil queue exposes server-side validation errors for operator review');
 assert(kanwilPersistenceSource.includes("correlationId,fileId)"),'Kanwil file-import audit event retains its source file identity');
