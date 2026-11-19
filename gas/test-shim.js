@@ -89,6 +89,8 @@ const workspaceIdentity=(email,values)=>{
 const validWorkspace=workspaceIdentity('Admin@EXAMPLE.GOV.ID',{INTAL_WORKSPACE_IDENTITY_ENFORCEMENT:'true',INTAL_WORKSPACE_ALLOWED_DOMAINS:'example.gov.id'});
 assert(validWorkspace.getWorkspaceIdentityV1_().email==='admin@example.gov.id','Workspace identity normalizes email');
 assert(validWorkspace.getWorkspaceIdentityV1_().domain==='example.gov.id','Workspace identity checks exact domain');
+const multiDomainWorkspace=workspaceIdentity('admin@other.gov.id',{INTAL_WORKSPACE_IDENTITY_ENFORCEMENT:'true',INTAL_WORKSPACE_ALLOWED_DOMAINS:'example.gov.id; other.gov.id,third.gov.id'});
+assert(multiDomainWorkspace.getWorkspaceIdentityV1_().domain==='other.gov.id','Workspace domain allowlist splits comma, semicolon, and whitespace delimiters');
 let missingWorkspaceIdentity=false;
 try{workspaceIdentity('',{INTAL_WORKSPACE_IDENTITY_ENFORCEMENT:'true',INTAL_WORKSPACE_ALLOWED_DOMAINS:'example.gov.id'}).getWorkspaceIdentityV1_();}catch(e){missingWorkspaceIdentity=String(e.message)==='UNAUTHENTICATED';}
 assert(missingWorkspaceIdentity,'Workspace identity rejects missing active-user email');
