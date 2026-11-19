@@ -163,7 +163,7 @@ const passportGovernanceBackup=read('PassportGovernanceService.gs');
 assert((passportGovernanceBackup.match(/\['status','AUDIT_PENDING'\]/g)||[]).length===2,'Both Passport snapshot creators start in AUDIT_PENDING');
 assert((passportGovernanceBackup.match(/finalizeSnapshotCreationV1_\(/g)||[]).length===2,'Both Passport snapshot creators use the shared audit finalizer');
 function snapshotFinalizeFixture(options){
-  const state=[['key','value'],['status','AUDIT_PENDING']];
+  const state=[['key','value'],['status','AUDIT_PENDING']],auditEvents=[];
   let trashed=false;
   const manifest={
     getDataRange:()=>({getValues:()=>state}),
@@ -173,25 +173,35 @@ function snapshotFinalizeFixture(options){
     }})
   };
   const api=new Function('appendAudit_','DriveApp','SpreadsheetApp',backupCode+'\nreturn finalizeSnapshotCreationV1_;')(
-    ()=>{if(options&&options.failAudit)throw new Error('AUDIT_WRITE_FAILED');},
+    (action,dataset,snapshot,count,status,details)=>{
+      auditEvents.push({action,status,details});
+      if(options&&options.failAudit&&action==='BACKUP_SNAPSHOT_CREATE')throw new Error('AUDIT_WRITE_FAILED');
+      if(options&&options.failFinalAudit&&action==='BACKUP_SNAPSHOT_FINALIZE'&&status==='SUCCESS')throw new Error('FINAL_AUDIT_WRITE_FAILED');
+    },
     {getFileById:()=>({setTrashed:()=>{if(options&&options.failTrash)throw new Error('TRASH_FAILED');trashed=true;}})},
     {flush:()=>{}}
   );
-  return {run:()=>api({manifest,backupId:'snapshot-test-id',datasetKey:'TEST',snapshotId:'snapshot-id',rowCount:1,details:{}}),state,trashed:()=>trashed};
+  return {run:()=>api({manifest,backupId:'snapshot-test-id',datasetKey:'TEST',snapshotId:'snapshot-id',rowCount:1,details:{}}),state,trashed:()=>trashed,auditEvents};
 }
 const snapshotFinalizeOk=snapshotFinalizeFixture({});
 snapshotFinalizeOk.run();
-assert(snapshotFinalizeOk.state[1][1]==='COMPLETE'&&!snapshotFinalizeOk.trashed(),'Snapshot becomes COMPLETE only after creation audit succeeds');
+assert(snapshotFinalizeOk.state[1][1]==='COMPLETE'&&!snapshotFinalizeOk.trashed(),'Snapshot becomes COMPLETE only after creation and finalization audit events succeed');
+assert(snapshotFinalizeOk.auditEvents[0].status==='PENDING_FINALIZATION'&&snapshotFinalizeOk.auditEvents[1].status==='SUCCESS','Snapshot audit distinguishes prepared creation from completed finalization');
 const snapshotAuditFailure=snapshotFinalizeFixture({failAudit:true});
 let snapshotAuditRollback=false;try{snapshotAuditFailure.run();}catch(e){snapshotAuditRollback=e.message==='SNAPSHOT_AUDIT_FAILED_ROLLED_BACK';}
-assert(snapshotAuditRollback&&snapshotAuditFailure.trashed()&&snapshotAuditFailure.state[1][1]==='AUDIT_FAILED_RECONCILIATION_REQUIRED','Audit failure marks snapshot invalid and trashes the artifact when cleanup succeeds');
+assert(snapshotAuditRollback&&snapshotAuditFailure.trashed()&&snapshotAuditFailure.state[1][1]==='AUDIT_FAILED_RECONCILIATION_REQUIRED','Creation audit failure invalidates and trashes the artifact');
 const snapshotAuditOrphan=snapshotFinalizeFixture({failAudit:true,failTrash:true});
 let snapshotReconciliationRequired=false;try{snapshotAuditOrphan.run();}catch(e){snapshotReconciliationRequired=e.message==='SNAPSHOT_AUDIT_FAILED_RECONCILIATION_REQUIRED:snapshot-test-id';}
 assert(snapshotReconciliationRequired&&!snapshotAuditOrphan.trashed()&&snapshotAuditOrphan.state[1][1]==='AUDIT_FAILED_RECONCILIATION_REQUIRED','Failed cleanup leaves an explicitly invalid artifact and returns its reconciliation ID');
 const snapshotManifestFailure=snapshotFinalizeFixture({failComplete:true});
-let snapshotFinalizeReconciliation=false;try{snapshotManifestFailure.run();}catch(e){snapshotFinalizeReconciliation=e.message==='SNAPSHOT_FINALIZE_FAILED_RECONCILIATION_REQUIRED:snapshot-test-id';}
-assert(snapshotFinalizeReconciliation&&snapshotManifestFailure.state[1][1]==='AUDIT_PENDING','Manifest finalization failure never reports a snapshot as complete');
-
+let snapshotFinalizeRollback=false;try{snapshotManifestFailure.run();}catch(e){snapshotFinalizeRollback=e.message==='SNAPSHOT_FINALIZE_FAILED_ROLLED_BACK';}
+assert(snapshotFinalizeRollback&&snapshotManifestFailure.trashed()&&snapshotManifestFailure.state[1][1]==='FINALIZATION_FAILED_RECONCILIATION_REQUIRED','Manifest finalization failure writes a compensating failure event and rolls back the artifact');
+const snapshotFinalAuditFailure=snapshotFinalizeFixture({failFinalAudit:true});
+let snapshotFinalAuditRollback=false;try{snapshotFinalAuditFailure.run();}catch(e){snapshotFinalAuditRollback=e.message==='SNAPSHOT_FINAL_AUDIT_FAILED_ROLLED_BACK';}
+assert(snapshotFinalAuditRollback&&snapshotFinalAuditFailure.trashed()&&snapshotFinalAuditFailure.state[1][1]==='FINAL_AUDIT_FAILED_RECONCILIATION_REQUIRED','Final audit failure invalidates and rolls back a manifest already marked complete');
+const snapshotFinalAuditOrphan=snapshotFinalizeFixture({failFinalAudit:true,failTrash:true});
+let snapshotFinalAuditReconciliation=false;try{snapshotFinalAuditOrphan.run();}catch(e){snapshotFinalAuditReconciliation=e.message==='SNAPSHOT_FINAL_AUDIT_FAILED_RECONCILIATION_REQUIRED:snapshot-test-id';}
+assert(snapshotFinalAuditReconciliation&&!snapshotFinalAuditOrphan.trashed()&&snapshotFinalAuditOrphan.state[1][1]==='FINAL_AUDIT_FAILED_RECONCILIATION_REQUIRED','Final audit and cleanup failures expose an explicit reconciliation identity');
 
 const configPerf=read('Config.gs');
 assert(configPerf.includes('CacheService.getScriptCache()'),'Backend read cache uses Apps Script CacheService');
