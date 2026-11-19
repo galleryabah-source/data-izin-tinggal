@@ -1861,6 +1861,7 @@ const kanwilPageSource=read('KanwilEntry.html');
 assert(kanwilPageSource.includes('staging terpisah')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
 assert(kanwilPageSource.includes('@c89ece54851b0a0fe8c2fde50b7c145fe22affc2/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
 assert(!kanwilPageSource.includes('data-izin-tinggal@main/gas/'),'Kanwil browser parser never executes mutable main-branch code');
+assert(kanwilPageSource.includes('sourceRowNumber:record.sourceRowNumber!==undefined?record.sourceRowNumber:(record.sourceRowIndex!==undefined?record.sourceRowIndex:null)'),'Kanwil UI preserves explicit invalid source row numbers for server-side rejection');
 
 assert(kanwilPageSource.includes('saveKanwilApplication')&&kanwilPageSource.includes('saveKanwilImportBatch')&&kanwilPageSource.includes('listKanwilApplications'),'Kanwil UI persists manual and parsed file records and loads the staging queue');
 assert(kanwilPageSource.includes('reviewKanwilApplication')&&kanwilPageSource.includes('commitKanwilApplication'),'Kanwil UI exposes guarded review and isolated finalization actions');
