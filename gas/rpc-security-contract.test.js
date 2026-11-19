@@ -144,16 +144,4 @@ for (const [name, policy] of Object.entries(manifest)) {
       'RPC without an inline guard delegates before performing direct storage/service effects: ' + name);
   }
 }
-console.log('RPC security contract passed: '+declared.size+' callable functions, '+Object.keys(manifest).length+' manifest entries.');') + '\\\\1\\\\s*\\\\)');
-  const guard = guardPattern.exec(root);
-  const effects = [...executableRoot.matchAll(directEffectPattern)];
-  if (guard) {
-    const firstEffect = effects[0];
-    assert(!firstEffect || guard.index < firstEffect.index,
-      'RPC authorization precedes direct storage/service side effects: ' + name);
-  } else {
-    assert.equal(effects.length, 0,
-      'RPC without an inline guard delegates before performing direct storage/service effects: ' + name);
-  }
-}
 console.log('RPC security contract passed: '+declared.size+' callable functions, '+Object.keys(manifest).length+' manifest entries.');
