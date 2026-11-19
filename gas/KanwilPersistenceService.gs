@@ -147,12 +147,23 @@ function saveKanwilImportBatch(payload){
   try{
     const sheets=kanwilSheets_(ss),files=sheets.files.getDataRange().getValues(),fh=kanwilHeader_(sheets.files);
     const batchRows=sheets.batches.getDataRange().getValues(),batchHeader=kanwilHeader_(sheets.batches);
-    const previous=files.slice(1).find(r=>{
-      if(String(r[fh.source_file_sha256]||'').toLowerCase()!==sha||String(r[fh.parser_version]||'')!==parserVersion)return false;
-      const parent=batchRows.slice(1).find(b=>String(b[batchHeader.batch_id]||'')===String(r[fh.batch_id]||''));
-      return !!parent&&String(parent[batchHeader.kanwil_scope_id]||'').trim()===scope&&String(parent[batchHeader.source_channel]||'').toUpperCase()===channel;
-    });
-    if(previous)return {ok:true,batchId:String(previous[fh.batch_id]),fileId:String(previous[fh.file_id]),idempotent:true};
+    const priorFileMatches=files.slice(1).filter(r=>
+      String(r[fh.source_file_sha256]||'').toLowerCase()===sha&&
+      String(r[fh.parser_version]||'')===parserVersion
+    );
+    if(priorFileMatches.length>1)throw new Error('KANWIL_FILE_IDENTITY_NOT_UNIQUE');
+    if(priorFileMatches.length===1){
+      const previous=priorFileMatches[0],parentMatches=batchRows.slice(1).filter(b=>
+        String(b[batchHeader.batch_id]||'')===String(previous[fh.batch_id]||'')
+      );
+      if(parentMatches.length!==1)throw new Error('KANWIL_FILE_PARENT_BATCH_INVALID');
+      const parent=parentMatches[0];
+      if(String(parent[batchHeader.kanwil_scope_id]||'').trim()!==scope||
+         String(parent[batchHeader.source_channel]||'').toUpperCase()!==channel)
+        throw new Error('KANWIL_FILE_IDENTITY_SCOPE_OR_CHANNEL_CONFLICT');
+      if(!String(previous[fh.file_id]||'').trim())throw new Error('KANWIL_FILE_IDENTITY_INVALID');
+      return {ok:true,batchId:String(previous[fh.batch_id]),fileId:String(previous[fh.file_id]),idempotent:true};
+    }
     const stagingValues=sheets.staging.getDataRange().getValues(),sh=kanwilHeader_(sheets.staging);
     const existingKeys=new Map(stagingValues.slice(1).map(r=>[String(r[sh.idempotency_key]||''),String(r[sh.payload_sha256]||'')]));
     const batchId=Utilities.getUuid(),fileId=Utilities.getUuid(),correlationId=Utilities.getUuid(),now=nowIso_();
@@ -299,14 +310,17 @@ function commitKanwilApplication(stagingId,reason){
       source_staging_id:id,correlation_id:correlationId
     }[k]??''));
     const checkpoint=kanwilCheckpointV1_(sheets,['records','events','audit']);
+    const previousUpdatedAt=String(row[h.updated_at]||'');
     try{
       sheets.records.appendRow(recordRow);
       sheets.staging.getRange(index+1,h.state+1).setValue('COMMITTED');
+      sheets.staging.getRange(index+1,h.updated_at+1).setValue(now);
       kanwilAppendEventV1_(sheets,recordId,id,'COMMIT','APPROVED','COMMITTED',Number(row[h.revision]),hash,user.email,why,correlationId);
       kanwilAppendAuditV1_(sheets,String(row[h.batch_id]),recordId,id,user.email,'COMMIT',why,correlationId);
     }catch(error){
       try{kanwilRollbackV1_(sheets,checkpoint);}catch(rollbackError){}
       sheets.staging.getRange(index+1,h.state+1).setValue(state);
+      sheets.staging.getRange(index+1,h.updated_at+1).setValue(previousUpdatedAt);
       throw new Error('KANWIL_COMMIT_RECOVERY_REQUIRED: '+String(error&&error.message||error));
     }
     return {ok:true,recordId,stagingId:id,state:'COMMITTED'};
