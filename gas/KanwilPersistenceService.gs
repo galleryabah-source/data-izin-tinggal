@@ -286,6 +286,7 @@ function reviseKanwilApplication(stagingId,expectedRevision,payload,reason){
     const {r:row,i:index}=matches[0],state=String(row[h.state]||''),currentRevision=Number(row[h.revision]||0);
     if(currentRevision!==expected)throw new Error('KANWIL_REVISION_CONFLICT');
     if(!['REJECTED','VALIDATION_REQUIRED'].includes(state))throw new Error('KANWIL_REVISION_STATE_NOT_ALLOWED');
+    if(String(row[h.created_by]||'').toLowerCase()!==String(user.email||'').toLowerCase())throw new Error('KANWIL_REVISION_ACTOR_NOT_ORIGINAL_SUBMITTER');
     const latestReview=kanwilLatestReviewEventV1_(sheets,id);
     if(latestReview&&String(latestReview[kanwilHeader_(sheets.events).actor_id]||'').toLowerCase()===String(user.email||'').toLowerCase())
       throw new Error('KANWIL_SEPARATION_OF_DUTIES');
