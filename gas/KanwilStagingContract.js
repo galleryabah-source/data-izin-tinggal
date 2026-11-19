@@ -22,7 +22,7 @@ function createKanwilStagingEnvelopeV1(input) {
   const x=input||{};
   if(!x.batchId||!x.fileId||!x.sourceChannel||!x.sourceRowNumber||!x.contractVersion)
     return {ok:false,reason:'STAGING_ENVELOPE_REQUIRED_FIELDS_MISSING'};
-  if(!['EXCEL','CSV','SCREENSHOT','CAMERA_PHOTO'].includes(x.sourceChannel))
+  if(!['MANUAL','EXCEL','CSV','SCREENSHOT','CAMERA_PHOTO'].includes(x.sourceChannel))
     return {ok:false,reason:'SOURCE_CHANNEL_INVALID'};
   if(!x.rawValues||!x.normalizedValues||!x.fieldEvidence)
     return {ok:false,reason:'STAGING_EVIDENCE_REQUIRED'};
