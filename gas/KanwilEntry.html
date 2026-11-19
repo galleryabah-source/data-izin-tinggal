@@ -122,7 +122,7 @@ async function persistKanwilFiles(){
    const digest=await crypto.subtle.digest('SHA-256',await file.arrayBuffer());
    const sha=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
    const records=item.records.map(record=>({
-    sourceRowNumber:Number(record.sourceRowNumber||record.sourceRowIndex||1),
+    sourceRowNumber:record.sourceRowNumber!==undefined?record.sourceRowNumber:(record.sourceRowIndex!==undefined?record.sourceRowIndex:null),
     rawValues:record.rawValues||record.normalizedValues||record.values||{},
     normalizedValues:record.normalizedValues||record.values||{},
     warnings:record.warnings||[]
