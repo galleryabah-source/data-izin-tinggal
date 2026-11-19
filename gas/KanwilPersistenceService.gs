@@ -55,6 +55,16 @@ function kanwilHashV1_(value){
   const bytes=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,JSON.stringify(value),Utilities.Charset.UTF_8);
   return bytes.map(b=>(b<0?b+256:b).toString(16).padStart(2,'0')).join('');
 }
+function kanwilBuildExistingIdempotencyIndexV1_(rows,keyIndex,hashIndex){
+  const index=new Map();
+  (rows||[]).forEach(row=>{
+    const key=String(row[keyIndex]||'');
+    if(!key)return;
+    if(index.has(key))throw new Error('KANWIL_STAGING_IDEMPOTENCY_KEY_DUPLICATE');
+    index.set(key,String(row[hashIndex]||''));
+  });
+  return index;
+}
 function kanwilCheckpointV1_(sheets,names){const out={};names.forEach(name=>out[name]=sheets[name].getLastRow());return out;}
 function kanwilRollbackV1_(sheets,checkpoint){
   Object.keys(checkpoint).reverse().forEach(name=>{
@@ -165,12 +175,12 @@ function saveKanwilImportBatch(payload){
       return {ok:true,batchId:String(previous[fh.batch_id]),fileId:String(previous[fh.file_id]),idempotent:true};
     }
     const stagingValues=sheets.staging.getDataRange().getValues(),sh=kanwilHeader_(sheets.staging);
-    const existingKeys=new Map(stagingValues.slice(1).map(r=>[String(r[sh.idempotency_key]||''),String(r[sh.payload_sha256]||'')]));
+    const existingKeys=kanwilBuildExistingIdempotencyIndexV1_(stagingValues.slice(1),sh.idempotency_key,sh.payload_sha256);
     const batchId=Utilities.getUuid(),fileId=Utilities.getUuid(),correlationId=Utilities.getUuid(),now=nowIso_();
     const stageRows=[],eventRows=[],seenApplications=new Set(),seenSourceRows=new Set();
     let validCount=0,invalidCount=0;
     records.forEach((record,index)=>{
-      const row=record&&typeof record==='object'?record:{},sourceRow=Number(row.sourceRowNumber||index+1);
+      const row=record&&typeof record==='object'?record:{},sourceRowRaw=row.sourceRowNumber===undefined||row.sourceRowNumber===null||row.sourceRowNumber===''?index+1:row.sourceRowNumber,sourceRow=Number(sourceRowRaw);
       if(!Number.isInteger(sourceRow)||sourceRow<1)throw new Error('KANWIL_SOURCE_ROW_NUMBER_INVALID');
       if(seenSourceRows.has(sourceRow))throw new Error('KANWIL_DUPLICATE_SOURCE_ROW_NUMBER');
       seenSourceRows.add(sourceRow);
