@@ -1911,6 +1911,10 @@ let kanwilDateRejected=false;try{kanwilPayloadValidator({values:{nomor_permohona
 assert(kanwilDateRejected,'Kanwil server payload validator rejects ambiguous birth dates');
 let impossibleKanwilDateRejected=false;try{kanwilPayloadValidator({values:{nomor_permohonan:'003',nama:'UJI',tanggal_lahir:'2026-99-99'}});}catch(e){impossibleKanwilDateRejected=/KANWIL_DATE_INVALID/.test(e.message);}
 assert(impossibleKanwilDateRejected,'Kanwil server payload validator rejects impossible calendar dates');
+let impossibleKanwilDateTimeRejected=false;try{kanwilPayloadValidator({values:{nomor_permohonan:'004',nama:'UJI',tanggal_permohonan:'2026-02-31T10:00'}});}catch(e){impossibleKanwilDateTimeRejected=/KANWIL_DATETIME_INVALID/.test(e.message);}
+assert(impossibleKanwilDateTimeRejected,'Kanwil server payload validator rejects impossible calendar datetimes');
+const kanwilCellSanitizer=new Function(kanwilPersistenceSource+'\\nreturn kanwilSafeCellTextV1_;')();
+assert(kanwilCellSanitizer('=IMPORTXML(1)')==="'=IMPORTXML(1)",'Kanwil audit and file metadata cell text is protected from spreadsheet formula injection');
 const kanwilAnalytics=require('./KanwilAnalyticsContract.js');
 const kanwilSampleRows=[
  {layanan:'CONVERSION',kategori_produk:'ITAP',jenis_produk:'ITASITAP5Y_GENINVEST',kebangsaan:'SAUDI ARABIA',tujuan:'INVESTMENT',posisi_permohonan:'Produk sudah Terbit',status_permohonan:'TERBIT',nama:'RAHASIA A',tanggal_lahir:'1980-01-01',no_passport:'P123',nomor_permohonan:'001',penjamin:'RAHASIA'},
