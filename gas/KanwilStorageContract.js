@@ -13,7 +13,7 @@ const KANWIL_STORAGE_SCHEMAS_V1 = Object.freeze({
   KANWIL_IMPORT_AUDIT:['audit_id','batch_id','file_id','record_id','staging_id','actor_id','action','reason','before_ref','after_ref','correlation_id','occurred_at']
 });
 const KANWIL_STORAGE_REQUIRED_BATCH_FIELDS_V1=['batchId','kanwilScopeId','sourceChannel','contractVersion','parserVersion','createdBy','correlationId'];
-const KANWIL_STORAGE_CHANNELS_V1=['EXCEL','CSV','SCREENSHOT','CAMERA_PHOTO'];
+const KANWIL_STORAGE_CHANNELS_V1=['MANUAL','EXCEL','CSV','SCREENSHOT','CAMERA_PHOTO'];
 function createKanwilBatchDescriptorV1(input){
   const x=input||{};
   for(const key of KANWIL_STORAGE_REQUIRED_BATCH_FIELDS_V1)if(!String(x[key]||'').trim())return {ok:false,reason:'BATCH_FIELD_REQUIRED:'+key};
