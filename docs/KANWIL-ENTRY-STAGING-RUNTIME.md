@@ -63,7 +63,7 @@ Private provisioning, validation, hashing, checkpoint, and rollback helpers end 
 ## Important limitations
 
 - This PR does not set production Script Properties, create a Drive spreadsheet, modify Drive ACLs, or deploy Apps Script.
-- Screenshot/OCR values remain machine-extracted candidates and require human review.
+- Screenshot/OCR values remain machine-extracted candidates and require human review. Each file import request is limited to 500 parsed rows and each source file is limited to 20 MB; larger source files must be split before intake.
 - Original file bytes remain in the user's browser; only the extracted structured fields and file checksum/metadata are sent to staging.
 - Google Sheets does not provide cross-sheet ACID transactions. Writes use Script Lock, checkpoints, rollback attempts, idempotency keys, and audit events; consistency verification is still required after partial failures.
 - The feature flag remains OFF by default. A green CI result is not runtime UAT or production certification.
