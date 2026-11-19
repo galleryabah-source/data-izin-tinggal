@@ -35,7 +35,7 @@ The account executing provisioning must be an authorized back-office administrat
    - `KANWIL_EVENTS`
    - `KANWIL_AUDIT`
 
-The provisioning routine creates missing tabs and writes headers only into empty tabs. It does not overwrite a non-empty tab with a mismatched schema. It persists the staging spreadsheet ID only after the schema loop validates.
+The provisioning routine first preflights every existing non-empty tab, including exact header count and order, before creating or modifying any tab. If any existing tab is mismatched, provisioning stops before creating missing tabs. It then creates missing tabs and writes headers only into empty tabs; it never overwrites a non-empty tab. The staging spreadsheet ID is persisted only after all six tabs validate.
 
 ## Runtime UAT — feature flag remains OFF
 
