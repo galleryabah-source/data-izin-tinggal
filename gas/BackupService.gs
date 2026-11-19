@@ -5,25 +5,41 @@ function setSnapshotManifestStatusV1_(manifest,status){
   manifest.getRange(matches[0],2).setValue(status);
   SpreadsheetApp.flush();
 }
+function trashSnapshotArtifactV1_(backupId){
+  try{DriveApp.getFileById(backupId).setTrashed(true);SpreadsheetApp.flush();return true;}
+  catch(cleanupError){return false;}
+}
+function invalidateSnapshotArtifactV1_(p,status,action,details){
+  const x=p||{},backupId=String(x.backupId||'').trim();
+  try{setSnapshotManifestStatusV1_(x.manifest,status);}catch(markerError){}
+  try{appendAudit_(action,x.datasetKey,x.snapshotId,x.rowCount,'FAILED',JSON.stringify(details||{}));}catch(auditError){}
+  return trashSnapshotArtifactV1_(backupId);
+}
 function finalizeSnapshotCreationV1_(p){
   const x=p||{},backupId=String(x.backupId||'').trim();
   if(!backupId||!x.manifest)throw new Error('SNAPSHOT_FINALIZATION_INPUT_INVALID');
   try{
-    appendAudit_('BACKUP_SNAPSHOT_CREATE',x.datasetKey,x.snapshotId,x.rowCount,'SUCCESS',JSON.stringify(x.details||{}));
+    appendAudit_('BACKUP_SNAPSHOT_CREATE',x.datasetKey,x.snapshotId,x.rowCount,'PENDING_FINALIZATION',JSON.stringify(x.details||{}));
   }catch(auditError){
-    try{setSnapshotManifestStatusV1_(x.manifest,'AUDIT_FAILED_RECONCILIATION_REQUIRED');}catch(markerError){}
-    let trashed=false;
-    try{DriveApp.getFileById(backupId).setTrashed(true);SpreadsheetApp.flush();trashed=true;}catch(cleanupError){}
-    if(trashed)throw new Error('SNAPSHOT_AUDIT_FAILED_ROLLED_BACK');
+    const rolledBack=invalidateSnapshotArtifactV1_(x,'AUDIT_FAILED_RECONCILIATION_REQUIRED','BACKUP_SNAPSHOT_FINALIZE',{reason:'CREATE_AUDIT_FAILED'});
+    if(rolledBack)throw new Error('SNAPSHOT_AUDIT_FAILED_ROLLED_BACK');
     throw new Error('SNAPSHOT_AUDIT_FAILED_RECONCILIATION_REQUIRED:'+backupId);
   }
   try{
     setSnapshotManifestStatusV1_(x.manifest,'COMPLETE');
   }catch(finalizeError){
+    const rolledBack=invalidateSnapshotArtifactV1_(x,'FINALIZATION_FAILED_RECONCILIATION_REQUIRED','BACKUP_SNAPSHOT_FINALIZE',{reason:'MANIFEST_FINALIZATION_FAILED'});
+    if(rolledBack)throw new Error('SNAPSHOT_FINALIZE_FAILED_ROLLED_BACK');
     throw new Error('SNAPSHOT_FINALIZE_FAILED_RECONCILIATION_REQUIRED:'+backupId);
   }
+  try{
+    appendAudit_('BACKUP_SNAPSHOT_FINALIZE',x.datasetKey,x.snapshotId,x.rowCount,'SUCCESS',JSON.stringify(x.details||{}));
+  }catch(finalAuditError){
+    const rolledBack=invalidateSnapshotArtifactV1_(x,'FINAL_AUDIT_FAILED_RECONCILIATION_REQUIRED','BACKUP_SNAPSHOT_FINALIZE',{reason:'FINAL_AUDIT_FAILED'});
+    if(rolledBack)throw new Error('SNAPSHOT_FINAL_AUDIT_FAILED_ROLLED_BACK');
+    throw new Error('SNAPSHOT_FINAL_AUDIT_FAILED_RECONCILIATION_REQUIRED:'+backupId);
+  }
 }
-
 function backupConfig_(){
   const props=PropertiesService.getScriptProperties();
   return {folderId:String(props.getProperty('BACKUP_FOLDER_ID')||'').trim()};
