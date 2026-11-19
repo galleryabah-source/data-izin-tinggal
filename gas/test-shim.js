@@ -1926,6 +1926,9 @@ const kanwilReconPass=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(k
 assert(kanwilReconPass.status==='PASS'&&kanwilReconPass.stagedRows===2&&kanwilReconPass.committedRows===1,'Kanwil batch reconciliation passes when source, staging, and committed records agree');
 const kanwilReconMismatch=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(kanwilReconBatch,[{batch_id:'B1',file_id:'F1',source_row_count:3}],kanwilReconStage,kanwilReconRecords);
 assert(kanwilReconMismatch.status==='MISMATCH'&&kanwilReconMismatch.mismatches.some(x=>x.code==='SOURCE_TO_STAGING_COUNT_MISMATCH'),'Kanwil batch reconciliation fails closed when source row counts diverge from staging');
+const kanwilReconOrphan=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(kanwilReconBatch,kanwilReconFiles,
+ [{...kanwilReconStage[0],file_id:''},kanwilReconStage[1]],kanwilReconRecords);
+assert(kanwilReconOrphan.mismatches.some(x=>x.code==='STAGING_FILE_REFERENCE_ORPHAN'),'Kanwil batch reconciliation detects staged rows without a source file reference');
 
 
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
