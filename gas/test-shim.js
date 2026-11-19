@@ -1907,6 +1907,25 @@ const kanwilEventHeaders=['event_id','record_id','staging_id','event_sequence','
 const kanwilEventRows=[kanwilEventHeaders,['E1','','S1',1,'REVIEW_REJECT','REVIEW_REQUIRED','REJECTED',1,'H1','reviewer@example.gov.id','','C1','T1'],['E2','','S1',2,'REVISION_SUBMITTED','REJECTED','REVIEW_REQUIRED',2,'H2','operator@example.gov.id','','C2','T2'],['E3','','S1',3,'REVIEW_APPROVE','REVIEW_REQUIRED','APPROVED',2,'H2','reviewer2@example.gov.id','','C3','T3']];
 const kanwilLatestReview=kanwilRevisionHelpers.kanwilLatestReviewEventV1_({events:{getLastColumn:()=>kanwilEventHeaders.length,getRange:()=>({getValues:()=>[kanwilEventHeaders]}),getDataRange:()=>({getValues:()=>kanwilEventRows})}},'S1');
 assert(kanwilLatestReview[3]===3&&kanwilLatestReview[9]==='reviewer2@example.gov.id','Kanwil reviewer identity resolves from the latest persisted review event');
+assert(kanwilServiceSource.includes("reconciliations:['reconciliation_id','batch_id','status'"),'Kanwil staging schema includes append-only batch reconciliation snapshots');
+assert(kanwilPersistenceSource.includes('function reconcileKanwilBatch(batchId)'),'Kanwil exposes a batch reconciliation RPC');
+assert(kanwilPersistenceSource.includes("KANWIL_RECONCILIATION_WRITE_FAILED")&&kanwilPersistenceSource.includes("'BATCH_RECONCILIATION'"),'Kanwil reconciliation snapshots and audit are written with rollback protection');
+assert(read('RpcManifest.js').includes("reconcileKanwilBatch:{access:'protected',permission:'backoffice.access'}"),'Kanwil batch reconciliation RPC is protected by back-office permission');
+const kanwilReconcileHelpers=new Function('Utilities',kanwilPersistenceSource+'\\nreturn {kanwilBuildBatchReconciliationV1_};')({
+  DigestAlgorithm:{SHA_256:'SHA_256'},Charset:{UTF_8:'UTF_8'},computeDigest:()=>[1,2,3]
+});
+const kanwilReconBatch={batch_id:'B1',file_count:1,record_count:2};
+const kanwilReconFiles=[{batch_id:'B1',file_id:'F1',source_row_count:2}];
+const kanwilReconStage=[
+ {batch_id:'B1',staging_id:'S1',file_id:'F1',state:'REVIEW_REQUIRED',validation_errors_json:'[]'},
+ {batch_id:'B1',staging_id:'S2',file_id:'F1',state:'COMMITTED',validation_errors_json:'[]'}
+];
+const kanwilReconRecords=[{source_staging_id:'S2'}];
+const kanwilReconPass=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(kanwilReconBatch,kanwilReconFiles,kanwilReconStage,kanwilReconRecords);
+assert(kanwilReconPass.status==='PASS'&&kanwilReconPass.stagedRows===2&&kanwilReconPass.committedRows===1,'Kanwil batch reconciliation passes when source, staging, and committed records agree');
+const kanwilReconMismatch=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(kanwilReconBatch,[{batch_id:'B1',file_id:'F1',source_row_count:3}],kanwilReconStage,kanwilReconRecords);
+assert(kanwilReconMismatch.status==='MISMATCH'&&kanwilReconMismatch.mismatches.some(x=>x.code==='SOURCE_TO_STAGING_COUNT_MISMATCH'),'Kanwil batch reconciliation fails closed when source row counts diverge from staging');
+
 
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
 assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil persistence endpoints require authenticated back-office access');
