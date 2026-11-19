@@ -1898,6 +1898,15 @@ const kanwilPersistenceSource=read('KanwilPersistenceService.gs');
 assert(kanwilPersistenceSource.includes("function saveKanwilApplication(payload)")&&kanwilPersistenceSource.includes("function saveKanwilImportBatch(payload)")&&kanwilPersistenceSource.includes("function commitKanwilApplication(stagingId,reason)"),'Kanwil isolated staging persistence and finalization endpoints exist');
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
 assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil persistence endpoints require authenticated back-office access');
+const kanwilBatchScopeResolver=new Function(kanwilPersistenceSource+'\\nreturn kanwilResolveBatchScopeV1_;')();
+const kanwilBatchHeader={batch_id:0,kanwil_scope_id:1};
+assert(kanwilBatchScopeResolver([['BATCH-1','KANWIL-JABAR']],kanwilBatchHeader,'BATCH-1','KANWIL-JABAR')==='KANWIL-JABAR','Kanwil finalization resolves scope from the persisted intake batch');
+let kanwilScopeMismatchRejected=false;try{kanwilBatchScopeResolver([['BATCH-1','KANWIL-JABAR']],kanwilBatchHeader,'BATCH-1','KANWIL-BALI');}catch(e){kanwilScopeMismatchRejected=/KANWIL_BATCH_SCOPE_MISMATCH/.test(e.message);}
+assert(kanwilScopeMismatchRejected,'Kanwil finalization rejects a batch if the configured scope changed after intake');
+let kanwilMissingBatchRejected=false;try{kanwilBatchScopeResolver([['OTHER','KANWIL-JABAR']],kanwilBatchHeader,'BATCH-1','KANWIL-JABAR');}catch(e){kanwilMissingBatchRejected=/KANWIL_BATCH_NOT_FOUND/.test(e.message);}
+assert(kanwilMissingBatchRejected,'Kanwil finalization rejects staging rows without exactly one persisted parent batch');
+assert(kanwilPersistenceSource.includes('kanwilResolveBatchScopeV1_(batchValues,batchHeader,String(row[h.batch_id]),configuredScope)'),'Kanwil commit binds the finalized record to its original batch scope');
+
 assert(kanwilPersistenceSource.includes("review_state:'PENDING',state:'REVIEW_REQUIRED'"),'Manual Kanwil intake persists an explicit review lifecycle state');
 assert(kanwilPersistenceSource.includes("review_state:'PENDING',state,payload_sha256:hash"),'File imports persist validation/review state with the staged row');
 assert(kanwilPersistenceSource.includes('normalized=kanwilPayloadV1_({values:normalized})'),'File imports store server-canonicalized fields after validation');
