@@ -1880,7 +1880,7 @@ assert(kanwilServiceSource.indexOf('Preflight every existing tab before creating
 assert(kanwilServiceSource.includes("reviewOnlyScreenshot:true"),'Kanwil screenshot intake remains explicitly review-only');
 assert(kanwilServiceSource.includes("'review_state','state','revision'"),'Kanwil staging schema persists the lifecycle state used by queue and review RPCs');
 const kanwilPersistenceSource=read('KanwilPersistenceService.gs');
-const kanwilIdempotencyIndexBuilder=new Function(kanwilPersistenceSource+'\\nreturn kanwilBuildExistingIdempotencyIndexV1_;')();
+const kanwilIdempotencyIndexBuilder=new Function(kanwilPersistenceSource+'\nreturn kanwilBuildExistingIdempotencyIndexV1_;')();
 const kanwilIndex=kanwilIdempotencyIndexBuilder([['KEY-A','HASH-A'],['KEY-B','HASH-B']],0,1);
 assert(kanwilIndex.get('KEY-A')==='HASH-A','Kanwil persisted idempotency index preserves unique keys');
 let duplicateKanwilKeyRejected=false;try{kanwilIdempotencyIndexBuilder([['KEY-A','HASH-A'],['KEY-A','HASH-B']],0,1);}catch(e){duplicateKanwilKeyRejected=/KANWIL_STAGING_IDEMPOTENCY_KEY_DUPLICATE/.test(e.message);}
