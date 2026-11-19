@@ -1906,6 +1906,9 @@ assert(kanwilScopeMismatchRejected,'Kanwil finalization rejects a batch if the c
 let kanwilMissingBatchRejected=false;try{kanwilBatchScopeResolver([['batch_id','kanwil_scope_id'],['OTHER','KANWIL-JABAR']],kanwilBatchHeader,'BATCH-1','KANWIL-JABAR');}catch(e){kanwilMissingBatchRejected=/KANWIL_BATCH_NOT_FOUND/.test(e.message);}
 assert(kanwilMissingBatchRejected,'Kanwil finalization rejects staging rows without exactly one persisted parent batch');
 assert(kanwilPersistenceSource.includes('kanwilResolveBatchScopeV1_(batchValues,batchHeader,String(row[h.batch_id]),configuredScope)'),'Kanwil commit binds the finalized record to its original batch scope');
+assert(kanwilPersistenceSource.includes('kanwilResolveBatchScopeV1_(persistedBatches,persistedBatchHeader,String(existing[h.batch_id]),scope)'),'Manual intake idempotent retries remain bound to their original persisted scope');
+assert(kanwilPersistenceSource.includes("String(parent[batchHeader.kanwil_scope_id]||'').trim()===scope&&String(parent[batchHeader.source_channel]||'').toUpperCase()===channel"),'File-level idempotency is isolated by persisted Kanwil scope and source channel');
+
 
 assert(kanwilPersistenceSource.includes("review_state:'PENDING',state:'REVIEW_REQUIRED'"),'Manual Kanwil intake persists an explicit review lifecycle state');
 assert(kanwilPersistenceSource.includes("review_state:'PENDING',state,payload_sha256:hash"),'File imports persist validation/review state with the staged row');
