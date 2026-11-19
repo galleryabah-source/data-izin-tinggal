@@ -140,7 +140,7 @@ function loadKanwilQueue(){
    }
    tr.append(number,name,status,actions);body.append(tr);
   });
- }).withFailureHandler(error=>say('Gagal memuat antrean Kanwil: '+(error&&error.message||String(error))).listKanwilApplications({limit:100});
+ }).withFailureHandler(error=>say('Gagal memuat antrean Kanwil: '+(error&&error.message||String(error)))).listKanwilApplications({limit:100});
 }
 function actKanwil(id,action){
  const reason=window.prompt('Masukkan alasan tindakan '+action+':');if(!reason||!reason.trim())return;
