@@ -1883,7 +1883,7 @@ assert(kanwilPageSource.includes('reviewKanwilApplication')&&kanwilPageSource.in
 const kanwilReviewContract=require('./KanwilStagingContract.js');
 assert(kanwilReviewContract.KANWIL_REVIEW_ONLY_V1===true,'Kanwil parser evidence remains review-only until human validation');
 assert(!kanwilReviewContract.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Parser staging contract blocks direct commit without approval');
-assert(kanwilPageSource.includes('kpeManualForm') && kanwilPageSource.includes('Tambahkan ke daftar review'),'Kanwil page exposes a manual application-entry form');
+assert(kanwilPageSource.includes('kpeManualForm') && kanwilPageSource.includes('Simpan ke staging Kanwil'),'Kanwil page exposes a manual application-entry form');
 const kanwilManualKeys=['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','layanan','kategori_produk','nomor_permohonan','tanggal_permohonan','penjamin','nama','jenis_kelamin','tanggal_lahir','kebangsaan','no_passport','jenis_produk','tujuan','posisi_permohonan','status_permohonan'];
 assert(kanwilManualKeys.every(key=>kanwilPageSource.includes("['"+key+"'")),'Manual Kanwil form enumerates all 17 source columns');
 assert(kanwilPageSource.includes("input.type=type") && kanwilPageSource.includes("input.inputMode='text'"),'Kanwil manual fields preserve identifiers as text inputs');
