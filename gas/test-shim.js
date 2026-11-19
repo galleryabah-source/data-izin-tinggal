@@ -1877,24 +1877,31 @@ assert(kanwilRouteSource.includes("view==='kanwil'?'KanwilEntry'"),'Kanwil entry
 const kanwilNavSource=read('index.html');
 assert(kanwilNavSource.includes('href="?view=kanwil"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace');
 const kanwilPageSource=read('KanwilEntry.html');
-assert(kanwilPageSource.includes('Mode REVIEW-ONLY aktif'),'Kanwil entry page explicitly discloses review-only mode');
-assert(!kanwilPageSource.includes('google.script.run')&&!kanwilPageSource.includes('FormData')&&!kanwilPageSource.includes('XMLHttpRequest'),'Kanwil review-only workspace has no RPC or upload transport');
+assert(kanwilPageSource.includes('staging terpisah')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
+assert(kanwilPageSource.includes('saveKanwilApplication')&&kanwilPageSource.includes('listKanwilApplications'),'Kanwil UI persists manual records and loads the staging queue');
+assert(kanwilPageSource.includes('reviewKanwilApplication')&&kanwilPageSource.includes('commitKanwilApplication'),'Kanwil UI exposes guarded review and isolated finalization actions');
 const kanwilReviewContract=require('./KanwilStagingContract.js');
-assert(kanwilReviewContract.KANWIL_REVIEW_ONLY_V1===true,'Kanwil staging contract is locked to review-only');
-assert(!kanwilReviewContract.transitionKanwilStagingV1('APPROVED','COMMITTED','').ok,'Kanwil contract blocks commit from approved state');
-assert(!kanwilReviewContract.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Kanwil review-only contract blocks direct commit');
-assert(!kanwilReviewContract.transitionKanwilStagingV1('APPROVED','COMMITTED','approved').ok,'Kanwil review-only contract blocks commit even after approval');
+assert(kanwilReviewContract.KANWIL_REVIEW_ONLY_V1===true,'Kanwil parser evidence remains review-only until human validation');
+assert(!kanwilReviewContract.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Parser staging contract blocks direct commit without approval');
 assert(kanwilPageSource.includes('kpeManualForm') && kanwilPageSource.includes('Tambahkan ke daftar review'),'Kanwil page exposes a manual application-entry form');
 const kanwilManualKeys=['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','layanan','kategori_produk','nomor_permohonan','tanggal_permohonan','penjamin','nama','jenis_kelamin','tanggal_lahir','kebangsaan','no_passport','jenis_produk','tujuan','posisi_permohonan','status_permohonan'];
 assert(kanwilManualKeys.every(key=>kanwilPageSource.includes("['"+key+"'")),'Manual Kanwil form enumerates all 17 source columns');
 assert(kanwilPageSource.includes("input.type=type") && kanwilPageSource.includes("input.inputMode='text'"),'Kanwil manual fields preserve identifiers as text inputs');
-assert(kanwilPageSource.includes('BELUM_DISIMPAN'),'Manual Kanwil entry clearly labels records as not persisted');
+assert(kanwilPageSource.includes('Data tidak masuk ke dataset bulanan kanonik'),'Manual Kanwil entry discloses isolated persistence boundary');
 const kanwilServiceSource=read('KanwilStagingService.gs');
-assert(kanwilServiceSource.includes("enabled:false") && kanwilServiceSource.includes("writeEndpointsExposed:false"),'Kanwil staging foundation remains disabled with no write RPC exposed');
+assert(kanwilServiceSource.includes("enabled:false") && kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID"),'Kanwil staging foundation requires explicit isolated storage configuration');
 assert(kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID") && kanwilServiceSource.includes("KANWIL_STAGING_MUST_BE_SEPARATE_FROM_CANONICAL"),'Kanwil staging requires a separate spreadsheet identity');
 assert(kanwilServiceSource.includes("requireBackOfficeAccess_()") && kanwilServiceSource.includes("function provisionKanwilStagingSchema_"),'Kanwil schema provisioning is a private back-office guarded helper');
 assert(kanwilServiceSource.includes("reviewOnlyScreenshot:true"),'Kanwil screenshot intake remains explicitly review-only');
-assert(!kanwilServiceSource.includes("function saveKanwil") && !kanwilServiceSource.includes("function commitKanwil"),'Kanwil staging foundation exposes no record persistence or commit endpoint');
+const kanwilPersistenceSource=read('KanwilPersistenceService.gs');
+assert(kanwilPersistenceSource.includes("function saveKanwilApplication(payload)")&&kanwilPersistenceSource.includes("function commitKanwilApplication(stagingId,reason)"),'Kanwil isolated staging persistence and finalization endpoints exist');
+assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
+assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil persistence endpoints require authenticated back-office access');
+const kanwilPayloadValidator=new Function(kanwilPersistenceSource+'\nreturn kanwilPayloadV1_;')();
+const validKanwilPayload=kanwilPayloadValidator({values:{nomor_permohonan:'001-ABC',nama:'UJI',jenis_kelamin:'MALE',tanggal_lahir:'1980-01-01'}});
+assert(validKanwilPayload.nomor_permohonan==='001-ABC'&&validKanwilPayload.nama==='UJI','Kanwil server payload validator preserves application identifiers and required fields');
+let kanwilDateRejected=false;try{kanwilPayloadValidator({values:{nomor_permohonan:'002',nama:'UJI',tanggal_lahir:'31/12/1980'}});}catch(e){kanwilDateRejected=/KANWIL_DATE_INVALID/.test(e.message);}
+assert(kanwilDateRejected,'Kanwil server payload validator rejects ambiguous birth dates');
 const kanwilAnalytics=require('./KanwilAnalyticsContract.js');
 const kanwilSampleRows=[
  {layanan:'CONVERSION',kategori_produk:'ITAP',jenis_produk:'ITASITAP5Y_GENINVEST',kebangsaan:'SAUDI ARABIA',tujuan:'INVESTMENT',posisi_permohonan:'Produk sudah Terbit',status_permohonan:'TERBIT',nama:'RAHASIA A',tanggal_lahir:'1980-01-01',no_passport:'P123',nomor_permohonan:'001',penjamin:'RAHASIA'},
