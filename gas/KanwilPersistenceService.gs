@@ -40,11 +40,13 @@ function kanwilPayloadV1_(input){
     throw new Error('KANWIL_GENDER_INVALID');
   normalized.jenis_kelamin=normalized.jenis_kelamin?String(normalized.jenis_kelamin).toUpperCase():null;
   ['tanggal_lahir'].forEach(key=>{
-    if(normalized[key]&&!/^\d{4}-\d{2}-\d{2}$/.test(normalized[key]))throw new Error('KANWIL_DATE_INVALID: '+key);
+    if(normalized[key]){const value=normalized[key],date=new Date(value+'T00:00:00Z');
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(value)||!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==value)throw new Error('KANWIL_DATE_INVALID: '+key);}
   });
   ['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','tanggal_permohonan'].forEach(key=>{
-    if(normalized[key]&&!/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/.test(normalized[key]))
-      throw new Error('KANWIL_DATETIME_INVALID: '+key);
+    if(normalized[key]){const value=normalized[key],iso=value.replace(' ','T'),date=new Date(iso+'Z');
+      if(!/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/.test(value)||!Number.isFinite(date.getTime()))
+        throw new Error('KANWIL_DATETIME_INVALID: '+key);}
   });
   return normalized;
 }
