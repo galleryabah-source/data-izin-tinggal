@@ -1893,9 +1893,9 @@ assert(kanwilPersistenceSource.includes('function reviseKanwilApplication(stagin
 assert(kanwilPersistenceSource.includes("KANWIL_REVISION_ACTOR_NOT_ORIGINAL_SUBMITTER"),'Only the original submitter may apply a correction revision');
 assert(kanwilPageSource.includes("reviseKanwilApplication(target.stagingId,target.revision,{values},reason.trim())"),'Kanwil UI submits corrections against the exact expected revision');
 assert(kanwilPageSource.includes("function startKanwilRevision(row)")&&kanwilPageSource.includes("Koreksi / revisi"),'Kanwil queue exposes correction mode for rejected or validation-required rows');
-const kanwilValidationActionAt=kanwilPageSource.indexOf("row.state==='REJECTED'||row.state==='VALIDATION_REQUIRED'");
-const kanwilValidationRejectAt=kanwilPageSource.indexOf("row.state==='VALIDATION_REQUIRED'",kanwilValidationActionAt+1);
-assert(kanwilValidationActionAt>=0&&kanwilValidationRejectAt>kanwilValidationActionAt,'Kanwil validation-required rows expose correction before optional rejection action');
+const kanwilCorrectionBranchAt=kanwilPageSource.indexOf("}else if(row.state==='REJECTED'||row.state==='VALIDATION_REQUIRED'){");
+const kanwilValidationRejectBranchAt=kanwilPageSource.indexOf("if(row.state==='VALIDATION_REQUIRED'){",kanwilCorrectionBranchAt+1);
+assert(kanwilCorrectionBranchAt>=0&&kanwilValidationRejectBranchAt>kanwilCorrectionBranchAt,'Kanwil validation-required rows expose correction before optional rejection action');
 assert(kanwilPageSource.includes("Simpan revisi v"),'Kanwil UI labels the next revision number before submission');
 
 assert(kanwilPersistenceSource.includes("if(!['REJECTED','VALIDATION_REQUIRED'].includes(state))throw new Error('KANWIL_REVISION_STATE_NOT_ALLOWED')"),'Kanwil corrections are limited to rejected or validation-required submissions');
