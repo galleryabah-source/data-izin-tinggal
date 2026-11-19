@@ -268,6 +268,69 @@ function listKanwilApplications(filters){
       createdBy:String(r[h.created_by]),createdAt:String(r[h.created_at])}));
   return {ok:true,rows};
 }
+function kanwilLatestReviewEventV1_(sheets,stagingId){
+  const rows=sheets.events.getDataRange().getValues(),h=kanwilHeader_(sheets.events);
+  return rows.slice(1).filter(r=>String(r[h.staging_id]||'')===String(stagingId)&&
+    ['REVIEW_APPROVE','REVIEW_REJECT'].includes(String(r[h.event_type]||'')))
+    .sort((a,b)=>Number(b[h.event_sequence]||0)-Number(a[h.event_sequence]||0))[0]||null;
+}
+function reviseKanwilApplication(stagingId,expectedRevision,payload,reason){
+  const user=requireBackOfficeAccess_(),ss=kanwilRequireReady_(),id=String(stagingId||'').trim(),why=String(reason||'').trim();
+  const expected=Number(expectedRevision);
+  if(!id||!Number.isInteger(expected)||expected<1||!why)throw new Error('KANWIL_REVISION_REQUEST_INVALID');
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try{
+    const sheets=kanwilSheets_(ss),rows=sheets.staging.getDataRange().getValues(),h=kanwilHeader_(sheets.staging);
+    const matches=rows.map((r,i)=>({r,i})).filter(x=>x.i>0&&String(x.r[h.staging_id])===id);
+    if(matches.length!==1)throw new Error(matches.length?'KANWIL_STAGING_ID_NOT_UNIQUE':'KANWIL_STAGING_NOT_FOUND');
+    const {r:row,i:index}=matches[0],state=String(row[h.state]||''),currentRevision=Number(row[h.revision]||0);
+    if(currentRevision!==expected)throw new Error('KANWIL_REVISION_CONFLICT');
+    if(!['REJECTED','VALIDATION_REQUIRED'].includes(state))throw new Error('KANWIL_REVISION_STATE_NOT_ALLOWED');
+    const latestReview=kanwilLatestReviewEventV1_(sheets,id);
+    if(latestReview&&String(latestReview[kanwilHeader_(sheets.events).actor_id]||'').toLowerCase()===String(user.email||'').toLowerCase())
+      throw new Error('KANWIL_SEPARATION_OF_DUTIES');
+    const raw=kanwilLoosePayloadV1_(payload&&payload.values?payload.values:payload||{});
+    let normalized=raw,errors=[];
+    try{normalized=kanwilPayloadV1_({values:raw});}catch(error){errors.push(String(error&&error.message||error));}
+    const appNo=String(normalized.nomor_permohonan||'').trim();
+    if(appNo&&rows.slice(1).some((other,i)=>i+1!==index&&String(other[h.state]||'')!=='REJECTED'&&(()=>{
+      let saved={};try{saved=JSON.parse(String(other[h.normalized_values_json]||'{}'));}catch(e){}
+      return String(saved.nomor_permohonan||'')===appNo;
+    })()))errors.push('DUPLICATE_APPLICATION_NUMBER_EXISTING');
+    const nextState=errors.length?'VALIDATION_REQUIRED':'REVIEW_REQUIRED',nextRevision=currentRevision+1;
+    const priorHash=String(row[h.payload_sha256]||''),nextHash=kanwilHashV1_(normalized),now=nowIso_(),correlationId=Utilities.getUuid();
+    const eventCheckpoint=kanwilCheckpointV1_(sheets,['revisions','events','audit']);
+    const previous={raw:row[h.raw_values_json],normalized:row[h.normalized_values_json],errors:row[h.validation_errors_json],
+      warnings:row[h.validation_warnings_json],review:row[h.review_state],state:row[h.state],revision:row[h.revision],
+      hash:row[h.payload_sha256],updated:row[h.updated_at]};
+    try{
+      sheets.revisions.appendRow([Utilities.getUuid(),id,nextRevision,priorHash,nextHash,
+        String(row[h.normalized_values_json]||'{}'),JSON.stringify(normalized),kanwilSafeCellTextV1_(why),user.email,now,correlationId]);
+      sheets.staging.getRange(index+1,h.raw_values_json+1).setValue(JSON.stringify(raw));
+      sheets.staging.getRange(index+1,h.normalized_values_json+1).setValue(JSON.stringify(normalized));
+      sheets.staging.getRange(index+1,h.validation_errors_json+1).setValue(JSON.stringify(errors));
+      sheets.staging.getRange(index+1,h.validation_warnings_json+1).setValue('[]');
+      sheets.staging.getRange(index+1,h.review_state+1).setValue('PENDING');
+      sheets.staging.getRange(index+1,h.state+1).setValue(nextState);
+      sheets.staging.getRange(index+1,h.revision+1).setValue(nextRevision);
+      sheets.staging.getRange(index+1,h.payload_sha256+1).setValue(nextHash);
+      sheets.staging.getRange(index+1,h.updated_at+1).setValue(now);
+      kanwilAppendEventV1_(sheets,'',id,'REVISION_SUBMITTED',state,nextState,nextRevision,nextHash,user.email,why,correlationId);
+      kanwilAppendAuditV1_(sheets,String(row[h.batch_id]),'',id,user.email,'REVISION_SUBMITTED',why,correlationId);
+    }catch(error){
+      try{
+        kanwilRollbackV1_(sheets,eventCheckpoint);
+        Object.entries({raw_values_json:previous.raw,normalized_values_json:previous.normalized,
+          validation_errors_json:previous.errors,validation_warnings_json:previous.warnings,
+          review_state:previous.review,state:previous.state,revision:previous.revision,
+          payload_sha256:previous.hash,updated_at:previous.updated}).forEach(([key,value])=>
+            sheets.staging.getRange(index+1,h[key]+1).setValue(value));
+      }catch(rollbackError){}
+      throw new Error('KANWIL_REVISION_RECOVERY_REQUIRED: '+String(error&&error.message||error));
+    }
+    return {ok:true,stagingId:id,revision:nextRevision,state:nextState,validationErrors:errors};
+  }finally{lock.releaseLock();}
+}
 function reviewKanwilApplication(stagingId,decision,reason){
   const user=requireBackOfficeAccess_(),ss=kanwilRequireReady_(),id=String(stagingId||'').trim();
   const action=String(decision||'').trim().toUpperCase(),why=String(reason||'').trim();
@@ -313,6 +376,11 @@ function commitKanwilApplication(stagingId,reason){
     const scope=kanwilResolveBatchScopeV1_(batchValues,batchHeader,String(row[h.batch_id]),configuredScope);
     if(state==='COMMITTED')return {ok:true,stagingId:id,state:'COMMITTED',idempotent:true};
     if(state!=='APPROVED')throw new Error('KANWIL_APPROVAL_REQUIRED');
+    const latestReview=kanwilLatestReviewEventV1_(sheets,id),eventHeader=kanwilHeader_(sheets.events);
+    if(!latestReview||String(latestReview[eventHeader.to_state]||'')!=='APPROVED')throw new Error('KANWIL_APPROVAL_EVIDENCE_MISSING');
+    if(String(latestReview[eventHeader.actor_id]||'').toLowerCase()===String(user.email||'').toLowerCase())
+      throw new Error('KANWIL_SEPARATION_OF_DUTIES');
+
     const records=sheets.records.getDataRange().getValues(),rh=kanwilHeader_(sheets.records);
     if(records.slice(1).some(r=>String(r[rh.application_number])===String(payload.nomor_permohonan)))throw new Error('KANWIL_DUPLICATE_APPLICATION_NUMBER');
     const recordId=Utilities.getUuid(),correlationId=Utilities.getUuid(),now=nowIso_(),hash=String(row[h.payload_sha256]);
