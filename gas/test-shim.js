@@ -1899,6 +1899,19 @@ const kanwilPersistenceSource=read('KanwilPersistenceService.gs');
 assert(kanwilPersistenceSource.includes("function saveKanwilApplication(payload)")&&kanwilPersistenceSource.includes("function saveKanwilImportBatch(payload)")&&kanwilPersistenceSource.includes("function commitKanwilApplication(stagingId,reason)"),'Kanwil isolated staging persistence and finalization endpoints exist');
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
 assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil persistence endpoints require authenticated back-office access');
+function assertKanwilGuardBeforeEffects(source,name){
+  const start=source.indexOf('function '+name+'(');
+  assert(start>=0,'Kanwil RPC source exists: '+name);
+  const next=source.indexOf('\\nfunction ',start+1);
+  const segment=source.slice(start,next<0?source.length:next);
+  const guard=segment.indexOf('requireBackOfficeAccess_()');
+  assert(guard>=0,'Kanwil RPC has direct back-office authorization: '+name);
+  const effects=['getDb_()','SpreadsheetApp.','PropertiesService.','.getDataRange()','.getRange(','.appendRow(','.setValue(','.setValues(','.deleteRow(','insertSheet('];
+  const firstEffect=Math.min(...effects.map(token=>{const at=segment.indexOf(token);return at<0?Infinity:at;}));
+  assert(guard<firstEffect,'Kanwil RPC authorizes before direct storage effects: '+name);
+}
+['saveKanwilApplication','saveKanwilImportBatch','listKanwilApplications','reviewKanwilApplication','commitKanwilApplication','getKanwilEntryStatus'].forEach(name=>assertKanwilGuardBeforeEffects(kanwilPersistenceSource,name));
+
 const kanwilStagingServiceSource=read('KanwilStagingService.gs');
 const kanwilRpcManifestSource=read('RpcManifest.js');
 assert(kanwilStagingServiceSource.includes('function provisionKanwilStagingFromConfiguredId()')&&kanwilStagingServiceSource.includes('requireBackOfficeAccess_()')&&kanwilStagingServiceSource.includes("requirePermission_('admin.config')"),'Owner provisioning entrypoint is argument-free and guarded by back-office and admin.config authorization');
