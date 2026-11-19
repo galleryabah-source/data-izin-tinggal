@@ -157,6 +157,7 @@ function initializeKanwilPersistence(){
   loadKanwilQueue();
  }).withFailureHandler(error=>say('Status Kanwil tidak dapat dibaca: '+(error&&error.message||String(error)))).getKanwilEntryStatus();
 }
-initManualForm();\ninitializeKanwilPersistence();
+initManualForm();
+initializeKanwilPersistence();
 })();
 </script>
