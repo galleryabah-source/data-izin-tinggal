@@ -27,7 +27,7 @@ CDN delivers JS/runtime assets only; selected files are processed in this browse
 @media(max-width:800px){.kpe .manual-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.kpe .manual-fields{grid-template-columns:1fr}}
 </style>
-<div class="toolbar"><input id="kpeFiles" type="file" multiple accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,image/jpeg,image/png"><button id="kpeRun" type="button">Proses file terpilih</button><button id="kpeClear" type="button">Bersihkan</button></div>
+<div class="toolbar"><input id="kpeFiles" type="file" multiple accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,image/jpeg,image/png"><button id="kpeRun" type="button">Proses file terpilih</button><button id="kpePersistFiles" type="button" disabled>Simpan hasil file ke staging</button><button id="kpeClear" type="button">Bersihkan</button></div>
 <div class="progress"><span id="kpeProgress"></span></div><div class="status" id="kpeStatus" role="status" aria-live="polite">Belum ada file diproses.</div>
 <div class="tablewrap"><table><thead><tr><th>File</th><th>Baris sumber</th><th>Nomor permohonan</th><th>Nama</th><th>Nomor paspor</th><th>Status</th><th>Catatan review</th></tr></thead><tbody id="kpeRows"><tr><td colspan="7">Belum ada hasil.</td></tr></tbody></table></div>
 <h3>Daftar Permohonan Tersimpan</h3><div class="tablewrap"><table><thead><tr><th>Nomor Permohonan</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="kpeQueue"><tr><td colspan="4">Memuat status penyimpanan…</td></tr></tbody></table></div><h3>Raw OCR / error log (lokal)</h3><pre id="kpeLog">—</pre>
@@ -36,7 +36,7 @@ CDN delivers JS/runtime assets only; selected files are processed in this browse
 (function(){
 'use strict';
 const root=document.getElementById('kanwilEntryPrototype');if(!root||root.dataset.ready)return;root.dataset.ready='1';
-const $=id=>document.getElementById(id),state={busy:false,rows:[],log:[],enabled:false};
+const $=id=>document.getElementById(id),state={busy:false,rows:[],log:[],imports:[],enabled:false};
 const manualFields=[
  ['tanggal_pembayaran','Tanggal Pembayaran','datetime-local'],['tanggal_mulai_verifikasi','Tanggal Mulai Verifikasi','datetime-local'],['tanggal_auto_terbit','Tanggal Auto Terbit','datetime-local'],
  ['layanan','Layanan','text'],['kategori_produk','Kategori Produk','text'],['nomor_permohonan','Nomor Permohonan','text'],
@@ -95,11 +95,37 @@ async function processImage(file,shot,ocrAdapter){
  try{const result=await worker.recognize(file);state.log.push('OCR '+file.name+':\n'+String(result.data.text||'').slice(0,5000));return ocrAdapter.adaptTesseractResultToKanwilV1(result,shot.reconstructKanwilScreenshotTableV1);}
  finally{await worker.terminate();}
 }
-$('kpeClear').addEventListener('click',()=>{if(state.busy)return;state.rows=[];state.log=[];$('kpeProgress').style.width='0';render();say('Hasil lokal dibersihkan.');});
+function saveKanwilImport(payload){
+ return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).saveKanwilImportBatch(payload));
+}
+async function persistKanwilFiles(){
+ if(state.busy||!state.enabled||!state.imports.length)return;
+ state.busy=true;$('kpePersistFiles').disabled=true;
+ try{
+  for(let i=0;i<state.imports.length;i++){
+   const item=state.imports[i],file=item.file;
+   say('Menyimpan metadata dan baris '+file.name+' ke staging…');
+   const digest=await crypto.subtle.digest('SHA-256',await file.arrayBuffer());
+   const sha=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+   const records=item.records.map(record=>({
+    sourceRowNumber:Number(record.sourceRowNumber||record.sourceRowIndex||1),
+    rawValues:record.rawValues||record.normalizedValues||record.values||{},
+    normalizedValues:record.normalizedValues||record.values||{},
+    warnings:record.warnings||[]
+   }));
+   const result=await saveKanwilImport({sourceChannel:item.channel,sourceFile:{name:file.name,size:file.size,mime:file.type,sha256:sha},parserVersion:'kanwil-browser-v1',records});
+   say('Staging '+file.name+': '+result.inserted+' baris tersimpan; '+result.invalidCount+' perlu validasi.');
+  }
+  state.imports=[];loadKanwilQueue();say('Seluruh hasil file berhasil dikirim ke staging Kanwil. File asli tidak diunggah.');
+ }catch(error){say('Penyimpanan file gagal: '+(error&&error.message||String(error)));}
+ finally{state.busy=false;$('kpePersistFiles').disabled=!state.enabled||!state.imports.length;}
+}
+$('kpePersistFiles').addEventListener('click',persistKanwilFiles);
+$('kpeClear').addEventListener('click',()=>{if(state.busy)return;state.rows=[];state.log=[];state.imports=[];$('kpePersistFiles').disabled=true;$('kpeProgress').style.width='0';render();say('Hasil lokal dibersihkan.');});
 $('kpeRun').addEventListener('click',async()=>{
  if(state.busy)return;const files=Array.from($('kpeFiles').files||[]);if(!files.length){say('Pilih file terlebih dahulu.');return;}
  if(files.length>50){say('Batas prototipe 50 file per batch.');return;}
- state.busy=true;$('kpeRun').disabled=true;state.rows=[];state.log=[];render();
+ state.busy=true;$('kpeRun').disabled=true;state.rows=[];state.log=[];state.imports=[];$('kpePersistFiles').disabled=true;render();
  try{
   const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@feat/kanwil-service-entry-ui-2026-11-17/gas/';
   const [contractSrc,xlsxSrc,shotSrc,ocrSrc,policySrc]=await Promise.all(['KanwilPermitContract.js','KanwilXlsxAdapter.js','KanwilScreenshotParser.js','KanwilOcrAdapter.js','KanwilIntakePolicy.js'].map(async name=>{const response=await fetch(base+name);if(!response.ok)throw Error('Gagal memuat modul '+name);return response.text();}));
@@ -121,7 +147,7 @@ $('kpeRun').addEventListener('click',async()=>{
    }catch(e){state.log.push(file.name+': ERROR '+(e.message||String(e)));}
    $('kpeProgress').style.width=Math.round((i+1)/files.length*100)+'%';render();
   }
-  say('Pemrosesan selesai. Semua hasil masih lokal dan belum disimpan. Lakukan review terhadap sumber asli.');
+  say('Parsing selesai. Periksa hasil, lalu simpan data terstruktur ke staging Kanwil. File sumber tetap berada di browser.');\n  $('kpePersistFiles').disabled=!state.enabled||!state.imports.length;
  }catch(e){say('Gagal memulai: '+(e.message||String(e)));}
  finally{state.busy=false;$('kpeRun').disabled=false;render();}
 });
