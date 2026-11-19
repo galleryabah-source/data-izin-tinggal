@@ -198,6 +198,17 @@ assert(officeRef.includes("readCacheKey_('office-reference-status')") && officeR
 assert(officeRef.includes('function getOfficeReferenceStatus()'), 'office reference readiness endpoint exists');
 assert(officeRef.includes("requirePermission_('map.read')"), 'map readiness is RBAC protected');
 assert(officeRef.includes("status!=='VERIFIED'"), 'map readiness requires verified reference rows');
+const parseOfficeCoordinate=new Function(officeRef+'\\nreturn parseOfficeCoordinate_;')();
+assert(parseOfficeCoordinate('',-90,90)===null,'Blank latitude/longitude is not coerced to zero');
+assert(parseOfficeCoordinate('   ',-90,90)===null,'Whitespace coordinate is rejected');
+assert(parseOfficeCoordinate(null,-90,90)===null,'Null coordinate is rejected');
+assert(parseOfficeCoordinate('not-a-coordinate',-90,90)===null,'Non-numeric coordinate is rejected');
+assert(parseOfficeCoordinate('-91',-90,90)===null&&parseOfficeCoordinate('181',-180,180)===null,'Out-of-range coordinates are rejected');
+assert(parseOfficeCoordinate('-6.9',-90,90)===-6.9&&parseOfficeCoordinate('107.6',-180,180)===107.6,'Valid numeric coordinate strings are normalized');
+assert(officeRef.includes('lat===null||lng===null'),'Office reference readiness rejects missing coordinates');
+assert(dashboard.includes('parseOfficeCoordinate_(reference[ri.latitude]')&&dashboard.includes('parseOfficeCoordinate_(reference[ri.longitude]'),'Canonical GIS map validates coordinate presence and range');
+const quotaService=read('MpasporQuotaService.gs');
+assert(quotaService.includes('parseOfficeCoordinate_(r[ri.latitude]')&&quotaService.includes('ref.latitude===null||ref.longitude===null'),'Public M-Paspor quota markers reject missing office coordinates');
 assert(officeRef.includes('function prepareOfficeReferenceDraftMetadata()'), 'office reference draft metadata repair exists');
 assert(officeRef.includes('function previewOfficeReferenceGeocoding()'), 'office reference geocoding preview exists');
 assert(officeRef.includes('Maps.newGeocoder()'), 'office reference geocoding uses Apps Script Maps service');
