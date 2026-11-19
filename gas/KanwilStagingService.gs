@@ -17,6 +17,7 @@ const KANWIL_STAGING_SHEETS_V1=Object.freeze({
   staging:['staging_id','batch_id','file_id','source_row_number','idempotency_key','contract_version','raw_values_json','normalized_values_json','validation_errors_json','validation_warnings_json','review_state','state','revision','payload_sha256','created_by','created_at','updated_at'],
   records:['record_id','kanwil_scope_id','application_number','current_revision','current_payload_sha256','current_payload_json','committed_at','committed_by','source_staging_id','correlation_id'],
   events:['event_id','record_id','staging_id','event_sequence','event_type','from_state','to_state','revision','payload_sha256','actor_id','reason','correlation_id','occurred_at'],
+  revisions:['revision_id','staging_id','revision','prior_payload_sha256','payload_sha256','prior_payload_json','payload_json','reason','actor_id','created_at','correlation_id'],
   audit:['audit_id','batch_id','file_id','record_id','staging_id','actor_id','action','reason','correlation_id','occurred_at']
 });
 function kanwilStagingSpreadsheetId_(){
