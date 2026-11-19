@@ -102,7 +102,7 @@ function saveKanwilApplication(payload){
     const stagingRow=KANWIL_STAGING_SHEETS_V1.staging.map(k=>({
       staging_id:stagingId,batch_id:batchId,file_id:fileId,source_row_number:1,idempotency_key:submissionId,
       contract_version:'KANWIL_PERMIT_APPLICATION_V1',raw_values_json:JSON.stringify(p),normalized_values_json:JSON.stringify(p),
-      validation_errors_json:'[]',validation_warnings_json:'[]',review_state:'PENDING',revision:1,
+      validation_errors_json:'[]',validation_warnings_json:'[]',review_state:'PENDING',state:'REVIEW_REQUIRED',revision:1,
       payload_sha256:hash,created_by:user.email,created_at:now,updated_at:now
     }[k]??''));
     const duplicate=values.slice(1).some(r=>{let saved={};try{saved=JSON.parse(String(r[h.normalized_values_json]||'{}'));}catch(e){}return String(saved.nomor_permohonan||'')===p.nomor_permohonan&&String(r[h.state]||'')!=='REJECTED';});
@@ -147,7 +147,7 @@ function saveKanwilImportBatch(payload){
       const row=record&&typeof record==='object'?record:{},sourceRow=Number(row.sourceRowNumber||index+1);
       if(!Number.isInteger(sourceRow)||sourceRow<1)throw new Error('KANWIL_SOURCE_ROW_NUMBER_INVALID');
       const raw=kanwilLoosePayloadV1_(row.rawValues||row.values||row.normalizedValues||{});
-      const normalized=kanwilLoosePayloadV1_(row.normalizedValues||row.values||row.rawValues||{});
+      let normalized=kanwilLoosePayloadV1_(row.normalizedValues||row.values||row.rawValues||{});
       const descriptor=buildKanwilIdempotencyDescriptorV1({kanwilScopeId:scope,sourceFileSha256:sha,
         contractVersion,parserVersion,sourceRowNumber:sourceRow});
       if(!descriptor.ok)throw new Error(descriptor.reason);
@@ -157,7 +157,7 @@ function saveKanwilImportBatch(payload){
         return;
       }
       let errors=[];
-      try{kanwilPayloadV1_({values:normalized});}
+      try{normalized=kanwilPayloadV1_({values:normalized});}
       catch(error){errors.push(String(error&&error.message||error));}
       const appNo=String(normalized.nomor_permohonan||'').trim();
       if(appNo&&seenApplications.has(appNo))errors.push('DUPLICATE_APPLICATION_NUMBER_IN_BATCH');
@@ -174,7 +174,7 @@ function saveKanwilImportBatch(payload){
         staging_id:stagingId,batch_id:batchId,file_id:fileId,source_row_number:sourceRow,idempotency_key:key,
         contract_version:contractVersion,raw_values_json:JSON.stringify(raw),normalized_values_json:JSON.stringify(normalized),
         validation_errors_json:JSON.stringify(errors),validation_warnings_json:JSON.stringify(warnings),
-        review_state:'PENDING',revision:1,payload_sha256:hash,created_by:user.email,created_at:now,updated_at:now
+        review_state:'PENDING',state,payload_sha256:hash,revision:1,created_by:user.email,created_at:now,updated_at:now
       };
       stageRows.push(KANWIL_STAGING_SHEETS_V1.staging.map(k=>valuesByKey[k]??''));
       eventRows.push([Utilities.getUuid(),' ',stagingId,1,'FILE_IMPORT_ROW','',state,1,hash,user.email,
