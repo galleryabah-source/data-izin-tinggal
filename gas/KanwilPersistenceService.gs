@@ -57,8 +57,7 @@ function kanwilAppendEventV1_(sheets,recordId,stagingId,eventType,fromState,toSt
     revision,hash,actor,reason||'',correlationId,nowIso_()]);
 }
 function kanwilAppendAuditV1_(sheets,batchId,recordId,stagingId,actor,action,reason,correlationId){
-  sheets.audit.appendRow([Utilities.getUuid(),batchId||'', '',recordId||'',stagingId||'',actor,action,reason||'',
-    '', '',correlationId,nowIso_()]);
+  sheets.audit.appendRow([Utilities.getUuid(),batchId||'', '',recordId||'',stagingId||'',actor,action,reason||'',correlationId,nowIso_()]);
 }
 function getKanwilEntryStatus(){
   requireBackOfficeAccess_();
@@ -82,7 +81,7 @@ function saveKanwilApplication(payload){
       if(String(existing[h.payload_sha256]||'')!==hash)throw new Error('KANWIL_IDEMPOTENCY_CONFLICT');
       return {ok:true,stagingId:String(existing[h.staging_id]),state:String(existing[h.state]),idempotent:true};
     }
-    const batchId=Utilities.getUuid(),fileId=Utilities.getUuid(),stagingId=Utilities.getUuid(),correlationId=Utilities.getUuid(),now=nowIso_();
+    const batchId=Utilities.getUuid(),fileId='',stagingId=Utilities.getUuid(),correlationId=Utilities.getUuid(),now=nowIso_();
     const batchHeaders=kanwilHeader_(sheets.batches);
     const batchRow=KANWIL_STAGING_SHEETS_V1.batches.map(k=>({
       batch_id:batchId,kanwil_scope_id:scope,source_channel:'MANUAL',contract_version:'KANWIL_PERMIT_APPLICATION_V1',
@@ -95,7 +94,7 @@ function saveKanwilApplication(payload){
       validation_errors_json:'[]',validation_warnings_json:'[]',review_state:'PENDING',revision:1,
       payload_sha256:hash,created_by:user.email,created_at:now,updated_at:now
     }[k]??''));
-    const duplicate=values.slice(1).some(r=>String(r[h.application_number]||'')===p.nomor_permohonan&&String(r[h.state]||'')!=='REJECTED');
+    const duplicate=values.slice(1).some(r=>{let saved={};try{saved=JSON.parse(String(r[h.normalized_values_json]||'{}'));}catch(e){}return String(saved.nomor_permohonan||'')===p.nomor_permohonan&&String(r[h.state]||'')!=='REJECTED';});
     if(duplicate)throw new Error('KANWIL_DUPLICATE_APPLICATION_NUMBER');
     const appended=[];
     try{
@@ -133,15 +132,17 @@ function reviewKanwilApplication(stagingId,decision,reason){
     const row=v[index],state=String(row[h.state]),next=action==='APPROVE'?'APPROVED':'REJECTED';
     if(state===next)return {ok:true,stagingId:id,state:next,idempotent:true};
     if(state!=='REVIEW_REQUIRED')throw new Error('KANWIL_STAGING_NOT_REVIEWABLE');
-    const now=nowIso_(),reasonCell=h.review_state;
-    sheets.staging.getRange(index+1,reasonCell+1).setValue(next);
+    const now=nowIso_(),oldReview=String(row[h.review_state]||'PENDING');
+    sheets.staging.getRange(index+1,h.review_state+1).setValue(next);
+    sheets.staging.getRange(index+1,h.state+1).setValue(next);
     sheets.staging.getRange(index+1,h.updated_at+1).setValue(now);
     const correlationId=Utilities.getUuid(),hash=String(row[h.payload_sha256]);
     try{
       kanwilAppendEventV1_(sheets,'',id,'REVIEW_'+action,state,next,Number(row[h.revision]),hash,user.email,why,correlationId);
       kanwilAppendAuditV1_(sheets,String(row[h.batch_id]),'',id,user.email,'REVIEW_'+action,why,correlationId);
     }catch(error){
-      sheets.staging.getRange(index+1,reasonCell+1).setValue('PENDING');
+      sheets.staging.getRange(index+1,h.review_state+1).setValue(oldReview);
+      sheets.staging.getRange(index+1,h.state+1).setValue(state);
       sheets.staging.getRange(index+1,h.updated_at+1).setValue(String(row[h.updated_at]||''));
       throw new Error('KANWIL_AUDIT_WRITE_FAILED: '+String(error&&error.message||error));
     }
