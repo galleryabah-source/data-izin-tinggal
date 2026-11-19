@@ -8,13 +8,13 @@ CDN delivers JS/runtime assets only; selected files are processed in this browse
 .kpe{font:14px/1.5 system-ui,sans-serif;color:#172b45;background:#f5f8fc;border:1px solid #dbe4ef;border-radius:14px;padding:18px;max-width:1180px;margin:18px auto}.kpe h2{margin:0;font-size:22px}.kpe .muted{color:#64748b}.kpe .notice{background:#fff7e8;border:1px solid #f2d29b;border-radius:8px;padding:10px;margin:12px 0}.kpe button,.kpe label.pick{border:0;border-radius:8px;padding:9px 13px;background:#1769e0;color:#fff;font-weight:700;cursor:pointer}.kpe button:disabled{opacity:.5}.kpe .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.kpe input[type=file]{max-width:100%}.kpe table{border-collapse:collapse;width:100%;font-size:12px;background:#fff}.kpe th,.kpe td{padding:7px;border:1px solid #dbe4ef;text-align:left;vertical-align:top}.kpe th{background:#eaf0f7;position:sticky;top:0}.kpe .tablewrap{max-height:480px;overflow:auto;margin-top:12px}.kpe pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#fff;border:1px solid #dbe4ef;padding:10px;border-radius:8px;max-height:220px;overflow:auto}.kpe .status{margin-top:10px;color:#334155}.kpe .progress{height:6px;background:#e2e8f0;border-radius:9px;overflow:hidden;margin:10px 0}.kpe .progress span{display:block;height:100%;width:0;background:#1769e0}@media(max-width:600px){.kpe{padding:12px}.kpe h2{font-size:19px}}
 </style>
 <header><h2>Kanwil Permit — Input & Review Lokal</h2><div class="muted">Excel · CSV · Screenshot · Foto · Kontrak 17 kolom</div></header>
-<div class="notice"><b>Prototipe terisolasi.</b> File diproses di browser. Tidak ada pengiriman file ke server, Drive, Sheets, atau OCR cloud. Library JavaScript dimuat dari CDN; gambar dan workbook tidak dikirim ke CDN. Mode REVIEW-ONLY aktif: hasil hanya untuk pemeriksaan lokal. Tidak tersedia persetujuan operasional, commit, upload, maupun penyimpanan.</div>
+<div class="notice"><b>Prototipe terisolasi.</b> File diproses di browser. Tidak ada pengiriman file ke server, Drive, Sheets, atau OCR cloud. Library JavaScript dimuat dari CDN; gambar dan workbook tidak dikirim ke CDN. Input manual akan disimpan ke Kanwil staging terpisah setelah storage dan feature flag diaktifkan. Import Excel/CSV dan OCR tetap lokal-review sampai alur upload sumber diaudit.</div>
 <section class="manual-entry" aria-labelledby="kpeManualTitle">
 <h3 id="kpeManualTitle">Input Manual Permohonan Kanwil</h3>
-<p class="muted">Masukkan satu data permohonan sesuai 17 kolom sumber. Tambah ke daftar hanya menyimpan sementara di memori halaman ini; belum tersimpan ke server atau database.</p>
+<p class="muted">Masukkan satu data permohonan sesuai 17 kolom sumber. Simpan akan mengirim 17 kolom ke server Kanwil staging. Data tidak masuk ke dataset bulanan kanonik.</p>
 <form id="kpeManualForm" class="manual-grid">
 <div class="manual-fields" id="kpeManualFields"></div>
-<div class="toolbar"><button type="submit">Tambahkan ke daftar review</button><button type="reset" class="secondary">Kosongkan form</button></div>
+<div class="toolbar"><button type="submit" disabled>Simpan ke staging Kanwil</button><button type="reset" class="secondary">Kosongkan form</button></div>
 </form>
 </section>
 <style>
@@ -30,13 +30,13 @@ CDN delivers JS/runtime assets only; selected files are processed in this browse
 <div class="toolbar"><input id="kpeFiles" type="file" multiple accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,image/jpeg,image/png"><button id="kpeRun" type="button">Proses file terpilih</button><button id="kpeClear" type="button">Bersihkan</button></div>
 <div class="progress"><span id="kpeProgress"></span></div><div class="status" id="kpeStatus" role="status" aria-live="polite">Belum ada file diproses.</div>
 <div class="tablewrap"><table><thead><tr><th>File</th><th>Baris sumber</th><th>Nomor permohonan</th><th>Nama</th><th>Nomor paspor</th><th>Status</th><th>Catatan review</th></tr></thead><tbody id="kpeRows"><tr><td colspan="7">Belum ada hasil.</td></tr></tbody></table></div>
-<h3>Raw OCR / error log</h3><pre id="kpeLog">—</pre>
+<h3>Daftar Permohonan Tersimpan</h3><div class="tablewrap"><table><thead><tr><th>Nomor Permohonan</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="kpeQueue"><tr><td colspan="4">Memuat status penyimpanan…</td></tr></tbody></table></div><h3>Raw OCR / error log (lokal)</h3><pre id="kpeLog">—</pre>
 </section>
 <script>
 (function(){
 'use strict';
 const root=document.getElementById('kanwilEntryPrototype');if(!root||root.dataset.ready)return;root.dataset.ready='1';
-const $=id=>document.getElementById(id),state={busy:false,rows:[],log:[]};
+const $=id=>document.getElementById(id),state={busy:false,rows:[],log:[],enabled:false};
 const manualFields=[
  ['tanggal_pembayaran','Tanggal Pembayaran','datetime-local'],['tanggal_mulai_verifikasi','Tanggal Mulai Verifikasi','datetime-local'],['tanggal_auto_terbit','Tanggal Auto Terbit','datetime-local'],
  ['layanan','Layanan','text'],['kategori_produk','Kategori Produk','text'],['nomor_permohonan','Nomor Permohonan','text'],
@@ -58,10 +58,17 @@ function initManualForm(){
   wrap.append(input);host.append(wrap);
  });
  $('kpeManualForm').addEventListener('submit',event=>{
-  event.preventDefault();const values={};manualFields.forEach(([key])=>{const v=$('kpe_'+key).value.trim();values[key]=v||null;});
+  event.preventDefault();if(!state.enabled){say('Penyimpanan Kanwil belum aktif: storage terpisah dan feature flag belum siap.');return;}
+  const values={};manualFields.forEach(([key])=>{const v=$('kpe_'+key).value.trim();values[key]=v||null;});
   if(!values.nomor_permohonan||!values.nama){say('Nomor Permohonan dan Nama wajib diisi.');return;}
-  state.rows.push({file:'INPUT MANUAL (SEMENTARA)',sourceRowNumber:'—',values,state:'REVIEW_REQUIRED',warnings:['BELUM_DISIMPAN','PERIKSA_17_KOLOM']});
-  render();event.target.reset();say('Data ditambahkan ke daftar review sementara. Belum tersimpan permanen.');
+  const button=event.target.querySelector('button[type="submit"]');button.disabled=true;
+  const payload={submissionId:crypto.randomUUID(),values,sourceReason:'MANUAL_ENTRY'};
+  google.script.run.withSuccessHandler(result=>{
+    event.target.reset();say('Tersimpan di staging Kanwil. Status: '+result.state+'. ID: '+result.stagingId);
+    button.disabled=!state.enabled;loadKanwilQueue();
+  }).withFailureHandler(error=>{
+    say('Gagal menyimpan: '+(error&&error.message||String(error)));button.disabled=!state.enabled;
+  }).saveKanwilApplication(payload);
  });
 }
 
@@ -118,6 +125,38 @@ $('kpeRun').addEventListener('click',async()=>{
  }catch(e){say('Gagal memulai: '+(e.message||String(e)));}
  finally{state.busy=false;$('kpeRun').disabled=false;render();}
 });
-initManualForm();
+function loadKanwilQueue(){
+ if(!state.enabled)return;
+ google.script.run.withSuccessHandler(result=>{
+  const body=$('kpeQueue');body.replaceChildren();const rows=result&&result.rows||[];
+  if(!rows.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.textContent='Belum ada permohonan tersimpan.';tr.append(td);body.append(tr);return;}
+  rows.forEach(row=>{
+   const tr=document.createElement('tr'),number=document.createElement('td'),name=document.createElement('td'),status=document.createElement('td'),actions=document.createElement('td');
+   number.textContent=row.values.nomor_permohonan||'—';name.textContent=row.values.nama||'—';status.textContent=row.state;
+   if(row.state==='REVIEW_REQUIRED'){
+    [['Setujui','APPROVE'],['Tolak','REJECT']].forEach(([label,decision])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',()=>actKanwil(row.stagingId,decision));actions.append(b);});
+   }else if(row.state==='APPROVED'){
+    const b=document.createElement('button');b.type='button';b.textContent='Finalisasi';b.addEventListener('click',()=>actKanwil(row.stagingId,'COMMIT'));actions.append(b);
+   }
+   tr.append(number,name,status,actions);body.append(tr);
+  });
+ }).withFailureHandler(error=>say('Gagal memuat antrean Kanwil: '+(error&&error.message||String(error))).listKanwilApplications({limit:100});
+}
+function actKanwil(id,action){
+ const reason=window.prompt('Masukkan alasan tindakan '+action+':');if(!reason||!reason.trim())return;
+ const runner=google.script.run.withSuccessHandler(()=>{say('Tindakan '+action+' berhasil.');loadKanwilQueue();})
+  .withFailureHandler(error=>say('Tindakan gagal: '+(error&&error.message||String(error))));
+ if(action==='COMMIT')runner.commitKanwilApplication(id,reason.trim());
+ else runner.reviewKanwilApplication(id,action,reason.trim());
+}
+function initializeKanwilPersistence(){
+ google.script.run.withSuccessHandler(status=>{
+  state.enabled=!!status.enabled;
+  const button=$('kpeManualForm').querySelector('button[type="submit"]');button.disabled=!state.enabled;
+  say(state.enabled?'Penyimpanan Kanwil aktif. Data manual masuk ke staging terpisah.':'Penyimpanan belum aktif: '+status.reason);
+  loadKanwilQueue();
+ }).withFailureHandler(error=>say('Status Kanwil tidak dapat dibaca: '+(error&&error.message||String(error)))).getKanwilEntryStatus();
+}
+initManualForm();\ninitializeKanwilPersistence();
 })();
 </script>
