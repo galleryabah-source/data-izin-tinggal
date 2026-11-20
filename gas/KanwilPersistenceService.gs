@@ -324,8 +324,9 @@ function kanwilBuildBatchReconciliationV1_(batch,files,staging,records){
     const fileStages=stageRows.filter(row=>String(row.file_id||'')===String(file.file_id||''));
     const observed=fileStages.length;
     const parsedExpected=Math.max(0,Number(file.parsed_record_count!==''&&file.parsed_record_count!==undefined?file.parsed_record_count:file.source_row_count)||0);
-    const sourceExpected=Number(file.source_data_row_count);
-    if(Number.isFinite(sourceExpected)&&sourceExpected!==parsedExpected)
+    const sourceExpectedRaw=file.source_data_row_count;
+    const sourceExpected=sourceExpectedRaw===''||sourceExpectedRaw===undefined||sourceExpectedRaw===null?null:Number(sourceExpectedRaw);
+    if(sourceExpected!==null&&Number.isFinite(sourceExpected)&&sourceExpected!==parsedExpected)
       mismatches.push({code:'SOURCE_TO_PARSER_COUNT_MISMATCH',fileId:String(file.file_id||''),expected:sourceExpected,observed:parsedExpected});
     if(observed!==parsedExpected)mismatches.push({code:'PARSER_TO_STAGING_COUNT_MISMATCH',fileId:String(file.file_id||''),expected:parsedExpected,observed});
     if(String(file.source_evidence_status||'')==='CLIENT_ATTESTED'){
