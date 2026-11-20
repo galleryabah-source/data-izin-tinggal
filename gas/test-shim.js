@@ -1961,7 +1961,9 @@ const kanwilEvidenceMismatch=kanwilReconcileHelpers.kanwilBuildBatchReconciliati
  {batch_id:'B2',file_count:1,record_count:2,source_channel:'EXCEL'},
  [{...kanwilEvidenceFile,source_data_row_count:3}],kanwilEvidenceStage,[]);
 assert(kanwilEvidenceMismatch.mismatches.some(x=>x.code==='SOURCE_TO_PARSER_COUNT_MISMATCH'),'Kanwil reconciliation flags source-to-parser row count drift');
-assert(kanwilEvidenceMismatch.mismatches.some(x=>x.code==='PARSER_TO_STAGING_COUNT_MISMATCH'),'Kanwil reconciliation flags parser-to-staging row count drift');
+const kanwilEvidenceStagingMismatch=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(
+ {batch_id:'B2',file_count:1,record_count:1,source_channel:'EXCEL'},[kanwilEvidenceFile],kanwilEvidenceStage.slice(0,1),[]);
+assert(kanwilEvidenceStagingMismatch.mismatches.some(x=>x.code==='PARSER_TO_STAGING_COUNT_MISMATCH'),'Kanwil reconciliation flags parser-to-staging row count drift');
 
 
 
