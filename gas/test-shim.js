@@ -49,6 +49,7 @@ assert(mobileHtml.includes("if(nav==='points'){serviceSubscreen='points';nav='se
 assert(mobileHtml.includes("$('offices').addEventListener('click'"),'Office selection retains a delegated click handler');
 assert(mobileHtml.includes('.app-map .map-wrap{height:calc(100dvh - 265px)'),'Map screen expands to the available mobile viewport');
 const workspaceHtml=read('index.html');
+assert(workspaceHtml.includes('Input Layanan Kanwil')&&workspaceHtml.includes('>STAGING</span>')&&!workspaceHtml.includes('REVIEW ONLY</span>'),'Kanwil navigation no longer advertises review-only mode and does not falsely claim live activation');
 assert(workspaceHtml.includes('INTAL TV Smartphone')&&workspaceHtml.includes("WEB_APP_URL+'?view=tv-mobile'"),'Workspace provides a dedicated INTAL TV Smartphone menu entry');
 const tvHtml=fs.readFileSync(path.join(__dirname,'tv.html'),'utf8');
 const tvScriptMatch=tvHtml.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
