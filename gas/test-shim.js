@@ -49,6 +49,7 @@ assert(mobileHtml.includes("if(nav==='points'){serviceSubscreen='points';nav='se
 assert(mobileHtml.includes("$('offices').addEventListener('click'"),'Office selection retains a delegated click handler');
 assert(mobileHtml.includes('.app-map .map-wrap{height:calc(100dvh - 265px)'),'Map screen expands to the available mobile viewport');
 const workspaceHtml=read('index.html');
+assert(workspaceHtml.includes('Input Layanan Kanwil')&&workspaceHtml.includes('>STAGING</span>')&&!workspaceHtml.includes('REVIEW ONLY</span>'),'Kanwil navigation no longer advertises review-only mode and does not falsely claim live activation');
 assert(workspaceHtml.includes('INTAL TV Smartphone')&&workspaceHtml.includes("WEB_APP_URL+'?view=tv-mobile'"),'Workspace provides a dedicated INTAL TV Smartphone menu entry');
 const tvHtml=fs.readFileSync(path.join(__dirname,'tv.html'),'utf8');
 const tvScriptMatch=tvHtml.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
@@ -1859,11 +1860,33 @@ const kanwilNavSource=read('index.html');
 assert(kanwilNavSource.includes('href="?view=kanwil"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace');
 const kanwilPageSource=read('KanwilEntry.html');
 assert(kanwilPageSource.includes('staging terpisah')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
+assert(kanwilPageSource.includes('@3501a30e0ab82806064f36104bb33594cf9ec23a/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
+assert(!kanwilPageSource.includes('data-izin-tinggal@main/gas/'),'Kanwil browser parser never executes mutable main-branch code');
+
+const kanwilPermitContract=require('./KanwilPermitContract.js');
+const kanwilXlsxAdapter=require('./KanwilXlsxAdapter.js');
+const kanwilCsvHeader=['tanggal pembayaran','tanggal mulai verifikasi','tanggal auto terbit','layanan','kategori produk','nomor permohonan','tanggal permohonan','penjamin','nama','jenis kelamin','tanggal lahir','kebangsaan','no passport','jenis produk','tujuan','posisi permohonan','status permohonan'];
+const kanwilCsvSource=kanwilCsvHeader.join(',')+'\n,,,,,APP-1,,,,,,,,,,,\n\n,,,,,APP-2,,,,,,,,,,,';
+const kanwilCsvParsed=kanwilPermitContract.parseKanwilPermitCsvV1(kanwilCsvSource,{delimiter:','});
+assert(kanwilCsvParsed.ok&&kanwilCsvParsed.sourceEvidence.sourceDataRowCount===2&&kanwilCsvParsed.sourceEvidence.parsedRecordCount===2,'CSV source evidence counts non-empty logical data rows before filtering');
+assert(JSON.stringify(kanwilCsvParsed.sourceEvidence.sourceRowNumbers)==='[2,4]','CSV source evidence preserves original source row positions across blank rows');
+const kanwilXlsxMatrix=[['cover','',''],kanwilCsvHeader,['','',''],['','','','', '', 'APP-1'],['','','','', '', 'APP-2']];
+const kanwilXlsxParsed=kanwilXlsxAdapter.parseKanwilXlsxV1(new ArrayBuffer(0),{
+ read:()=>({SheetNames:['Data'],Sheets:{Data:{}}}),
+ utils:{sheet_to_json:()=>kanwilXlsxMatrix}
+ },{},kanwilPermitContract.parseKanwilPermitCsvV1,kanwilPermitContract.kanwilMapHeadersV1_);
+assert(kanwilXlsxParsed.ok&&kanwilXlsxParsed.sourceEvidence.sourceDataRowCount===2&&kanwilXlsxParsed.sourceEvidence.parsedRecordCount===2,'XLSX evidence counts non-empty worksheet data rows before parser filtering');
+assert(JSON.stringify(kanwilXlsxParsed.sourceEvidence.sourceRowNumbers)==='[4,5]','XLSX parser preserves physical worksheet row numbers including blank-row gaps');
+assert(kanwilXlsxParsed.sourceEvidence.measurement==='NON_EMPTY_WORKSHEET_ROWS_AFTER_HEADER','XLSX evidence identifies its source measurement method');
+
+assert(kanwilPageSource.includes('sourceRowNumber:record.sourceRowNumber!==undefined?record.sourceRowNumber:(record.sourceRowIndex!==undefined?record.sourceRowIndex:null)'),'Kanwil UI preserves explicit invalid source row numbers for server-side rejection');
+
 assert(kanwilPageSource.includes('saveKanwilApplication')&&kanwilPageSource.includes('saveKanwilImportBatch')&&kanwilPageSource.includes('listKanwilApplications'),'Kanwil UI persists manual and parsed file records and loads the staging queue');
 assert(kanwilPageSource.includes('reviewKanwilApplication')&&kanwilPageSource.includes('commitKanwilApplication'),'Kanwil UI exposes guarded review and isolated finalization actions');
 const kanwilReviewContract=require('./KanwilStagingContract.js');
-assert(kanwilReviewContract.KANWIL_REVIEW_ONLY_V1===true,'Kanwil parser evidence remains review-only until human validation');
-assert(!kanwilReviewContract.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Parser staging contract blocks direct commit without approval');
+assert(kanwilReviewContract.KANWIL_REVIEW_ONLY_V1===false,'Kanwil isolated staging workflow is no longer hardcoded review-only');
+assert(!kanwilReviewContract.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Kanwil staging contract still blocks commit without human approval');
+assert(kanwilReviewContract.transitionKanwilStagingV1('APPROVED','COMMITTED','approved by independent reviewer').ok,'Kanwil staging contract permits commit only after approval');
 assert(kanwilPageSource.includes('kpeManualForm') && kanwilPageSource.includes('Simpan ke staging Kanwil'),'Kanwil page exposes a manual application-entry form');
 const kanwilManualKeys=['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','layanan','kategori_produk','nomor_permohonan','tanggal_permohonan','penjamin','nama','jenis_kelamin','tanggal_lahir','kebangsaan','no_passport','jenis_produk','tujuan','posisi_permohonan','status_permohonan'];
 assert(kanwilManualKeys.every(key=>kanwilPageSource.includes("['"+key+"'")),'Manual Kanwil form enumerates all 17 source columns');
@@ -1875,9 +1898,84 @@ assert(kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID") && kanwilSe
 assert(kanwilServiceSource.includes("requireBackOfficeAccess_()") && kanwilServiceSource.includes("function provisionKanwilStagingSchema_"),'Kanwil schema provisioning is a private back-office guarded helper');
 assert(kanwilServiceSource.indexOf('Preflight every existing tab before creating or modifying any schema')>=0&&kanwilServiceSource.indexOf('Preflight every existing tab before creating or modifying any schema')<kanwilServiceSource.indexOf('if(!sh)sh=ss.insertSheet(name)'),'Kanwil provisioning preflights all existing schemas before creating missing tabs');
 assert(kanwilServiceSource.includes("reviewOnlyScreenshot:true"),'Kanwil screenshot intake remains explicitly review-only');
+assert(kanwilServiceSource.includes('source_data_row_count')&&kanwilServiceSource.includes('source_row_manifest_sha256')&&kanwilServiceSource.includes('source_evidence_status'),'Kanwil file schema stores source-row evidence and provenance status');
 assert(kanwilServiceSource.includes("'review_state','state','revision'"),'Kanwil staging schema persists the lifecycle state used by queue and review RPCs');
 const kanwilPersistenceSource=read('KanwilPersistenceService.gs');
+const kanwilIdempotencyIndexBuilder=new Function(kanwilPersistenceSource+'\nreturn kanwilBuildExistingIdempotencyIndexV1_;')();
+const kanwilIndex=kanwilIdempotencyIndexBuilder([['KEY-A','HASH-A'],['KEY-B','HASH-B']],0,1);
+assert(kanwilIndex.get('KEY-A')==='HASH-A','Kanwil persisted idempotency index preserves unique keys');
+let duplicateKanwilKeyRejected=false;try{kanwilIdempotencyIndexBuilder([['KEY-A','HASH-A'],['KEY-A','HASH-B']],0,1);}catch(e){duplicateKanwilKeyRejected=/KANWIL_STAGING_IDEMPOTENCY_KEY_DUPLICATE/.test(e.message);}
+assert(duplicateKanwilKeyRejected,'Kanwil import fails closed when persisted idempotency keys are duplicated');
+assert(kanwilPersistenceSource.includes("sourceRowRaw=row.sourceRowNumber===undefined||row.sourceRowNumber===null||row.sourceRowNumber===''?index+1:row.sourceRowNumber"),'Kanwil import does not silently replace an explicitly supplied invalid source row number');
+
 assert(kanwilPersistenceSource.includes("function saveKanwilApplication(payload)")&&kanwilPersistenceSource.includes("function saveKanwilImportBatch(payload)")&&kanwilPersistenceSource.includes("function commitKanwilApplication(stagingId,reason)"),'Kanwil isolated staging persistence and finalization endpoints exist');
+assert(kanwilServiceSource.includes("revisions:['revision_id','staging_id','revision','prior_payload_sha256','payload_sha256','prior_payload_json','payload_json','reason','actor_id','created_at','correlation_id']"),'Kanwil storage provisions an append-only revision history sheet');
+assert(kanwilPersistenceSource.includes('function reviseKanwilApplication(stagingId,expectedRevision,payload,reason)'),'Kanwil revision endpoint requires an expected revision and reason');
+assert(kanwilPersistenceSource.includes("KANWIL_REVISION_ACTOR_NOT_ORIGINAL_SUBMITTER"),'Only the original submitter may apply a correction revision');
+assert(kanwilPageSource.includes("reviseKanwilApplication(target.stagingId,target.revision,{values},reason.trim())"),'Kanwil UI submits corrections against the exact expected revision');
+assert(kanwilPageSource.includes("function startKanwilRevision(row)")&&kanwilPageSource.includes("Koreksi / revisi"),'Kanwil queue exposes correction mode for rejected or validation-required rows');
+const kanwilCorrectionBranchAt=kanwilPageSource.indexOf("}else if(row.state==='REJECTED'||row.state==='VALIDATION_REQUIRED'){");
+const kanwilValidationRejectBranchAt=kanwilPageSource.indexOf("if(row.state==='VALIDATION_REQUIRED'){",kanwilCorrectionBranchAt+1);
+assert(kanwilCorrectionBranchAt>=0&&kanwilValidationRejectBranchAt>kanwilCorrectionBranchAt,'Kanwil validation-required rows expose correction before optional rejection action');
+assert(kanwilPageSource.includes("Simpan revisi v"),'Kanwil UI labels the next revision number before submission');
+
+assert(kanwilPersistenceSource.includes("if(!['REJECTED','VALIDATION_REQUIRED'].includes(state))throw new Error('KANWIL_REVISION_STATE_NOT_ALLOWED')"),'Kanwil corrections are limited to rejected or validation-required submissions');
+assert(kanwilPersistenceSource.includes("throw new Error('KANWIL_REVISION_CONFLICT')"),'Kanwil revision endpoint rejects stale concurrent edits');
+assert(kanwilPersistenceSource.includes("kanwilAppendEventV1_(sheets,'',id,'REVISION_SUBMITTED'")&&kanwilPersistenceSource.includes("user.email,'REVISION_SUBMITTED',why"),'Every Kanwil revision records a lifecycle event and audit entry');
+assert(kanwilPersistenceSource.includes("throw new Error('KANWIL_APPROVAL_EVIDENCE_MISSING')")&&kanwilPersistenceSource.includes("latestReview[eventHeader.actor_id]"),'Kanwil finalization requires persisted approval evidence and a distinct reviewer');
+const kanwilRevisionHelpers=new Function(kanwilPersistenceSource+'\nreturn {kanwilLatestReviewEventV1_};')();
+const kanwilEventHeaders=['event_id','record_id','staging_id','event_sequence','event_type','from_state','to_state','revision','payload_sha256','actor_id','reason','correlation_id','occurred_at'];
+const kanwilEventRows=[kanwilEventHeaders,['E1','','S1',1,'REVIEW_REJECT','REVIEW_REQUIRED','REJECTED',1,'H1','reviewer@example.gov.id','','C1','T1'],['E2','','S1',2,'REVISION_SUBMITTED','REJECTED','REVIEW_REQUIRED',2,'H2','operator@example.gov.id','','C2','T2'],['E3','','S1',3,'REVIEW_APPROVE','REVIEW_REQUIRED','APPROVED',2,'H2','reviewer2@example.gov.id','','C3','T3']];
+const kanwilLatestReview=kanwilRevisionHelpers.kanwilLatestReviewEventV1_({events:{getLastColumn:()=>kanwilEventHeaders.length,getRange:()=>({getValues:()=>[kanwilEventHeaders]}),getDataRange:()=>({getValues:()=>kanwilEventRows})}},'S1');
+assert(kanwilLatestReview[3]===3&&kanwilLatestReview[9]==='reviewer2@example.gov.id','Kanwil reviewer identity resolves from the latest persisted review event');
+assert(kanwilServiceSource.includes("reconciliations:['reconciliation_id','batch_id','status'"),'Kanwil staging schema includes append-only batch reconciliation snapshots');
+assert(kanwilPersistenceSource.includes('function reconcileKanwilBatch(batchId)'),'Kanwil exposes a batch reconciliation RPC');
+assert(kanwilPersistenceSource.includes("KANWIL_RECONCILIATION_WRITE_FAILED")&&kanwilPersistenceSource.includes("'BATCH_RECONCILIATION'"),'Kanwil reconciliation snapshots and audit are written with rollback protection');
+assert(read('RpcManifest.js').includes("reconcileKanwilBatch:{access:'protected',permission:'backoffice.access'}"),'Kanwil batch reconciliation RPC is protected by back-office permission');
+const kanwilReconcileHelpers=new Function('Utilities',kanwilPersistenceSource+'\nreturn {kanwilBuildBatchReconciliationV1_};')({
+  DigestAlgorithm:{SHA_256:'SHA_256'},Charset:{UTF_8:'UTF_8'},computeDigest:()=>[1,2,3]
+});
+const kanwilReconBatch={batch_id:'B1',file_count:1,record_count:2};
+const kanwilReconFiles=[{batch_id:'B1',file_id:'F1',source_row_count:2}];
+const kanwilReconStage=[
+ {batch_id:'B1',staging_id:'S1',file_id:'F1',state:'REVIEW_REQUIRED',validation_errors_json:'[]'},
+ {batch_id:'B1',staging_id:'S2',file_id:'F1',state:'COMMITTED',validation_errors_json:'[]'}
+];
+const kanwilReconRecords=[{source_staging_id:'S2'}];
+const kanwilReconPass=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(kanwilReconBatch,kanwilReconFiles,kanwilReconStage,kanwilReconRecords);
+assert(kanwilReconPass.status==='PASS'&&kanwilReconPass.stagedRows===2&&kanwilReconPass.committedRows===1,'Kanwil batch reconciliation passes when source, staging, and committed records agree');
+const kanwilReconMismatch=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(kanwilReconBatch,[{batch_id:'B1',file_id:'F1',source_row_count:3}],kanwilReconStage,kanwilReconRecords);
+assert(kanwilReconMismatch.status==='MISMATCH'&&kanwilReconMismatch.mismatches.some(x=>x.code==='SOURCE_TO_STAGING_COUNT_MISMATCH'),'Kanwil batch reconciliation fails closed when source row counts diverge from staging');
+const kanwilReconOrphan=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(kanwilReconBatch,kanwilReconFiles,
+ [{...kanwilReconStage[0],file_id:''},kanwilReconStage[1]],kanwilReconRecords);
+assert(kanwilReconOrphan.mismatches.some(x=>x.code==='STAGING_FILE_REFERENCE_ORPHAN'),'Kanwil batch reconciliation detects staged rows without a source file reference');
+
+const kanwilEvidenceFile={batch_id:'B2',file_id:'F2',source_file_sha256:'a'.repeat(64),parser_version:'parser-v2',
+ source_data_row_count:2,parsed_record_count:2,source_row_count:2,source_row_manifest_sha256:'010203',source_evidence_status:'CLIENT_ATTESTED'};
+const kanwilEvidenceStage=[
+ {batch_id:'B2',staging_id:'E1',file_id:'F2',source_row_number:5,state:'REVIEW_REQUIRED',validation_errors_json:'[]'},
+ {batch_id:'B2',staging_id:'E2',file_id:'F2',source_row_number:7,state:'REVIEW_REQUIRED',validation_errors_json:'[]'}
+];
+const kanwilEvidenceRecon=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(
+ {batch_id:'B2',file_count:1,record_count:2,source_channel:'EXCEL'},[kanwilEvidenceFile],kanwilEvidenceStage,[]);
+assert(kanwilEvidenceRecon.status==='PASS'&&kanwilEvidenceRecon.sourceRowsExpected===2&&kanwilEvidenceRecon.parsedRows===2,'Kanwil reconciliation distinguishes source-data rows from parsed records');
+const kanwilEvidenceMismatch=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(
+ {batch_id:'B2',file_count:1,record_count:2,source_channel:'EXCEL'},
+ [{...kanwilEvidenceFile,source_data_row_count:3}],kanwilEvidenceStage,[]);
+assert(kanwilEvidenceMismatch.mismatches.some(x=>x.code==='SOURCE_TO_PARSER_COUNT_MISMATCH'),'Kanwil reconciliation flags source-to-parser row count drift');
+const kanwilEvidenceStagingMismatch=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(
+ {batch_id:'B2',file_count:1,record_count:1,source_channel:'EXCEL'},[kanwilEvidenceFile],kanwilEvidenceStage.slice(0,1),[]);
+assert(kanwilEvidenceStagingMismatch.mismatches.some(x=>x.code==='PARSER_TO_STAGING_COUNT_MISMATCH'),'Kanwil reconciliation flags parser-to-staging row count drift');
+
+const kanwilScreenshotRecon=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(
+ {batch_id:'B3',file_count:1,record_count:1,source_channel:'SCREENSHOT'},
+ [{batch_id:'B3',file_id:'F3',source_row_count:1,source_data_row_count:'',parsed_record_count:1,source_evidence_status:'UNAVAILABLE'}],
+ [{batch_id:'B3',staging_id:'S3',file_id:'F3',source_row_number:1,state:'REVIEW_REQUIRED',validation_errors_json:'[]'}],[]);
+assert(!kanwilScreenshotRecon.mismatches.some(x=>x.code==='SOURCE_TO_PARSER_COUNT_MISMATCH'),'Screenshot/OCR intake does not claim unavailable physical source-row evidence');
+
+
+
+
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
 assert(kanwilPersistenceSource.includes("requireBackOfficeAccess_()"),'Kanwil persistence endpoints require authenticated back-office access');
 function assertKanwilGuardBeforeEffects(source,name){
@@ -1917,7 +2015,13 @@ assert(kanwilPersistenceSource.includes("sheets.staging.getRange(index+1,h.updat
 assert(kanwilPersistenceSource.includes("review_state:'PENDING',state:'REVIEW_REQUIRED'"),'Manual Kanwil intake persists an explicit review lifecycle state');
 assert(kanwilPersistenceSource.includes("review_state:'PENDING',state,payload_sha256:hash"),'File imports persist validation/review state with the staged row');
 assert(kanwilPersistenceSource.includes('normalized=kanwilPayloadV1_({values:normalized})'),'File imports store server-canonicalized fields after validation');
+const kanwilImportNormalizeAt=kanwilPersistenceSource.indexOf('normalized=kanwilPayloadV1_({values:normalized})');
+const kanwilImportHashAt=kanwilPersistenceSource.indexOf('const hash=kanwilHashV1_(normalized)',kanwilImportNormalizeAt);
+assert(kanwilImportNormalizeAt>=0&&kanwilImportHashAt>kanwilImportNormalizeAt,'Kanwil import checksum is computed from the exact server-normalized payload that is persisted');
+
 assert(kanwilPersistenceSource.includes('seenSourceRows.has(sourceRow)'),'File import rejects duplicate physical source row numbers');
+assert(kanwilPersistenceSource.includes('KANWIL_SOURCE_EVIDENCE_REQUIRED')&&kanwilPersistenceSource.includes('KANWIL_SOURCE_ROW_MANIFEST_MISMATCH'),'Server validates tabular parser source-row evidence before persistence');
+assert(kanwilPersistenceSource.includes('SOURCE_TO_PARSER_COUNT_MISMATCH')&&kanwilPersistenceSource.includes('PARSER_TO_STAGING_COUNT_MISMATCH')&&kanwilPersistenceSource.includes('SOURCE_ROW_MANIFEST_MISMATCH'),'Batch reconciliation compares source, parser, staging counts and row manifest');
 assert(kanwilPersistenceSource.includes('validationErrors:JSON.parse'),'Kanwil queue exposes server-side validation errors for operator review');
 assert(kanwilPersistenceSource.includes("correlationId,fileId)"),'Kanwil file-import audit event retains its source file identity');
 const kanwilPayloadValidator=new Function(kanwilPersistenceSource+'\nreturn kanwilPayloadV1_;')();
@@ -1969,3 +2073,62 @@ assert(!JSON.stringify(kanwilWorkspace).includes('RAHASIA A'),'Kanwil analytics 
 
 
 
+
+
+assert(kanwilPersistenceSource.includes('function inspectKanwilRecovery(batchId)'),'Kanwil exposes a protected read-only recovery inspection RPC');
+assert(read('RpcManifest.js').includes("inspectKanwilRecovery:{access:'protected',permission:'backoffice.access'}"),'Kanwil recovery inspection RPC requires back-office permission');
+assert(kanwilPersistenceSource.includes("mode:'DRY_RUN'")&&kanwilPersistenceSource.includes('mutationsApplied:false')&&kanwilPersistenceSource.includes('canonicalWrites:false'),'Kanwil recovery inspection explicitly guarantees dry-run with no canonical writes');
+const kanwilRecoveryBuilder=new Function('Utilities',kanwilPersistenceSource+'\nreturn kanwilBuildRecoveryInspectionV1_;')({DigestAlgorithm:{SHA_256:'SHA_256'},Charset:{UTF_8:'UTF_8'},computeDigest:()=>[1,2,3]});
+const recoveryBatch={batch_id:'RB1',file_count:1,record_count:2};
+const recoveryFiles=[{batch_id:'RB1',file_id:'RF1'}];
+const recoveryStage=[
+ {batch_id:'RB1',staging_id:'RS1',file_id:'RF1',idempotency_key:'DUP',state:'COMMITTED',revision:2},
+ {batch_id:'RB1',staging_id:'RS2',file_id:'MISSING-FILE',idempotency_key:'DUP',state:'REVIEW_REQUIRED',revision:1}
+];
+const recoveryRecords=[];
+const recoveryEvents=[{event_id:'RE1',staging_id:'MISSING-STAGE',event_type:'REVIEW_APPROVE'}];
+const recoveryRevisions=[{revision_id:'RV1',staging_id:'MISSING-STAGE',revision:2}];
+const recoveryAudit=[{audit_id:'RA1',batch_id:'RB1',staging_id:'MISSING-STAGE'}];
+const recoveryInspection=kanwilRecoveryBuilder(recoveryBatch,recoveryFiles,recoveryStage,recoveryRecords,recoveryEvents,recoveryRevisions,recoveryAudit);
+assert(recoveryInspection.mode==='DRY_RUN'&&recoveryInspection.mutationsApplied===false&&recoveryInspection.canonicalWrites===false,'Kanwil recovery inspection is explicitly non-mutating');
+assert(recoveryInspection.findings.some(x=>x.code==='STAGING_FILE_REFERENCE_ORPHAN'),'Kanwil recovery inspection detects orphan file references');
+
+const recoveryEvidenceInspection=kanwilRecoveryBuilder(
+ {batch_id:'RB2',file_count:1,record_count:1,source_channel:'CSV'},
+ [{batch_id:'RB2',file_id:'RF2',source_file_sha256:'a'.repeat(64),parser_version:'p',source_data_row_count:2,parsed_record_count:1,source_evidence_status:'CLIENT_ATTESTED',source_row_manifest_sha256:'wrong'}],
+ [{batch_id:'RB2',staging_id:'RS3',file_id:'RF2',source_row_number:4,idempotency_key:'K3',state:'REVIEW_REQUIRED',revision:1}],
+ [],[],[],[]);
+assert(recoveryEvidenceInspection.findings.some(x=>x.code==='SOURCE_TO_PARSER_COUNT_DRIFT')&&recoveryEvidenceInspection.findings.some(x=>x.code==='SOURCE_ROW_MANIFEST_DRIFT'),'Kanwil recovery inspection detects source count and row manifest drift');
+
+assert(recoveryInspection.findings.some(x=>x.code==='DUPLICATE_IDEMPOTENCY_KEY'),'Kanwil recovery inspection detects duplicate idempotency keys');
+assert(recoveryInspection.findings.some(x=>x.code==='COMMITTED_RECORD_CARDINALITY'),'Kanwil recovery inspection detects committed staging/record inconsistency');
+assert(recoveryInspection.findings.some(x=>x.code==='EVENT_STAGING_ORPHAN')&&recoveryInspection.findings.some(x=>x.code==='REVISION_STAGING_ORPHAN')&&recoveryInspection.findings.some(x=>x.code==='AUDIT_STAGING_ORPHAN'),'Kanwil recovery inspection detects orphan event, revision, and audit references');
+assert(recoveryInspection.recoveryPlan.every(x=>x.automatic===false&&x.requiresOwnerApproval===true),'Kanwil recovery plan contains only owner-reviewed manual actions');
+
+
+// Server-side CSV verification helper is private and is not an RPC or uploader.
+const kanwilServerVerifierSource=read('KanwilServerCsvVerifier.gs');
+assert(kanwilServerVerifierSource.includes('function kanwilVerifyCsvBlobV1_(')&&kanwilServerVerifierSource.includes('sourceBlob.getBytes()'),'Kanwil server verifier accepts original Blob bytes and is a private helper');
+assert(!read('RpcManifest.js').includes('kanwilVerifyCsvBlobV1_:'),'Kanwil server CSV verifier is not exposed as a callable RPC');
+const kanwilCrypto=require('crypto');
+const kanwilServerUtilities={
+  DigestAlgorithm:{SHA_256:'SHA_256'},
+  computeDigest:(algorithm,bytes)=>Array.from(kanwilCrypto.createHash('sha256').update(Buffer.from(bytes.map(x=>x<0?x+256:x))).digest()).map(x=>x>127?x-256:x)
+};
+const kanwilServerVerify=new Function('Utilities','parseKanwilPermitCsvV1',kanwilServerVerifierSource+'\nreturn kanwilVerifyCsvBlobV1_;')(kanwilServerUtilities,kanwilPermitContract.parseKanwilPermitCsvV1);
+const kanwilServerBytes=Array.from(Buffer.from(kanwilCsvSource,'utf8')).map(x=>x>127?x-256:x);
+const kanwilServerBlob={getBytes:()=>kanwilServerBytes,getDataAsString:encoding=>{assert(encoding==='UTF-8','Kanwil server verifier decodes source as UTF-8');return kanwilCsvSource;}};
+const kanwilServerSha=kanwilCrypto.createHash('sha256').update(Buffer.from(kanwilCsvSource,'utf8')).digest('hex');
+const kanwilServerVerified=kanwilServerVerify(kanwilServerBlob,kanwilCsvParsed.sourceEvidence,kanwilServerSha);
+assert(kanwilServerVerified.ok&&kanwilServerVerified.verificationStatus==='SERVER_VERIFIED_CSV','Kanwil private verifier parses original server Blob and returns server-verified CSV evidence');
+assert(kanwilServerVerified.sourceFileSha256===kanwilServerSha&&kanwilServerVerified.sourceByteSize===kanwilServerBytes.length,'Kanwil server verifier computes digest and byte size from original Blob bytes');
+assert(JSON.stringify(kanwilServerVerified.sourceEvidence.sourceRowNumbers)==='[2,4]','Kanwil server verifier preserves logical source row positions');
+let kanwilServerHashMismatch=false;
+try{kanwilServerVerify(kanwilServerBlob,kanwilCsvParsed.sourceEvidence,'0'.repeat(64));}catch(e){kanwilServerHashMismatch=/KANWIL_SOURCE_SHA256_MISMATCH/.test(e.message);}
+assert(kanwilServerHashMismatch,'Kanwil server verifier rejects a browser/server source digest mismatch');
+let kanwilServerParserMismatch=false;
+try{kanwilServerVerify(kanwilServerBlob,{...kanwilCsvParsed.sourceEvidence,sourceDataRowCount:99},kanwilServerSha);}catch(e){kanwilServerParserMismatch=/KANWIL_BROWSER_SERVER_PARSER_MISMATCH/.test(e.message);}
+assert(kanwilServerParserMismatch,'Kanwil server verifier rejects browser/server parser evidence drift');
+let kanwilServerMalformedRejected=false;
+try{kanwilServerVerify({getBytes:()=>[1],getDataAsString:()=>kanwilCsvSource+'\n"unterminated'},null,null);}catch(e){kanwilServerMalformedRejected=/KANWIL_SERVER_CSV_PARSE_FAILED/.test(e.message);}
+assert(kanwilServerMalformedRejected,'Kanwil server verifier fails closed on malformed CSV source bytes');
