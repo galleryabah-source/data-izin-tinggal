@@ -2069,7 +2069,7 @@ assert(!JSON.stringify(kanwilWorkspace).includes('RAHASIA A'),'Kanwil analytics 
 assert(kanwilPersistenceSource.includes('function inspectKanwilRecovery(batchId)'),'Kanwil exposes a protected read-only recovery inspection RPC');
 assert(read('RpcManifest.js').includes("inspectKanwilRecovery:{access:'protected',permission:'backoffice.access'}"),'Kanwil recovery inspection RPC requires back-office permission');
 assert(kanwilPersistenceSource.includes("mode:'DRY_RUN'")&&kanwilPersistenceSource.includes('mutationsApplied:false')&&kanwilPersistenceSource.includes('canonicalWrites:false'),'Kanwil recovery inspection explicitly guarantees dry-run with no canonical writes');
-const kanwilRecoveryBuilder=new Function(kanwilPersistenceSource+'\nreturn kanwilBuildRecoveryInspectionV1_;')();
+const kanwilRecoveryBuilder=new Function('Utilities',kanwilPersistenceSource+'\nreturn kanwilBuildRecoveryInspectionV1_;')({DigestAlgorithm:{SHA_256:'SHA_256'},Charset:{UTF_8:'UTF_8'},computeDigest:()=>[1,2,3]});
 const recoveryBatch={batch_id:'RB1',file_count:1,record_count:2};
 const recoveryFiles=[{batch_id:'RB1',file_id:'RF1'}];
 const recoveryStage=[
