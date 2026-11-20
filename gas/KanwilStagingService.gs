@@ -77,7 +77,7 @@ function provisionKanwilStagingSchema_(stagingSpreadsheetId){
     if(actual.join('|')!==headers.join('|'))throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
     sh.setFrozenRows(1);
   });
-  // Persist the dedicated target only after all six schema headers validate.
+  // Persist the dedicated target only after all configured schema headers validate.
   // This function must be run explicitly by an authorized back-office owner.
   PropertiesService.getScriptProperties().setProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty,id);
   return kanwilStagingReadinessV1_();
