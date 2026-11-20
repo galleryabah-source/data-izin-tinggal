@@ -2128,5 +2128,5 @@ let kanwilServerParserMismatch=false;
 try{kanwilServerVerify(kanwilServerBlob,{...kanwilCsvParsed.sourceEvidence,sourceDataRowCount:99},kanwilServerSha);}catch(e){kanwilServerParserMismatch=/KANWIL_BROWSER_SERVER_PARSER_MISMATCH/.test(e.message);}
 assert(kanwilServerParserMismatch,'Kanwil server verifier rejects browser/server parser evidence drift');
 let kanwilServerMalformedRejected=false;
-try{kanwilServerVerify({getBytes:()=>[1],getDataAsString:()=>kanwilCsvSource+'\\n"unterminated'},null,null);}catch(e){kanwilServerMalformedRejected=/KANWIL_SERVER_CSV_PARSE_FAILED/.test(e.message);}
+try{kanwilServerVerify({getBytes:()=>[1],getDataAsString:()=>kanwilCsvSource+'\n"unterminated'},null,null);}catch(e){kanwilServerMalformedRejected=/KANWIL_SERVER_CSV_PARSE_FAILED/.test(e.message);}
 assert(kanwilServerMalformedRejected,'Kanwil server verifier fails closed on malformed CSV source bytes');
