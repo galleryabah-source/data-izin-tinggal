@@ -2,7 +2,7 @@
  * Kanwil Permit v1 — shared staging envelope and guarded state transitions.
  * Pure staging envelope and transition helpers. Persistence is implemented in KanwilPersistenceService.gs.
  */
-const KANWIL_REVIEW_ONLY_V1=true;
+const KANWIL_REVIEW_ONLY_V1=false;
 const KANWIL_STAGING_FIELD_KEYS_V1=['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','layanan','kategori_produk','nomor_permohonan','tanggal_permohonan','penjamin','nama','jenis_kelamin','tanggal_lahir','kebangsaan','no_passport','jenis_produk','tujuan','posisi_permohonan','status_permohonan'];
 const KANWIL_STAGING_STATES_V1=['RECEIVED','PARSED','VALIDATION_REQUIRED','REVIEW_REQUIRED','APPROVED','COMMITTED','REJECTED','DUPLICATE','CONFLICT','FAILED','CANCELLED'];
 const KANWIL_STAGING_TRANSITIONS_V1={
@@ -46,7 +46,6 @@ function createKanwilStagingEnvelopeV1(input) {
 function transitionKanwilStagingV1(currentState,nextState,reason) {
   if(!KANWIL_STAGING_STATES_V1.includes(currentState)||!KANWIL_STAGING_STATES_V1.includes(nextState))
     return {ok:false,reason:'STAGING_STATE_UNKNOWN'};
-  if(nextState==='COMMITTED')return {ok:false,reason:'KANWIL_REVIEW_ONLY_COMMIT_DISABLED'};
   if(!(KANWIL_STAGING_TRANSITIONS_V1[currentState]||[]).includes(nextState))
     return {ok:false,reason:'STAGING_TRANSITION_NOT_ALLOWED'};
   if(['REJECTED','CANCELLED','CONFLICT'].includes(nextState)&&!String(reason||'').trim())
