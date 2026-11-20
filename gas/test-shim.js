@@ -1861,6 +1861,23 @@ const kanwilPageSource=read('KanwilEntry.html');
 assert(kanwilPageSource.includes('staging terpisah')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
 assert(kanwilPageSource.includes('@c89ece54851b0a0fe8c2fde50b7c145fe22affc2/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
 assert(!kanwilPageSource.includes('data-izin-tinggal@main/gas/'),'Kanwil browser parser never executes mutable main-branch code');
+
+const kanwilPermitContract=require('./KanwilPermitContract.js');
+const kanwilXlsxAdapter=require('./KanwilXlsxAdapter.js');
+const kanwilCsvHeader=['tanggal pembayaran','tanggal mulai verifikasi','tanggal auto terbit','layanan','kategori produk','nomor permohonan','tanggal permohonan','penjamin','nama','jenis kelamin','tanggal lahir','kebangsaan','no passport','jenis produk','tujuan','posisi permohonan','status permohonan'];
+const kanwilCsvSource=kanwilCsvHeader.join(',')+'\\n,,,,,APP-1,,,,,,,,,,,\\n\\n,,,,,APP-2,,,,,,,,,,,';
+const kanwilCsvParsed=kanwilPermitContract.parseKanwilPermitCsvV1(kanwilCsvSource,{delimiter:','});
+assert(kanwilCsvParsed.ok&&kanwilCsvParsed.sourceEvidence.sourceDataRowCount===2&&kanwilCsvParsed.sourceEvidence.parsedRecordCount===2,'CSV source evidence counts non-empty logical data rows before filtering');
+assert(JSON.stringify(kanwilCsvParsed.sourceEvidence.sourceRowNumbers)==='[2,4]','CSV source evidence preserves original source row positions across blank rows');
+const kanwilXlsxMatrix=[['cover','',''],kanwilCsvHeader,['','',''],['','','','', '', 'APP-1'],['','','','', '', 'APP-2']];
+const kanwilXlsxParsed=kanwilXlsxAdapter.parseKanwilXlsxV1(new ArrayBuffer(0),{
+ read:()=>({SheetNames:['Data'],Sheets:{Data:{}}}),
+ utils:{sheet_to_json:()=>kanwilXlsxMatrix}
+ },{},kanwilPermitContract.parseKanwilPermitCsvV1,kanwilPermitContract.kanwilMapHeadersV1_);
+assert(kanwilXlsxParsed.ok&&kanwilXlsxParsed.sourceEvidence.sourceDataRowCount===2&&kanwilXlsxParsed.sourceEvidence.parsedRecordCount===2,'XLSX evidence counts non-empty worksheet data rows before parser filtering');
+assert(JSON.stringify(kanwilXlsxParsed.sourceEvidence.sourceRowNumbers)==='[4,5]','XLSX parser preserves physical worksheet row numbers including blank-row gaps');
+assert(kanwilXlsxParsed.sourceEvidence.measurement==='NON_EMPTY_WORKSHEET_ROWS_AFTER_HEADER','XLSX evidence identifies its source measurement method');
+
 assert(kanwilPageSource.includes('sourceRowNumber:record.sourceRowNumber!==undefined?record.sourceRowNumber:(record.sourceRowIndex!==undefined?record.sourceRowIndex:null)'),'Kanwil UI preserves explicit invalid source row numbers for server-side rejection');
 
 assert(kanwilPageSource.includes('saveKanwilApplication')&&kanwilPageSource.includes('saveKanwilImportBatch')&&kanwilPageSource.includes('listKanwilApplications'),'Kanwil UI persists manual and parsed file records and loads the staging queue');
@@ -1879,6 +1896,7 @@ assert(kanwilServiceSource.includes("KANWIL_STAGING_SPREADSHEET_ID") && kanwilSe
 assert(kanwilServiceSource.includes("requireBackOfficeAccess_()") && kanwilServiceSource.includes("function provisionKanwilStagingSchema_"),'Kanwil schema provisioning is a private back-office guarded helper');
 assert(kanwilServiceSource.indexOf('Preflight every existing tab before creating or modifying any schema')>=0&&kanwilServiceSource.indexOf('Preflight every existing tab before creating or modifying any schema')<kanwilServiceSource.indexOf('if(!sh)sh=ss.insertSheet(name)'),'Kanwil provisioning preflights all existing schemas before creating missing tabs');
 assert(kanwilServiceSource.includes("reviewOnlyScreenshot:true"),'Kanwil screenshot intake remains explicitly review-only');
+assert(kanwilServiceSource.includes('source_data_row_count')&&kanwilServiceSource.includes('source_row_manifest_sha256')&&kanwilServiceSource.includes('source_evidence_status'),'Kanwil file schema stores source-row evidence and provenance status');
 assert(kanwilServiceSource.includes("'review_state','state','revision'"),'Kanwil staging schema persists the lifecycle state used by queue and review RPCs');
 const kanwilPersistenceSource=read('KanwilPersistenceService.gs');
 const kanwilIdempotencyIndexBuilder=new Function(kanwilPersistenceSource+'\nreturn kanwilBuildExistingIdempotencyIndexV1_;')();
@@ -1975,6 +1993,8 @@ const kanwilImportHashAt=kanwilPersistenceSource.indexOf('const hash=kanwilHashV
 assert(kanwilImportNormalizeAt>=0&&kanwilImportHashAt>kanwilImportNormalizeAt,'Kanwil import checksum is computed from the exact server-normalized payload that is persisted');
 
 assert(kanwilPersistenceSource.includes('seenSourceRows.has(sourceRow)'),'File import rejects duplicate physical source row numbers');
+assert(kanwilPersistenceSource.includes('KANWIL_SOURCE_EVIDENCE_REQUIRED')&&kanwilPersistenceSource.includes('KANWIL_SOURCE_ROW_MANIFEST_MISMATCH'),'Server validates tabular parser source-row evidence before persistence');
+assert(kanwilPersistenceSource.includes('SOURCE_TO_PARSER_COUNT_MISMATCH')&&kanwilPersistenceSource.includes('PARSER_TO_STAGING_COUNT_MISMATCH')&&kanwilPersistenceSource.includes('SOURCE_ROW_MANIFEST_MISMATCH'),'Batch reconciliation compares source, parser, staging counts and row manifest');
 assert(kanwilPersistenceSource.includes('validationErrors:JSON.parse'),'Kanwil queue exposes server-side validation errors for operator review');
 assert(kanwilPersistenceSource.includes("correlationId,fileId)"),'Kanwil file-import audit event retains its source file identity');
 const kanwilPayloadValidator=new Function(kanwilPersistenceSource+'\nreturn kanwilPayloadV1_;')();
