@@ -127,7 +127,7 @@ async function persistKanwilFiles(){
     normalizedValues:record.normalizedValues||record.values||{},
     warnings:record.warnings||[]
    }));
-   const result=await saveKanwilImport({sourceChannel:item.channel,sourceFile:{name:file.name,size:file.size,mime:file.type,sha256:sha},parserVersion:'kanwil-browser-v1',records});
+   const result=await saveKanwilImport({sourceChannel:item.channel,sourceFile:{name:file.name,size:file.size,mime:file.type,sha256:sha},parserVersion:'kanwil-browser-v2-source-evidence',sourceEvidence:item.sourceEvidence,records});
    say('Staging '+file.name+': '+result.inserted+' baris tersimpan; '+result.invalidCount+' perlu validasi.');
   }
   state.imports=[];loadKanwilQueue();say('Seluruh hasil file berhasil dikirim ke staging Kanwil. File asli tidak diunggah.');
@@ -157,7 +157,7 @@ $('kpeRun').addEventListener('click',async()=>{
     if(!result.ok){state.log.push(file.name+': '+(result.reason||'PARSE_FAILED'));continue;}
     const records=result.records||result.rows||[];
     records.forEach(record=>state.rows.push({file:file.name,sourceRowNumber:record.sourceRowNumber||record.sourceRowIndex,values:record.normalizedValues||record.values,state:'REVIEW_REQUIRED',warnings:record.warnings||result.warnings||[]}));
-    if(records.length)state.imports.push({file,channel:ext==='csv'?'CSV':(['xlsx','xls'].includes(ext)?'EXCEL':'SCREENSHOT'),records});
+    if(records.length)state.imports.push({file,channel:ext==='csv'?'CSV':(['xlsx','xls'].includes(ext)?'EXCEL':'SCREENSHOT'),records,sourceEvidence:result.sourceEvidence||null});
     state.log.push(file.name+': '+records.length+' record kandidat; wajib review.');
    }catch(e){state.log.push(file.name+': ERROR '+(e.message||String(e)));}
    $('kpeProgress').style.width=Math.round((i+1)/files.length*100)+'%';render();
