@@ -2081,6 +2081,14 @@ const recoveryAudit=[{audit_id:'RA1',batch_id:'RB1',staging_id:'MISSING-STAGE'}]
 const recoveryInspection=kanwilRecoveryBuilder(recoveryBatch,recoveryFiles,recoveryStage,recoveryRecords,recoveryEvents,recoveryRevisions,recoveryAudit);
 assert(recoveryInspection.mode==='DRY_RUN'&&recoveryInspection.mutationsApplied===false&&recoveryInspection.canonicalWrites===false,'Kanwil recovery inspection is explicitly non-mutating');
 assert(recoveryInspection.findings.some(x=>x.code==='STAGING_FILE_REFERENCE_ORPHAN'),'Kanwil recovery inspection detects orphan file references');
+
+const recoveryEvidenceInspection=kanwilRecoveryBuilder(
+ {batch_id:'RB2',file_count:1,record_count:1,source_channel:'CSV'},
+ [{batch_id:'RB2',file_id:'RF2',source_file_sha256:'a'.repeat(64),parser_version:'p',source_data_row_count:2,parsed_record_count:1,source_evidence_status:'CLIENT_ATTESTED',source_row_manifest_sha256:'wrong'}],
+ [{batch_id:'RB2',staging_id:'RS3',file_id:'RF2',source_row_number:4,idempotency_key:'K3',state:'REVIEW_REQUIRED',revision:1}],
+ [],[],[],[]);
+assert(recoveryEvidenceInspection.findings.some(x=>x.code==='SOURCE_TO_PARSER_COUNT_DRIFT')&&recoveryEvidenceInspection.findings.some(x=>x.code==='SOURCE_ROW_MANIFEST_DRIFT'),'Kanwil recovery inspection detects source count and row manifest drift');
+
 assert(recoveryInspection.findings.some(x=>x.code==='DUPLICATE_IDEMPOTENCY_KEY'),'Kanwil recovery inspection detects duplicate idempotency keys');
 assert(recoveryInspection.findings.some(x=>x.code==='COMMITTED_RECORD_CARDINALITY'),'Kanwil recovery inspection detects committed staging/record inconsistency');
 assert(recoveryInspection.findings.some(x=>x.code==='EVENT_STAGING_ORPHAN')&&recoveryInspection.findings.some(x=>x.code==='REVISION_STAGING_ORPHAN')&&recoveryInspection.findings.some(x=>x.code==='AUDIT_STAGING_ORPHAN'),'Kanwil recovery inspection detects orphan event, revision, and audit references');
