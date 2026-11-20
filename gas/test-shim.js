@@ -1865,7 +1865,7 @@ assert(!kanwilPageSource.includes('data-izin-tinggal@main/gas/'),'Kanwil browser
 const kanwilPermitContract=require('./KanwilPermitContract.js');
 const kanwilXlsxAdapter=require('./KanwilXlsxAdapter.js');
 const kanwilCsvHeader=['tanggal pembayaran','tanggal mulai verifikasi','tanggal auto terbit','layanan','kategori produk','nomor permohonan','tanggal permohonan','penjamin','nama','jenis kelamin','tanggal lahir','kebangsaan','no passport','jenis produk','tujuan','posisi permohonan','status permohonan'];
-const kanwilCsvSource=kanwilCsvHeader.join(',')+'\\n,,,,,APP-1,,,,,,,,,,,\\n\\n,,,,,APP-2,,,,,,,,,,,';
+const kanwilCsvSource=kanwilCsvHeader.join(',')+'\n,,,,,APP-1,,,,,,,,,,,\n\n,,,,,APP-2,,,,,,,,,,,';
 const kanwilCsvParsed=kanwilPermitContract.parseKanwilPermitCsvV1(kanwilCsvSource,{delimiter:','});
 assert(kanwilCsvParsed.ok&&kanwilCsvParsed.sourceEvidence.sourceDataRowCount===2&&kanwilCsvParsed.sourceEvidence.parsedRecordCount===2,'CSV source evidence counts non-empty logical data rows before filtering');
 assert(JSON.stringify(kanwilCsvParsed.sourceEvidence.sourceRowNumbers)==='[2,4]','CSV source evidence preserves original source row positions across blank rows');
