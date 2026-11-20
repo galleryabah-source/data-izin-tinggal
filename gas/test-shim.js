@@ -2113,7 +2113,7 @@ const kanwilServerUtilities={
   DigestAlgorithm:{SHA_256:'SHA_256'},
   computeDigest:(algorithm,bytes)=>Array.from(kanwilCrypto.createHash('sha256').update(Buffer.from(bytes.map(x=>x<0?x+256:x))).digest()).map(x=>x>127?x-256:x)
 };
-const kanwilServerVerify=new Function('Utilities','parseKanwilPermitCsvV1',kanwilServerVerifierSource+'\\nreturn kanwilVerifyCsvBlobV1_;')(kanwilServerUtilities,kanwilPermitContract.parseKanwilPermitCsvV1);
+const kanwilServerVerify=new Function('Utilities','parseKanwilPermitCsvV1',kanwilServerVerifierSource+'\nreturn kanwilVerifyCsvBlobV1_;')(kanwilServerUtilities,kanwilPermitContract.parseKanwilPermitCsvV1);
 const kanwilServerBytes=Array.from(Buffer.from(kanwilCsvSource,'utf8')).map(x=>x>127?x-256:x);
 const kanwilServerBlob={getBytes:()=>kanwilServerBytes,getDataAsString:encoding=>{assert(encoding==='UTF-8','Kanwil server verifier decodes source as UTF-8');return kanwilCsvSource;}};
 const kanwilServerSha=kanwilCrypto.createHash('sha256').update(Buffer.from(kanwilCsvSource,'utf8')).digest('hex');
