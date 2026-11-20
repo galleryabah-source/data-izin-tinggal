@@ -150,6 +150,23 @@ function saveKanwilImportBatch(payload){
   if(!Number.isSafeInteger(size)||size<1||size>20*1024*1024)throw new Error('KANWIL_SOURCE_FILE_SIZE_INVALID');
   const records=Array.isArray(x.records)?x.records:[];
   if(!records.length||records.length>500)throw new Error('KANWIL_IMPORT_ROW_LIMIT');
+  const sourceEvidence=x.sourceEvidence&&typeof x.sourceEvidence==='object'?x.sourceEvidence:{};
+  const tabularSource=channel==='CSV'||channel==='EXCEL';
+  const evidenceVersion='KANWIL_SOURCE_ROW_EVIDENCE_V1';
+  if(tabularSource){
+    if(sourceEvidence.version!==evidenceVersion)throw new Error('KANWIL_SOURCE_EVIDENCE_REQUIRED');
+    if(!Number.isSafeInteger(sourceEvidence.sourceDataRowCount)||sourceEvidence.sourceDataRowCount<0||
+       !Number.isSafeInteger(sourceEvidence.parsedRecordCount)||sourceEvidence.parsedRecordCount!==records.length||
+       sourceEvidence.sourceDataRowCount!==records.length)
+      throw new Error('KANWIL_SOURCE_ROW_COUNT_INVALID');
+    if(!Array.isArray(sourceEvidence.sourceRowNumbers)||sourceEvidence.sourceRowNumbers.length!==records.length)
+      throw new Error('KANWIL_SOURCE_ROW_MANIFEST_INVALID');
+    records.forEach((record,index)=>{
+      const row=record&&typeof record==='object'?record:{};
+      if(Number(sourceEvidence.sourceRowNumbers[index])!==Number(row.sourceRowNumber))
+        throw new Error('KANWIL_SOURCE_ROW_MANIFEST_MISMATCH');
+    });
+  }
   const scope=String(PropertiesService.getScriptProperties().getProperty('KANWIL_SCOPE_ID')||'').trim();
   if(!scope)throw new Error('KANWIL_SCOPE_ID_NOT_CONFIGURED');
   const contractVersion='KANWIL_PERMIT_APPLICATION_V1',parserVersion=kanwilSafeCellTextV1_(String(x.parserVersion||'browser-parser-v1').slice(0,80));
@@ -228,9 +245,16 @@ function saveKanwilImportBatch(payload){
       file_count:1,record_count:stageRows.length,correlation_id:correlationId
     };
     const batchRow=KANWIL_STAGING_SHEETS_V1.batches.map(k=>batchValues[k]??'');
+    const sourceRowNumbers=records.map((record,index)=>Number(record&&record.sourceRowNumber!==undefined?record.sourceRowNumber:index+1));
+    const sourceDataRowCount=tabularSource?Number(sourceEvidence.sourceDataRowCount):null;
+    const sourceEvidenceStatus=tabularSource?'CLIENT_ATTESTED':'UNAVAILABLE';
+    const sourceRowManifestSha256=kanwilHashV1_({fileSha256:sha,parserVersion,sourceDataRowCount,
+      parsedRecordCount:records.length,sourceRowNumbers});
     const fileValues={file_id:fileId,batch_id:batchId,source_filename:fileName,source_file_sha256:sha,
-      source_file_mime:mime,source_file_size:size,source_row_count:records.length,parser_version:parserVersion,
-      processing_state:'PARSED',created_by:user.email,created_at:now};
+      source_file_mime:mime,source_file_size:size,source_row_count:records.length,
+      source_data_row_count:sourceDataRowCount===null?'':sourceDataRowCount,parsed_record_count:records.length,
+      source_row_manifest_sha256:sourceRowManifestSha256,source_evidence_status:sourceEvidenceStatus,
+      parser_version:parserVersion,processing_state:'PARSED',created_by:user.email,created_at:now};
     const fileRow=KANWIL_STAGING_SHEETS_V1.files.map(k=>fileValues[k]??'');
     const checkpoint=kanwilCheckpointV1_(sheets,['batches','files','staging','events','audit']);
     try{
@@ -282,10 +306,10 @@ function kanwilBuildBatchReconciliationV1_(batch,files,staging,records){
   stageRows.forEach(row=>{const id=String(row.staging_id||'');if(stageIds.has(id))duplicateStagingIds.push(id);stageIds.add(id);});
   const fileIds=new Set(fileRows.map(row=>String(row.file_id||'')));
   const sourceRowsExpected=fileRows.length
-    ?fileRows.reduce((sum,row)=>sum+Math.max(0,Number(row.source_row_count)||0),0)
+    ?fileRows.reduce((sum,row)=>sum+Math.max(0,Number(row.source_data_row_count!==''&&row.source_data_row_count!==undefined?row.source_data_row_count:row.source_row_count)||0),0)
     :Math.max(0,Number(batch.record_count)||0);
   const parsedRows=fileRows.length
-    ?fileRows.reduce((sum,row)=>sum+Math.max(0,Number(row.source_row_count)||0),0)
+    ?fileRows.reduce((sum,row)=>sum+Math.max(0,Number(row.parsed_record_count!==''&&row.parsed_record_count!==undefined?row.parsed_record_count:row.source_row_count)||0),0)
     :stageRows.length;
   const validRows=stageRows.filter(row=>{try{return JSON.parse(String(row.validation_errors_json||'[]')).length===0;}catch(error){return false;}}).length;
   const invalidRows=stageRows.length-validRows;
@@ -297,9 +321,22 @@ function kanwilBuildBatchReconciliationV1_(batch,files,staging,records){
   if(stageRows.length!==Math.max(0,Number(batch.record_count)||0))mismatches.push({code:'BATCH_RECORD_COUNT_MISMATCH',expected:Number(batch.record_count)||0,observed:stageRows.length});
   if(sourceRowsExpected!==stageRows.length)mismatches.push({code:'SOURCE_TO_STAGING_COUNT_MISMATCH',expected:sourceRowsExpected,observed:stageRows.length});
   fileRows.forEach(file=>{
-    const observed=stageRows.filter(row=>String(row.file_id||'')===String(file.file_id||'')).length;
-    const expected=Math.max(0,Number(file.source_row_count)||0);
-    if(observed!==expected)mismatches.push({code:'FILE_STAGING_COUNT_MISMATCH',fileId:String(file.file_id||''),expected,observed});
+    const fileStages=stageRows.filter(row=>String(row.file_id||'')===String(file.file_id||''));
+    const observed=fileStages.length;
+    const parsedExpected=Math.max(0,Number(file.parsed_record_count!==''&&file.parsed_record_count!==undefined?file.parsed_record_count:file.source_row_count)||0);
+    const sourceExpected=Number(file.source_data_row_count);
+    if(Number.isFinite(sourceExpected)&&sourceExpected!==parsedExpected)
+      mismatches.push({code:'SOURCE_TO_PARSER_COUNT_MISMATCH',fileId:String(file.file_id||''),expected:sourceExpected,observed:parsedExpected});
+    if(observed!==parsedExpected)mismatches.push({code:'PARSER_TO_STAGING_COUNT_MISMATCH',fileId:String(file.file_id||''),expected:parsedExpected,observed});
+    if(String(file.source_evidence_status||'')==='CLIENT_ATTESTED'){
+      const sourceRowNumbers=fileStages.map(row=>Number(row.source_row_number));
+      const manifest=kanwilHashV1_({fileSha256:String(file.source_file_sha256||''),parserVersion:String(file.parser_version||''),
+        sourceDataRowCount:sourceExpected,parsedRecordCount:parsedExpected,sourceRowNumbers});
+      if(manifest!==String(file.source_row_manifest_sha256||''))
+        mismatches.push({code:'SOURCE_ROW_MANIFEST_MISMATCH',fileId:String(file.file_id||''),expected:String(file.source_row_manifest_sha256||''),observed:manifest});
+    }else if(['CSV','EXCEL'].includes(String(batch.source_channel||'').toUpperCase())){
+      mismatches.push({code:'SOURCE_EVIDENCE_UNAVAILABLE',fileId:String(file.file_id||'')});
+    }
   });
   const orphanFileRows=stageRows.filter(row=>fileRows.length?!fileIds.has(String(row.file_id||'')):!!row.file_id);
   if(orphanFileRows.length)mismatches.push({code:'STAGING_FILE_REFERENCE_ORPHAN',count:orphanFileRows.length});
