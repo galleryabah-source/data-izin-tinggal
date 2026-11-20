@@ -1949,7 +1949,7 @@ const kanwilReconOrphan=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_
 assert(kanwilReconOrphan.mismatches.some(x=>x.code==='STAGING_FILE_REFERENCE_ORPHAN'),'Kanwil batch reconciliation detects staged rows without a source file reference');
 
 const kanwilEvidenceFile={batch_id:'B2',file_id:'F2',source_file_sha256:'a'.repeat(64),parser_version:'parser-v2',
- source_data_row_count:2,parsed_record_count:2,source_row_count:2,source_evidence_status:'CLIENT_ATTESTED'};
+ source_data_row_count:2,parsed_record_count:2,source_row_count:2,source_row_manifest_sha256:'010203',source_evidence_status:'CLIENT_ATTESTED'};
 const kanwilEvidenceStage=[
  {batch_id:'B2',staging_id:'E1',file_id:'F2',source_row_number:5,state:'REVIEW_REQUIRED',validation_errors_json:'[]'},
  {batch_id:'B2',staging_id:'E2',file_id:'F2',source_row_number:7,state:'REVIEW_REQUIRED',validation_errors_json:'[]'}
