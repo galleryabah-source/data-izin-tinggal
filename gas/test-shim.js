@@ -1883,8 +1883,9 @@ assert(kanwilPageSource.includes('sourceRowNumber:record.sourceRowNumber!==undef
 assert(kanwilPageSource.includes('saveKanwilApplication')&&kanwilPageSource.includes('saveKanwilImportBatch')&&kanwilPageSource.includes('listKanwilApplications'),'Kanwil UI persists manual and parsed file records and loads the staging queue');
 assert(kanwilPageSource.includes('reviewKanwilApplication')&&kanwilPageSource.includes('commitKanwilApplication'),'Kanwil UI exposes guarded review and isolated finalization actions');
 const kanwilReviewContract=require('./KanwilStagingContract.js');
-assert(kanwilReviewContract.KANWIL_REVIEW_ONLY_V1===true,'Kanwil parser evidence remains review-only until human validation');
-assert(!kanwilReviewContract.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Parser staging contract blocks direct commit without approval');
+assert(kanwilReviewContract.KANWIL_REVIEW_ONLY_V1===false,'Kanwil isolated staging workflow is no longer hardcoded review-only');
+assert(!kanwilReviewContract.transitionKanwilStagingV1('REVIEW_REQUIRED','COMMITTED','').ok,'Kanwil staging contract still blocks commit without human approval');
+assert(kanwilReviewContract.transitionKanwilStagingV1('APPROVED','COMMITTED','approved by independent reviewer').ok,'Kanwil staging contract permits commit only after approval');
 assert(kanwilPageSource.includes('kpeManualForm') && kanwilPageSource.includes('Simpan ke staging Kanwil'),'Kanwil page exposes a manual application-entry form');
 const kanwilManualKeys=['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','layanan','kategori_produk','nomor_permohonan','tanggal_permohonan','penjamin','nama','jenis_kelamin','tanggal_lahir','kebangsaan','no_passport','jenis_produk','tujuan','posisi_permohonan','status_permohonan'];
 assert(kanwilManualKeys.every(key=>kanwilPageSource.includes("['"+key+"'")),'Manual Kanwil form enumerates all 17 source columns');
