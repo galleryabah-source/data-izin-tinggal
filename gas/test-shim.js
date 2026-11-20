@@ -1965,6 +1965,13 @@ const kanwilEvidenceStagingMismatch=kanwilReconcileHelpers.kanwilBuildBatchRecon
  {batch_id:'B2',file_count:1,record_count:1,source_channel:'EXCEL'},[kanwilEvidenceFile],kanwilEvidenceStage.slice(0,1),[]);
 assert(kanwilEvidenceStagingMismatch.mismatches.some(x=>x.code==='PARSER_TO_STAGING_COUNT_MISMATCH'),'Kanwil reconciliation flags parser-to-staging row count drift');
 
+const kanwilScreenshotRecon=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(
+ {batch_id:'B3',file_count:1,record_count:1,source_channel:'SCREENSHOT'},
+ [{batch_id:'B3',file_id:'F3',source_row_count:1,source_data_row_count:'',parsed_record_count:1,source_evidence_status:'UNAVAILABLE'}],
+ [{batch_id:'B3',staging_id:'S3',file_id:'F3',source_row_number:1,state:'REVIEW_REQUIRED',validation_errors_json:'[]'}],[]);
+assert(!kanwilScreenshotRecon.mismatches.some(x=>x.code==='SOURCE_TO_PARSER_COUNT_MISMATCH'),'Screenshot/OCR intake does not claim unavailable physical source-row evidence');
+
+
 
 
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
