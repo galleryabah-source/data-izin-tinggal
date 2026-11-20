@@ -1859,7 +1859,7 @@ const kanwilNavSource=read('index.html');
 assert(kanwilNavSource.includes('href="?view=kanwil"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace');
 const kanwilPageSource=read('KanwilEntry.html');
 assert(kanwilPageSource.includes('staging terpisah')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
-assert(kanwilPageSource.includes('@c89ece54851b0a0fe8c2fde50b7c145fe22affc2/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
+assert(kanwilPageSource.includes('@3501a30e0ab82806064f36104bb33594cf9ec23a/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
 assert(!kanwilPageSource.includes('data-izin-tinggal@main/gas/'),'Kanwil browser parser never executes mutable main-branch code');
 
 const kanwilPermitContract=require('./KanwilPermitContract.js');
@@ -1947,6 +1947,22 @@ assert(kanwilReconMismatch.status==='MISMATCH'&&kanwilReconMismatch.mismatches.s
 const kanwilReconOrphan=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(kanwilReconBatch,kanwilReconFiles,
  [{...kanwilReconStage[0],file_id:''},kanwilReconStage[1]],kanwilReconRecords);
 assert(kanwilReconOrphan.mismatches.some(x=>x.code==='STAGING_FILE_REFERENCE_ORPHAN'),'Kanwil batch reconciliation detects staged rows without a source file reference');
+
+const kanwilEvidenceFile={batch_id:'B2',file_id:'F2',source_file_sha256:'a'.repeat(64),parser_version:'parser-v2',
+ source_data_row_count:2,parsed_record_count:2,source_row_count:2,source_evidence_status:'CLIENT_ATTESTED'};
+const kanwilEvidenceStage=[
+ {batch_id:'B2',staging_id:'E1',file_id:'F2',source_row_number:5,state:'REVIEW_REQUIRED',validation_errors_json:'[]'},
+ {batch_id:'B2',staging_id:'E2',file_id:'F2',source_row_number:7,state:'REVIEW_REQUIRED',validation_errors_json:'[]'}
+];
+const kanwilEvidenceRecon=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(
+ {batch_id:'B2',file_count:1,record_count:2,source_channel:'EXCEL'},[kanwilEvidenceFile],kanwilEvidenceStage,[]);
+assert(kanwilEvidenceRecon.status==='PASS'&&kanwilEvidenceRecon.sourceRowsExpected===2&&kanwilEvidenceRecon.parsedRows===2,'Kanwil reconciliation distinguishes source-data rows from parsed records');
+const kanwilEvidenceMismatch=kanwilReconcileHelpers.kanwilBuildBatchReconciliationV1_(
+ {batch_id:'B2',file_count:1,record_count:2,source_channel:'EXCEL'},
+ [{...kanwilEvidenceFile,source_data_row_count:3}],kanwilEvidenceStage,[]);
+assert(kanwilEvidenceMismatch.mismatches.some(x=>x.code==='SOURCE_TO_PARSER_COUNT_MISMATCH'),'Kanwil reconciliation flags source-to-parser row count drift');
+assert(kanwilEvidenceMismatch.mismatches.some(x=>x.code==='PARSER_TO_STAGING_COUNT_MISMATCH'),'Kanwil reconciliation flags parser-to-staging row count drift');
+
 
 
 assert(kanwilPersistenceSource.includes("KANWIL_STAGING_ENABLED")&&kanwilPersistenceSource.includes("KANWIL_SCOPE_ID_NOT_CONFIGURED"),'Kanwil persistence fails closed without explicit feature and scope configuration');
