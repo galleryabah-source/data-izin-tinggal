@@ -266,7 +266,7 @@ function saveKanwilImportBatch(payload){
       try{kanwilRollbackV1_(sheets,checkpoint);}catch(rollbackError){}
       throw new Error('KANWIL_IMPORT_WRITE_FAILED: '+String(error&&error.message||error));
     }
-    return {ok:true,batchId,fileId,inserted:stageRows.length,validCount,invalidCount,state:invalidCount?'VALIDATION_REQUIRED':'REVIEW_REQUIRED'};
+    return {ok:true,batchId,fileId,inserted:stageRows.length,validCount,invalidCount,state:invalidCount?'VALIDATION_REQUIRED':'REVIEW_REQUIRED',sourceEvidenceStatus,sourceDataRowCount:sourceDataRowCount===null?null:sourceDataRowCount,parsedRecordCount:records.length,sourceRowManifestSha256};
   }finally{lock.releaseLock();}
 }
 function kanwilLoosePayloadV1_(input){
@@ -410,6 +410,21 @@ function kanwilBuildRecoveryInspectionV1_(batch,files,staging,records,events,rev
     const id=String(row.file_id||'');
     if(!id||fileIdsSeen.has(id))add('P0','FILE_ID_MISSING_OR_DUPLICATE','file',id||batchId,'File identity is blank or duplicated within the batch.','Stop intake finalization and verify file identity against its SHA-256 and parent batch.');
     fileIdsSeen.add(id);
+    if(['CSV','EXCEL'].includes(String(batch.source_channel||'').toUpperCase())){
+      const sourceCount=Number(row.source_data_row_count),parsedCount=Number(row.parsed_record_count);
+      if(String(row.source_evidence_status||'')!=='CLIENT_ATTESTED'||!Number.isSafeInteger(sourceCount)||!Number.isSafeInteger(parsedCount))
+        add('P1','SOURCE_EVIDENCE_MISSING','file',id,'Tabular source lacks complete client-attested source-row evidence.','Re-run parsing from the original file using the reviewed parser and preserve the source file hash.');
+      if(Number.isFinite(sourceCount)&&Number.isFinite(parsedCount)&&sourceCount!==parsedCount)
+        add('P0','SOURCE_TO_PARSER_COUNT_DRIFT','file',id,'Source data-row count '+sourceCount+' differs from parsed record count '+parsedCount+'.','Quarantine this file batch and inspect parser omissions before review or commit.');
+      if(String(row.source_evidence_status||'')==='CLIENT_ATTESTED'){
+        const fileStages=stageRows.filter(stage=>String(stage.file_id||'')===id);
+        const sourceRowNumbers=fileStages.map(stage=>Number(stage.source_row_number));
+        const manifest=kanwilHashV1_({fileSha256:String(row.source_file_sha256||''),parserVersion:String(row.parser_version||''),
+          sourceDataRowCount:sourceCount,parsedRecordCount:parsedCount,sourceRowNumbers});
+        if(manifest!==String(row.source_row_manifest_sha256||''))
+          add('P0','SOURCE_ROW_MANIFEST_DRIFT','file',id,'Persisted source-row identities no longer match the intake manifest checksum.','Preserve the file and staging rows; compare source row numbers and original file checksum before controlled repair.');
+      }
+    }
   });
   const allStageIds=new Set((staging||[]).map(row=>String(row.staging_id||'')).filter(Boolean));
   const batchRevisions=(revisions||[]).filter(row=>{
