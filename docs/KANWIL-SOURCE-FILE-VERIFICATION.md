@@ -35,6 +35,8 @@ This document defines the next safe implementation boundary. It does not authori
 
 ## Parser support boundary
 
+A private helper, `kanwilVerifyCsvBlobV1_`, now exists as a testable server-side foundation. It accepts an already server-obtained Blob, hashes its original bytes, parses its UTF-8 CSV content using the shared Kanwil contract, and rejects browser/server digest or parser-evidence mismatches. It is deliberately private, is not in the RPC manifest, does not upload or archive files, and is not called by the current browser intake. Therefore it does not change the current `CLIENT_ATTESTED` status.
+
 ### CSV
 
 Apps Script Utilities.parseCsv can be used as a server-side parser, but the implementation must define and test:
@@ -114,7 +116,8 @@ Until those decisions are supplied and verified, the archive RPC must not be ena
 ## Current truth
 
 - Existing import path: browser parse + client-attested source evidence.
-- Independent server-side source verification: NOT IMPLEMENTED.
+- Private server-side CSV Blob verifier helper: IMPLEMENTED AND CI-TESTED, but not connected to an upload/archive path.
+- Independent end-to-end source verification for live intake: NOT IMPLEMENTED.
 - Restricted Drive archive: NOT CONFIGURED.
 - Source archive feature flag: NOT CONFIGURED / MUST REMAIN OFF.
 - Kanwil staging feature flag: OFF.
