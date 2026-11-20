@@ -2102,3 +2102,31 @@ assert(recoveryInspection.findings.some(x=>x.code==='DUPLICATE_IDEMPOTENCY_KEY')
 assert(recoveryInspection.findings.some(x=>x.code==='COMMITTED_RECORD_CARDINALITY'),'Kanwil recovery inspection detects committed staging/record inconsistency');
 assert(recoveryInspection.findings.some(x=>x.code==='EVENT_STAGING_ORPHAN')&&recoveryInspection.findings.some(x=>x.code==='REVISION_STAGING_ORPHAN')&&recoveryInspection.findings.some(x=>x.code==='AUDIT_STAGING_ORPHAN'),'Kanwil recovery inspection detects orphan event, revision, and audit references');
 assert(recoveryInspection.recoveryPlan.every(x=>x.automatic===false&&x.requiresOwnerApproval===true),'Kanwil recovery plan contains only owner-reviewed manual actions');
+
+
+// Server-side CSV verification helper is private and is not an RPC or uploader.
+const kanwilServerVerifierSource=read('KanwilServerCsvVerifier.gs');
+assert(kanwilServerVerifierSource.includes('function kanwilVerifyCsvBlobV1_(')&&kanwilServerVerifierSource.includes('sourceBlob.getBytes()'),'Kanwil server verifier accepts original Blob bytes and is a private helper');
+assert(!read('RpcManifest.js').includes('kanwilVerifyCsvBlobV1_:'),'Kanwil server CSV verifier is not exposed as a callable RPC');
+const kanwilCrypto=require('crypto');
+const kanwilServerUtilities={
+  DigestAlgorithm:{SHA_256:'SHA_256'},
+  computeDigest:(algorithm,bytes)=>Array.from(kanwilCrypto.createHash('sha256').update(Buffer.from(bytes.map(x=>x<0?x+256:x))).digest()).map(x=>x>127?x-256:x)
+};
+const kanwilServerVerify=new Function('Utilities','parseKanwilPermitCsvV1',kanwilServerVerifierSource+'\\nreturn kanwilVerifyCsvBlobV1_;')(kanwilServerUtilities,kanwilPermitContract.parseKanwilPermitCsvV1);
+const kanwilServerBytes=Array.from(Buffer.from(kanwilCsvSource,'utf8')).map(x=>x>127?x-256:x);
+const kanwilServerBlob={getBytes:()=>kanwilServerBytes,getDataAsString:encoding=>{assert(encoding==='UTF-8','Kanwil server verifier decodes source as UTF-8');return kanwilCsvSource;}};
+const kanwilServerSha=kanwilCrypto.createHash('sha256').update(Buffer.from(kanwilCsvSource,'utf8')).digest('hex');
+const kanwilServerVerified=kanwilServerVerify(kanwilServerBlob,kanwilCsvParsed.sourceEvidence,kanwilServerSha);
+assert(kanwilServerVerified.ok&&kanwilServerVerified.verificationStatus==='SERVER_VERIFIED_CSV','Kanwil private verifier parses original server Blob and returns server-verified CSV evidence');
+assert(kanwilServerVerified.sourceFileSha256===kanwilServerSha&&kanwilServerVerified.sourceByteSize===kanwilServerBytes.length,'Kanwil server verifier computes digest and byte size from original Blob bytes');
+assert(JSON.stringify(kanwilServerVerified.sourceEvidence.sourceRowNumbers)==='[2,4]','Kanwil server verifier preserves logical source row positions');
+let kanwilServerHashMismatch=false;
+try{kanwilServerVerify(kanwilServerBlob,kanwilCsvParsed.sourceEvidence,'0'.repeat(64));}catch(e){kanwilServerHashMismatch=/KANWIL_SOURCE_SHA256_MISMATCH/.test(e.message);}
+assert(kanwilServerHashMismatch,'Kanwil server verifier rejects a browser/server source digest mismatch');
+let kanwilServerParserMismatch=false;
+try{kanwilServerVerify(kanwilServerBlob,{...kanwilCsvParsed.sourceEvidence,sourceDataRowCount:99},kanwilServerSha);}catch(e){kanwilServerParserMismatch=/KANWIL_BROWSER_SERVER_PARSER_MISMATCH/.test(e.message);}
+assert(kanwilServerParserMismatch,'Kanwil server verifier rejects browser/server parser evidence drift');
+let kanwilServerMalformedRejected=false;
+try{kanwilServerVerify({getBytes:()=>[1],getDataAsString:()=>kanwilCsvSource+'\\n"unterminated'},null,null);}catch(e){kanwilServerMalformedRejected=/KANWIL_SERVER_CSV_PARSE_FAILED/.test(e.message);}
+assert(kanwilServerMalformedRejected,'Kanwil server verifier fails closed on malformed CSV source bytes');
