@@ -13,7 +13,7 @@ const KANWIL_STAGING_GUARD_V1=Object.freeze({
 });
 const KANWIL_STAGING_SHEETS_V1=Object.freeze({
   batches:['batch_id','kanwil_scope_id','source_channel','contract_version','parser_version','source_exported_at','source_authorization_ref','created_by','created_at','state','file_count','record_count','correlation_id'],
-  files:['file_id','batch_id','source_filename','source_file_sha256','source_file_mime','source_file_size','source_row_count','source_data_row_count','parsed_record_count','source_row_manifest_sha256','source_evidence_status','parser_version','processing_state','created_by','created_at'],
+  files:['file_id','batch_id','source_filename','source_file_sha256','source_file_mime','source_file_size','source_row_count','source_data_row_count','parsed_record_count','source_row_manifest_sha256','source_evidence_status','parser_version','processing_state','drive_file_id','drive_file_url','storage_status','server_verified_sha256','created_by','created_at'],
   staging:['staging_id','batch_id','file_id','source_row_number','idempotency_key','contract_version','raw_values_json','normalized_values_json','validation_errors_json','validation_warnings_json','review_state','state','revision','payload_sha256','created_by','created_at','updated_at'],
   records:['record_id','kanwil_scope_id','application_number','current_revision','current_payload_sha256','current_payload_json','committed_at','committed_by','source_staging_id','correlation_id'],
   events:['event_id','record_id','staging_id','event_sequence','event_type','from_state','to_state','revision','payload_sha256','actor_id','reason','correlation_id','occurred_at'],
