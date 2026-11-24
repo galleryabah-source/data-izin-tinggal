@@ -2009,6 +2009,8 @@ assert(!kanwilEntryHtml.includes('Prototipe terisolasi.'),'Kanwil UI no longer l
 const kanwilRpcManifestSource=read('RpcManifest.js');
 assert(kanwilStagingServiceSource.includes('function provisionKanwilStagingFromConfiguredId()')&&kanwilStagingServiceSource.includes('requireBackOfficeAccess_()')&&kanwilStagingServiceSource.includes("requirePermission_('admin.config')"),'Owner provisioning entrypoint is argument-free and guarded by back-office and admin.config authorization');
 assert(kanwilStagingServiceSource.includes("getProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty)"),'Owner provisioning reads the dedicated staging target from Script Properties');
+assert(kanwilStagingServiceSource.includes('function activateKanwilStorageFromOwnerTargetsV1()')&&kanwilStagingServiceSource.includes("KANWIL_DRIVE_FOLDER_ID:driveFolderId")&&kanwilStagingServiceSource.includes("props.setProperty('KANWIL_STAGING_ENABLED','true')"),'Owner activation configures supplied storage targets and enables writes only after schema and Drive permission checks');
+assert(kanwilStagingServiceSource.includes('probe.setTrashed(true)')&&kanwilStagingServiceSource.includes('KANWIL_DRIVE_WRITE_PREFLIGHT_FAILED'),'Owner activation verifies actual Drive write permission and trashes its preflight file');
 assert(kanwilRpcManifestSource.includes("provisionKanwilStagingFromConfiguredId:{access:'protected',permission:'admin.config'}"),'Owner provisioning RPC is explicitly classified as admin.config protected');
 
 const kanwilBatchScopeResolver=new Function(kanwilPersistenceSource+'\nreturn kanwilResolveBatchScopeV1_;')();
