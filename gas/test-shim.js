@@ -1859,7 +1859,7 @@ const kanwilRouteSource=read('Code.gs');
 assert(kanwilRouteSource.includes("else if(view==='kanwil')requireBackOfficeAccess_()"),'Kanwil entry route requires authenticated back-office access');
 assert(kanwilRouteSource.includes("view==='kanwil'?'KanwilEntry'"),'Kanwil entry route serves the dedicated Kanwil workspace');
 const kanwilNavSource=read('index.html');
-assert(kanwilNavSource.includes('href="?view=kanwil"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace');
+assert(kanwilNavSource.includes('href="<?= WEB_APP_URL ?>?view=kanwil" target="_top"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace through the canonical same-tab route');
 const kanwilPageSource=read('KanwilEntry.html');
 assert(kanwilPageSource.includes('staging terpisah')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
 assert(kanwilPageSource.includes('@3501a30e0ab82806064f36104bb33594cf9ec23a/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
