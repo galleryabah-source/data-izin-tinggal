@@ -1997,6 +1997,8 @@ const kanwilStagingServiceSource=read('KanwilStagingService.gs');
 const kanwilDriveUploadSource=read('KanwilPersistenceService.gs');
 const kanwilEntryHtml=read('KanwilEntry.html');
 assert(kanwilStagingServiceSource.includes("'drive_file_id','drive_file_url','storage_status','server_verified_sha256'"),'Kanwil file schema records Drive object identity and server verification');
+assert(kanwilStagingServiceSource.includes("actual.length===15")&&kanwilStagingServiceSource.includes("'LEGACY_NOT_ARCHIVED'"),'Kanwil provisioning migrates legacy file metadata columns additively without misrepresenting historical files');
+assert(kanwilDriveUploadSource.includes("getProperty('KANWIL_DRIVE_FOLDER_ID')")&&kanwilDriveUploadSource.includes('driveReady'),'Kanwil entry readiness requires an accessible configured Drive archive folder');
 assert(kanwilDriveUploadSource.includes('DriveApp.getFolderById(folderId)')&&kanwilDriveUploadSource.includes('folder.createFile(blob)'),'Kanwil import persists original files to the configured Drive folder');
 assert(kanwilDriveUploadSource.includes('KANWIL_SOURCE_FILE_HASH_MISMATCH')&&kanwilDriveUploadSource.includes('Utilities.base64Decode(base64)'),'Kanwil upload verifies uploaded bytes against the client SHA-256 before Drive storage');
 assert(kanwilDriveUploadSource.includes('driveFile.setTrashed(true)'),'Kanwil import compensates by trashing the uploaded Drive file if staging persistence fails');
