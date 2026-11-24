@@ -91,8 +91,12 @@ function kanwilAppendAuditV1_(sheets,batchId,recordId,stagingId,actor,action,rea
 function getKanwilEntryStatus(){
   requireBackOfficeAccess_();
   const readiness=kanwilStagingReadinessV1_();
-  return {enabled:kanwilEntryEnabled_()&&readiness.ready,configured:readiness.ready,
-    reason:readiness.ready?(kanwilEntryEnabled_()?'READY':'FEATURE_FLAG_OFF'):readiness.reason,
+  const folderId=String(PropertiesService.getScriptProperties().getProperty('KANWIL_DRIVE_FOLDER_ID')||'').trim();
+  let driveReady=false;
+  if(folderId){try{const folder=DriveApp.getFolderById(folderId);driveReady=!!folder&&String(folder.getId())===folderId;}catch(error){}}
+  const enabled=kanwilEntryEnabled_()&&readiness.ready&&driveReady;
+  const reason=!readiness.ready?readiness.reason:(!driveReady?'DRIVE_FOLDER_NOT_READY':(kanwilEntryEnabled_()?'READY':'FEATURE_FLAG_OFF'));
+  return {enabled,configured:readiness.ready,driveConfigured:driveReady,reason,
     writeMode:'ISOLATED_KANWIL_STAGING',canonicalWrites:false};
 }
 function saveKanwilApplication(payload){
@@ -144,10 +148,22 @@ function saveKanwilImportBatch(payload){
   const user=requireBackOfficeAccess_(),ss=kanwilRequireReady_(),x=payload&&typeof payload==='object'?payload:{};
   const source=x.sourceFile&&typeof x.sourceFile==='object'?x.sourceFile:{},channel=String(x.sourceChannel||'').toUpperCase();
   if(!['CSV','EXCEL','SCREENSHOT','CAMERA_PHOTO'].includes(channel))throw new Error('KANWIL_SOURCE_CHANNEL_INVALID');
-  const fileName=kanwilSafeCellTextV1_(String(source.name||'').replace(/[\/\\]/g,'_').slice(0,255));
-  const sha=String(source.sha256||'').toLowerCase(),size=Number(source.size||0),mime=kanwilSafeCellTextV1_(String(source.mime||'').slice(0,120));
-  if(!fileName||! /^[a-f0-9]{64}$/.test(sha))throw new Error('KANWIL_SOURCE_FILE_METADATA_INVALID');
-  if(!Number.isSafeInteger(size)||size<1||size>20*1024*1024)throw new Error('KANWIL_SOURCE_FILE_SIZE_INVALID');
+  const fileName=kanwilSafeCellTextV1_(String(source.name||'').replace(/[\\/\\\\]/g,'_').slice(0,255));
+  const clientSha=String(source.sha256||'').toLowerCase(),size=Number(source.size||0),mime=kanwilSafeCellTextV1_(String(source.mime||'application/octet-stream').slice(0,120));
+  if(!fileName||! /^[a-f0-9]{64}$/.test(clientSha))throw new Error('KANWIL_SOURCE_FILE_METADATA_INVALID');
+  // Base64 crosses google.script.run as text; cap raw bytes to keep RPC payload bounded.
+  if(!Number.isSafeInteger(size)||size<1||size>10*1024*1024)throw new Error('KANWIL_SOURCE_FILE_SIZE_INVALID');
+  const base64=String(source.base64Data||'');
+  if(!base64||base64.length>14*1024*1024||!/^[A-Za-z0-9+/]+={0,2}$/.test(base64))throw new Error('KANWIL_SOURCE_FILE_BYTES_REQUIRED');
+  const bytes=Utilities.base64Decode(base64);
+  if(bytes.length!==size)throw new Error('KANWIL_SOURCE_FILE_SIZE_MISMATCH');
+  const shaBytes=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,bytes);
+  const sha=shaBytes.map(b=>(b<0?b+256:b).toString(16).padStart(2,'0')).join('');
+  if(sha!==clientSha)throw new Error('KANWIL_SOURCE_FILE_HASH_MISMATCH');
+  const folderId=String(PropertiesService.getScriptProperties().getProperty('KANWIL_DRIVE_FOLDER_ID')||'').trim();
+  if(!folderId)throw new Error('KANWIL_DRIVE_FOLDER_NOT_CONFIGURED');
+  const folder=DriveApp.getFolderById(folderId);
+  if(!folder||folder.getId()!==folderId)throw new Error('KANWIL_DRIVE_FOLDER_IDENTITY_MISMATCH');
   const records=Array.isArray(x.records)?x.records:[];
   if(!records.length||records.length>500)throw new Error('KANWIL_IMPORT_ROW_LIMIT');
   const sourceEvidence=x.sourceEvidence&&typeof x.sourceEvidence==='object'?x.sourceEvidence:{};
@@ -254,19 +270,29 @@ function saveKanwilImportBatch(payload){
       source_file_mime:mime,source_file_size:size,source_row_count:records.length,
       source_data_row_count:sourceDataRowCount===null?'':sourceDataRowCount,parsed_record_count:records.length,
       source_row_manifest_sha256:sourceRowManifestSha256,source_evidence_status:sourceEvidenceStatus,
-      parser_version:parserVersion,processing_state:'PARSED',created_by:user.email,created_at:now};
+      parser_version:parserVersion,processing_state:'PARSED',drive_file_id:'',drive_file_url:'',storage_status:'PENDING',
+      server_verified_sha256:sha,created_by:user.email,created_at:now};
     const fileRow=KANWIL_STAGING_SHEETS_V1.files.map(k=>fileValues[k]??'');
     const checkpoint=kanwilCheckpointV1_(sheets,['batches','files','staging','events','audit']);
+    let driveFile=null;
     try{
-      sheets.batches.appendRow(batchRow);sheets.files.appendRow(fileRow);
+      const blob=Utilities.newBlob(bytes,mime,fileName);
+      driveFile=folder.createFile(blob);
+      if(!driveFile||!driveFile.getId())throw new Error('KANWIL_DRIVE_FILE_CREATE_FAILED');
+      fileValues.drive_file_id=driveFile.getId();
+      fileValues.drive_file_url=driveFile.getUrl();
+      fileValues.storage_status='STORED';
+      const persistedFileRow=KANWIL_STAGING_SHEETS_V1.files.map(k=>fileValues[k]??'');
+      sheets.batches.appendRow(batchRow);sheets.files.appendRow(persistedFileRow);
       sheets.staging.getRange(sheets.staging.getLastRow()+1,1,stageRows.length,stageRows[0].length).setValues(stageRows);
       sheets.events.getRange(sheets.events.getLastRow()+1,1,eventRows.length,eventRows[0].length).setValues(eventRows);
       kanwilAppendAuditV1_(sheets,batchId,'','',user.email,'FILE_IMPORT','Imported '+stageRows.length+' rows; '+invalidCount+' require validation',correlationId,fileId);
     }catch(error){
       try{kanwilRollbackV1_(sheets,checkpoint);}catch(rollbackError){}
+      if(driveFile){try{driveFile.setTrashed(true);}catch(cleanupError){}}
       throw new Error('KANWIL_IMPORT_WRITE_FAILED: '+String(error&&error.message||error));
     }
-    return {ok:true,batchId,fileId,inserted:stageRows.length,validCount,invalidCount,state:invalidCount?'VALIDATION_REQUIRED':'REVIEW_REQUIRED',sourceEvidenceStatus,sourceDataRowCount:sourceDataRowCount===null?null:sourceDataRowCount,parsedRecordCount:records.length,sourceRowManifestSha256};
+    return {ok:true,batchId,fileId,driveFileId:driveFile.getId(),driveFileUrl:driveFile.getUrl(),storageStatus:'STORED',serverVerifiedSha256:sha,inserted:stageRows.length,validCount,invalidCount,state:invalidCount?'VALIDATION_REQUIRED':'REVIEW_REQUIRED',sourceEvidenceStatus,sourceDataRowCount:sourceDataRowCount===null?null:sourceDataRowCount,parsedRecordCount:records.length,sourceRowManifestSha256};
   }finally{lock.releaseLock();}
 }
 function kanwilLoosePayloadV1_(input){

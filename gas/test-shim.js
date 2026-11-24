@@ -1861,7 +1861,7 @@ assert(kanwilRouteSource.includes("view==='kanwil'?'KanwilEntry'"),'Kanwil entry
 const kanwilNavSource=read('index.html');
 assert(kanwilNavSource.includes('href="<?= WEB_APP_URL ?>?view=kanwil" target="_top"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace through the canonical same-tab route');
 const kanwilPageSource=read('KanwilEntry.html');
-assert(kanwilPageSource.includes('staging terpisah')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
+assert(kanwilPageSource.includes('Kanwil staging')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
 assert(kanwilPageSource.includes('@3501a30e0ab82806064f36104bb33594cf9ec23a/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
 assert(!kanwilPageSource.includes('data-izin-tinggal@main/gas/'),'Kanwil browser parser never executes mutable main-branch code');
 
@@ -1994,9 +1994,23 @@ function assertKanwilGuardBeforeEffects(source,name){
 ['saveKanwilApplication','saveKanwilImportBatch','listKanwilApplications','reviewKanwilApplication','commitKanwilApplication','getKanwilEntryStatus'].forEach(name=>assertKanwilGuardBeforeEffects(kanwilPersistenceSource,name));
 
 const kanwilStagingServiceSource=read('KanwilStagingService.gs');
+const kanwilDriveUploadSource=read('KanwilPersistenceService.gs');
+const kanwilEntryHtml=read('KanwilEntry.html');
+assert(kanwilStagingServiceSource.includes("'drive_file_id','drive_file_url','storage_status','server_verified_sha256'"),'Kanwil file schema records Drive object identity and server verification');
+assert(kanwilStagingServiceSource.includes("actual.length===15")&&kanwilStagingServiceSource.includes("'LEGACY_NOT_ARCHIVED'"),'Kanwil provisioning migrates legacy file metadata columns additively without misrepresenting historical files');
+assert(kanwilDriveUploadSource.includes("getProperty('KANWIL_DRIVE_FOLDER_ID')")&&kanwilDriveUploadSource.includes('driveReady'),'Kanwil entry readiness requires an accessible configured Drive archive folder');
+assert(kanwilDriveUploadSource.includes('DriveApp.getFolderById(folderId)')&&kanwilDriveUploadSource.includes('folder.createFile(blob)'),'Kanwil import persists original files to the configured Drive folder');
+assert(kanwilDriveUploadSource.includes('KANWIL_SOURCE_FILE_HASH_MISMATCH')&&kanwilDriveUploadSource.includes('Utilities.base64Decode(base64)'),'Kanwil upload verifies uploaded bytes against the client SHA-256 before Drive storage');
+assert(kanwilDriveUploadSource.includes('driveFile.setTrashed(true)'),'Kanwil import compensates by trashing the uploaded Drive file if staging persistence fails');
+assert(kanwilDriveUploadSource.includes('KANWIL_DRIVE_FOLDER_ID'),'Kanwil Drive destination is read from a dedicated Script Property');
+assert(kanwilEntryHtml.includes('base64Data')&&kanwilEntryHtml.includes('Mengunggah file asli ke Google Drive'),'Kanwil UI uploads original file bytes to the server');
+assert(!kanwilEntryHtml.includes('Prototipe terisolasi.'),'Kanwil UI no longer labels the integrated upload path as an isolated prototype');
+
 const kanwilRpcManifestSource=read('RpcManifest.js');
 assert(kanwilStagingServiceSource.includes('function provisionKanwilStagingFromConfiguredId()')&&kanwilStagingServiceSource.includes('requireBackOfficeAccess_()')&&kanwilStagingServiceSource.includes("requirePermission_('admin.config')"),'Owner provisioning entrypoint is argument-free and guarded by back-office and admin.config authorization');
 assert(kanwilStagingServiceSource.includes("getProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty)"),'Owner provisioning reads the dedicated staging target from Script Properties');
+assert(kanwilStagingServiceSource.includes('function activateKanwilStorageFromOwnerTargetsV1()')&&kanwilStagingServiceSource.includes("KANWIL_DRIVE_FOLDER_ID:driveFolderId")&&kanwilStagingServiceSource.includes("props.setProperty('KANWIL_STAGING_ENABLED','true')"),'Owner activation configures supplied storage targets and enables writes only after schema and Drive permission checks');
+assert(kanwilStagingServiceSource.includes('probe.setTrashed(true)')&&kanwilStagingServiceSource.includes('KANWIL_DRIVE_WRITE_PREFLIGHT_FAILED'),'Owner activation verifies actual Drive write permission and trashes its preflight file');
 assert(kanwilRpcManifestSource.includes("provisionKanwilStagingFromConfiguredId:{access:'protected',permission:'admin.config'}"),'Owner provisioning RPC is explicitly classified as admin.config protected');
 
 const kanwilBatchScopeResolver=new Function(kanwilPersistenceSource+'\nreturn kanwilResolveBatchScopeV1_;')();
