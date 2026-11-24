@@ -64,16 +64,28 @@ function provisionKanwilStagingSchema_(stagingSpreadsheetId){
   Object.entries(KANWIL_STAGING_SHEETS_V1).forEach(([key,headers])=>{
     const name='KANWIL_'+key.toUpperCase(),sh=ss.getSheetByName(name);
     if(!sh||sh.getLastRow()===0)return;
-    if(sh.getLastColumn()!==headers.length)throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
-    const actual=sh.getRange(1,1,1,headers.length).getValues()[0].map(String);
-    if(actual.join('|')!==headers.join('|'))throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
+    const actual=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(String);
+    if(key==='files'){
+      const legacy=['file_id','batch_id','source_filename','source_file_sha256','source_file_mime','source_file_size','source_row_count','source_data_row_count','parsed_record_count','source_row_manifest_sha256','source_evidence_status','parser_version','processing_state','created_by','created_at'];
+      if(actual.join('|')===legacy.join('|'))return; // Safe additive migration is applied only after every tab passes preflight.
+    }
+    if(sh.getLastColumn()!==headers.length||actual.join('|')!==headers.join('|'))throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
   });
   Object.entries(KANWIL_STAGING_SHEETS_V1).forEach(([key,headers])=>{
     const name='KANWIL_'+key.toUpperCase();
     let sh=ss.getSheetByName(name);
     if(!sh)sh=ss.insertSheet(name);
     if(sh.getLastRow()===0)sh.getRange(1,1,1,headers.length).setValues([headers]);
-    const actual=sh.getRange(1,1,1,headers.length).getValues()[0].map(String);
+    let actual=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(String);
+    if(key==='files'&&actual.length===15){
+      const legacy=['file_id','batch_id','source_filename','source_file_sha256','source_file_mime','source_file_size','source_row_count','source_data_row_count','parsed_record_count','source_row_manifest_sha256','source_evidence_status','parser_version','processing_state','created_by','created_at'];
+      if(actual.join('|')!==legacy.join('|'))throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
+      const additions=['drive_file_id','drive_file_url','storage_status','server_verified_sha256'];
+      sh.getRange(1,16,1,additions.length).setValues([additions]);
+      const last=sh.getLastRow();
+      if(last>1)sh.getRange(2,16,last-1,4).setValues(Array.from({length:last-1},()=>['','','LEGACY_NOT_ARCHIVED','']));
+      actual=sh.getRange(1,1,1,headers.length).getValues()[0].map(String);
+    }
     if(actual.join('|')!==headers.join('|'))throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
     sh.setFrozenRows(1);
   });
