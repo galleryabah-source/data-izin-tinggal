@@ -109,7 +109,7 @@ function activateKanwilStorageFromOwnerTargetsV1(){
   requireBackOfficeAccess_();
   requirePermission_('admin.config');
   const stagingId='1hK0ClWkKcUhvne7yXYXYqvMQW7L-R2tuGOTVyzSVBWE';
-  const driveFolderId='1oo5_9s4ohZK6ydLXUIuy7-enGk5-BXFo';
+  const driveFolderId='13cIXTqgXUaxpYLlCXaE9hiNLHu2xZYTN';
   const scopeId='KANWIL_JABAR';
   const props=PropertiesService.getScriptProperties();
   const canonicalId=String(props.getProperty('SPREADSHEET_ID')||'').trim();
