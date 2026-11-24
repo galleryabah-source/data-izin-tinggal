@@ -92,8 +92,10 @@ function parseKanwilPermitCsvV1(source, options) {
   if(parsed.rows.length<2)return {ok:false,reason:'NO_DATA_ROWS',records:[]};
   const header=kanwilMapHeadersV1_(parsed.rows[0]);
   if(!header.ok)return {ok:false,reason:header.reason,missing:header.missing,duplicateKeys:header.duplicateKeys,unknownHeaders:header.unknown,records:[]};
+  const dataRows=parsed.rows.slice(1);
+  const sourceDataRowCount=dataRows.filter(cells=>!cells.every(v=>String(v).trim()==='')).length;
   const records=[];
-  parsed.rows.slice(1).forEach((cells,index)=>{
+  dataRows.forEach((cells,index)=>{
     if(cells.every(v=>String(v).trim()===''))return;
     if(cells.length!==parsed.rows[0].length){
       records.push({sourceRowNumber:index+2,ok:false,reason:'COLUMN_COUNT_MISMATCH',rawCells:cells});
@@ -108,6 +110,9 @@ function parseKanwilPermitCsvV1(source, options) {
     if(!normalizedValues.nomor_permohonan)warnings.push({field:'nomor_permohonan',code:'REQUIRED_IDENTIFIER_MISSING'});
     records.push({sourceRowNumber:index+2,ok:!!normalizedValues.nomor_permohonan,rawValues,normalizedValues,warnings});
   });
-  return {ok:true,reason:null,contractVersion:'KANWIL_PERMIT_APPLICATION_V1',headerMapping:header.mapping,unknownHeaders:header.unknown,records,warnings:['HUMAN_REVIEW_REQUIRED','NO_AUTO_COMMIT']};
+  return {ok:true,reason:null,contractVersion:'KANWIL_PERMIT_APPLICATION_V1',headerMapping:header.mapping,unknownHeaders:header.unknown,records,
+    sourceEvidence:{version:'KANWIL_SOURCE_ROW_EVIDENCE_V1',sourceDataRowCount,parsedRecordCount:records.length,
+      sourceRowNumbers:records.map(record=>record.sourceRowNumber),measurement:'NON_EMPTY_LOGICAL_DATA_ROWS_AFTER_HEADER'},
+    warnings:['HUMAN_REVIEW_REQUIRED','NO_AUTO_COMMIT']};
 }
 if(typeof module!=='undefined'&&module.exports)module.exports={KANWIL_PERMIT_COLUMNS_V1,kanwilNormalizeHeaderV1_,kanwilMapHeadersV1_,parseKanwilPermitCsvV1};

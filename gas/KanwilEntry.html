@@ -38,6 +38,7 @@ rows plus file metadata/checksum are sent to the dedicated Kanwil staging store.
 'use strict';
 const root=document.getElementById('kanwilEntryPrototype');if(!root||root.dataset.ready)return;root.dataset.ready='1';
 const $=id=>document.getElementById(id),state={busy:false,rows:[],log:[],imports:[],enabled:false};
+let revisionTarget=null;
 const manualFields=[
  ['tanggal_pembayaran','Tanggal Pembayaran','datetime-local'],['tanggal_mulai_verifikasi','Tanggal Mulai Verifikasi','datetime-local'],['tanggal_auto_terbit','Tanggal Auto Terbit','datetime-local'],
  ['layanan','Layanan','text'],['kategori_produk','Kategori Produk','text'],['nomor_permohonan','Nomor Permohonan','text'],
@@ -58,11 +59,23 @@ function initManualForm(){
   if(key==='nomor_permohonan'||key==='no_passport')input.inputMode='text';
   wrap.append(input);host.append(wrap);
  });
+ $('kpeManualForm').addEventListener('reset',()=>{revisionTarget=null;const b=$('kpeManualForm').querySelector('button[type="submit"]');if(b)b.textContent='Simpan ke staging Kanwil';});
  $('kpeManualForm').addEventListener('submit',event=>{
   event.preventDefault();if(!state.enabled){say('Penyimpanan Kanwil belum aktif: storage terpisah dan feature flag belum siap.');return;}
   const values={};manualFields.forEach(([key])=>{const v=$('kpe_'+key).value.trim();values[key]=v||null;});
   if(!values.nomor_permohonan||!values.nama){say('Nomor Permohonan dan Nama wajib diisi.');return;}
   const button=event.target.querySelector('button[type="submit"]');button.disabled=true;
+  if(revisionTarget){
+   const target=revisionTarget,reason=window.prompt('Alasan koreksi/revisi data:');
+   if(!reason||!reason.trim()){button.disabled=!state.enabled;return;}
+   google.script.run.withSuccessHandler(result=>{
+    event.target.reset();say('Revisi tersimpan. Versi '+result.revision+'. Status: '+result.state+'.');
+    button.disabled=!state.enabled;loadKanwilQueue();
+   }).withFailureHandler(error=>{
+    say('Revisi gagal: '+(error&&error.message||String(error)));button.disabled=!state.enabled;
+   }).reviseKanwilApplication(target.stagingId,target.revision,{values},reason.trim());
+   return;
+  }
   const payload={submissionId:crypto.randomUUID(),values,sourceReason:'MANUAL_ENTRY'};
   google.script.run.withSuccessHandler(result=>{
     event.target.reset();say('Tersimpan di staging Kanwil. Status: '+result.state+'. ID: '+result.stagingId);
@@ -109,13 +122,13 @@ async function persistKanwilFiles(){
    const digest=await crypto.subtle.digest('SHA-256',await file.arrayBuffer());
    const sha=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
    const records=item.records.map(record=>({
-    sourceRowNumber:Number(record.sourceRowNumber||record.sourceRowIndex||1),
+    sourceRowNumber:record.sourceRowNumber!==undefined?record.sourceRowNumber:(record.sourceRowIndex!==undefined?record.sourceRowIndex:null),
     rawValues:record.rawValues||record.normalizedValues||record.values||{},
     normalizedValues:record.normalizedValues||record.values||{},
     warnings:record.warnings||[]
    }));
-   const result=await saveKanwilImport({sourceChannel:item.channel,sourceFile:{name:file.name,size:file.size,mime:file.type,sha256:sha},parserVersion:'kanwil-browser-v1',records});
-   say('Staging '+file.name+': '+result.inserted+' baris tersimpan; '+result.invalidCount+' perlu validasi.');
+   const result=await saveKanwilImport({sourceChannel:item.channel,sourceFile:{name:file.name,size:file.size,mime:file.type,sha256:sha},parserVersion:'kanwil-browser-v2-source-evidence',sourceEvidence:item.sourceEvidence,records});
+   say('Staging '+file.name+': '+result.inserted+' baris tersimpan; '+result.invalidCount+' perlu validasi; bukti sumber '+(result.sourceEvidenceStatus||'UNAVAILABLE')+'.');
   }
   state.imports=[];loadKanwilQueue();say('Seluruh hasil file berhasil dikirim ke staging Kanwil. File asli tidak diunggah.');
  }catch(error){say('Penyimpanan file gagal: '+(error&&error.message||String(error)));}
@@ -128,7 +141,7 @@ $('kpeRun').addEventListener('click',async()=>{
  if(files.length>50){say('Batas prototipe 50 file per batch.');return;}
  state.busy=true;$('kpeRun').disabled=true;state.rows=[];state.log=[];state.imports=[];$('kpePersistFiles').disabled=true;render();
  try{
-  const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@main/gas/';
+  const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@3501a30e0ab82806064f36104bb33594cf9ec23a/gas/';
   const [contractSrc,xlsxSrc,shotSrc,ocrSrc,policySrc]=await Promise.all(['KanwilPermitContract.js','KanwilXlsxAdapter.js','KanwilScreenshotParser.js','KanwilOcrAdapter.js','KanwilIntakePolicy.js'].map(async name=>{const response=await fetch(base+name);if(!response.ok)throw Error('Gagal memuat modul '+name);return response.text();}));
   const loadModule=source=>{const module={exports:{}};new Function('module','exports',source)(module,module.exports);return module.exports;};
   const contract=loadModule(contractSrc),xlsx=loadModule(xlsxSrc),shot=loadModule(shotSrc),ocr=loadModule(ocrSrc),policy=loadModule(policySrc);
@@ -144,8 +157,8 @@ $('kpeRun').addEventListener('click',async()=>{
     if(!result.ok){state.log.push(file.name+': '+(result.reason||'PARSE_FAILED'));continue;}
     const records=result.records||result.rows||[];
     records.forEach(record=>state.rows.push({file:file.name,sourceRowNumber:record.sourceRowNumber||record.sourceRowIndex,values:record.normalizedValues||record.values,state:'REVIEW_REQUIRED',warnings:record.warnings||result.warnings||[]}));
-    if(records.length)state.imports.push({file,channel:ext==='csv'?'CSV':(['xlsx','xls'].includes(ext)?'EXCEL':'SCREENSHOT'),records});
-    state.log.push(file.name+': '+records.length+' record kandidat; wajib review.');
+    if(records.length)state.imports.push({file,channel:ext==='csv'?'CSV':(['xlsx','xls'].includes(ext)?'EXCEL':'SCREENSHOT'),records,sourceEvidence:result.sourceEvidence||null});
+    state.log.push(file.name+': '+records.length+' record kandidat; '+(result.sourceEvidence?'bukti parser '+result.sourceEvidence.sourceDataRowCount+' baris sumber non-kosong':'jumlah baris sumber tidak tersedia')+'; wajib review.');
    }catch(e){state.log.push(file.name+': ERROR '+(e.message||String(e)));}
    $('kpeProgress').style.width=Math.round((i+1)/files.length*100)+'%';render();
   }
@@ -164,14 +177,25 @@ function loadKanwilQueue(){
    number.textContent=row.values.nomor_permohonan||'—';name.textContent=row.values.nama||'—';status.textContent=row.state+(row.validationErrors&&row.validationErrors.length?' — '+row.validationErrors.join('; '):'');
    if(row.state==='REVIEW_REQUIRED'){
     [['Setujui','APPROVE'],['Tolak','REJECT']].forEach(([label,decision])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',()=>actKanwil(row.stagingId,decision));actions.append(b);});
-   }else if(row.state==='VALIDATION_REQUIRED'){
-    const b=document.createElement('button');b.type='button';b.textContent='Tolak data tidak valid';b.addEventListener('click',()=>actKanwil(row.stagingId,'REJECT'));actions.append(b);
+   }else if(row.state==='REJECTED'||row.state==='VALIDATION_REQUIRED'){
+    const b=document.createElement('button');b.type='button';b.textContent='Koreksi / revisi';b.addEventListener('click',()=>startKanwilRevision(row));actions.append(b);
+    if(row.state==='VALIDATION_REQUIRED'){
+     const reject=document.createElement('button');reject.type='button';reject.textContent='Tolak data tidak valid';reject.addEventListener('click',()=>actKanwil(row.stagingId,'REJECT'));actions.append(reject);
+    }
    }else if(row.state==='APPROVED'){
     const b=document.createElement('button');b.type='button';b.textContent='Finalisasi';b.addEventListener('click',()=>actKanwil(row.stagingId,'COMMIT'));actions.append(b);
    }
    tr.append(number,name,status,actions);body.append(tr);
   });
  }).withFailureHandler(error=>say('Gagal memuat antrean Kanwil: '+(error&&error.message||String(error)))).listKanwilApplications({limit:100});
+}
+function startKanwilRevision(row){
+ const form=$('kpeManualForm'),button=form.querySelector('button[type="submit"]');
+ revisionTarget={stagingId:row.stagingId,revision:Number(row.revision)};
+ manualFields.forEach(([key])=>{$('kpe_'+key).value=row.values&&row.values[key]!==null&&row.values[key]!==undefined?String(row.values[key]):'';});
+ button.textContent='Simpan revisi v'+(revisionTarget.revision+1);
+ say('Mode koreksi aktif untuk '+(row.values?.nomor_permohonan||row.stagingId)+'. Perubahan akan disimpan sebagai revisi baru dan wajib diperiksa ulang.');
+ form.scrollIntoView({behavior:'smooth',block:'center'});
 }
 function actKanwil(id,action){
  const reason=window.prompt('Masukkan alasan tindakan '+action+':');if(!reason||!reason.trim())return;
