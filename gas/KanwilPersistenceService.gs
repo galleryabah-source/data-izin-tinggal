@@ -91,8 +91,12 @@ function kanwilAppendAuditV1_(sheets,batchId,recordId,stagingId,actor,action,rea
 function getKanwilEntryStatus(){
   requireBackOfficeAccess_();
   const readiness=kanwilStagingReadinessV1_();
-  return {enabled:kanwilEntryEnabled_()&&readiness.ready,configured:readiness.ready,
-    reason:readiness.ready?(kanwilEntryEnabled_()?'READY':'FEATURE_FLAG_OFF'):readiness.reason,
+  const folderId=String(PropertiesService.getScriptProperties().getProperty('KANWIL_DRIVE_FOLDER_ID')||'').trim();
+  let driveReady=false;
+  if(folderId){try{const folder=DriveApp.getFolderById(folderId);driveReady=!!folder&&String(folder.getId())===folderId;}catch(error){}}
+  const enabled=kanwilEntryEnabled_()&&readiness.ready&&driveReady;
+  const reason=!readiness.ready?readiness.reason:(!driveReady?'DRIVE_FOLDER_NOT_READY':(kanwilEntryEnabled_()?'READY':'FEATURE_FLAG_OFF'));
+  return {enabled,configured:readiness.ready,driveConfigured:driveReady,reason,
     writeMode:'ISOLATED_KANWIL_STAGING',canonicalWrites:false};
 }
 function saveKanwilApplication(payload){
