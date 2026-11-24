@@ -9,7 +9,7 @@ rows plus file metadata/checksum are sent to the dedicated Kanwil staging store.
 .kpe{font:14px/1.5 system-ui,sans-serif;color:#172b45;background:#f5f8fc;border:1px solid #dbe4ef;border-radius:14px;padding:18px;max-width:1180px;margin:18px auto}.kpe h2{margin:0;font-size:22px}.kpe .muted{color:#64748b}.kpe .notice{background:#fff7e8;border:1px solid #f2d29b;border-radius:8px;padding:10px;margin:12px 0}.kpe button,.kpe label.pick{border:0;border-radius:8px;padding:9px 13px;background:#1769e0;color:#fff;font-weight:700;cursor:pointer}.kpe button:disabled{opacity:.5}.kpe .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.kpe input[type=file]{max-width:100%}.kpe table{border-collapse:collapse;width:100%;font-size:12px;background:#fff}.kpe th,.kpe td{padding:7px;border:1px solid #dbe4ef;text-align:left;vertical-align:top}.kpe th{background:#eaf0f7;position:sticky;top:0}.kpe .tablewrap{max-height:480px;overflow:auto;margin-top:12px}.kpe pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#fff;border:1px solid #dbe4ef;padding:10px;border-radius:8px;max-height:220px;overflow:auto}.kpe .status{margin-top:10px;color:#334155}.kpe .progress{height:6px;background:#e2e8f0;border-radius:9px;overflow:hidden;margin:10px 0}.kpe .progress span{display:block;height:100%;width:0;background:#1769e0}@media(max-width:600px){.kpe{padding:12px}.kpe h2{font-size:19px}}
 </style>
 <header><h2>Kanwil Permit — Input & Review Lokal</h2><div class="muted">Excel · CSV · Screenshot · Foto · Kontrak 17 kolom</div></header>
-<div class="notice"><b>Penyimpanan Kanwil terintegrasi.</b> Data terstruktur disimpan pada spreadsheet staging khusus Kanwil. File asli yang diimpor diunggah ke folder Drive Kanwil melalui backend Apps Script; SHA-256 diverifikasi ulang di server. OCR gambar tetap berjalan di browser dan hasil ekstraksinya wajib diperiksa operator sebelum disimpan. Data ini tidak menulis ke dataset bulanan kanonik.</div>
+<div class="notice"><b>Modul Input Layanan Kanwil.</b> Jalur upload server-side mengarsipkan file asli ke folder Drive Kanwil dan memverifikasi SHA-256 di server. Operasi hanya dapat digunakan setelah spreadsheet staging, folder Drive, izin akses, dan feature flag lolos pemeriksaan. OCR gambar saat ini berjalan lokal di browser; hasil ekstraksi wajib diperiksa operator. Data tidak menulis ke dataset bulanan kanonik.</div>
 <section class="manual-entry" aria-labelledby="kpeManualTitle">
 <h3 id="kpeManualTitle">Input Manual Permohonan Kanwil</h3>
 <p class="muted">Masukkan satu data permohonan sesuai 17 kolom sumber. Simpan akan mengirim 17 kolom ke server Kanwil staging. Data tidak masuk ke dataset bulanan kanonik.</p>
@@ -212,7 +212,7 @@ function initializeKanwilPersistence(){
  google.script.run.withSuccessHandler(status=>{
   state.enabled=!!status.enabled;
   const button=$('kpeManualForm').querySelector('button[type="submit"]');button.disabled=!state.enabled;
-  say(state.enabled?'Penyimpanan Kanwil aktif. Data manual masuk ke staging terpisah.':'Penyimpanan belum aktif: '+status.reason);
+  say(state.enabled?'Penyimpanan Kanwil dan folder arsip Drive siap. Input dan impor dapat digunakan.':'Modul belum siap digunakan: '+status.reason+'. Hubungi administrator untuk menyelesaikan konfigurasi storage.');
   loadKanwilQueue();
  }).withFailureHandler(error=>say('Status Kanwil tidak dapat dibaca: '+(error&&error.message||String(error)))).getKanwilEntryStatus();
 }
