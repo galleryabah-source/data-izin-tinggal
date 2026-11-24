@@ -1994,6 +1994,16 @@ function assertKanwilGuardBeforeEffects(source,name){
 ['saveKanwilApplication','saveKanwilImportBatch','listKanwilApplications','reviewKanwilApplication','commitKanwilApplication','getKanwilEntryStatus'].forEach(name=>assertKanwilGuardBeforeEffects(kanwilPersistenceSource,name));
 
 const kanwilStagingServiceSource=read('KanwilStagingService.gs');
+const kanwilDriveUploadSource=read('KanwilPersistenceService.gs');
+const kanwilEntryHtml=read('KanwilEntry.html');
+assert(kanwilStagingServiceSource.includes("'drive_file_id','drive_file_url','storage_status','server_verified_sha256'"),'Kanwil file schema records Drive object identity and server verification');
+assert(kanwilDriveUploadSource.includes('DriveApp.getFolderById(folderId)')&&kanwilDriveUploadSource.includes('folder.createFile(blob)'),'Kanwil import persists original files to the configured Drive folder');
+assert(kanwilDriveUploadSource.includes('KANWIL_SOURCE_FILE_HASH_MISMATCH')&&kanwilDriveUploadSource.includes('Utilities.base64Decode(base64)'),'Kanwil upload verifies uploaded bytes against the client SHA-256 before Drive storage');
+assert(kanwilDriveUploadSource.includes('driveFile.setTrashed(true)'),'Kanwil import compensates by trashing the uploaded Drive file if staging persistence fails');
+assert(kanwilDriveUploadSource.includes('KANWIL_DRIVE_FOLDER_ID'),'Kanwil Drive destination is read from a dedicated Script Property');
+assert(kanwilEntryHtml.includes('base64Data')&&kanwilEntryHtml.includes('Mengunggah file asli ke Google Drive'),'Kanwil UI uploads original file bytes to the server');
+assert(!kanwilEntryHtml.includes('Prototipe terisolasi.'),'Kanwil UI no longer labels the integrated upload path as an isolated prototype');
+
 const kanwilRpcManifestSource=read('RpcManifest.js');
 assert(kanwilStagingServiceSource.includes('function provisionKanwilStagingFromConfiguredId()')&&kanwilStagingServiceSource.includes('requireBackOfficeAccess_()')&&kanwilStagingServiceSource.includes("requirePermission_('admin.config')"),'Owner provisioning entrypoint is argument-free and guarded by back-office and admin.config authorization');
 assert(kanwilStagingServiceSource.includes("getProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty)"),'Owner provisioning reads the dedicated staging target from Script Properties');
