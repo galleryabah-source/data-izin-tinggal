@@ -56,6 +56,14 @@ jobs:
           printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
           printf '%s' "{\"scriptId\":\"$APPS_SCRIPT_ID\"}" > .clasp.json
 
+      - name: Verify Apps Script source excludes Node-only tests
+        working-directory: gas
+        run: |
+          if find . -type f \\( -name '*.test.js' -o -name 'test-shim.js' \\) -print -quit | grep -q .; then
+            echo "Node-only test artifacts must remain outside the Apps Script source root."
+            exit 1
+          fi
+
       - name: Push Apps Script source
         working-directory: gas
         run: clasp push --force
