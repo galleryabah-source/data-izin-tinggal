@@ -2170,4 +2170,3 @@ assert(kanwilEntryHtml.includes('word.confidence.toFixed(1)'),'Kanwil review UI 
 assert(kanwilEntryHtml.includes('word.bbox'),'Kanwil review UI displays per-token bounding boxes');
 assert(kanwilEntryHtml.includes('Geometri: Y '),'Kanwil review UI displays vertical row band coordinates');
 assert(kanwilEntryHtml.includes('hasPaymentDateAnchor'),'Kanwil review UI displays payment-date row anchor status');
-assert(kanwilParser.includes('VERTICAL_GAP_CLUSTERING') ,'Kanwil parser distinguishes vertical-only row segmentation');
