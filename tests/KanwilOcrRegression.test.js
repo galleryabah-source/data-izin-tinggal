@@ -198,3 +198,24 @@ assert.ok(edgeDateResult.rowSegmentation.rowBands.every(b=>b.hasPaymentDateAncho
 assert.strictEqual(edgeDateResult.rowSegmentation.method,'VERTICAL_GAP_CLUSTERING_WITH_DATE_ANCHORS');
 assert.strictEqual(edgeDateResult.sourceRowCountVerified,false);
 assert.strictEqual(edgeDateResult.autoCommit,false);
+
+
+// Row boundary anchors must use any date-bearing field, not only the first
+// payment-date column. Payment-date detection remains a separate audit flag.
+const dateColumnAnchorWords=words.filter(w=>w.bbox.y0<80).map(w=>({...w,bbox:{...w.bbox}}));
+[
+ {y:130,app:'171126046899',date:'2026-11-17'},
+ {y:185,app:'161126042545',date:'2026-11-16'},
+ {y:275,app:'161126043599',date:'2026-11-16'},
+ {y:330,app:'161126042225',date:'2026-11-16'},
+ {y:420,app:'161126037700',date:'2026-11-13'}
+].forEach(row=>{
+ dateColumnAnchorWords.push({text:row.date,confidence:94,bbox:{x0:colX[1],y0:row.y,x1:colX[1]+72,y1:row.y+13}});
+ dateColumnAnchorWords.push({text:row.app,confidence:93,bbox:{x0:colX[5],y0:row.y,x1:colX[5]+78,y1:row.y+13}});
+});
+const dateColumnResult=reconstructKanwilScreenshotTableV1(dateColumnAnchorWords,{lineTolerance:8,maxHeaderLines:6});
+assert.strictEqual(dateColumnResult.rows.length,5,'dates in non-payment date columns still preserve row boundaries');
+assert.ok(dateColumnResult.rowSegmentation.rowBands.every(b=>b.hasAnyDateAnchor),'each candidate row exposes any-date anchor');
+assert.ok(dateColumnResult.rowSegmentation.rowBands.every(b=>!b.hasPaymentDateAnchor),'payment-date evidence remains separately auditable');
+assert.ok(dateColumnResult.rowSegmentation.rowBands.every(b=>b.dateAnchorFields.includes('tanggal_mulai_verifikasi')),'date anchor field identity is preserved');
+assert.strictEqual(dateColumnResult.autoCommit,false);

@@ -180,6 +180,7 @@ function reconstructKanwilScreenshotTableV1(words,options){
   right:i<columns.length-1?(col.anchor+columns[i+1].anchor)/2:maxX+edgePadding
  }));
  const dataLines=lines.slice(best.end+1);
+ const dateKeysForAnchors=new Set(['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','tanggal_permohonan','tanggal_lahir']);
  const lineBuckets=dataLines.map((line,index)=>{
   const buckets=Object.fromEntries(columns.map(col=>[col.key,[]]));
   line.words.forEach(w=>{
@@ -188,7 +189,14 @@ function reconstructKanwilScreenshotTableV1(words,options){
    if(col)buckets[col.key].push(w);
   });
   const paymentText=(buckets.tanggal_pembayaran||[]).map(w=>String(w.text)).join(' ').trim();
-  return {index,line,buckets,paymentText,hasDateAnchor:/\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/.test(paymentText)};
+  const lineText=line.words.map(w=>String(w.text)).join(' ').replace(/\s+/g,' ').trim();
+  const dateAnchorFields=columns.filter(col=>dateKeysForAnchors.has(col.key)&&
+   /\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/.test((buckets[col.key]||[]).map(w=>String(w.text)).join(' ')))
+   .map(col=>col.key);
+  const hasAnyDateAnchor=/\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/.test(lineText);
+  return {index,line,buckets,paymentText,lineText,dateAnchorFields,
+   hasPaymentDateAnchor:/\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/.test(paymentText),
+   hasAnyDateAnchor,hasDateAnchor:hasAnyDateAnchor||dateAnchorFields.length>0};
  });
  const gaps=[];
  for(let i=1;i<dataLines.length;i++)gaps.push(Math.max(0,dataLines[i].cy-dataLines[i-1].cy));
@@ -298,13 +306,15 @@ function reconstructKanwilScreenshotTableV1(words,options){
   const rowWarnings=['OCR_GEOMETRY_REQUIRES_HUMAN_REVIEW'];
   if(geometryConfidence==='AMBIGUOUS')rowWarnings.push('ROW_GEOMETRY_AMBIGUOUS');
   if(geometryConfidence!=='HIGH')rowWarnings.push('ROW_GEOMETRY_NOT_CONFIRMED_BY_VERTICAL_GAPS');
-  if(!group.lines.some(line=>line.hasDateAnchor))rowWarnings.push('ROW_BOUNDARY_WITHOUT_PAYMENT_DATE_ANCHOR');
+  if(!group.lines.some(line=>line.hasAnyDateAnchor))rowWarnings.push('ROW_BOUNDARY_WITHOUT_ANY_DATE_ANCHOR');
   if(validationWarnings.length)rowWarnings.push('CELL_VALIDATION_WARNINGS');
   rows.push({
    sourceRowIndex:index+1,values,fieldEvidence,validationErrors,validationWarnings,
    rowGeometry:{yStart:group.yStart,yEnd:group.yEnd,lineCount:group.lines.length,gapBefore:group.gapBefore,
     boundaryReason:group.boundaryReason,
-    hasPaymentDateAnchor:group.lines.some(line=>line.hasDateAnchor),
+    hasPaymentDateAnchor:group.lines.some(line=>line.hasPaymentDateAnchor),
+    hasAnyDateAnchor:group.lines.some(line=>line.hasAnyDateAnchor),
+    dateAnchorFields:[...new Set(group.lines.flatMap(line=>line.dateAnchorFields))],
     lineYCoordinates:group.lines.map(line=>Math.round(line.line.cy)),
     segmentationMethod:geometryConfidence==='HIGH'?(lineBuckets.some(x=>x.hasDateAnchor)?'VERTICAL_GAP_CLUSTERING_WITH_DATE_ANCHORS':'VERTICAL_GAP_CLUSTERING'):
      (lineBuckets.some(x=>x.hasDateAnchor)?'DATE_ANCHORS_WITH_VERTICAL_GAP_CHECK':'LINE_BASELINE_FALLBACK'),
@@ -318,7 +328,7 @@ function reconstructKanwilScreenshotTableV1(words,options){
   confidence:geometryConfidence,verticalGapThreshold:geometryThreshold,dataLineCount:dataLines.length,
   candidateRowCount:rows.length,sourceRowCountVerified:false,
   sourceRowCountEvidence:'UNAVAILABLE_FROM_OCR_WORD_GEOMETRY',
-  rowBands:rows.map((row,index)=>({candidateRowNumber:index+1,yStart:row.rowGeometry.yStart,yEnd:row.rowGeometry.yEnd,lineCount:row.rowGeometry.lineCount,gapBefore:row.rowGeometry.gapBefore,boundaryReason:row.rowGeometry.boundaryReason,hasPaymentDateAnchor:row.rowGeometry.hasPaymentDateAnchor,lineYCoordinates:row.rowGeometry.lineYCoordinates,confidence:row.rowGeometry.confidence}))
+  rowBands:rows.map((row,index)=>({candidateRowNumber:index+1,yStart:row.rowGeometry.yStart,yEnd:row.rowGeometry.yEnd,lineCount:row.rowGeometry.lineCount,gapBefore:row.rowGeometry.gapBefore,boundaryReason:row.rowGeometry.boundaryReason,hasPaymentDateAnchor:row.rowGeometry.hasPaymentDateAnchor,hasAnyDateAnchor:row.rowGeometry.hasAnyDateAnchor,dateAnchorFields:row.rowGeometry.dateAnchorFields,lineYCoordinates:row.rowGeometry.lineYCoordinates,confidence:row.rowGeometry.confidence}))
  };
 
  return {
