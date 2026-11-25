@@ -237,7 +237,10 @@ function reconstructKanwilScreenshotTableV1(words,options){
  const dateKeys=new Set(['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','tanggal_permohonan','tanggal_lahir']);
  function validateCell(key,value,evidence){
   const flags=[];
-  if(!value){flags.push('CELL_EMPTY');return flags;}
+  if(!value){
+   flags.push(key==='nomor_permohonan'||key==='nama'?'REQUIRED_CELL_EMPTY':'CELL_EMPTY_OPTIONAL');
+   return flags;
+  }
   if(evidence&&Number.isFinite(evidence.meanConfidence)&&evidence.meanConfidence<65)flags.push('CELL_LOW_CONFIDENCE');
   if(evidence&&evidence.bbox&&evidence.columnBounds){
    if(evidence.bbox.x0<evidence.columnBounds.left-2||evidence.bbox.x1>evidence.columnBounds.right+2)flags.push('CELL_CROSSES_COLUMN_BOUNDARY');
@@ -271,7 +274,7 @@ function reconstructKanwilScreenshotTableV1(words,options){
    cellEvidence.reviewFlags=validateCell(key,value,cellEvidence);
    if(cellEvidence.reviewFlags.length){
     cellEvidence.cellStatus=ws.length?'REVIEW':'EMPTY';
-    cellEvidence.reviewFlags.forEach(code=>validationWarnings.push({field:key,code}));
+    cellEvidence.reviewFlags.filter(code=>code!=='CELL_EMPTY_OPTIONAL').forEach(code=>validationWarnings.push({field:key,code}));
    }
    fieldEvidence[key]=cellEvidence;
   });
