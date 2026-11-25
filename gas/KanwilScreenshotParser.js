@@ -20,13 +20,17 @@ function kanwilShotLines_(words,tolerance){
 function kanwilShotMedian_(values){const a=values.filter(Number.isFinite).sort((x,y)=>x-y);return a.length?a[Math.floor(a.length/2)]:8;}
 function kanwilShotHeaderClusters_(lines,start,end){
  const words=lines.slice(start,end+1).flatMap((line,lineOffset)=>line.words.map(w=>({...w,_line:start+lineOffset,_cx:(w.bbox.x0+w.bbox.x1)/2})));
- const heights=words.map(w=>w.bbox.y1-w.bbox.y0),tol=Math.max(9,kanwilShotMedian_(heights)*1.45);
+ const heights=words.map(w=>w.bbox.y1-w.bbox.y0),tol=Math.max(8,kanwilShotMedian_(heights)*1.35);
  const clusters=[];
- words.sort((a,b)=>a._cx-b._cx||a.bbox.y0-b.bbox.y0).forEach(w=>{
+ words.sort((a,b)=>a.bbox.x0-b.bbox.x0||a.bbox.y0-b.bbox.y0).forEach(w=>{
   let best=null,bestDistance=Infinity;
-  clusters.forEach(c=>{const distance=Math.abs(c.cx-w._cx);if(distance<=tol&&distance<bestDistance){best=c;bestDistance=distance;}});
-  if(!best){best={words:[],cx:w._cx};clusters.push(best);}
-  best.words.push(w);best.cx=best.words.reduce((sum,x)=>sum+x._cx,0)/best.words.length;
+  clusters.forEach(c=>{
+   const gap=Math.max(0,Math.max(c.minX-w.bbox.x1,w.bbox.x0-c.maxX));
+   if(gap<=tol&&gap<bestDistance){best=c;bestDistance=gap;}
+  });
+  if(!best){best={words:[],minX:w.bbox.x0,maxX:w.bbox.x1,cx:w._cx};clusters.push(best);}
+  best.words.push(w);best.minX=Math.min(best.minX,w.bbox.x0);best.maxX=Math.max(best.maxX,w.bbox.x1);
+  best.cx=best.words.reduce((sum,x)=>sum+x._cx,0)/best.words.length;
  });
  return clusters.map(c=>{const ordered=c.words.slice().sort((a,b)=>a._line-b._line||a.bbox.x0-b.bbox.x0);return {...c,text:ordered.map(w=>String(w.text).trim()).join(' '),lineStart:Math.min(...ordered.map(w=>w._line)),lineEnd:Math.max(...ordered.map(w=>w._line))};}).sort((a,b)=>a.cx-b.cx);
 }
