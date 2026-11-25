@@ -1,3 +1,6 @@
 README.md
 *.example
 test-shim.js
+# Node-only tests must stay in GitHub Actions, not Apps Script's global runtime.
+*.test.js
+**/*.test.js
