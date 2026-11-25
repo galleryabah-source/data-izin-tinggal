@@ -247,8 +247,18 @@ function reconstructKanwilScreenshotTableV1(words,options){
    else if(evidence.bbox.x0<=evidence.columnBounds.left+2||evidence.bbox.x1>=evidence.columnBounds.right-2)flags.push('CELL_NEAR_COLUMN_BOUNDARY');
   }
   if(/[-–—]$/.test(value.trim())||(evidence&&evidence.bbox&&evidence.columnBounds&&evidence.bbox.x1>=evidence.columnBounds.right-1))flags.push('POSSIBLE_TEXT_TRUNCATION');
-  if(dateKeys.has(key)&&! /^\d{4}[-/]\d{1,2}[-/]\d{1,2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?$/.test(value.trim()))
-   flags.push('DATE_FORMAT_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
+  if(dateKeys.has(key)){
+   const dateMatch=value.trim().match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+   if(!dateMatch)flags.push('DATE_FORMAT_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
+   else{
+    const year=Number(dateMatch[1]),month=Number(dateMatch[2]),day=Number(dateMatch[3]);
+    const date=new Date(Date.UTC(year,month-1,day));
+    if(date.getUTCFullYear()!==year||date.getUTCMonth()!==month-1||date.getUTCDate()!==day)
+     flags.push('DATE_VALUE_INVALID','POSSIBLE_COLUMN_SHIFT');
+    if(dateMatch[4]!==undefined&&(Number(dateMatch[4])>23||Number(dateMatch[5])>59||Number(dateMatch[6]||0)>59))
+     flags.push('TIME_VALUE_INVALID');
+   }
+  }
   if(key==='nomor_permohonan'&&!/^[A-Z0-9-]{8,24}$/i.test(value.replace(/\s+/g,'')))flags.push('APPLICATION_NUMBER_FORMAT_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
   if(key==='jenis_kelamin'&&!/^(MALE|FEMALE|LAKI[\s-]?LAKI|PEREMPUAN)$/i.test(value.trim()))flags.push('GENDER_VALUE_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
   if(key==='no_passport'&&!/^[A-Z0-9]{5,15}$/i.test(value.replace(/\s+/g,'')))flags.push('PASSPORT_FORMAT_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
@@ -261,7 +271,9 @@ function reconstructKanwilScreenshotTableV1(words,options){
   const values={},fieldEvidence={},validationWarnings=[],validationErrors=[];
   columns.forEach(col=>{
    const key=col.key,ws=cellWords[key].slice().sort((a,b)=>(a.bbox.y0+a.bbox.y1)-(b.bbox.y0+b.bbox.y1)||a.bbox.x0-b.bbox.x0);
-   const value=ws.map(w=>String(w.text).trim()).filter(Boolean).join(' ').replace(/\s+/g,' ').trim();
+   let value=ws.map(w=>String(w.text).trim()).filter(Boolean).join(' ').replace(/\s+/g,' ').trim();
+   // Rejoin a date day split across OCR lines, without changing word evidence.
+   if(dateKeys.has(key))value=value.replace(/(\d{4}[-/]\d{1,2}[-/])\s+(\d{1,2})(?=\s|$)/g,'$1$2');
    values[key]=value||null;
    const bbox=ws.length?{x0:Math.min(...ws.map(w=>w.bbox.x0)),y0:Math.min(...ws.map(w=>w.bbox.y0)),x1:Math.max(...ws.map(w=>w.bbox.x1)),y1:Math.max(...ws.map(w=>w.bbox.y1))}:null;
    const columnBounds=bounds.find(b=>b.key===key);
@@ -281,11 +293,15 @@ function reconstructKanwilScreenshotTableV1(words,options){
   ['nomor_permohonan','nama'].forEach(key=>{if(!values[key])validationErrors.push({field:key,code:'REQUIRED_CELL_EMPTY'});});
   const rowWarnings=['OCR_GEOMETRY_REQUIRES_HUMAN_REVIEW'];
   if(geometryConfidence==='AMBIGUOUS')rowWarnings.push('ROW_GEOMETRY_AMBIGUOUS');
+  if(geometryConfidence!=='HIGH')rowWarnings.push('ROW_GEOMETRY_NOT_CONFIRMED_BY_VERTICAL_GAPS');
+  if(!group.lines.some(line=>line.hasDateAnchor))rowWarnings.push('ROW_BOUNDARY_WITHOUT_PAYMENT_DATE_ANCHOR');
   if(validationWarnings.length)rowWarnings.push('CELL_VALIDATION_WARNINGS');
   rows.push({
    sourceRowIndex:index+1,values,fieldEvidence,validationErrors,validationWarnings,
    rowGeometry:{yStart:group.yStart,yEnd:group.yEnd,lineCount:group.lines.length,gapBefore:group.gapBefore,
     boundaryReason:group.boundaryReason,
+    hasPaymentDateAnchor:group.lines.some(line=>line.hasDateAnchor),
+    lineYCoordinates:group.lines.map(line=>Math.round(line.line.cy)),
     segmentationMethod:geometryConfidence==='HIGH'?'VERTICAL_GAP_CLUSTERING_WITH_DATE_ANCHORS':
      (lineBuckets.some(x=>x.hasDateAnchor)?'DATE_ANCHORS_WITH_VERTICAL_GAP_CHECK':'LINE_BASELINE_FALLBACK'),
     confidence:geometryConfidence},
@@ -297,7 +313,8 @@ function reconstructKanwilScreenshotTableV1(words,options){
    (lineBuckets.some(x=>x.hasDateAnchor)?'DATE_ANCHORS_WITH_VERTICAL_GAP_CHECK':'LINE_BASELINE_FALLBACK'),
   confidence:geometryConfidence,verticalGapThreshold:geometryThreshold,dataLineCount:dataLines.length,
   candidateRowCount:rows.length,sourceRowCountVerified:false,
-  sourceRowCountEvidence:'UNAVAILABLE_FROM_OCR_WORD_GEOMETRY'
+  sourceRowCountEvidence:'UNAVAILABLE_FROM_OCR_WORD_GEOMETRY',
+  rowBands:rows.map((row,index)=>({candidateRowNumber:index+1,yStart:row.rowGeometry.yStart,yEnd:row.rowGeometry.yEnd,lineCount:row.rowGeometry.lineCount,gapBefore:row.rowGeometry.gapBefore,boundaryReason:row.rowGeometry.boundaryReason,hasPaymentDateAnchor:row.rowGeometry.hasPaymentDateAnchor,lineYCoordinates:row.rowGeometry.lineYCoordinates,confidence:row.rowGeometry.confidence}))
  };
 
  return {
