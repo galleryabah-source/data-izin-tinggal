@@ -1,5 +1,5 @@
 const assert=require('assert');
-const {KANWIL_SCREENSHOT_COLUMNS_V1,reconstructKanwilScreenshotTableV1}=require('./KanwilScreenshotParser');
+const {KANWIL_SCREENSHOT_COLUMNS_V1,reconstructKanwilScreenshotTableV1}=require('../gas/KanwilScreenshotParser');
 const words=[];
 const y0=12, lineH=17, colX=[8,112,207,289,380,463,568,675,762,868,944,1024,1120,1200,1338,1428,1520];
 // Realistic wrapped headers: words within one header cell have normal word gaps,

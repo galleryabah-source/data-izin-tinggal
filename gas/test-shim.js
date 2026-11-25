@@ -2155,4 +2155,4 @@ try{kanwilServerVerify({getBytes:()=>[1],getDataAsString:()=>kanwilCsvSource+'\n
 assert(kanwilServerMalformedRejected,'Kanwil server verifier fails closed on malformed CSV source bytes');
 
 // Kanwil OCR multiline header regression contract.
-const kanwilOcrRegression=require('./KanwilOcrRegression.test.js');
+const kanwilOcrRegression=require('../tests/KanwilOcrRegression.test.js');
