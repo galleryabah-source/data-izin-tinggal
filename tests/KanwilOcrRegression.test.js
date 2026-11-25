@@ -32,6 +32,13 @@ assert.strictEqual(result.rows[0].values.jenis_kelamin,'MALE','gender remains in
 assert.strictEqual(result.rows[0].values.no_passport,'U37234274');
 assert.strictEqual(result.autoCommit,false);
 assert.strictEqual(result.reviewRequired,true);
+assert.strictEqual(result.matchedHeaderCount,17,'successful OCR must report all 17 matched headers');
+assert.strictEqual(result.anchorGroupCount,17,'successful OCR must report 17 geometry anchors');
+assert.ok(result.candidateLineCount>0,'successful OCR must report header candidate line count');
+assert.ok(result.inputWordCount>=17,'successful OCR must report OCR word count');
+assert.strictEqual(result.missing.length,0);
+assert.strictEqual(result.duplicate.length,0);
+assert.strictEqual(result.headerDiagnostics.length,17,'successful OCR must expose header diagnostics');
 assert.strictEqual('tanggal pembayaran'.replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' '),'tanggal pembayaran','whitespace normalization is correct');
 // Regression: OCR boxes for wrapped header fragments may be horizontally indented
 // by the browser's centered header layout. They must still resolve to the same column.
