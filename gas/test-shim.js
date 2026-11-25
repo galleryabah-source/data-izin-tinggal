@@ -1862,8 +1862,12 @@ const kanwilNavSource=read('index.html');
 assert(kanwilNavSource.includes('href="<?= WEB_APP_URL ?>?view=kanwil" target="_top"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace through the canonical same-tab route');
 const kanwilPageSource=read('KanwilEntry.html');
 assert(kanwilPageSource.includes('Kanwil staging')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
-assert(kanwilPageSource.includes('@3501a30e0ab82806064f36104bb33594cf9ec23a/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
+assert(kanwilPageSource.includes('@8c6c2d1de4f40b101f8709808a438ddd39b80e18/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
 assert(!kanwilPageSource.includes('data-izin-tinggal@main/gas/'),'Kanwil browser parser never executes mutable main-branch code');
+assert(kanwilPageSource.includes('id="kpePasteImage"')&&kanwilPageSource.includes("clipboardData.items")&&kanwilPageSource.includes("kpeProcessPastedImage"),'Kanwil screenshot intake accepts a directly pasted clipboard image');
+assert(kanwilPageSource.includes('id="kpePasteText"')&&kanwilPageSource.includes('kpeParsePasteText')&&kanwilPageSource.includes("delimiter:'\\t'"),'Kanwil intake exposes a dedicated tabular-text paste field and parser action');
+assert(kanwilPageSource.includes('function preprocessKanwilImage')&&kanwilPageSource.includes("tessedit_pageseg_mode:'6'")&&kanwilPageSource.includes('preserve_interword_spaces'),'Kanwil OCR preprocesses screenshot images and configures table-oriented recognition');
+
 
 const kanwilPermitContract=require('./KanwilPermitContract.js');
 const kanwilXlsxAdapter=require('./KanwilXlsxAdapter.js');
