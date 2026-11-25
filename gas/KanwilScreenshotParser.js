@@ -312,7 +312,9 @@ function reconstructKanwilScreenshotTableV1(words,options){
    sourceRowIndex:index+1,values,fieldEvidence,validationErrors,validationWarnings,
    rowGeometry:{yStart:group.yStart,yEnd:group.yEnd,lineCount:group.lines.length,gapBefore:group.gapBefore,
     boundaryReason:group.boundaryReason,
-    hasPaymentDateAnchor:group.lines.some(line=>line.hasPaymentDateAnchor),\n    hasAnyDateAnchor:group.lines.some(line=>line.hasAnyDateAnchor),\n    dateAnchorFields:[...new Set(group.lines.flatMap(line=>line.dateAnchorFields))],
+    hasPaymentDateAnchor:group.lines.some(line=>line.hasPaymentDateAnchor),
+    hasAnyDateAnchor:group.lines.some(line=>line.hasAnyDateAnchor),
+    dateAnchorFields:[...new Set(group.lines.flatMap(line=>line.dateAnchorFields))],
     lineYCoordinates:group.lines.map(line=>Math.round(line.line.cy)),
     segmentationMethod:geometryConfidence==='HIGH'?(lineBuckets.some(x=>x.hasDateAnchor)?'VERTICAL_GAP_CLUSTERING_WITH_DATE_ANCHORS':'VERTICAL_GAP_CLUSTERING'):
      (lineBuckets.some(x=>x.hasDateAnchor)?'DATE_ANCHORS_WITH_VERTICAL_GAP_CHECK':'LINE_BASELINE_FALLBACK'),
