@@ -101,3 +101,24 @@ assert.strictEqual(staggeredResult.autoCommit,false);
 assert.strictEqual(staggeredResult.reviewRequired,true);
 
 console.log('Kanwil OCR realistic multiline-header tests: PASS');
+
+
+// Regression: browser OCR can truncate the final glyphs in narrow header cells.
+// These aliases are intentionally confined to screenshot OCR, not the CSV contract.
+const truncatedHeaderWords=[];
+KANWIL_SCREENSHOT_COLUMNS_V1.forEach(([key,aliases],col)=>{
+ const header=key==='tanggal_permohonan'?'tanggal permoh':key==='penjamin'?'penjami':aliases[0];
+ header.split(' ').forEach((token,row)=>{
+  const x=colX[col]+(row===0?0:2);
+  const y=y0+(col%3)*17+row*17;
+  truncatedHeaderWords.push({text:token,confidence:88,bbox:{x0:x,y0:y,x1:x+token.length*6.2,y1:y+13}});
+ });
+});
+// A sort indicator can be OCR'd as a stray punctuation fragment between columns.
+truncatedHeaderWords.push({text:'~',confidence:20,bbox:{x0:colX[1]-45,y0:y0+17,x1:colX[1]-39,y1:y0+22}});
+const truncatedHeaderResult=reconstructKanwilScreenshotTableV1(truncatedHeaderWords,{lineTolerance:8,maxHeaderLines:6});
+assert.strictEqual(truncatedHeaderResult.ok,true,'truncated narrow header labels should map all 17 columns: '+JSON.stringify({missing:truncatedHeaderResult.missing,diagnostics:truncatedHeaderResult.headerDiagnostics}));
+assert.deepStrictEqual(truncatedHeaderResult.header,KANWIL_SCREENSHOT_COLUMNS_V1.map(([key])=>key),'truncated OCR labels must preserve the canonical 17-column order');
+assert.ok(truncatedHeaderResult.headerFragments.some(x=>x.key==='tanggal_permohonan'&&x.text==='tanggal permoh'));
+assert.ok(truncatedHeaderResult.headerFragments.some(x=>x.key==='penjamin'&&x.text==='penjami'));
+assert.strictEqual(truncatedHeaderResult.autoCommit,false);

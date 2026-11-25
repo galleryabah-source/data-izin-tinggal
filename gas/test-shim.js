@@ -6,6 +6,7 @@ const files=fs.readdirSync(__dirname).filter(x=>/\.(gs|js)$/.test(x));
 for(const name of files){new Function(fs.readFileSync(path.join(__dirname,name),'utf8'));}
 
 const assert=(condition,message)=>{if(!condition)throw new Error('TEST FAILED: '+message);};
+assert(!fs.existsSync(path.join(__dirname,'KanwilOcrRegression.test.js')) && fs.existsSync(path.join(__dirname,'..','tests','KanwilOcrRegression.test.js')), 'Node-only Kanwil OCR regression test stays outside the Apps Script source directory');
 const read=(name)=>fs.readFileSync(path.join(__dirname,name),'utf8');
 const mobileHtml=fs.readFileSync(path.join(__dirname,'tv-mobile.html'),'utf8');
 assert(mobileHtml.includes('INTAL TV MOBILE'),'Dedicated INTAL TV Mobile page exists');
