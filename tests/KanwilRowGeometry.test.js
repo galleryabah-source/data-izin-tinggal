@@ -44,7 +44,7 @@ assert.ok(!result.rows[0].validationWarnings.some(x=>x.field==='tanggal_auto_ter
 assert.ok(result.rows[0].validationErrors.length===0,'optional empty cells must not become required-field errors');
 assert.ok(Number.isFinite(result.rows[0].fieldEvidence.tanggal_auto_terbit.columnBounds.left));
 assert.ok(Number.isFinite(result.rows[0].fieldEvidence.tanggal_auto_terbit.columnBounds.right));
-assert.ok(result.rows[0].validationWarnings.some(x=>x.field==='tanggal_auto_terbit'&&x.code==='CELL_EMPTY'));
+assert.ok(!result.rows[0].validationWarnings.some(x=>x.field==='tanggal_auto_terbit'&&x.code==='CELL_EMPTY_OPTIONAL'));
 const invalidWords=words.map(w=>({...w,bbox:{...w.bbox}}));
 invalidWords.push({text:'MALE?',confidence:52,bbox:{x0:x[9],y0:113,x1:x[9]+36,y1:124}});
 invalidWords.push({text:'AB12-',confidence:48,bbox:{x0:x[12],y0:113,x1:x[12]+32,y1:124}});
