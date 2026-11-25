@@ -144,3 +144,34 @@ assert.deepStrictEqual(truncatedHeaderResult.header,KANWIL_SCREENSHOT_COLUMNS_V1
 assert.ok(truncatedHeaderResult.headerFragments.some(x=>x.key==='tanggal_permohonan'&&x.text==='tanggal permoh'));
 assert.ok(truncatedHeaderResult.headerFragments.some(x=>x.key==='penjamin'&&x.text==='penjami'));
 assert.strictEqual(truncatedHeaderResult.autoCommit,false);
+
+
+// Row geometry regression: wrapped names and a date-of-birth day split onto
+// the next OCR baseline must remain in one row/cell. Four rows provide enough
+// vertical-gap samples to distinguish intra-row wrapping from row boundaries.
+const geometryWords=words.filter(w=>w.bbox.y0<80).map(w=>({...w,bbox:{...w.bbox}}));
+const geometryRows=[
+ {y:130,app:'171126046899',name:['MEHMET','UZELE'],birth:['1980-06-','05']},
+ {y:185,app:'161126042545',name:['YOHANES','BONAR'],birth:['1984-03-','27']},
+ {y:257,app:'161126043599',name:['MUHAMMED','CAKIR'],birth:['1980-09-','03']},
+ {y:312,app:'161126042225',name:['HAITHAM','ISMAEL'],birth:['1994-06-','12']}
+];
+geometryRows.forEach((row,index)=>{
+ const add=(col,text,y)=>geometryWords.push({text,confidence:92,bbox:{x0:colX[col],y0:y,x1:colX[col]+Math.max(18,text.length*5.8),y1:y+13}});
+ add(0,'2026-11-'+String(17-index).padStart(2,'0'),row.y);
+ add(5,row.app,row.y);
+ add(8,row.name[0],row.y);add(8,row.name[1],row.y+17);
+ add(9,'MALE',row.y);
+ add(10,row.birth[0],row.y);add(10,row.birth[1],row.y+17);
+ add(12,'U37234274',row.y);
+});
+const geometryResult=reconstructKanwilScreenshotTableV1(geometryWords,{lineTolerance:8,maxHeaderLines:6});
+assert.strictEqual(geometryResult.ok,true,'wrapped-row fixture should map headers');
+assert.strictEqual(geometryResult.rows.length,4,'vertical row bands should retain all four candidate rows');
+assert.strictEqual(geometryResult.rows[0].values.tanggal_lahir,'1980-06-05','wrapped date day should be rejoined without losing token evidence');
+assert.strictEqual(geometryResult.rows[0].values.nama,'MEHMET UZELE','wrapped name should remain one cell');
+assert.strictEqual(geometryResult.rowSegmentation.rowBands.length,4,'row-band evidence should be exposed for every candidate');
+assert.ok(geometryResult.rowSegmentation.rowBands.every(b=>b.hasPaymentDateAnchor),'each fixture row should expose its payment-date anchor');
+assert.strictEqual(geometryResult.sourceRowCountVerified,false,'OCR candidates must never certify source row count');
+assert.strictEqual(geometryResult.autoCommit,false);
+assert.ok(geometryResult.rows.every(r=>r.reviewRequired),'all reconstructed rows remain review-required');
