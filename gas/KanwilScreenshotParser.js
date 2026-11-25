@@ -116,8 +116,11 @@ function reconstructKanwilScreenshotTableV1(words,options){
  lines.slice(best.end+1).forEach(line=>{
   const buckets=Object.fromEntries(columns.map(c=>[c.key,[]]));
   line.words.forEach(w=>{
-   const cx=(w.bbox.x0+w.bbox.x1)/2;
-   const col=bounds.find(b=>cx>=b.left&&cx<b.right);
+   // OCR boxes can extend across the visual midpoint of a narrow column (e.g. the
+   // second token in a two-word name). Assign by the token's left edge with a
+   // small font-height correction; midpoint ties remain in the preceding column.
+   const x=w.bbox.x0-Math.max(3,(w.bbox.y1-w.bbox.y0)*0.4);
+   const col=bounds.find(b=>x>=b.left&&x<=b.right);
    if(col)buckets[col.key].push(w);
   });
   const values={},fieldEvidence={};
