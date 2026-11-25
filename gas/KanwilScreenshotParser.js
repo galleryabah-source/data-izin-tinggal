@@ -26,7 +26,7 @@ function kanwilShotHeaderClusters_(lines,start,end){
   let best=null,bestDistance=Infinity;
   clusters.forEach(c=>{
    const gap=Math.max(0,Math.max(c.minX-w.bbox.x1,w.bbox.x0-c.maxX));
-   if(gap<=tol&&gap<bestDistance){best=c;bestDistance=gap;}
+   if(gap<=2&&gap<bestDistance){best=c;bestDistance=gap;}
   });
   if(!best){best={words:[],minX:w.bbox.x0,maxX:w.bbox.x1,cx:w._cx};clusters.push(best);}
   best.words.push(w);best.minX=Math.min(best.minX,w.bbox.x0);best.maxX=Math.max(best.maxX,w.bbox.x1);
