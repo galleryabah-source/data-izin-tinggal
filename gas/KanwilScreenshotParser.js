@@ -91,7 +91,7 @@ function kanwilShotHeaderClusters_(lines,start,end){
  // within-cell indentation; a bounded x cluster therefore preserves adjacent
  // columns while tolerating OCR box jitter and wrapped-token indentation.
  const allFragments=perLine.flatMap(entry=>entry.fragments).slice().sort((a,b)=>a.x0-b.x0||a.line-b.line);
- const anchorTolerance=Math.max(10,medianHeight*2.5);
+ const anchorTolerance=Math.max(10,medianHeight*3.5);
  const anchorGroups=[];
  allFragments.forEach(fragment=>{
   let group=anchorGroups[anchorGroups.length-1];
