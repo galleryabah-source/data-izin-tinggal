@@ -171,7 +171,8 @@ async function persistKanwilFiles(){
  }catch(error){say('Penyimpanan file gagal: '+(error&&error.message||String(error)));}
  finally{state.busy=false;$('kpePersistFiles').disabled=!state.enabled||!state.imports.length;}
 }
-$('kpePersistFiles').addEventListener('click',persistKanwilFiles);\n
+$('kpePersistFiles').addEventListener('click',persistKanwilFiles);
+
 function acceptPastedImage(file){
  if(!file||!/^image\/(png|jpeg|webp)$/.test(file.type||'')){say('Clipboard tidak berisi screenshot gambar yang didukung.');return;}
  state.pastedImage=new File([file], 'kanwil-screenshot-paste.'+(file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg'),{type:file.type});
