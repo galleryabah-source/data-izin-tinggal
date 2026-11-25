@@ -101,7 +101,7 @@ function kanwilShotHeaderClusters_(lines,start,end){
   }
   group.fragments.push(fragment);
  });
- if(anchorGroups.length!==KANWIL_SCREENSHOT_COLUMNS_V1.length)return [];
+ // Preserve partial groups so failed mappings expose the actual OCR geometry.
  const anchors=anchorGroups.map(group=>group.minX);
  if(anchors.some((x,i)=>i&&x<=anchors[i-1]))return [];
  const clusters=anchors.map(anchor=>({anchor,fragments:[]}));
