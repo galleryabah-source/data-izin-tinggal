@@ -83,13 +83,26 @@ function kanwilShotHeaderClusters_(lines,start,end){
   const fragments=kanwilShotMergeKnownHeaderFragments_(kanwilShotHeaderFragments_(lines,li,li,wordGap)).map(f=>({...f,line:li}));
   perLine.push({line:li,fragments});
  }
- // The Kanwil source has a fixed left-to-right 17-column contract. The visual
- // header's densest line normally contains the first token of each column.
- // Use that line to establish 17 independent anchors; do not cluster all
- // fragments with one global x tolerance because adjacent columns can merge.
- const seed=perLine.slice().sort((a,b)=>b.fragments.length-a.fragments.length||a.line-b.line)[0];
- if(!seed||seed.fragments.length!==KANWIL_SCREENSHOT_COLUMNS_V1.length)return [];
- const anchors=seed.fragments.slice().sort((a,b)=>a.x0-b.x0).map(f=>f.x0);
+ // Header cells are vertically staggered in the real Kanwil table:
+ // each label wraps independently, so no single OCR text line is guaranteed
+ // to contain all 17 columns. Infer anchors from the x-coordinates of every
+ // header fragment, grouping wrapped tokens that share a column start.
+ // The minimum inter-column gap in this table is much larger than normal
+ // within-cell indentation; a bounded x cluster therefore preserves adjacent
+ // columns while tolerating OCR box jitter and wrapped-token indentation.
+ const allFragments=perLine.flatMap(entry=>entry.fragments).slice().sort((a,b)=>a.x0-b.x0||a.line-b.line);
+ const anchorTolerance=Math.max(10,medianHeight*3.5);
+ const anchorGroups=[];
+ allFragments.forEach(fragment=>{
+  let group=anchorGroups[anchorGroups.length-1];
+  if(!group||fragment.x0-group.minX>anchorTolerance){
+   group={minX:fragment.x0,fragments:[]};
+   anchorGroups.push(group);
+  }
+  group.fragments.push(fragment);
+ });
+ if(anchorGroups.length!==KANWIL_SCREENSHOT_COLUMNS_V1.length)return [];
+ const anchors=anchorGroups.map(group=>group.minX);
  if(anchors.some((x,i)=>i&&x<=anchors[i-1]))return [];
  const clusters=anchors.map(anchor=>({anchor,fragments:[]}));
  perLine.forEach(entry=>entry.fragments.forEach(fragment=>{
