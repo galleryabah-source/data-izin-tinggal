@@ -59,7 +59,7 @@ jobs:
       - name: Verify Apps Script source excludes Node-only tests
         working-directory: gas
         run: |
-          if find . -type f \\( -name '*.test.js' -o -name 'test-shim.js' \\) -print -quit | grep -q .; then
+          if find . -type f \( -name '*.test.js' -o -name 'test-shim.js' \) -print -quit | grep -q .; then
             echo "Node-only test artifacts must remain outside the Apps Script source root."
             exit 1
           fi
