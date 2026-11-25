@@ -213,6 +213,10 @@ function reconstructKanwilScreenshotTableV1(words,options){
  });
  return {
   ok:true,reason:null,header:columns.map(c=>c.key),headerLineRange:[best.start,best.end],
+  matchedHeaderCount:best.score,anchorGroupCount:best.clusters.length,
+  candidateLineCount:best.end-best.start+1,inputWordCount:Array.isArray(words)?words.length:0,
+  missing:[],duplicate:[],
+  headerDiagnostics:best.clusters.map(c=>({text:c.text,anchor:Math.round(c.anchor),key:c.key||null,lineStart:c.lineStart,lineEnd:c.lineEnd})),
   headerFragments:best.matched.map(c=>({key:c.key,text:c.text,anchor:c.anchor})),
   rows,warnings:['MULTILINE_HEADER_RECONSTRUCTED','NO_AUTO_COMMIT','VERIFY_EACH_CELL_AGAINST_SOURCE'],
   reviewRequired:true,autoCommit:false
