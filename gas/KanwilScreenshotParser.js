@@ -171,7 +171,7 @@ function reconstructKanwilScreenshotTableV1(words,options){
  }
  const columns=best.matched.filter(x=>x.key).map(x=>({key:x.key,anchor:x.anchor})).sort((a,b)=>a.anchor-b.anchor);
  const minX=Math.min(...words.map(w=>w.bbox.x0)),maxX=Math.max(...words.map(w=>w.bbox.x1));
- const edgePadding=Math.max(4,kanwilShotMedian_(words.map(w=>w.bbox.y1-w.bbox.y0))*0.75);
+ const edgePadding=Math.max(8,kanwilShotMedian_(words.map(w=>w.bbox.y1-w.bbox.y0))*2.0);
  // The first data column is left-aligned at the screenshot edge. The OCR
  // word-origin adjustment below can move its x probe slightly left of the
  // first glyph, so provide explicit edge padding or payment-date anchors vanish.
@@ -306,14 +306,14 @@ function reconstructKanwilScreenshotTableV1(words,options){
     boundaryReason:group.boundaryReason,
     hasPaymentDateAnchor:group.lines.some(line=>line.hasDateAnchor),
     lineYCoordinates:group.lines.map(line=>Math.round(line.line.cy)),
-    segmentationMethod:geometryConfidence==='HIGH'?'VERTICAL_GAP_CLUSTERING_WITH_DATE_ANCHORS':
+    segmentationMethod:geometryConfidence==='HIGH'?(lineBuckets.some(x=>x.hasDateAnchor)?'VERTICAL_GAP_CLUSTERING_WITH_DATE_ANCHORS':'VERTICAL_GAP_CLUSTERING'):
      (lineBuckets.some(x=>x.hasDateAnchor)?'DATE_ANCHORS_WITH_VERTICAL_GAP_CHECK':'LINE_BASELINE_FALLBACK'),
     confidence:geometryConfidence},
    warnings:rowWarnings,reviewRequired:true,autoCommit:false
   });
  });
  const rowSegmentation={
-  method:geometryConfidence==='HIGH'?'VERTICAL_GAP_CLUSTERING_WITH_DATE_ANCHORS':
+  method:geometryConfidence==='HIGH'?(lineBuckets.some(x=>x.hasDateAnchor)?'VERTICAL_GAP_CLUSTERING_WITH_DATE_ANCHORS':'VERTICAL_GAP_CLUSTERING'):
    (lineBuckets.some(x=>x.hasDateAnchor)?'DATE_ANCHORS_WITH_VERTICAL_GAP_CHECK':'LINE_BASELINE_FALLBACK'),
   confidence:geometryConfidence,verticalGapThreshold:geometryThreshold,dataLineCount:dataLines.length,
   candidateRowCount:rows.length,sourceRowCountVerified:false,
