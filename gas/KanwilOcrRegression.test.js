@@ -51,4 +51,30 @@ assert.deepStrictEqual(indentedResult.header, KANWIL_SCREENSHOT_COLUMNS_V1.map((
 assert.ok(indentedResult.headerFragments.some(x=>x.key==='posisi_permohonan'&&x.text==='posisi permohonan'));
 assert.ok(indentedResult.headerFragments.some(x=>x.key==='status_permohonan'&&x.text==='status permohonan'));
 
+
+// Regression: a single multi-word heading can be split into separate OCR boxes
+// on the same visual line. The parser must merge only an exact known alias.
+const splitAliasWords=[];
+KANWIL_SCREENSHOT_COLUMNS_V1.forEach(([key,aliases],col)=>{
+ const tokens=aliases[0].split(' ');
+ tokens.forEach((token,row)=>{
+  const x=colX[col]+(row===0?0:2);
+  const y=y0+row*lineH;
+  const width=token.length*6.2;
+  if(col===13&&row===1){
+   splitAliasWords.push({text:token,confidence:92,bbox:{x0:colX[col]+tokens[0].length*6.2+14,y0:y0,x1:colX[col]+tokens[0].length*6.2+14+width,y1:y0+13}});
+  }else if(col!==13){
+   splitAliasWords.push({text:token,confidence:92,bbox:{x0:x,y0:y,x1:x+width,y1:y+13}});
+  }else{
+   splitAliasWords.push({text:token,confidence:92,bbox:{x0:x,y0:y0,x1:x+width,y1:y0+13}});
+  }
+ });
+});
+const splitAliasResult=reconstructKanwilScreenshotTableV1(splitAliasWords,{lineTolerance:8,maxHeaderLines:6});
+assert.strictEqual(splitAliasResult.ok,true,'same-line split alias should map 17 columns: '+JSON.stringify({missing:splitAliasResult.missing,diagnostics:splitAliasResult.headerDiagnostics}));
+assert.strictEqual(splitAliasResult.header.length,17);
+assert.ok(splitAliasResult.headerFragments.some(x=>x.key==='jenis_produk'&&x.text==='jenis produk'));
+assert.ok(splitAliasResult.headerFragments.some(x=>x.key==='posisi_permohonan'&&x.text==='posisi permohonan'));
+assert.ok(splitAliasResult.headerFragments.some(x=>x.key==='status_permohonan'&&x.text==='status permohonan'));
+
 console.log('Kanwil OCR realistic multiline-header tests: PASS');
