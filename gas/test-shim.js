@@ -2164,4 +2164,4 @@ assert(kanwilStagingSchema.includes("'field_evidence_json'"),'Kanwil staging sch
 assert(kanwilStagingSchema.includes("actual.join('|')===headers.slice(0,-1).join('|')"),'Kanwil staging has an additive legacy schema migration for OCR evidence');
 const kanwilPersistence=read('KanwilPersistenceService.gs');
 assert(kanwilPersistence.includes('KANWIL_SCREENSHOT_CELL_EVIDENCE_REQUIRED'),'Screenshot staging rejects rows without complete per-cell evidence');
-assert(kanwilPersistence.includes('field_evidence_json:JSON.stringify(fieldEvidence)'),'Screenshot staging persists per-cell evidence');
+assert(kanwilPersistence.includes('field_evidence_json:JSON.stringify({cells:fieldEvidence,rowGeometry:row.rowGeometry||null})'),'Screenshot staging persists per-cell evidence');
