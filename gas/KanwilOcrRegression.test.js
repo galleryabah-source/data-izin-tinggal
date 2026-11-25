@@ -77,4 +77,27 @@ assert.ok(splitAliasResult.headerFragments.some(x=>x.key==='jenis_produk'&&x.tex
 assert.ok(splitAliasResult.headerFragments.some(x=>x.key==='posisi_permohonan'&&x.text==='posisi permohonan'));
 assert.ok(splitAliasResult.headerFragments.some(x=>x.key==='status_permohonan'&&x.text==='status permohonan'));
 
+
+// Regression: the real Kanwil table staggers header cells vertically, so no
+// single OCR line contains all 17 column starts. Anchors must be inferred
+// across the complete multi-line header region.
+const staggeredHeaderWords=[];
+KANWIL_SCREENSHOT_COLUMNS_V1.forEach(([key,aliases],col)=>{
+ const tokens=aliases[0].split(' ');
+ tokens.forEach((token,row)=>{
+  const x=colX[col]+(row===0?0:2);
+  const y=y0+(col%3)*17+row*17;
+  staggeredHeaderWords.push({text:token,confidence:94,bbox:{x0:x,y0:y,x1:x+token.length*6.2,y1:y+13}});
+ });
+});
+const staggeredResult=reconstructKanwilScreenshotTableV1(staggeredHeaderWords,{lineTolerance:8,maxHeaderLines:6});
+assert.strictEqual(staggeredResult.ok,true,'vertically staggered headers should map all 17 columns: '+JSON.stringify({missing:staggeredResult.missing,diagnostics:staggeredResult.headerDiagnostics}));
+assert.strictEqual(staggeredResult.header.length,17);
+assert.deepStrictEqual(staggeredResult.header,KANWIL_SCREENSHOT_COLUMNS_V1.map(([key])=>key),'staggered headers must retain canonical order');
+assert.ok(staggeredResult.headerFragments.some(x=>x.key==='tanggal_mulai_verifikasi'&&x.text==='tanggal mulai verifikasi'));
+assert.ok(staggeredResult.headerFragments.some(x=>x.key==='posisi_permohonan'&&x.text==='posisi permohonan'));
+assert.ok(staggeredResult.headerFragments.some(x=>x.key==='status_permohonan'&&x.text==='status permohonan'));
+assert.strictEqual(staggeredResult.autoCommit,false);
+assert.strictEqual(staggeredResult.reviewRequired,true);
+
 console.log('Kanwil OCR realistic multiline-header tests: PASS');
