@@ -50,7 +50,10 @@ function kanwilShotHeaderFragments_(lines,start,end,wordGap){
 function kanwilShotHeaderClusters_(lines,start,end){
  const allWords=lines.slice(start,end+1).flatMap(l=>l.words);
  const medianHeight=kanwilShotMedian_(allWords.map(w=>w.bbox.y1-w.bbox.y0));
- const wordGap=Math.max(8,medianHeight*1.45);
+ // Keep OCR words as small fragments here. A wide word-gap threshold can
+ // merge the last word of one narrow header with the next column's first word
+ // (notably "Posisi Permohonan" beside "Status Permohonan").
+ const wordGap=Math.max(3,medianHeight*0.65);
  const perLine=[];
  for(let li=start;li<=end;li++){
   const fragments=kanwilShotHeaderFragments_(lines,li,li,wordGap).map(f=>({...f,line:li}));
