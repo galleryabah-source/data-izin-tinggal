@@ -1863,7 +1863,7 @@ const kanwilNavSource=read('index.html');
 assert(kanwilNavSource.includes('href="<?= WEB_APP_URL ?>?view=kanwil" target="_top"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace through the canonical same-tab route');
 const kanwilPageSource=read('KanwilEntry.html');
 assert(kanwilPageSource.includes('Kanwil staging')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
-assert(kanwilPageSource.includes('@eec0b9529a144f876217cb21787b3acb484ae406/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
+assert(kanwilPageSource.includes('@9882ae3202f56f8f3bdcf270da629545e0953950/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
 assert(!kanwilPageSource.includes('data-izin-tinggal@main/gas/'),'Kanwil browser parser never executes mutable main-branch code');
 assert(kanwilPageSource.includes('id="kpePasteImage"')&&kanwilPageSource.includes("clipboardData.items")&&kanwilPageSource.includes("kpeProcessPastedImage"),'Kanwil screenshot intake accepts a directly pasted clipboard image');
 assert(kanwilPageSource.includes('id="kpePasteText"')&&kanwilPageSource.includes('kpeParsePasteText')&&kanwilPageSource.includes("delimiter:'\\t'"),'Kanwil intake exposes a dedicated tabular-text paste field and parser action');
