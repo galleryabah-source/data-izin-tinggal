@@ -231,7 +231,7 @@ function saveKanwilImportBatch(payload){
         contractVersion,parserVersion,sourceRowNumber:sourceRow});
       if(!descriptor.ok)throw new Error(descriptor.reason);
       const key=descriptor.key;
-      let errors=[];
+      let errors=Array.isArray(row.validationErrors)?row.validationErrors.map(item=>typeof item==='string'?item:String(item&&item.code||'OCR_VALIDATION_REVIEW')).slice(0,50):[];
       try{normalized=kanwilPayloadV1_({values:normalized});}
       catch(error){errors.push(String(error&&error.message||error));}
       // Hash the exact server-normalized payload that is persisted below.
@@ -247,14 +247,14 @@ function saveKanwilImportBatch(payload){
         let saved={};try{saved=JSON.parse(String(r[sh.normalized_values_json]||'{}'));}catch(e){}
         return String(saved.nomor_permohonan||'')===appNo&&String(r[sh.state]||'')!=='REJECTED';
       }))errors.push('DUPLICATE_APPLICATION_NUMBER_EXISTING');
-      const warnings=Array.isArray(row.warnings)?row.warnings.slice(0,50):[];
+      const warnings=[...(Array.isArray(row.warnings)?row.warnings:[]),...(Array.isArray(row.validationWarnings)?row.validationWarnings:[])].slice(0,100);
       const state=errors.length?'VALIDATION_REQUIRED':'REVIEW_REQUIRED';
       if(errors.length)invalidCount++;else validCount++;
       const stagingId=Utilities.getUuid();
       const valuesByKey={
         staging_id:stagingId,batch_id:batchId,file_id:fileId,source_row_number:sourceRow,idempotency_key:key,
         contract_version:contractVersion,raw_values_json:JSON.stringify(raw),normalized_values_json:JSON.stringify(normalized),
-        validation_errors_json:JSON.stringify(errors),validation_warnings_json:JSON.stringify(warnings),field_evidence_json:JSON.stringify(fieldEvidence),
+        validation_errors_json:JSON.stringify(errors),validation_warnings_json:JSON.stringify(warnings),field_evidence_json:JSON.stringify({cells:fieldEvidence,rowGeometry:row.rowGeometry||null}),
         review_state:'PENDING',state,payload_sha256:hash,revision:1,created_by:user.email,created_at:now,updated_at:now
       };
       stageRows.push(KANWIL_STAGING_SHEETS_V1.staging.map(k=>valuesByKey[k]??''));
@@ -322,7 +322,7 @@ function listKanwilApplications(filters){
       sourceRowNumber:Number(r[h.source_row_number]),state:String(r[h.state]),reviewState:String(r[h.review_state]),
       revision:Number(r[h.revision]),values:JSON.parse(String(r[h.normalized_values_json]||'{}')),
       validationErrors:JSON.parse(String(r[h.validation_errors_json]||'[]')),
-      validationWarnings:JSON.parse(String(r[h.validation_warnings_json]||'[]')),\n      fieldEvidence:JSON.parse(String(r[h.field_evidence_json]||'{}')),
+      validationWarnings:JSON.parse(String(r[h.validation_warnings_json]||'[]')),\n      fieldEvidence:(()=>{const evidence=JSON.parse(String(r[h.field_evidence_json]||'{}'));return evidence.cells||evidence;})(),\n      rowGeometry:(()=>{const evidence=JSON.parse(String(r[h.field_evidence_json]||'{}'));return evidence.rowGeometry||null;})(),
       createdBy:String(r[h.created_by]),createdAt:String(r[h.created_at])}));
   return {ok:true,rows};
 }
