@@ -119,7 +119,7 @@ function render(){
   const details=document.createElement('details'),summaryNode=document.createElement('summary');
   summaryNode.textContent='Periksa bukti 17 sel';details.append(summaryNode);
   const evidenceTable=document.createElement('table'),thead=document.createElement('thead'),headRow=document.createElement('tr');
-  ['Kolom','Nilai OCR','Status bukti','Confidence','Koordinat (x0,y0–x1,y1)','Catatan'].forEach(label=>{const th=document.createElement('th');th.textContent=label;headRow.append(th);});
+  ['Kolom','Nilai OCR','Status bukti','Confidence','Bounding box sel','Batas kolom','Token OCR per kata','Catatan'].forEach(label=>{const th=document.createElement('th');th.textContent=label;headRow.append(th);});
   thead.append(headRow);evidenceTable.append(thead);
   const evidenceBody=document.createElement('tbody');
   manualFields.forEach(([key,label])=>{
@@ -127,8 +127,19 @@ function render(){
    const vals=[label,r.values&&r.values[key]||'—',ev.cellStatus||'NO_EVIDENCE',
     Number.isFinite(ev.meanConfidence)?ev.meanConfidence.toFixed(1)+'%':'—',
     ev.bbox?[ev.bbox.x0,ev.bbox.y0,ev.bbox.x1,ev.bbox.y1].map(n=>Math.round(n)).join(', '):'—',
-    (ev.reviewFlags||[]).join(', ')||'Periksa visual'];
+    ev.columnBounds?[Math.round(ev.columnBounds.left),Math.round(ev.columnBounds.right)].join(' – '):'—'];
    vals.forEach(value=>{const td=document.createElement('td');td.textContent=String(value);row.append(td);});
+   const tokenCell=document.createElement('td'),tokenList=document.createElement('ul');
+   (Array.isArray(ev.words)?ev.words:[]).forEach(word=>{
+    const item=document.createElement('li'),box=word.bbox||{};
+    const confidence=Number.isFinite(word.confidence)?word.confidence.toFixed(1)+'%':'confidence tidak tersedia';
+    const coordinates=[box.x0,box.y0,box.x1,box.y1].every(Number.isFinite)?[box.x0,box.y0,box.x1,box.y1].map(n=>Math.round(n)).join(', '):'koordinat tidak tersedia';
+    item.textContent=String(word.text||'')+' · '+confidence+' · ('+coordinates+')';
+    tokenList.append(item);
+   });
+   if(!tokenList.children.length){const item=document.createElement('li');item.textContent='Tidak ada token OCR pada sel ini.';tokenList.append(item);}
+   tokenCell.append(tokenList);row.append(tokenCell);
+   const warningCell=document.createElement('td');warningCell.textContent=(ev.reviewFlags||[]).join(', ')||'Periksa visual';row.append(warningCell);
    evidenceBody.append(row);
   });
   evidenceTable.append(evidenceBody);details.append(evidenceTable);reviewCell.append(details);tr.append(reviewCell);body.append(tr);
