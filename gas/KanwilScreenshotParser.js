@@ -170,47 +170,133 @@ function reconstructKanwilScreenshotTableV1(words,options){
    rows:[],reviewRequired:true,autoCommit:false};
  }
  const columns=best.matched.filter(x=>x.key).map(x=>({key:x.key,anchor:x.anchor})).sort((a,b)=>a.anchor-b.anchor);
- const bounds=columns.map((c,i)=>({
-  key:c.key,left:i?(columns[i-1].anchor+c.anchor)/2:-Infinity,
-  right:i<columns.length-1?(c.anchor+columns[i+1].anchor)/2:Infinity
+ const minX=Math.min(...words.map(w=>w.bbox.x0)),maxX=Math.max(...words.map(w=>w.bbox.x1));
+ const bounds=columns.map((col,i)=>({
+  key:col.key,left:i?(columns[i-1].anchor+col.anchor)/2:minX,
+  right:i<columns.length-1?(col.anchor+columns[i+1].anchor)/2:maxX
  }));
- const rows=[];
- let current=null,sourceRowIndex=0;
- lines.slice(best.end+1).forEach(line=>{
-  const buckets=Object.fromEntries(columns.map(c=>[c.key,[]]));
+ const dataLines=lines.slice(best.end+1);
+ const lineBuckets=dataLines.map((line,index)=>{
+  const buckets=Object.fromEntries(columns.map(col=>[col.key,[]]));
   line.words.forEach(w=>{
-   // OCR boxes can extend across the visual midpoint of a narrow column (e.g. the
-   // second token in a two-word name). Assign by the token's left edge with a
-   // small font-height correction; midpoint ties remain in the preceding column.
    const x=w.bbox.x0-Math.max(3,(w.bbox.y1-w.bbox.y0)*0.4);
    const col=bounds.find(b=>x>=b.left&&x<=b.right);
    if(col)buckets[col.key].push(w);
   });
-  const values={},fieldEvidence={};
-  Object.keys(buckets).forEach(key=>{
-   const ws=buckets[key].sort((a,b)=>a.bbox.x0-b.bbox.x0);
-   values[key]=ws.map(w=>String(w.text).trim()).filter(Boolean).join(' ')||null;
-   fieldEvidence[key]=ws.length?{
-    words:ws.map(w=>({text:String(w.text),confidence:Number.isFinite(w.confidence)?w.confidence:null,bbox:{...w.bbox}})),
-    meanConfidence:ws.every(w=>Number.isFinite(w.confidence))?ws.reduce((s,w)=>s+w.confidence,0)/ws.length:null
-   }:null;
-  });
-  if(!Object.values(values).some(v=>v!==null))return;
-  const firstDate=String(values.tanggal_pembayaran||'').trim();
-  const hasRecordStart=/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(firstDate);
-  if(hasRecordStart||!current){
-   sourceRowIndex++;
-   current={sourceRowIndex,values:Object.fromEntries(columns.map(c=>[c.key,null])),
-    fieldEvidence:{},warnings:['OCR_GEOMETRY_REQUIRES_HUMAN_REVIEW']};
-   rows.push(current);
+  const paymentText=(buckets.tanggal_pembayaran||[]).map(w=>String(w.text)).join(' ').trim();
+  return {index,line,buckets,paymentText,hasDateAnchor:/\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/.test(paymentText)};
+ });
+ const gaps=[];
+ for(let i=1;i<dataLines.length;i++)gaps.push(Math.max(0,dataLines[i].cy-dataLines[i-1].cy));
+ let geometryThreshold=null,geometryConfidence='LOW';
+ if(gaps.length>=4){
+  let low=Math.min(...gaps),high=Math.max(...gaps);
+  for(let iteration=0;iteration<12;iteration++){
+   const lower=gaps.filter(g=>Math.abs(g-low)<=Math.abs(g-high));
+   const upper=gaps.filter(g=>Math.abs(g-low)>Math.abs(g-high));
+   if(!lower.length||!upper.length)break;
+   const nextLow=lower.reduce((s,v)=>s+v,0)/lower.length;
+   const nextHigh=upper.reduce((s,v)=>s+v,0)/upper.length;
+   if(Math.abs(nextLow-low)<0.01&&Math.abs(nextHigh-high)<0.01)break;
+   low=nextLow;high=nextHigh;
   }
-  columns.forEach(c=>{
-   if(values[c.key]){
-    current.values[c.key]=[current.values[c.key],values[c.key]].filter(Boolean).join(' ');
-    current.fieldEvidence[c.key]=fieldEvidence[c.key];
-   }
+  const lowerCount=gaps.filter(g=>Math.abs(g-low)<=Math.abs(g-high)).length;
+  const upperCount=gaps.length-lowerCount;
+  if(upperCount>=2&&lowerCount>=2&&high>=low*1.45){
+   geometryThreshold=(low+high)/2;geometryConfidence='HIGH';
+  }
+ }
+ const boundaries=[0],boundaryEvidence=[];
+ for(let i=1;i<lineBuckets.length;i++){
+  const gap=Math.max(0,lineBuckets[i].line.cy-lineBuckets[i-1].line.cy);
+  const verticalBoundary=geometryThreshold!==null&&gap>geometryThreshold;
+  const dateBoundary=lineBuckets[i].hasDateAnchor;
+  if(verticalBoundary||dateBoundary){
+   boundaries.push(i);
+   boundaryEvidence.push({lineIndex:i,gapBefore:gap,verticalBoundary,dateBoundary});
+  }
+ }
+ if(lineBuckets.length&&boundaries.length===1&&!lineBuckets.some(x=>x.hasDateAnchor)){
+  for(let i=1;i<lineBuckets.length;i++)boundaries.push(i);
+  geometryConfidence='AMBIGUOUS';
+ }
+ const rowGroups=[];
+ boundaries.forEach((startIndex,i)=>{
+  const endIndex=(boundaries[i+1]??lineBuckets.length)-1;
+  if(endIndex<startIndex)return;
+  const groupLines=lineBuckets.slice(startIndex,endIndex+1);
+  const before=boundaryEvidence.find(x=>x.lineIndex===startIndex)||null;
+  rowGroups.push({
+   startIndex,endIndex,lines:groupLines,
+   yStart:Math.min(...groupLines.map(x=>Math.min(...x.line.words.map(w=>w.bbox.y0)))),
+   yEnd:Math.max(...groupLines.map(x=>Math.max(...x.line.words.map(w=>w.bbox.y1)))),
+   gapBefore:before?before.gapBefore:null,
+   boundaryReason:before?(before.verticalBoundary&&before.dateBoundary?'VERTICAL_GAP_AND_DATE_ANCHOR':before.verticalBoundary?'VERTICAL_GAP':'DATE_ANCHOR'):'FIRST_DATA_BAND'
   });
  });
+ const dateKeys=new Set(['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','tanggal_permohonan','tanggal_lahir']);
+ function validateCell(key,value,evidence){
+  const flags=[];
+  if(!value){flags.push('CELL_EMPTY');return flags;}
+  if(evidence&&Number.isFinite(evidence.meanConfidence)&&evidence.meanConfidence<65)flags.push('CELL_LOW_CONFIDENCE');
+  if(evidence&&evidence.bbox&&evidence.columnBounds){
+   if(evidence.bbox.x0<evidence.columnBounds.left-2||evidence.bbox.x1>evidence.columnBounds.right+2)flags.push('CELL_CROSSES_COLUMN_BOUNDARY');
+   else if(evidence.bbox.x0<=evidence.columnBounds.left+2||evidence.bbox.x1>=evidence.columnBounds.right-2)flags.push('CELL_NEAR_COLUMN_BOUNDARY');
+  }
+  if(/[-–—]$/.test(value.trim())||(evidence&&evidence.bbox&&evidence.columnBounds&&evidence.bbox.x1>=evidence.columnBounds.right-1))flags.push('POSSIBLE_TEXT_TRUNCATION');
+  if(dateKeys.has(key)&&! /^\d{4}[-/]\d{1,2}[-/]\d{1,2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?$/.test(value.trim()))
+   flags.push('DATE_FORMAT_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
+  if(key==='nomor_permohonan'&&!/^[A-Z0-9-]{8,24}$/i.test(value.replace(/\s+/g,'')))flags.push('APPLICATION_NUMBER_FORMAT_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
+  if(key==='jenis_kelamin'&&!/^(MALE|FEMALE|LAKI[\s-]?LAKI|PEREMPUAN)$/i.test(value.trim()))flags.push('GENDER_VALUE_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
+  if(key==='no_passport'&&!/^[A-Z0-9]{5,15}$/i.test(value.replace(/\s+/g,'')))flags.push('PASSPORT_FORMAT_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
+  return flags;
+ }
+ const rows=[];
+ rowGroups.forEach((group,index)=>{
+  const cellWords=Object.fromEntries(columns.map(col=>[col.key,[]]));
+  group.lines.forEach(item=>Object.keys(item.buckets).forEach(key=>cellWords[key].push(...item.buckets[key])));
+  const values={},fieldEvidence={},validationWarnings=[],validationErrors=[];
+  columns.forEach(col=>{
+   const key=col.key,ws=cellWords[key].slice().sort((a,b)=>(a.bbox.y0+a.bbox.y1)-(b.bbox.y0+b.bbox.y1)||a.bbox.x0-b.bbox.x0);
+   const value=ws.map(w=>String(w.text).trim()).filter(Boolean).join(' ').replace(/\s+/g,' ').trim();
+   values[key]=value||null;
+   const bbox=ws.length?{x0:Math.min(...ws.map(w=>w.bbox.x0)),y0:Math.min(...ws.map(w=>w.bbox.y0)),x1:Math.max(...ws.map(w=>w.bbox.x1)),y1:Math.max(...ws.map(w=>w.bbox.y1))}:null;
+   const columnBounds=bounds.find(b=>b.key===key);
+   const cellEvidence={
+    cellStatus:ws.length?'CAPTURED':'EMPTY',bbox,columnBounds:{left:columnBounds.left,right:columnBounds.right},
+    wordCount:ws.length,words:ws.map(w=>({text:String(w.text),confidence:Number.isFinite(w.confidence)?w.confidence:null,bbox:{...w.bbox}})),
+    meanConfidence:ws.length&&ws.every(w=>Number.isFinite(w.confidence))?ws.reduce((sum,w)=>sum+w.confidence,0)/ws.length:null,
+    reviewFlags:[]
+   };
+   cellEvidence.reviewFlags=validateCell(key,value,cellEvidence);
+   if(cellEvidence.reviewFlags.length){
+    cellEvidence.cellStatus=ws.length?'REVIEW':'EMPTY';
+    cellEvidence.reviewFlags.forEach(code=>validationWarnings.push({field:key,code}));
+   }
+   fieldEvidence[key]=cellEvidence;
+  });
+  ['nomor_permohonan','nama'].forEach(key=>{if(!values[key])validationErrors.push({field:key,code:'REQUIRED_CELL_EMPTY'});});
+  const rowWarnings=['OCR_GEOMETRY_REQUIRES_HUMAN_REVIEW'];
+  if(geometryConfidence==='AMBIGUOUS')rowWarnings.push('ROW_GEOMETRY_AMBIGUOUS');
+  if(validationWarnings.length)rowWarnings.push('CELL_VALIDATION_WARNINGS');
+  rows.push({
+   sourceRowIndex:index+1,values,fieldEvidence,validationErrors,validationWarnings,
+   rowGeometry:{yStart:group.yStart,yEnd:group.yEnd,lineCount:group.lines.length,gapBefore:group.gapBefore,
+    boundaryReason:group.boundaryReason,
+    segmentationMethod:geometryConfidence==='HIGH'?'VERTICAL_GAP_CLUSTERING_WITH_DATE_ANCHORS':
+     (lineBuckets.some(x=>x.hasDateAnchor)?'DATE_ANCHORS_WITH_VERTICAL_GAP_CHECK':'LINE_BASELINE_FALLBACK'),
+    confidence:geometryConfidence},
+   warnings:rowWarnings,reviewRequired:true,autoCommit:false
+  });
+ });
+ const rowSegmentation={
+  method:geometryConfidence==='HIGH'?'VERTICAL_GAP_CLUSTERING_WITH_DATE_ANCHORS':
+   (lineBuckets.some(x=>x.hasDateAnchor)?'DATE_ANCHORS_WITH_VERTICAL_GAP_CHECK':'LINE_BASELINE_FALLBACK'),
+  confidence:geometryConfidence,verticalGapThreshold:geometryThreshold,dataLineCount:dataLines.length,
+  candidateRowCount:rows.length,sourceRowCountVerified:false,
+  sourceRowCountEvidence:'UNAVAILABLE_FROM_OCR_WORD_GEOMETRY'
+ };
+
  return {
   ok:true,reason:null,header:columns.map(c=>c.key),headerLineRange:[best.start,best.end],
   matchedHeaderCount:best.score,anchorGroupCount:best.clusters.length,
@@ -218,8 +304,8 @@ function reconstructKanwilScreenshotTableV1(words,options){
   missing:[],duplicate:[],
   headerDiagnostics:best.clusters.map(c=>({text:c.text,anchor:Math.round(c.anchor),key:c.key||null,lineStart:c.lineStart,lineEnd:c.lineEnd})),
   headerFragments:best.matched.map(c=>({key:c.key,text:c.text,anchor:c.anchor})),
-  rows,warnings:['MULTILINE_HEADER_RECONSTRUCTED','NO_AUTO_COMMIT','VERIFY_EACH_CELL_AGAINST_SOURCE'],
-  reviewRequired:true,autoCommit:false
+  rowSegmentation,rows,warnings:['MULTILINE_HEADER_RECONSTRUCTED','NO_AUTO_COMMIT','VERIFY_EACH_CELL_AGAINST_SOURCE'],
+  reviewRequired:true,autoCommit:false,sourceRowCountVerified:false
  };
 }
 if(typeof module!=='undefined'&&module.exports)module.exports={KANWIL_SCREENSHOT_COLUMNS_V1,reconstructKanwilScreenshotTableV1};
