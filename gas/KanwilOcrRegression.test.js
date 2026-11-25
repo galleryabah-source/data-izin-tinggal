@@ -47,4 +47,8 @@ KANWIL_SCREENSHOT_COLUMNS_V1.forEach(([key,aliases],col)=>{
 const indentedResult=reconstructKanwilScreenshotTableV1(indentedWords,{lineTolerance:8,maxHeaderLines:6});
 assert.strictEqual(indentedResult.ok,true,'indented multiline headers should remain in their source column: '+JSON.stringify({missing:indentedResult.missing,diagnostics:indentedResult.headerDiagnostics}));
 assert.strictEqual(indentedResult.header.length,17);
+assert.deepStrictEqual(indentedResult.header, KANWIL_SCREENSHOT_COLUMNS_V1.map(([key])=>key),'all 17 columns must retain canonical order');
+assert.ok(indentedResult.headerFragments.some(x=>x.key==='posisi_permohonan'&&x.text==='posisi permohonan'));
+assert.ok(indentedResult.headerFragments.some(x=>x.key==='status_permohonan'&&x.text==='status permohonan'));
+
 console.log('Kanwil OCR realistic multiline-header tests: PASS');
