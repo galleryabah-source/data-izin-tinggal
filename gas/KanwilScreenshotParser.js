@@ -50,33 +50,56 @@ function kanwilShotHeaderFragments_(lines,start,end,wordGap){
 function kanwilShotHeaderClusters_(lines,start,end){
  const allWords=lines.slice(start,end+1).flatMap(l=>l.words);
  const medianHeight=kanwilShotMedian_(allWords.map(w=>w.bbox.y1-w.bbox.y0));
- const fragments=kanwilShotHeaderFragments_(lines,start,end,Math.max(8,medianHeight*1.45));
- const xTolerance=Math.max(16,medianHeight*2.15);
- const clusters=[];
- fragments.sort((a,b)=>a.x0-b.x0||a.line-b.line).forEach(fragment=>{
-  let best=null,distance=Infinity;
-  clusters.forEach(cluster=>{
-   const d=Math.abs(fragment.x0-cluster.anchor);
-   if(d<=xTolerance&&d<distance){best=cluster;distance=d;}
+ // Keep OCR words as small fragments here. A wide word-gap threshold can
+ // merge the last word of one narrow header with the next column's first word
+ // (notably "Posisi Permohonan" beside "Status Permohonan").
+ const wordGap=Math.max(3,medianHeight*0.65);
+ const perLine=[];
+ for(let li=start;li<=end;li++){
+  const fragments=kanwilShotHeaderFragments_(lines,li,li,wordGap).map(f=>({...f,line:li}));
+  perLine.push({line:li,fragments});
+ }
+ // The Kanwil source has a fixed left-to-right 17-column contract. The visual
+ // header's densest line normally contains the first token of each column.
+ // Use that line to establish 17 independent anchors; do not cluster all
+ // fragments with one global x tolerance because adjacent columns can merge.
+ const seed=perLine.slice().sort((a,b)=>b.fragments.length-a.fragments.length||a.line-b.line)[0];
+ if(!seed||seed.fragments.length!==KANWIL_SCREENSHOT_COLUMNS_V1.length)return [];
+ const anchors=seed.fragments.slice().sort((a,b)=>a.x0-b.x0).map(f=>f.x0);
+ if(anchors.some((x,i)=>i&&x<=anchors[i-1]))return [];
+ const clusters=anchors.map(anchor=>({anchor,fragments:[]}));
+ perLine.forEach(entry=>entry.fragments.forEach(fragment=>{
+  let nearest=-1,distance=Infinity;
+  anchors.forEach((anchor,i)=>{
+   const d=Math.abs(fragment.x0-anchor);
+   if(d<distance){distance=d;nearest=i;}
   });
-  if(!best){
-   best={fragments:[],anchor:fragment.x0};
-   clusters.push(best);
-  }
-  best.fragments.push(fragment);
-  best.anchor=kanwilShotMedian_(best.fragments.map(f=>f.x0));
- });
+  const leftGap=nearest>0?anchors[nearest]-anchors[nearest-1]:Infinity;
+  const rightGap=nearest<anchors.length-1?anchors[nearest+1]-anchors[nearest]:Infinity;
+  const localGap=Math.min(leftGap,rightGap);
+  const tolerance=Number.isFinite(localGap)?Math.max(medianHeight*1.5,localGap*0.46):medianHeight*2.5;
+  if(distance<=tolerance)clusters[nearest].fragments.push(fragment);
+ }));
  return clusters.map(c=>{
   const ordered=c.fragments.slice().sort((a,b)=>a.line-b.line||a.x0-b.x0);
   return {text:ordered.map(f=>f.text).join(' '),anchor:c.anchor,
-   lineStart:Math.min(...ordered.map(f=>f.line)),lineEnd:Math.max(...ordered.map(f=>f.line))};
+   lineStart:ordered.length?Math.min(...ordered.map(f=>f.line)):start,
+   lineEnd:ordered.length?Math.max(...ordered.map(f=>f.line)):end};
  }).sort((a,b)=>a.anchor-b.anchor);
 }
 function kanwilShotHeaderMatch_(clusters){
  const aliases=KANWIL_SCREENSHOT_COLUMNS_V1.flatMap(([key,names])=>names.map(name=>({key,name:kanwilShotNormalize_(name)})));
  const matched=clusters.map(cluster=>{
   const normalized=kanwilShotNormalize_(cluster.text);
-  const alias=aliases.find(a=>a.name===normalized);
+  const tokens=normalized.split(' ').filter(Boolean);
+  const alias=aliases.find(a=>a.name===normalized)||
+   aliases.find(a=>normalized.includes(a.name))||
+   aliases.find(a=>{
+    const expected=a.name.split(' ').filter(Boolean);
+    if(expected.length!==tokens.length)return false;
+    const overlap=expected.filter((token,i)=>token===tokens[i]).length;
+    return overlap/Math.max(1,expected.length)>=0.75;
+   });
   return {...cluster,key:alias?alias.key:null};
  });
  const keys=matched.filter(x=>x.key).map(x=>x.key);
@@ -104,7 +127,9 @@ function reconstructKanwilScreenshotTableV1(words,options){
   return {ok:false,reason:'HEADER_MAPPING_INCOMPLETE_OR_AMBIGUOUS',
    missing:best?best.missing:KANWIL_SCREENSHOT_COLUMNS_V1.map(x=>x[0]),
    duplicate:best?best.duplicate:[],header:best?best.clusters.map(c=>c.text):[],
-   matchedHeaderCount:best?best.score:0,rows:[],reviewRequired:true,autoCommit:false};
+   matchedHeaderCount:best?best.score:0,
+   headerDiagnostics:best?best.clusters.map(c=>({text:c.text,anchor:Math.round(c.anchor),key:c.key||null,lineStart:c.lineStart,lineEnd:c.lineEnd})):[],
+   rows:[],reviewRequired:true,autoCommit:false};
  }
  const columns=best.matched.filter(x=>x.key).map(x=>({key:x.key,anchor:x.anchor})).sort((a,b)=>a.anchor-b.anchor);
  const bounds=columns.map((c,i)=>({

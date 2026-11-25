@@ -33,4 +33,22 @@ assert.strictEqual(result.rows[0].values.no_passport,'U37234274');
 assert.strictEqual(result.autoCommit,false);
 assert.strictEqual(result.reviewRequired,true);
 assert.strictEqual('tanggal pembayaran'.replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' '),'tanggal pembayaran','whitespace normalization is correct');
+// Regression: OCR boxes for wrapped header fragments may be horizontally indented
+// by the browser's centered header layout. They must still resolve to the same column.
+const indentedWords=[];
+const offsets=[0,24,31,18,27,34,22,29,16,25,32,20,28,35,23,30,17];
+KANWIL_SCREENSHOT_COLUMNS_V1.forEach(([key,aliases],col)=>{
+ aliases[0].split(' ').forEach((token,row)=>{
+  const x=colX[col]+(row===0?0:offsets[col]);
+  const y=y0+row*lineH;
+  indentedWords.push({text:token,confidence:93,bbox:{x0:x,y0:y,x1:x+token.length*6.2,y1:y+13}});
+ });
+});
+const indentedResult=reconstructKanwilScreenshotTableV1(indentedWords,{lineTolerance:8,maxHeaderLines:6});
+assert.strictEqual(indentedResult.ok,true,'indented multiline headers should remain in their source column: '+JSON.stringify({missing:indentedResult.missing,diagnostics:indentedResult.headerDiagnostics}));
+assert.strictEqual(indentedResult.header.length,17);
+assert.deepStrictEqual(indentedResult.header, KANWIL_SCREENSHOT_COLUMNS_V1.map(([key])=>key),'all 17 columns must retain canonical order');
+assert.ok(indentedResult.headerFragments.some(x=>x.key==='posisi_permohonan'&&x.text==='posisi permohonan'));
+assert.ok(indentedResult.headerFragments.some(x=>x.key==='status_permohonan'&&x.text==='status permohonan'));
+
 console.log('Kanwil OCR realistic multiline-header tests: PASS');
