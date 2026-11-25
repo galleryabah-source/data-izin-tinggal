@@ -121,10 +121,26 @@ async function processCsv(file,contract){
 async function processXlsx(file,contract,adapter){
  const XLSX=await loadXlsx();return adapter.parseKanwilXlsxV1(await file.arrayBuffer(),XLSX,{},contract.parseKanwilPermitCsvV1,contract.kanwilMapHeadersV1_);
 }
+async function preprocessKanwilImage(file){
+ const bitmap=await createImageBitmap(file),scale=Math.min(3,Math.max(2,Math.ceil(2200/Math.max(bitmap.width,bitmap.height))));
+ const canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
+ const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
+ const image=ctx.getImageData(0,0,canvas.width,canvas.height),d=image.data;
+ let sum=0,count=0;for(let i=0;i<d.length;i+=16){sum+=(d[i]+d[i+1]+d[i+2])/3;count++;}
+ const mean=sum/Math.max(1,count),threshold=Math.max(145,Math.min(205,mean-28));
+ for(let i=0;i<d.length;i+=4){const gray=.299*d[i]+.587*d[i+1]+.114*d[i+2];const enhanced=Math.max(0,Math.min(255,(gray-128)*1.45+128));const value=enhanced<threshold?0:255;d[i]=d[i+1]=d[i+2]=value;d[i+3]=255;}
+ ctx.putImageData(image,0,0);return canvas;
+}
 async function processImage(file,shot,ocrAdapter){
- const T=await loadTesseract();const worker=await T.createWorker('eng+ind',1,{logger:m=>{if(m.status==='recognizing text')say('OCR '+file.name+': '+Math.round((m.progress||0)*100)+'%');}});
- try{const result=await worker.recognize(file);state.log.push('OCR '+file.name+':\n'+String(result.data.text||'').slice(0,5000));return ocrAdapter.adaptTesseractResultToKanwilV1(result,shot.reconstructKanwilScreenshotTableV1);}
- finally{await worker.terminate();}
+ const T=await loadTesseract(),canvas=await preprocessKanwilImage(file);
+ const worker=await T.createWorker('eng+ind',1,{logger:m=>{if(m.status==='recognizing text')say('OCR '+file.name+': '+Math.round((m.progress||0)*100)+'%');}});
+ try{
+  await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});
+  const result=await worker.recognize(canvas);
+  state.log.push('OCR '+file.name+':\n'+String(result.data.text||'').slice(0,8000));
+  $('kpePasteText').value=String(result.data.text||'');
+  return ocrAdapter.adaptTesseractResultToKanwilV1(result,shot.reconstructKanwilScreenshotTableV1,{lineTolerance:Math.max(14,canvas.height/100)});
+ }finally{await worker.terminate();}
 }
 function saveKanwilImport(payload){
  return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).saveKanwilImportBatch(payload));
