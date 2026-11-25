@@ -1,3 +1,52 @@
+function setSnapshotManifestStatusV1_(manifest,status){
+  const values=manifest.getDataRange().getValues(),matches=[];
+  for(let i=1;i<values.length;i++)if(String(values[i][0]||'').trim()==='status')matches.push(i+1);
+  if(matches.length!==1)throw new Error('SNAPSHOT_MANIFEST_STATUS_ROW_INVALID');
+  manifest.getRange(matches[0],2).setValue(status);
+  SpreadsheetApp.flush();
+}
+function trashSnapshotArtifactV1_(backupId){
+  try{DriveApp.getFileById(backupId).setTrashed(true);SpreadsheetApp.flush();return true;}
+  catch(cleanupError){return false;}
+}
+function invalidateSnapshotArtifactV1_(p,status,action,details){
+  const x=p||{},backupId=String(x.backupId||'').trim();
+  try{setSnapshotManifestStatusV1_(x.manifest,status);}catch(markerError){}
+  try{appendAudit_(action,x.datasetKey,x.snapshotId,x.rowCount,'FAILED',JSON.stringify(details||{}));}catch(auditError){}
+  return trashSnapshotArtifactV1_(backupId);
+}
+function finalizeSnapshotCreationV1_(p){
+  const x=p||{},backupId=String(x.backupId||'').trim();
+  if(!backupId||!x.manifest)throw new Error('SNAPSHOT_FINALIZATION_INPUT_INVALID');
+  try{
+    appendAudit_('BACKUP_SNAPSHOT_CREATE',x.datasetKey,x.snapshotId,x.rowCount,'PENDING_FINALIZATION',JSON.stringify(x.details||{}));
+  }catch(auditError){
+    const rolledBack=invalidateSnapshotArtifactV1_(x,'AUDIT_FAILED_RECONCILIATION_REQUIRED','BACKUP_SNAPSHOT_FINALIZE',{reason:'CREATE_AUDIT_FAILED'});
+    if(rolledBack)throw new Error('SNAPSHOT_AUDIT_FAILED_ROLLED_BACK');
+    throw new Error('SNAPSHOT_AUDIT_FAILED_RECONCILIATION_REQUIRED:'+backupId);
+  }
+  try{
+    setSnapshotManifestStatusV1_(x.manifest,'FINALIZING');
+  }catch(finalizeError){
+    const rolledBack=invalidateSnapshotArtifactV1_(x,'FINALIZATION_FAILED_RECONCILIATION_REQUIRED','BACKUP_SNAPSHOT_FINALIZE',{reason:'MANIFEST_FINALIZING_FAILED'});
+    if(rolledBack)throw new Error('SNAPSHOT_FINALIZE_FAILED_ROLLED_BACK');
+    throw new Error('SNAPSHOT_FINALIZE_FAILED_RECONCILIATION_REQUIRED:'+backupId);
+  }
+  try{
+    appendAudit_('BACKUP_SNAPSHOT_FINALIZE',x.datasetKey,x.snapshotId,x.rowCount,'SUCCESS',JSON.stringify(x.details||{}));
+  }catch(finalAuditError){
+    const rolledBack=invalidateSnapshotArtifactV1_(x,'FINAL_AUDIT_FAILED_RECONCILIATION_REQUIRED','BACKUP_SNAPSHOT_FINALIZE',{reason:'FINAL_AUDIT_FAILED'});
+    if(rolledBack)throw new Error('SNAPSHOT_FINAL_AUDIT_FAILED_ROLLED_BACK');
+    throw new Error('SNAPSHOT_FINAL_AUDIT_FAILED_RECONCILIATION_REQUIRED:'+backupId);
+  }
+  try{
+    setSnapshotManifestStatusV1_(x.manifest,'COMPLETE');
+  }catch(completeError){
+    const rolledBack=invalidateSnapshotArtifactV1_(x,'FINALIZATION_FAILED_RECONCILIATION_REQUIRED','BACKUP_SNAPSHOT_FINALIZE',{reason:'MANIFEST_COMPLETE_FAILED'});
+    if(rolledBack)throw new Error('SNAPSHOT_FINALIZE_FAILED_ROLLED_BACK');
+    throw new Error('SNAPSHOT_FINALIZE_FAILED_RECONCILIATION_REQUIRED:'+backupId);
+  }
+}
 function backupConfig_(){
   const props=PropertiesService.getScriptProperties();
   return {folderId:String(props.getProperty('BACKUP_FOLDER_ID')||'').trim()};
@@ -55,13 +104,13 @@ function createResidencePermitSnapshot(){
   manifest.getRange(2,1,10,2).setValues([
     ['snapshot_id',snapshotId],['created_at',timestamp],['dataset_key',datasetKey],['schema_version','1'],
     ['schema_signature',String(reg[ri.schema_signature]||'')],['source_spreadsheet_id',source.getId()],
-    ['source_sheet',sheetName],['row_count',rowCount],['content_sha256',checksum],['status','COMPLETE']
+    ['source_sheet',sheetName],['row_count',rowCount],['content_sha256',checksum],['status','AUDIT_PENDING']
   ]);
   manifest.setFrozenRows(1);
   const folder=DriveApp.getFolderById(cfg.folderId),file=DriveApp.getFileById(backupId);
   folder.addFile(file);
   try{DriveApp.getRootFolder().removeFile(file);}catch(e){}
-  appendAudit_('BACKUP_SNAPSHOT_CREATE',datasetKey,snapshotId,rowCount,'SUCCESS',JSON.stringify({backupSpreadsheetId:backupId,filename,checksum,folderId:cfg.folderId}));
+  finalizeSnapshotCreationV1_({manifest,backupId,datasetKey,snapshotId,rowCount,details:{backupSpreadsheetId:backupId,filename,checksum,folderId:cfg.folderId}});
   return {ok:true,snapshotId,backupSpreadsheetId:backupId,filename,rowCount,checksum,folderId:cfg.folderId};
 }
 
