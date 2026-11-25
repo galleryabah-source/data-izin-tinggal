@@ -51,7 +51,11 @@ function kanwilShotHeaderClusters_(lines,start,end){
  const allWords=lines.slice(start,end+1).flatMap(l=>l.words);
  const medianHeight=kanwilShotMedian_(allWords.map(w=>w.bbox.y1-w.bbox.y0));
  const fragments=kanwilShotHeaderFragments_(lines,start,end,Math.max(8,medianHeight*1.45));
- const xTolerance=Math.max(16,medianHeight*2.15);
+ // Header text is frequently centered or indented within its cell. A narrow
+ // x tolerance splits wrapped labels ("Tanggal" / "Pembayaran") into separate
+ // pseudo-columns. Keep a stable left-edge anchor and allow a wider, bounded
+ // tolerance while remaining below the normal inter-column gap.
+ const xTolerance=Math.max(22,Math.min(58,medianHeight*3.8));
  const clusters=[];
  fragments.sort((a,b)=>a.x0-b.x0||a.line-b.line).forEach(fragment=>{
   let best=null,distance=Infinity;
@@ -64,7 +68,9 @@ function kanwilShotHeaderClusters_(lines,start,end){
    clusters.push(best);
   }
   best.fragments.push(fragment);
-  best.anchor=kanwilShotMedian_(best.fragments.map(f=>f.x0));
+  // Use the left-most observed fragment as the stable anchor. A median drifts
+  // when one wrapped header line is centered or starts after a short first word.
+  best.anchor=Math.min(...best.fragments.map(f=>f.x0));
  });
  return clusters.map(c=>{
   const ordered=c.fragments.slice().sort((a,b)=>a.line-b.line||a.x0-b.x0);
@@ -76,7 +82,15 @@ function kanwilShotHeaderMatch_(clusters){
  const aliases=KANWIL_SCREENSHOT_COLUMNS_V1.flatMap(([key,names])=>names.map(name=>({key,name:kanwilShotNormalize_(name)})));
  const matched=clusters.map(cluster=>{
   const normalized=kanwilShotNormalize_(cluster.text);
-  const alias=aliases.find(a=>a.name===normalized);
+  const tokens=normalized.split(' ').filter(Boolean);
+  const alias=aliases.find(a=>a.name===normalized)||
+   aliases.find(a=>normalized.includes(a.name))||
+   aliases.find(a=>{
+    const expected=a.name.split(' ').filter(Boolean);
+    if(expected.length!==tokens.length)return false;
+    const overlap=expected.filter((token,i)=>token===tokens[i]).length;
+    return overlap/Math.max(1,expected.length)>=0.75;
+   });
   return {...cluster,key:alias?alias.key:null};
  });
  const keys=matched.filter(x=>x.key).map(x=>x.key);
@@ -104,7 +118,9 @@ function reconstructKanwilScreenshotTableV1(words,options){
   return {ok:false,reason:'HEADER_MAPPING_INCOMPLETE_OR_AMBIGUOUS',
    missing:best?best.missing:KANWIL_SCREENSHOT_COLUMNS_V1.map(x=>x[0]),
    duplicate:best?best.duplicate:[],header:best?best.clusters.map(c=>c.text):[],
-   matchedHeaderCount:best?best.score:0,rows:[],reviewRequired:true,autoCommit:false};
+   matchedHeaderCount:best?best.score:0,
+   headerDiagnostics:best?best.clusters.map(c=>({text:c.text,anchor:Math.round(c.anchor),key:c.key||null,lineStart:c.lineStart,lineEnd:c.lineEnd})):[],
+   rows:[],reviewRequired:true,autoCommit:false};
  }
  const columns=best.matched.filter(x=>x.key).map(x=>({key:x.key,anchor:x.anchor})).sort((a,b)=>a.anchor-b.anchor);
  const bounds=columns.map((c,i)=>({
