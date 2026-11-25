@@ -248,12 +248,12 @@ function reconstructKanwilScreenshotTableV1(words,options){
    if(evidence.bbox.x0<evidence.columnBounds.left-2||evidence.bbox.x1>evidence.columnBounds.right+2)flags.push('CELL_CROSSES_COLUMN_BOUNDARY');
    else if(evidence.bbox.x0<=evidence.columnBounds.left+2||evidence.bbox.x1>=evidence.columnBounds.right-2)flags.push('CELL_NEAR_COLUMN_BOUNDARY');
   }
-  if(/[-–—]$/.test(value.trim()))flags.push('POSSIBLE_TEXT_TRUNCATION');
+  if(/[-–—]$/.test(value.trim())||(evidence&&evidence.bbox&&evidence.columnBounds&&evidence.bbox.x1>=evidence.columnBounds.right-1))flags.push('POSSIBLE_TEXT_TRUNCATION');
   if(dateKeys.has(key)&&! /^\d{4}[-/]\d{1,2}[-/]\d{1,2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?$/.test(value.trim()))
-   flags.push('DATE_FORMAT_REQUIRES_REVIEW');
-  if(key==='nomor_permohonan'&&!/^[A-Z0-9-]{8,24}$/i.test(value.replace(/\s+/g,'')))flags.push('APPLICATION_NUMBER_FORMAT_REQUIRES_REVIEW');
-  if(key==='jenis_kelamin'&&!/^(MALE|FEMALE|LAKI[\s-]?LAKI|PEREMPUAN)$/i.test(value.trim()))flags.push('GENDER_VALUE_REQUIRES_REVIEW');
-  if(key==='no_passport'&&!/^[A-Z0-9]{5,15}$/i.test(value.replace(/\s+/g,'')))flags.push('PASSPORT_FORMAT_REQUIRES_REVIEW');
+   flags.push('DATE_FORMAT_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
+  if(key==='nomor_permohonan'&&!/^[A-Z0-9-]{8,24}$/i.test(value.replace(/\s+/g,'')))flags.push('APPLICATION_NUMBER_FORMAT_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
+  if(key==='jenis_kelamin'&&!/^(MALE|FEMALE|LAKI[\s-]?LAKI|PEREMPUAN)$/i.test(value.trim()))flags.push('GENDER_VALUE_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
+  if(key==='no_passport'&&!/^[A-Z0-9]{5,15}$/i.test(value.replace(/\s+/g,'')))flags.push('PASSPORT_FORMAT_REQUIRES_REVIEW','POSSIBLE_COLUMN_SHIFT');
   return flags;
  }
  const rows=[];
