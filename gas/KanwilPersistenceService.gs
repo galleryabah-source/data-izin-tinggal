@@ -125,7 +125,7 @@ function saveKanwilApplication(payload){
     }[k]??''));
     const stagingRow=KANWIL_STAGING_SHEETS_V1.staging.map(k=>({
       staging_id:stagingId,batch_id:batchId,file_id:fileId,source_row_number:1,idempotency_key:submissionId,
-      contract_version:'KANWIL_PERMIT_APPLICATION_V1',raw_values_json:JSON.stringify(p),normalized_values_json:JSON.stringify(p),
+      contract_version:'KANWIL_PERMIT_APPLICATION_V1',raw_values_json:JSON.stringify(p),normalized_values_json:JSON.stringify(p),field_evidence_json:'{}',
       validation_errors_json:'[]',validation_warnings_json:'[]',review_state:'PENDING',state:'REVIEW_REQUIRED',revision:1,
       payload_sha256:hash,created_by:user.email,created_at:now,updated_at:now
     }[k]??''));
@@ -219,6 +219,14 @@ function saveKanwilImportBatch(payload){
       seenSourceRows.add(sourceRow);
       const raw=kanwilLoosePayloadV1_(row.rawValues||row.values||row.normalizedValues||{});
       let normalized=kanwilLoosePayloadV1_(row.normalizedValues||row.values||row.rawValues||{});
+      const fieldEvidence=row.fieldEvidence&&typeof row.fieldEvidence==='object'&&!Array.isArray(row.fieldEvidence)?row.fieldEvidence:{};
+      if(channel==='SCREENSHOT'){
+        const missingEvidence=KANWIL_APPLICATION_FIELDS_V1.filter(key=>!fieldEvidence[key]||
+          !fieldEvidence[key].columnBounds||!Number.isFinite(Number(fieldEvidence[key].columnBounds.left))||
+          !Number.isFinite(Number(fieldEvidence[key].columnBounds.right))||
+          !Array.isArray(fieldEvidence[key].reviewFlags));
+        if(missingEvidence.length)throw new Error('KANWIL_SCREENSHOT_CELL_EVIDENCE_REQUIRED: '+missingEvidence.join(','));
+      }
       const descriptor=buildKanwilIdempotencyDescriptorV1({kanwilScopeId:scope,sourceFileSha256:sha,
         contractVersion,parserVersion,sourceRowNumber:sourceRow});
       if(!descriptor.ok)throw new Error(descriptor.reason);
@@ -246,7 +254,7 @@ function saveKanwilImportBatch(payload){
       const valuesByKey={
         staging_id:stagingId,batch_id:batchId,file_id:fileId,source_row_number:sourceRow,idempotency_key:key,
         contract_version:contractVersion,raw_values_json:JSON.stringify(raw),normalized_values_json:JSON.stringify(normalized),
-        validation_errors_json:JSON.stringify(errors),validation_warnings_json:JSON.stringify(warnings),
+        validation_errors_json:JSON.stringify(errors),validation_warnings_json:JSON.stringify(warnings),field_evidence_json:JSON.stringify(fieldEvidence),
         review_state:'PENDING',state,payload_sha256:hash,revision:1,created_by:user.email,created_at:now,updated_at:now
       };
       stageRows.push(KANWIL_STAGING_SHEETS_V1.staging.map(k=>valuesByKey[k]??''));
@@ -314,7 +322,7 @@ function listKanwilApplications(filters){
       sourceRowNumber:Number(r[h.source_row_number]),state:String(r[h.state]),reviewState:String(r[h.review_state]),
       revision:Number(r[h.revision]),values:JSON.parse(String(r[h.normalized_values_json]||'{}')),
       validationErrors:JSON.parse(String(r[h.validation_errors_json]||'[]')),
-      validationWarnings:JSON.parse(String(r[h.validation_warnings_json]||'[]')),
+      validationWarnings:JSON.parse(String(r[h.validation_warnings_json]||'[]')),\n      fieldEvidence:JSON.parse(String(r[h.field_evidence_json]||'{}')),
       createdBy:String(r[h.created_by]),createdAt:String(r[h.created_at])}));
   return {ok:true,rows};
 }
