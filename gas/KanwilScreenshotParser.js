@@ -171,9 +171,13 @@ function reconstructKanwilScreenshotTableV1(words,options){
  }
  const columns=best.matched.filter(x=>x.key).map(x=>({key:x.key,anchor:x.anchor})).sort((a,b)=>a.anchor-b.anchor);
  const minX=Math.min(...words.map(w=>w.bbox.x0)),maxX=Math.max(...words.map(w=>w.bbox.x1));
+ const edgePadding=Math.max(4,kanwilShotMedian_(words.map(w=>w.bbox.y1-w.bbox.y0))*0.75);
+ // The first data column is left-aligned at the screenshot edge. The OCR
+ // word-origin adjustment below can move its x probe slightly left of the
+ // first glyph, so provide explicit edge padding or payment-date anchors vanish.
  const bounds=columns.map((col,i)=>({
-  key:col.key,left:i?(columns[i-1].anchor+col.anchor)/2:minX,
-  right:i<columns.length-1?(col.anchor+columns[i+1].anchor)/2:maxX
+  key:col.key,left:i?(columns[i-1].anchor+col.anchor)/2:minX-edgePadding,
+  right:i<columns.length-1?(col.anchor+columns[i+1].anchor)/2:maxX+edgePadding
  }));
  const dataLines=lines.slice(best.end+1);
  const lineBuckets=dataLines.map((line,index)=>{
