@@ -174,7 +174,6 @@ function reconstructKanwilScreenshotTableV1(words,options){
   key:c.key,left:i?(columns[i-1].anchor+c.anchor)/2:-Infinity,
   right:i<columns.length-1?(c.anchor+columns[i+1].anchor)/2:Infinity
  }));
- const columns=best.matched.filter(x=>x.key).map(x=>({key:x.key,anchor:x.anchor})).sort((a,b)=>a.anchor-b.anchor);
  const minX=Math.min(...words.map(w=>w.bbox.x0)),maxX=Math.max(...words.map(w=>w.bbox.x1));
  const bounds=columns.map((col,i)=>({
   key:col.key,left:i?(columns[i-1].anchor+col.anchor)/2:minX,
