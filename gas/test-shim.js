@@ -2152,3 +2152,6 @@ assert(kanwilServerParserMismatch,'Kanwil server verifier rejects browser/server
 let kanwilServerMalformedRejected=false;
 try{kanwilServerVerify({getBytes:()=>[1],getDataAsString:()=>kanwilCsvSource+'\n"unterminated'},null,null);}catch(e){kanwilServerMalformedRejected=/KANWIL_SERVER_CSV_PARSE_FAILED/.test(e.message);}
 assert(kanwilServerMalformedRejected,'Kanwil server verifier fails closed on malformed CSV source bytes');
+
+// Kanwil OCR multiline header regression contract.
+const kanwilOcrRegression=require('./KanwilOcrRegression.test.js');
