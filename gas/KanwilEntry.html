@@ -110,9 +110,32 @@ async function loadTesseract(){if(!window.Tesseract)await addScript('https://cdn
 function render(){
  const body=$('kpeRows');body.replaceChildren();
  if(!state.rows.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.textContent='Belum ada hasil.';tr.append(td);body.append(tr);}
- state.rows.forEach(r=>{const tr=document.createElement('tr');[r.file,r.sourceRowNumber||'—',r.values?.nomor_permohonan||'—',r.values?.nama||'—',r.values?.no_passport||'—',r.state||'REVIEW_REQUIRED',(r.warnings||[]).map(w=>typeof w==='string'?w:(w.code||w.field+': '+w.code)).join('; ')||'Periksa sumber'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.append(td);});body.append(tr);});
+ state.rows.forEach(r=>{
+  const tr=document.createElement('tr');
+  [r.file,r.sourceRowNumber||'—',r.values?.nomor_permohonan||'—',r.values?.nama||'—',r.values?.no_passport||'—',r.state||'REVIEW_REQUIRED'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.append(td);});
+  const reviewCell=document.createElement('td'),summary=document.createElement('div');
+  summary.textContent=(r.validationErrors||[]).length+' error; '+(r.validationWarnings||[]).length+' peringatan; '+((r.rowGeometry&&r.rowGeometry.lineCount)||0)+' baris OCR vertikal';
+  reviewCell.append(summary);
+  const details=document.createElement('details'),summaryNode=document.createElement('summary');
+  summaryNode.textContent='Periksa bukti 17 sel';details.append(summaryNode);
+  const evidenceTable=document.createElement('table'),thead=document.createElement('thead'),headRow=document.createElement('tr');
+  ['Kolom','Nilai OCR','Status bukti','Confidence','Koordinat (x0,y0–x1,y1)','Catatan'].forEach(label=>{const th=document.createElement('th');th.textContent=label;headRow.append(th);});
+  thead.append(headRow);evidenceTable.append(thead);
+  const evidenceBody=document.createElement('tbody');
+  manualFields.forEach(([key,label])=>{
+   const ev=r.fieldEvidence&&r.fieldEvidence[key]||{},row=document.createElement('tr');
+   const vals=[label,r.values&&r.values[key]||'—',ev.cellStatus||'NO_EVIDENCE',
+    Number.isFinite(ev.meanConfidence)?ev.meanConfidence.toFixed(1)+'%':'—',
+    ev.bbox?[ev.bbox.x0,ev.bbox.y0,ev.bbox.x1,ev.bbox.y1].map(n=>Math.round(n)).join(', '):'—',
+    (ev.reviewFlags||[]).join(', ')||'Periksa visual'];
+   vals.forEach(value=>{const td=document.createElement('td');td.textContent=String(value);row.append(td);});
+   evidenceBody.append(row);
+  });
+  evidenceTable.append(evidenceBody);details.append(evidenceTable);reviewCell.append(details);tr.append(reviewCell);body.append(tr);
+ });
  $('kpeLog').textContent=state.log.join('\n\n')||'—';
 }
+
 async function processCsv(file,contract){
  const text=await file.text();let delimiter=',';
  const first=text.split(/\r?\n/,1)[0]||'';if((first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length)delimiter=';';
@@ -200,7 +223,11 @@ async function persistKanwilFiles(){
     sourceRowNumber:record.sourceRowNumber!==undefined?record.sourceRowNumber:(record.sourceRowIndex!==undefined?record.sourceRowIndex:null),
     rawValues:record.rawValues||record.normalizedValues||record.values||{},
     normalizedValues:record.normalizedValues||record.values||{},
-    warnings:record.warnings||[]
+    warnings:record.warnings||[],
+    fieldEvidence:record.fieldEvidence||{},
+    validationErrors:record.validationErrors||[],
+    validationWarnings:record.validationWarnings||[],
+    rowGeometry:record.rowGeometry||null
    }));
    const result=await saveKanwilImport({sourceChannel:item.channel,sourceFile:{name:file.name,size:file.size,mime:file.type,sha256:sha,base64Data},parserVersion:'kanwil-browser-v2-source-evidence',sourceEvidence:item.sourceEvidence,records});
    say('Drive '+file.name+': file asli tersimpan ('+result.driveFileId+'); '+result.inserted+' baris tersimpan; '+result.invalidCount+' perlu validasi; SHA-256 diverifikasi server.');
@@ -269,7 +296,7 @@ $('kpeRun').addEventListener('click',async()=>{
     else result={ok:false,reason:'UNSUPPORTED_FILE_TYPE',records:[],rows:[]};
     if(!result.ok){state.log.push(file.name+': '+(result.reason||'PARSE_FAILED'));continue;}
     const records=result.records||result.rows||[];
-    records.forEach(record=>state.rows.push({file:file.name,sourceRowNumber:record.sourceRowNumber||record.sourceRowIndex,values:record.normalizedValues||record.values,state:'REVIEW_REQUIRED',warnings:record.warnings||result.warnings||[]}));
+    records.forEach(record=>state.rows.push({file:file.name,sourceRowNumber:record.sourceRowNumber||record.sourceRowIndex,values:record.normalizedValues||record.values,fieldEvidence:record.fieldEvidence||{},rowGeometry:record.rowGeometry||null,validationErrors:record.validationErrors||[],validationWarnings:record.validationWarnings||[],state:'REVIEW_REQUIRED',warnings:record.warnings||result.warnings||[]}));
     if(records.length)state.imports.push({file,channel:ext==='csv'?'CSV':(['xlsx','xls'].includes(ext)?'EXCEL':'SCREENSHOT'),records,sourceEvidence:result.sourceEvidence||null});
     state.log.push(file.name+': '+records.length+' record kandidat; '+(result.sourceEvidence?'bukti parser '+result.sourceEvidence.sourceDataRowCount+' baris sumber non-kosong':'jumlah baris sumber tidak tersedia')+'; wajib review.');
    }catch(e){state.log.push(file.name+': ERROR '+(e.message||String(e)));}
