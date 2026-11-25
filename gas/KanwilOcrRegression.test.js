@@ -1,0 +1,20 @@
+const assert=require('assert');
+const {KANWIL_SCREENSHOT_COLUMNS_V1,reconstructKanwilScreenshotTableV1}=require('./KanwilScreenshotParser');
+const words=[];
+const headers=KANWIL_SCREENSHOT_COLUMNS_V1.map(([key,aliases])=>aliases[0].split(' '));
+headers.forEach((tokens,col)=>{
+ const x=col*90+20;
+ tokens.forEach((token,row)=>words.push({text:token,confidence:95,bbox:{x0:x,y0:row*18+10,x1:x+token.length*7,y1:row*18+24}}));
+});
+const dataY=130;
+const sample=['2026-11-17','2026-11-23','2026-11-23','CONVERSION ITAP','PASSPORT','171126046899','2026-11-17','LINDA','MEHMET UZELE','MALE','1980-06-13','TURK','U37234274','TASITAP_SPOUSEIND','FAMILY','Produk sudah','Aktif'];
+sample.forEach((value,col)=>words.push({text:value,confidence:91,bbox:{x0:col*90+20,y0:dataY,x1:col*90+20+value.length*6,y1:dataY+16}}));
+const result=reconstructKanwilScreenshotTableV1(words,{lineTolerance:8,maxHeaderLines:6});
+assert.strictEqual(result.ok,true,'wrapped multi-line header should map all 17 columns: '+JSON.stringify(result.missing));
+assert.strictEqual(result.header.length,17,'all 17 columns are mapped');
+assert.strictEqual(result.rows.length,1,'one source record is reconstructed');
+assert.strictEqual(result.rows[0].values.nomor_permohonan,'171126046899','application number stays in its column');
+assert.strictEqual(result.rows[0].values.nama,'MEHMET UZELE','applicant name stays in its column');
+assert.strictEqual(result.rows[0].values.no_passport,'U37234274','passport number stays in its column');
+assert.strictEqual(result.autoCommit,false,'OCR output can never auto-commit');
+console.log('Kanwil OCR multiline-header tests: PASS');
