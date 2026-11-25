@@ -47,6 +47,30 @@ function kanwilShotHeaderFragments_(lines,start,end,wordGap){
  }
  return fragments.map(f=>({...f,text:f.words.map(w=>String(w.text).trim()).join(' ')}));
 }
+
+function kanwilShotMergeKnownHeaderFragments_(fragments){
+ const aliases=new Set(KANWIL_SCREENSHOT_COLUMNS_V1.flatMap(([,names])=>names.map(kanwilShotNormalize_)));
+ const merged=[];
+ for(let i=0;i<fragments.length;){
+  let match=null,matchLength=0;
+  // OCR may split a single multi-word heading into separate boxes on the same
+  // visual line. Merge only when the joined text is an exact canonical alias;
+  // this cannot combine the adjacent "Posisi Permohonan" and "Status Permohonan"
+  // columns because "Permohonan Permohonan" is not a valid alias.
+  for(let count=2;count<=3&&i+count<=fragments.length;count++){
+   const part=fragments.slice(i,i+count);
+   const text=part.map(x=>x.text).join(' ');
+   if(aliases.has(kanwilShotNormalize_(text))){
+    match={...part[0],x1:part[part.length-1].x1,
+     words:part.flatMap(x=>x.words||[]),text};
+    matchLength=count;
+   }
+  }
+  if(match){merged.push(match);i+=matchLength;}
+  else{merged.push(fragments[i]);i++;}
+ }
+ return merged;
+}
 function kanwilShotHeaderClusters_(lines,start,end){
  const allWords=lines.slice(start,end+1).flatMap(l=>l.words);
  const medianHeight=kanwilShotMedian_(allWords.map(w=>w.bbox.y1-w.bbox.y0));
@@ -56,7 +80,7 @@ function kanwilShotHeaderClusters_(lines,start,end){
  const wordGap=Math.max(3,medianHeight*0.65);
  const perLine=[];
  for(let li=start;li<=end;li++){
-  const fragments=kanwilShotHeaderFragments_(lines,li,li,wordGap).map(f=>({...f,line:li}));
+  const fragments=kanwilShotMergeKnownHeaderFragments_(kanwilShotHeaderFragments_(lines,li,li,wordGap)).map(f=>({...f,line:li}));
   perLine.push({line:li,fragments});
  }
  // The Kanwil source has a fixed left-to-right 17-column contract. The visual
