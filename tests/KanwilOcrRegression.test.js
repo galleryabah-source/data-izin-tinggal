@@ -175,3 +175,26 @@ assert.ok(geometryResult.rowSegmentation.rowBands.every(b=>b.hasPaymentDateAncho
 assert.strictEqual(geometryResult.sourceRowCountVerified,false,'OCR candidates must never certify source row count');
 assert.strictEqual(geometryResult.autoCommit,false);
 assert.ok(geometryResult.rows.every(r=>r.reviewRequired),'all reconstructed rows remain review-required');
+
+
+// Regression: the first payment-date token can touch the screenshot edge.
+// The x-origin correction used for column assignment must not push it outside
+// the first column, otherwise row geometry silently loses its date anchor.
+const edgeDateWords=words.filter(w=>w.bbox.y0<80).map(w=>({...w,bbox:{...w.bbox}}));
+[
+ {y:130,app:'171126046899',date:'2026-11-17'},
+ {y:185,app:'161126042545',date:'2026-11-16'},
+ {y:275,app:'161126043599',date:'2026-11-16'},
+ {y:330,app:'161126042225',date:'2026-11-16'},
+ {y:420,app:'161126037700',date:'2026-11-13'}
+].forEach(row=>{
+ edgeDateWords.push({text:row.date,confidence:94,bbox:{x0:0,y0:row.y,x1:72,y1:row.y+13}});
+ edgeDateWords.push({text:row.app,confidence:93,bbox:{x0:colX[5],y0:row.y,x1:colX[5]+78,y1:row.y+13}});
+});
+const edgeDateResult=reconstructKanwilScreenshotTableV1(edgeDateWords,{lineTolerance:8,maxHeaderLines:6});
+assert.strictEqual(edgeDateResult.ok,true,'left-edge payment-date fixture should map headers');
+assert.strictEqual(edgeDateResult.rows.length,5,'left-edge dates should preserve row segmentation');
+assert.ok(edgeDateResult.rowSegmentation.rowBands.every(b=>b.hasPaymentDateAnchor),'payment dates touching image edge must be detected');
+assert.strictEqual(edgeDateResult.rowSegmentation.method,'VERTICAL_GAP_CLUSTERING_WITH_DATE_ANCHORS');
+assert.strictEqual(edgeDateResult.sourceRowCountVerified,false);
+assert.strictEqual(edgeDateResult.autoCommit,false);
