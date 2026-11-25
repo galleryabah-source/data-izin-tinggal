@@ -122,35 +122,60 @@ async function processXlsx(file,contract,adapter){
  const XLSX=await loadXlsx();return adapter.parseKanwilXlsxV1(await file.arrayBuffer(),XLSX,{},contract.parseKanwilPermitCsvV1,contract.kanwilMapHeadersV1_);
 }
 async function preprocessKanwilImage(file){
- const bitmap=await createImageBitmap(file),scale=Math.min(3,Math.max(2,Math.ceil(2200/Math.max(bitmap.width,bitmap.height))));
+ const bitmap=await createImageBitmap(file);
+ const scale=Math.min(4,Math.max(2,Math.ceil(3200/Math.max(bitmap.width,bitmap.height))));
  const canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
- const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
+ const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
  const image=ctx.getImageData(0,0,canvas.width,canvas.height),d=image.data;
- let sum=0,count=0;for(let i=0;i<d.length;i+=16){sum+=(d[i]+d[i+1]+d[i+2])/3;count++;}
- const mean=sum/Math.max(1,count),threshold=Math.max(145,Math.min(205,mean-28));
- for(let i=0;i<d.length;i+=4){const gray=.299*d[i]+.587*d[i+1]+.114*d[i+2];const enhanced=Math.max(0,Math.min(255,(gray-128)*1.45+128));const value=enhanced<threshold?0:255;d[i]=d[i+1]=d[i+2]=value;d[i+3]=255;}
- ctx.putImageData(image,0,0);return canvas;
+ // Keep a grayscale/contrast image as the primary OCR input. Hard thresholding can erase
+ // thin blue glyphs and punctuation from browser-rendered tables.
+ for(let i=0;i<d.length;i+=4){
+  const gray=.299*d[i]+.587*d[i+1]+.114*d[i+2];
+  const enhanced=Math.max(0,Math.min(255,(gray-132)*1.32+132));
+  d[i]=d[i+1]=d[i+2]=enhanced;d[i+3]=255;
+ }
+ ctx.putImageData(image,0,0);
+ const binary=document.createElement('canvas');binary.width=canvas.width;binary.height=canvas.height;
+ const bctx=binary.getContext('2d',{willReadFrequently:true}),bimg=bctx.getImageData(0,0,binary.width,binary.height),bd=bimg.data;
+ let sum=0,count=0;for(let i=0;i<d.length;i+=16){sum+=d[i];count++;}
+ const threshold=Math.max(150,Math.min(215,sum/Math.max(1,count)-24));
+ for(let i=0;i<bd.length;i+=4){const value=d[i]<threshold?0:255;bd[i]=bd[i+1]=bd[i+2]=value;bd[i+3]=255;}
+ bctx.putImageData(bimg,0,0);
+ return {gray:canvas,binary};
 }
 async function processImage(file,shot,ocrAdapter){
- const T=await loadTesseract(),canvas=await preprocessKanwilImage(file);
+ const T=await loadTesseract(),canvases=await preprocessKanwilImage(file);
  const worker=await T.createWorker('eng+ind',1,{logger:m=>{if(m.status==='recognizing text')say('OCR '+file.name+': '+Math.round((m.progress||0)*100)+'%');}});
  try{
-  const modes=[{name:'SPARSE_TEXT',psm:'11'},{name:'TABLE_BLOCK',psm:'6'},{name:'COLUMN_LAYOUT',psm:'4'}];
+  // Table/block modes are evaluated before sparse-text mode. A valid header alone is
+  // insufficient: the selected attempt must also reconstruct at least one data row.
+  const modes=[
+   {name:'TABLE_BLOCK_GRAY',psm:'6',image:canvases.gray},
+   {name:'COLUMN_LAYOUT_GRAY',psm:'4',image:canvases.gray},
+   {name:'SPARSE_TEXT_GRAY',psm:'11',image:canvases.gray},
+   {name:'TABLE_BLOCK_BINARY',psm:'6',image:canvases.binary},
+   {name:'COLUMN_LAYOUT_BINARY',psm:'4',image:canvases.binary}
+  ];
   const attempts=[];
   for(const mode of modes){
    await worker.setParameters({tessedit_pageseg_mode:mode.psm,preserve_interword_spaces:'1',user_defined_dpi:'300'});
-   const result=await worker.recognize(canvas);
-   const parsed=ocrAdapter.adaptTesseractResultToKanwilV1(result,shot.reconstructKanwilScreenshotTableV1,{lineTolerance:Math.max(8,canvas.height/160),maxHeaderLines:6});
+   const result=await worker.recognize(mode.image);
+   const parsed=ocrAdapter.adaptTesseractResultToKanwilV1(result,shot.reconstructKanwilScreenshotTableV1,{
+    lineTolerance:Math.max(12,mode.image.height/100),maxHeaderLines:8
+   });
    attempts.push({mode:mode.name,result,parsed});
-   if(parsed.ok&&parsed.header&&parsed.header.length===17)break;
+   if(parsed.ok&&parsed.header&&parsed.header.length===17&&parsed.rows&&parsed.rows.length>0)break;
   }
-  attempts.sort((a,b)=>(b.parsed.ok?1000:0)+(b.parsed.matchedHeaderCount||0)-(a.parsed.ok?1000:0)-(a.parsed.matchedHeaderCount||0));
+  const score=a=>(a.parsed.ok?100000:0)+(a.parsed.rows?.length||0)*1000+(a.parsed.matchedHeaderCount||0)*10+(a.result.data.words?.length||0)/1000;
+  attempts.sort((a,b)=>score(b)-score(a));
   const best=attempts[0];
   state.log.push('OCR '+file.name+' ['+best.mode+']:\\n'+String(best.result.data.text||'').slice(0,8000));
-  // Keep OCR raw text in the OCR evidence log; never overwrite the independent TSV paste input.
-  if(!best.parsed.ok){
-   best.parsed.attempts=attempts.map(a=>({mode:a.mode,reason:a.parsed.reason,matchedHeaderCount:a.parsed.matchedHeaderCount,missing:a.parsed.missing}));
-   state.log.push('OCR HEADER DIAGNOSTIC: '+JSON.stringify(best.parsed.attempts));
+  state.log.push('OCR ATTEMPTS: '+JSON.stringify(attempts.map(a=>({mode:a.mode,ok:a.parsed.ok,rows:a.parsed.rows?.length||0,matchedHeaderCount:a.parsed.matchedHeaderCount||0,reason:a.parsed.reason||null,missing:a.parsed.missing||[]}))));
+  if(!best.parsed.ok||!best.parsed.rows?.length){
+   return {...best.parsed,ok:false,reason:best.parsed.reason||'OCR_NO_DATA_ROWS_RECONSTRUCTED',
+    attempts:attempts.map(a=>({mode:a.mode,ok:a.parsed.ok,rows:a.parsed.rows?.length||0,matchedHeaderCount:a.parsed.matchedHeaderCount||0,reason:a.parsed.reason||null,missing:a.parsed.missing||[]})),
+    reviewRequired:true,autoCommit:false,rows:[]};
   }
   return best.parsed;
  }finally{await worker.terminate();}
@@ -250,7 +275,11 @@ $('kpeRun').addEventListener('click',async()=>{
    }catch(e){state.log.push(file.name+': ERROR '+(e.message||String(e)));}
    $('kpeProgress').style.width=Math.round((i+1)/files.length*100)+'%';render();
   }
-  say('Parsing selesai. Periksa hasil, lalu simpan data terstruktur ke staging Kanwil. File sumber tetap berada di browser.');
+  if(state.rows.length){
+   say('Parsing selesai: '+state.rows.length+' baris kandidat berhasil direkonstruksi. Periksa seluruh nilai sebelum penyimpanan staging. File sumber tetap berada di browser.');
+  }else{
+   say('OCR belum berhasil merekonstruksi baris data. Tidak ada data yang disiapkan untuk staging. Periksa Raw OCR / error log dan gunakan screenshot beresolusi lebih tinggi atau paste tabel Excel.');
+  }
   $('kpePersistFiles').disabled=!state.enabled||!state.imports.length;
  }catch(e){say('Gagal memulai: '+(e.message||String(e)));}
  finally{state.busy=false;$('kpeRun').disabled=false;render();}
