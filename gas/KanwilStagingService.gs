@@ -14,7 +14,7 @@ const KANWIL_STAGING_GUARD_V1=Object.freeze({
 const KANWIL_STAGING_SHEETS_V1=Object.freeze({
   batches:['batch_id','kanwil_scope_id','source_channel','contract_version','parser_version','source_exported_at','source_authorization_ref','created_by','created_at','state','file_count','record_count','correlation_id'],
   files:['file_id','batch_id','source_filename','source_file_sha256','source_file_mime','source_file_size','source_row_count','source_data_row_count','parsed_record_count','source_row_manifest_sha256','source_evidence_status','parser_version','processing_state','drive_file_id','drive_file_url','storage_status','server_verified_sha256','created_by','created_at'],
-  staging:['staging_id','batch_id','file_id','source_row_number','idempotency_key','contract_version','raw_values_json','normalized_values_json','validation_errors_json','validation_warnings_json','review_state','state','revision','payload_sha256','created_by','created_at','updated_at'],
+  staging:['staging_id','batch_id','file_id','source_row_number','idempotency_key','contract_version','raw_values_json','normalized_values_json','validation_errors_json','validation_warnings_json','review_state','state','revision','payload_sha256','created_by','created_at','updated_at','field_evidence_json'],
   records:['record_id','kanwil_scope_id','application_number','current_revision','current_payload_sha256','current_payload_json','committed_at','committed_by','source_staging_id','correlation_id'],
   events:['event_id','record_id','staging_id','event_sequence','event_type','from_state','to_state','revision','payload_sha256','actor_id','reason','correlation_id','occurred_at'],
   revisions:['revision_id','staging_id','revision','prior_payload_sha256','payload_sha256','prior_payload_json','payload_json','reason','actor_id','created_at','correlation_id'],
@@ -69,6 +69,7 @@ function provisionKanwilStagingSchema_(stagingSpreadsheetId){
       const legacy=['file_id','batch_id','source_filename','source_file_sha256','source_file_mime','source_file_size','source_row_count','source_data_row_count','parsed_record_count','source_row_manifest_sha256','source_evidence_status','parser_version','processing_state','created_by','created_at'];
       if(actual.join('|')===legacy.join('|'))return; // Safe additive migration is applied only after every tab passes preflight.
     }
+    if(key==='staging'&&actual.join('|')===headers.slice(0,-1).join('|'))return; // Additive OCR cell-evidence migration.
     if(sh.getLastColumn()!==headers.length||actual.join('|')!==headers.join('|'))throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
   });
   Object.entries(KANWIL_STAGING_SHEETS_V1).forEach(([key,headers])=>{
@@ -77,6 +78,12 @@ function provisionKanwilStagingSchema_(stagingSpreadsheetId){
     if(!sh)sh=ss.insertSheet(name);
     if(sh.getLastRow()===0)sh.getRange(1,1,1,headers.length).setValues([headers]);
     let actual=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(String);
+    if(key==='staging'&&actual.length===headers.length-1&&actual.join('|')===headers.slice(0,-1).join('|')){
+      sh.getRange(1,actual.length+1).setValue('field_evidence_json');
+      const last=sh.getLastRow();
+      if(last>1)sh.getRange(2,actual.length+1,last-1,1).setValues(Array.from({length:last-1},()=>['{}']));
+      actual=sh.getRange(1,1,1,headers.length).getValues()[0].map(String);
+    }
     if(key==='files'&&actual.length===15){
       const legacy=['file_id','batch_id','source_filename','source_file_sha256','source_file_mime','source_file_size','source_row_count','source_data_row_count','parsed_record_count','source_row_manifest_sha256','source_evidence_status','parser_version','processing_state','created_by','created_at'];
       if(actual.join('|')!==legacy.join('|'))throw new Error('KANWIL_SCHEMA_MISMATCH:'+name);
