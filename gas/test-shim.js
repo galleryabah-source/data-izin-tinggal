@@ -2157,3 +2157,11 @@ assert(kanwilServerMalformedRejected,'Kanwil server verifier fails closed on mal
 
 // Kanwil OCR multiline header regression contract.
 const kanwilOcrRegression=require('../tests/KanwilOcrRegression.test.js');
+const kanwilRowGeometryRegression=require('../tests/KanwilRowGeometry.test.js');
+assert(!!kanwilRowGeometryRegression,'Kanwil row geometry and cell integrity regression test loads');
+const kanwilStagingSchema=read('KanwilStagingService.gs');
+assert(kanwilStagingSchema.includes("'field_evidence_json'"),'Kanwil staging schema persists per-cell OCR evidence');
+assert(kanwilStagingSchema.includes("actual.join('|')===headers.slice(0,-1).join('|')"),'Kanwil staging has an additive legacy schema migration for OCR evidence');
+const kanwilPersistence=read('KanwilPersistenceService.gs');
+assert(kanwilPersistence.includes('KANWIL_SCREENSHOT_CELL_EVIDENCE_REQUIRED'),'Screenshot staging rejects rows without complete per-cell evidence');
+assert(kanwilPersistence.includes('field_evidence_json:JSON.stringify(fieldEvidence)'),'Screenshot staging persists per-cell evidence');
