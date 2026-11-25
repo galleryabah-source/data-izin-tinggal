@@ -180,6 +180,7 @@ function reconstructKanwilScreenshotTableV1(words,options){
   right:i<columns.length-1?(col.anchor+columns[i+1].anchor)/2:maxX+edgePadding
  }));
  const dataLines=lines.slice(best.end+1);
+ const dateKeysForAnchors=new Set(['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','tanggal_permohonan','tanggal_lahir']);
  const lineBuckets=dataLines.map((line,index)=>{
   const buckets=Object.fromEntries(columns.map(col=>[col.key,[]]));
   line.words.forEach(w=>{
@@ -197,7 +198,6 @@ function reconstructKanwilScreenshotTableV1(words,options){
    hasPaymentDateAnchor:/\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/.test(paymentText),
    hasAnyDateAnchor,hasDateAnchor:hasAnyDateAnchor||dateAnchorFields.length>0};
  });
- const dateKeysForAnchors=new Set(['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','tanggal_permohonan','tanggal_lahir']);
  const gaps=[];
  for(let i=1;i<dataLines.length;i++)gaps.push(Math.max(0,dataLines[i].cy-dataLines[i-1].cy));
  let geometryThreshold=null,geometryConfidence='LOW';
