@@ -322,7 +322,9 @@ function listKanwilApplications(filters){
       sourceRowNumber:Number(r[h.source_row_number]),state:String(r[h.state]),reviewState:String(r[h.review_state]),
       revision:Number(r[h.revision]),values:JSON.parse(String(r[h.normalized_values_json]||'{}')),
       validationErrors:JSON.parse(String(r[h.validation_errors_json]||'[]')),
-      validationWarnings:JSON.parse(String(r[h.validation_warnings_json]||'[]')),\n      fieldEvidence:(()=>{const evidence=JSON.parse(String(r[h.field_evidence_json]||'{}'));return evidence.cells||evidence;})(),\n      rowGeometry:(()=>{const evidence=JSON.parse(String(r[h.field_evidence_json]||'{}'));return evidence.rowGeometry||null;})(),
+      validationWarnings:JSON.parse(String(r[h.validation_warnings_json]||'[]')),
+      fieldEvidence:(()=>{const evidence=JSON.parse(String(r[h.field_evidence_json]||'{}'));return evidence.cells||evidence;})(),
+      rowGeometry:(()=>{const evidence=JSON.parse(String(r[h.field_evidence_json]||'{}'));return evidence.rowGeometry||null;})(),
       createdBy:String(r[h.created_by]),createdAt:String(r[h.created_at])}));
   return {ok:true,rows};
 }
