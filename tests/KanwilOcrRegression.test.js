@@ -100,6 +100,21 @@ assert.ok(staggeredResult.headerFragments.some(x=>x.key==='status_permohonan'&&x
 assert.strictEqual(staggeredResult.autoCommit,false);
 assert.strictEqual(staggeredResult.reviewRequired,true);
 
+// A failed geometry match must retain partial header evidence instead of
+// collapsing every missing field into an unhelpful zero-match result.
+const partialHeaderWords=[
+ {text:'Tanggal',confidence:90,bbox:{x0:10,y0:10,x1:52,y1:22}},
+ {text:'Pembayaran',confidence:90,bbox:{x0:10,y0:26,x1:75,y1:38}},
+ {text:'Kategori',confidence:90,bbox:{x0:200,y0:10,x1:250,y1:22}},
+ {text:'Produk',confidence:90,bbox:{x0:200,y0:26,x1:238,y1:38}}
+];
+const partialHeaderResult=reconstructKanwilScreenshotTableV1(partialHeaderWords,{lineTolerance:8,maxHeaderLines:6});
+assert.strictEqual(partialHeaderResult.ok,false,'incomplete header must remain rejected');
+assert.strictEqual(partialHeaderResult.autoCommit,false);
+assert.strictEqual(partialHeaderResult.anchorGroupCount,2,'partial anchor count must be exposed');
+assert.strictEqual(partialHeaderResult.inputWordCount,4,'input OCR word count must be exposed');
+assert.ok(partialHeaderResult.headerDiagnostics.length>0,'partial header clusters must be retained for diagnosis');
+
 console.log('Kanwil OCR realistic multiline-header tests: PASS');
 
 

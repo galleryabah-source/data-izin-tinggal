@@ -101,7 +101,7 @@ function kanwilShotHeaderClusters_(lines,start,end){
   }
   group.fragments.push(fragment);
  });
- if(anchorGroups.length!==KANWIL_SCREENSHOT_COLUMNS_V1.length)return [];
+ // Preserve partial groups so failed mappings expose the actual OCR geometry.
  const anchors=anchorGroups.map(group=>group.minX);
  if(anchors.some((x,i)=>i&&x<=anchors[i-1]))return [];
  const clusters=anchors.map(anchor=>({anchor,fragments:[]}));
@@ -119,7 +119,7 @@ function kanwilShotHeaderClusters_(lines,start,end){
  }));
  return clusters.map(c=>{
   const ordered=c.fragments.slice().sort((a,b)=>a.line-b.line||a.x0-b.x0);
-  return {text:ordered.map(f=>f.text).join(' '),anchor:c.anchor,
+  return {text:ordered.map(f=>f.text).join(' '),anchor:c.anchor,anchorGroupCount:anchors.length,
    lineStart:ordered.length?Math.min(...ordered.map(f=>f.line)):start,
    lineEnd:ordered.length?Math.max(...ordered.map(f=>f.line)):end};
  }).sort((a,b)=>a.anchor-b.anchor);
@@ -166,6 +166,7 @@ function reconstructKanwilScreenshotTableV1(words,options){
    duplicate:best?best.duplicate:[],header:best?best.clusters.map(c=>c.text):[],
    matchedHeaderCount:best?best.score:0,
    headerDiagnostics:best?best.clusters.map(c=>({text:c.text,anchor:Math.round(c.anchor),key:c.key||null,lineStart:c.lineStart,lineEnd:c.lineEnd})):[],
+   anchorGroupCount:best?best.clusters.length:0,candidateLineCount:best?best.end-best.start+1:0,inputWordCount:Array.isArray(words)?words.length:0,
    rows:[],reviewRequired:true,autoCommit:false};
  }
  const columns=best.matched.filter(x=>x.key).map(x=>({key:x.key,anchor:x.anchor})).sort((a,b)=>a.anchor-b.anchor);

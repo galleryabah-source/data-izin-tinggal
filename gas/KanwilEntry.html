@@ -171,10 +171,10 @@ async function processImage(file,shot,ocrAdapter){
   attempts.sort((a,b)=>score(b)-score(a));
   const best=attempts[0];
   state.log.push('OCR '+file.name+' ['+best.mode+']:\\n'+String(best.result.data.text||'').slice(0,8000));
-  state.log.push('OCR ATTEMPTS: '+JSON.stringify(attempts.map(a=>({mode:a.mode,ok:a.parsed.ok,rows:a.parsed.rows?.length||0,matchedHeaderCount:a.parsed.matchedHeaderCount||0,reason:a.parsed.reason||null,missing:a.parsed.missing||[]}))));
+  state.log.push('OCR ATTEMPTS: '+JSON.stringify(attempts.map(a=>({mode:a.mode,ok:a.parsed.ok,rows:a.parsed.rows?.length||0,matchedHeaderCount:a.parsed.matchedHeaderCount||0,anchorGroupCount:a.parsed.anchorGroupCount??null,candidateLineCount:a.parsed.candidateLineCount??null,inputWordCount:a.parsed.inputWordCount??a.result.data.words?.length??0,reason:a.parsed.reason||null,missing:a.parsed.missing||[],duplicate:a.parsed.duplicate||[],header:a.parsed.header||[],headerDiagnostics:a.parsed.headerDiagnostics||[]}))));
   if(!best.parsed.ok||!best.parsed.rows?.length){
    return {...best.parsed,ok:false,reason:best.parsed.reason||'OCR_NO_DATA_ROWS_RECONSTRUCTED',
-    attempts:attempts.map(a=>({mode:a.mode,ok:a.parsed.ok,rows:a.parsed.rows?.length||0,matchedHeaderCount:a.parsed.matchedHeaderCount||0,reason:a.parsed.reason||null,missing:a.parsed.missing||[]})),
+    attempts:attempts.map(a=>({mode:a.mode,ok:a.parsed.ok,rows:a.parsed.rows?.length||0,matchedHeaderCount:a.parsed.matchedHeaderCount||0,anchorGroupCount:a.parsed.anchorGroupCount??null,candidateLineCount:a.parsed.candidateLineCount??null,inputWordCount:a.parsed.inputWordCount??a.result.data.words?.length??0,reason:a.parsed.reason||null,missing:a.parsed.missing||[],duplicate:a.parsed.duplicate||[],header:a.parsed.header||[],headerDiagnostics:a.parsed.headerDiagnostics||[]})),
     reviewRequired:true,autoCommit:false,rows:[]};
   }
   return best.parsed;
