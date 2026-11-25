@@ -50,32 +50,38 @@ function kanwilShotHeaderFragments_(lines,start,end,wordGap){
 function kanwilShotHeaderClusters_(lines,start,end){
  const allWords=lines.slice(start,end+1).flatMap(l=>l.words);
  const medianHeight=kanwilShotMedian_(allWords.map(w=>w.bbox.y1-w.bbox.y0));
- const fragments=kanwilShotHeaderFragments_(lines,start,end,Math.max(8,medianHeight*1.45));
- // Header text is frequently centered or indented within its cell. A narrow
- // x tolerance splits wrapped labels ("Tanggal" / "Pembayaran") into separate
- // pseudo-columns. Keep a stable left-edge anchor and allow a wider, bounded
- // tolerance while remaining below the normal inter-column gap.
- const xTolerance=Math.max(22,Math.min(58,medianHeight*3.8));
- const clusters=[];
- fragments.sort((a,b)=>a.x0-b.x0||a.line-b.line).forEach(fragment=>{
-  let best=null,distance=Infinity;
-  clusters.forEach(cluster=>{
-   const d=Math.abs(fragment.x0-cluster.anchor);
-   if(d<=xTolerance&&d<distance){best=cluster;distance=d;}
+ const wordGap=Math.max(8,medianHeight*1.45);
+ const perLine=[];
+ for(let li=start;li<=end;li++){
+  const fragments=kanwilShotHeaderFragments_(lines,li,li,wordGap).map(f=>({...f,line:li}));
+  perLine.push({line:li,fragments});
+ }
+ // The Kanwil source has a fixed left-to-right 17-column contract. The visual
+ // header's densest line normally contains the first token of each column.
+ // Use that line to establish 17 independent anchors; do not cluster all
+ // fragments with one global x tolerance because adjacent columns can merge.
+ const seed=perLine.slice().sort((a,b)=>b.fragments.length-a.fragments.length||a.line-b.line)[0];
+ if(!seed||seed.fragments.length!==KANWIL_SCREENSHOT_COLUMNS_V1.length)return [];
+ const anchors=seed.fragments.slice().sort((a,b)=>a.x0-b.x0).map(f=>f.x0);
+ if(anchors.some((x,i)=>i&&x<=anchors[i-1]))return [];
+ const clusters=anchors.map(anchor=>({anchor,fragments:[]}));
+ perLine.forEach(entry=>entry.fragments.forEach(fragment=>{
+  let nearest=-1,distance=Infinity;
+  anchors.forEach((anchor,i)=>{
+   const d=Math.abs(fragment.x0-anchor);
+   if(d<distance){distance=d;nearest=i;}
   });
-  if(!best){
-   best={fragments:[],anchor:fragment.x0};
-   clusters.push(best);
-  }
-  best.fragments.push(fragment);
-  // Use the left-most observed fragment as the stable anchor. A median drifts
-  // when one wrapped header line is centered or starts after a short first word.
-  best.anchor=Math.min(...best.fragments.map(f=>f.x0));
- });
+  const leftGap=nearest>0?anchors[nearest]-anchors[nearest-1]:Infinity;
+  const rightGap=nearest<anchors.length-1?anchors[nearest+1]-anchors[nearest]:Infinity;
+  const localGap=Math.min(leftGap,rightGap);
+  const tolerance=Number.isFinite(localGap)?Math.max(medianHeight*1.5,localGap*0.46):medianHeight*2.5;
+  if(distance<=tolerance)clusters[nearest].fragments.push(fragment);
+ }));
  return clusters.map(c=>{
   const ordered=c.fragments.slice().sort((a,b)=>a.line-b.line||a.x0-b.x0);
   return {text:ordered.map(f=>f.text).join(' '),anchor:c.anchor,
-   lineStart:Math.min(...ordered.map(f=>f.line)),lineEnd:Math.max(...ordered.map(f=>f.line))};
+   lineStart:ordered.length?Math.min(...ordered.map(f=>f.line)):start,
+   lineEnd:ordered.length?Math.max(...ordered.map(f=>f.line)):end};
  }).sort((a,b)=>a.anchor-b.anchor);
 }
 function kanwilShotHeaderMatch_(clusters){
