@@ -147,8 +147,11 @@ async function processImage(file,shot,ocrAdapter){
   attempts.sort((a,b)=>(b.parsed.ok?1000:0)+(b.parsed.matchedHeaderCount||0)-(a.parsed.ok?1000:0)-(a.parsed.matchedHeaderCount||0));
   const best=attempts[0];
   state.log.push('OCR '+file.name+' ['+best.mode+']:\\n'+String(best.result.data.text||'').slice(0,8000));
-  $('kpePasteText').value=String(best.result.data.text||'');
-  if(!best.parsed.ok)best.parsed.attempts=attempts.map(a=>({mode:a.mode,reason:a.parsed.reason,matchedHeaderCount:a.parsed.matchedHeaderCount,missing:a.parsed.missing}));
+  // Keep OCR raw text in the OCR evidence log; never overwrite the independent TSV paste input.
+  if(!best.parsed.ok){
+   best.parsed.attempts=attempts.map(a=>({mode:a.mode,reason:a.parsed.reason,matchedHeaderCount:a.parsed.matchedHeaderCount,missing:a.parsed.missing}));
+   state.log.push('OCR HEADER DIAGNOSTIC: '+JSON.stringify(best.parsed.attempts));
+  }
   return best.parsed;
  }finally{await worker.terminate();}
 }
