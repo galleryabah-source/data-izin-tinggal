@@ -114,7 +114,15 @@ function render(){
   const tr=document.createElement('tr');
   [r.file,r.sourceRowNumber||'—',r.values?.nomor_permohonan||'—',r.values?.nama||'—',r.values?.no_passport||'—',r.state||'REVIEW_REQUIRED'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.append(td);});
   const reviewCell=document.createElement('td'),summary=document.createElement('div');
-  summary.textContent=(r.validationErrors||[]).length+' error; '+(r.validationWarnings||[]).length+' peringatan; '+((r.rowGeometry&&r.rowGeometry.lineCount)||0)+' baris OCR vertikal';
+  summary.textContent=(r.validationErrors||[]).length+' error; '+(r.validationWarnings||[]).length+' peringatan';
+  const geometry=r.rowGeometry||{};
+  const geometryLine=document.createElement('div');
+  geometryLine.textContent='Geometri: Y '+(Number.isFinite(geometry.yStart)?Math.round(geometry.yStart):'—')+'–'+(Number.isFinite(geometry.yEnd)?Math.round(geometry.yEnd):'—')+
+   '; '+(geometry.lineCount||0)+' garis OCR; posisi '+((geometry.lineYCoordinates||[]).join(', ')||'—')+
+   '; '+(geometry.boundaryReason||'batas belum diketahui')+
+   '; jangkar tanggal '+(geometry.hasPaymentDateAnchor?'ada':'tidak ada')+
+   '; confidence '+(geometry.confidence||'—');
+  reviewCell.append(summary,geometryLine);
   reviewCell.append(summary);
   const details=document.createElement('details'),summaryNode=document.createElement('summary');
   summaryNode.textContent='Periksa bukti 17 sel';details.append(summaryNode);

@@ -2168,3 +2168,5 @@ assert(kanwilPersistence.includes('field_evidence_json:JSON.stringify({cells:fie
 assert(kanwilEntryHtml.includes('Token OCR per kata'),'Kanwil review UI exposes each OCR token separately');
 assert(kanwilEntryHtml.includes('word.confidence.toFixed(1)'),'Kanwil review UI displays per-token OCR confidence');
 assert(kanwilEntryHtml.includes('word.bbox'),'Kanwil review UI displays per-token bounding boxes');
+assert(kanwilEntryHtml.includes('Geometri: Y '),'Kanwil review UI displays vertical row band coordinates');
+assert(kanwilEntryHtml.includes('hasPaymentDateAnchor'),'Kanwil review UI displays payment-date row anchor status');
