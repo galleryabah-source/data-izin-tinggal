@@ -1866,7 +1866,8 @@ assert(kanwilPageSource.includes('@8c6c2d1de4f40b101f8709808a438ddd39b80e18/gas/
 assert(!kanwilPageSource.includes('data-izin-tinggal@main/gas/'),'Kanwil browser parser never executes mutable main-branch code');
 assert(kanwilPageSource.includes('id="kpePasteImage"')&&kanwilPageSource.includes("clipboardData.items")&&kanwilPageSource.includes("kpeProcessPastedImage"),'Kanwil screenshot intake accepts a directly pasted clipboard image');
 assert(kanwilPageSource.includes('id="kpePasteText"')&&kanwilPageSource.includes('kpeParsePasteText')&&kanwilPageSource.includes("delimiter:'\\t'"),'Kanwil intake exposes a dedicated tabular-text paste field and parser action');
-assert(kanwilPageSource.includes('function preprocessKanwilImage')&&kanwilPageSource.includes("tessedit_pageseg_mode:'6'")&&kanwilPageSource.includes('preserve_interword_spaces'),'Kanwil OCR preprocesses screenshot images and configures table-oriented recognition');
+assert(!kanwilPageSource.includes("$('kpePasteText').value=String(best.result.data.text||'')"),'OCR evidence never overwrites the independent TSV clipboard input');
+assert(kanwilPageSource.includes('function preprocessKanwilImage')&&kanwilPageSource.includes("psm:'11'")&&kanwilPageSource.includes("psm:'6'")&&kanwilPageSource.includes("psm:'4'")&&kanwilPageSource.includes('preserve_interword_spaces'),'Kanwil OCR preprocesses screenshot images and evaluates sparse-text, block, and column recognition modes');
 
 
 const kanwilPermitContract=require('./KanwilPermitContract.js');
@@ -2152,3 +2153,6 @@ assert(kanwilServerParserMismatch,'Kanwil server verifier rejects browser/server
 let kanwilServerMalformedRejected=false;
 try{kanwilServerVerify({getBytes:()=>[1],getDataAsString:()=>kanwilCsvSource+'\n"unterminated'},null,null);}catch(e){kanwilServerMalformedRejected=/KANWIL_SERVER_CSV_PARSE_FAILED/.test(e.message);}
 assert(kanwilServerMalformedRejected,'Kanwil server verifier fails closed on malformed CSV source bytes');
+
+// Kanwil OCR multiline header regression contract.
+const kanwilOcrRegression=require('./KanwilOcrRegression.test.js');

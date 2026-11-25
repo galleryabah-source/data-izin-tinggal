@@ -135,11 +135,24 @@ async function processImage(file,shot,ocrAdapter){
  const T=await loadTesseract(),canvas=await preprocessKanwilImage(file);
  const worker=await T.createWorker('eng+ind',1,{logger:m=>{if(m.status==='recognizing text')say('OCR '+file.name+': '+Math.round((m.progress||0)*100)+'%');}});
  try{
-  await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});
-  const result=await worker.recognize(canvas);
-  state.log.push('OCR '+file.name+':\n'+String(result.data.text||'').slice(0,8000));
-  $('kpePasteText').value=String(result.data.text||'');
-  return ocrAdapter.adaptTesseractResultToKanwilV1(result,shot.reconstructKanwilScreenshotTableV1,{lineTolerance:Math.max(14,canvas.height/100)});
+  const modes=[{name:'SPARSE_TEXT',psm:'11'},{name:'TABLE_BLOCK',psm:'6'},{name:'COLUMN_LAYOUT',psm:'4'}];
+  const attempts=[];
+  for(const mode of modes){
+   await worker.setParameters({tessedit_pageseg_mode:mode.psm,preserve_interword_spaces:'1',user_defined_dpi:'300'});
+   const result=await worker.recognize(canvas);
+   const parsed=ocrAdapter.adaptTesseractResultToKanwilV1(result,shot.reconstructKanwilScreenshotTableV1,{lineTolerance:Math.max(8,canvas.height/160),maxHeaderLines:6});
+   attempts.push({mode:mode.name,result,parsed});
+   if(parsed.ok&&parsed.header&&parsed.header.length===17)break;
+  }
+  attempts.sort((a,b)=>(b.parsed.ok?1000:0)+(b.parsed.matchedHeaderCount||0)-(a.parsed.ok?1000:0)-(a.parsed.matchedHeaderCount||0));
+  const best=attempts[0];
+  state.log.push('OCR '+file.name+' ['+best.mode+']:\\n'+String(best.result.data.text||'').slice(0,8000));
+  // Keep OCR raw text in the OCR evidence log; never overwrite the independent TSV paste input.
+  if(!best.parsed.ok){
+   best.parsed.attempts=attempts.map(a=>({mode:a.mode,reason:a.parsed.reason,matchedHeaderCount:a.parsed.matchedHeaderCount,missing:a.parsed.missing}));
+   state.log.push('OCR HEADER DIAGNOSTIC: '+JSON.stringify(best.parsed.attempts));
+  }
+  return best.parsed;
  }finally{await worker.terminate();}
 }
 function saveKanwilImport(payload){
