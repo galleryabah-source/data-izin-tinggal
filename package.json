@@ -2,6 +2,6 @@
   "name": "data-izin-tinggal",
   "private": true,
   "scripts": {
-    "test": "node gas/test-shim.js"
+    "test": "node gas/test-shim.js && node gas/rpc-security-contract.test.js && node gas/rpc-self-scope.test.js && node gas/public-tv-contract.test.js"
   }
 }

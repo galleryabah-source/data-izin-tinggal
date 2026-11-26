@@ -6,7 +6,7 @@ function getWorkspaceIdentityV1_(){
   const email=String(Session.getActiveUser().getEmail()||'').trim().toLowerCase();
   if(!email)throw new Error('UNAUTHENTICATED');
   const rawDomains=String(PropertiesService.getScriptProperties().getProperty('INTAL_WORKSPACE_ALLOWED_DOMAINS')||'').trim();
-  const domains=rawDomains.split(/[;,\\s]+/).map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
+  const domains=rawDomains.split(/[;,\s]+/).map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
   if(!domains.length)throw new Error('WORKSPACE_DOMAIN_POLICY_MISSING');
   const at=email.lastIndexOf('@');
   const domain=at>0?email.slice(at+1):'';
@@ -46,7 +46,9 @@ function getRolePermissions_(role){
   return Array.from(new Set(assigned));
 }
 function getCurrentUser_(){
-  const email=getCurrentIdentity_(),v=getDb_().getSheetByName(SHEETS.USERS).getDataRange().getValues();
+  const email=getCurrentIdentity_();
+  if(!email)throw new Error('UNAUTHENTICATED');
+  const v=getDb_().getSheetByName(SHEETS.USERS).getDataRange().getValues();
   if(v.length<2)return {authenticated:false,email,role:null,permissions:[]};
   const h=v[0],i=Object.fromEntries(h.map((x,n)=>[x,n]));
   const matching=v.slice(1).filter(x=>String(x[i.email]||'').trim().toLowerCase()===email);
