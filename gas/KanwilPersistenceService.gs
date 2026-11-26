@@ -316,16 +316,21 @@ function kanwilLoosePayloadV1_(input){
 function listKanwilApplications(filters){
   requireBackOfficeAccess_();const ss=kanwilRequireReady_(),sheets=kanwilSheets_(ss),f=filters||{};
   const values=sheets.staging.getDataRange().getValues();if(values.length<2)return {ok:true,rows:[]};
-  const h=kanwilHeader_(sheets.staging),status=String(f.state||'').trim().toUpperCase(),limit=Math.min(200,Math.max(1,Number(f.limit)||100));
+  const h=kanwilHeader_(sheets.staging),files=kanwilRowsAsObjectsV1_(sheets.files),fileById=new Map(files.map(file=>[String(file.file_id||''),file]));
+  const status=String(f.state||'').trim().toUpperCase(),limit=Math.min(200,Math.max(1,Number(f.limit)||100));
   const rows=values.slice(1).filter(r=>r[h.staging_id]&&(!status||String(r[h.state]).toUpperCase()===status))
-    .slice(-limit).reverse().map(r=>({stagingId:String(r[h.staging_id]),batchId:String(r[h.batch_id]),
-      sourceRowNumber:Number(r[h.source_row_number]),state:String(r[h.state]),reviewState:String(r[h.review_state]),
-      revision:Number(r[h.revision]),values:JSON.parse(String(r[h.normalized_values_json]||'{}')),
-      validationErrors:JSON.parse(String(r[h.validation_errors_json]||'[]')),
-      validationWarnings:JSON.parse(String(r[h.validation_warnings_json]||'[]')),
-      fieldEvidence:(()=>{const evidence=JSON.parse(String(r[h.field_evidence_json]||'{}'));return evidence.cells||evidence;})(),
-      rowGeometry:(()=>{const evidence=JSON.parse(String(r[h.field_evidence_json]||'{}'));return evidence.rowGeometry||null;})(),
-      createdBy:String(r[h.created_by]),createdAt:String(r[h.created_at])}));
+    .slice(-limit).reverse().map(r=>{
+      const evidence=JSON.parse(String(r[h.field_evidence_json]||'{}')),file=fileById.get(String(r[h.file_id]||''))||{};
+      return {stagingId:String(r[h.staging_id]),batchId:String(r[h.batch_id]),
+        sourceRowNumber:Number(r[h.source_row_number]),state:String(r[h.state]),reviewState:String(r[h.review_state]),
+        revision:Number(r[h.revision]),values:JSON.parse(String(r[h.normalized_values_json]||'{}')),
+        validationErrors:JSON.parse(String(r[h.validation_errors_json]||'[]')),
+        validationWarnings:JSON.parse(String(r[h.validation_warnings_json]||'[]')),
+        fieldEvidence:evidence.cells||evidence,rowGeometry:evidence.rowGeometry||null,
+        sourceFileName:String(file.source_filename||''),sourceFileUrl:String(file.drive_file_url||''),
+        sourceFileSha256:String(file.server_verified_sha256||file.source_file_sha256||''),
+        createdBy:String(r[h.created_by]),createdAt:String(r[h.created_at])};
+    });
   return {ok:true,rows};
 }
 function kanwilRowsAsObjectsV1_(sheet){
