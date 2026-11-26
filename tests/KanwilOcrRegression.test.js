@@ -219,3 +219,49 @@ assert.ok(dateColumnResult.rowSegmentation.rowBands.every(b=>b.hasAnyDateAnchor)
 assert.ok(dateColumnResult.rowSegmentation.rowBands.every(b=>!b.hasPaymentDateAnchor),'payment-date evidence remains separately auditable');
 assert.ok(dateColumnResult.rowSegmentation.rowBands.every(b=>b.dateAnchorFields.includes('tanggal_mulai_verifikasi')),'date anchor field identity is preserved');
 assert.strictEqual(dateColumnResult.autoCommit,false);
+
+
+// Regression: OCR tokens can start just before the inferred column left edge
+// but have their center inside the correct cell. Midpoint-derived boundaries
+// incorrectly move these tokens into the preceding column.
+const leftEdgeWords=[];
+KANWIL_SCREENSHOT_COLUMNS_V1.forEach(([key,aliases],col)=>{
+ aliases[0].split(' ').forEach((token,row)=>{
+  const x=colX[col]+(row===0?0:2);
+  const y=y0+row*lineH;
+  leftEdgeWords.push({text:token,confidence:94,bbox:{x0:x,y0:y,x1:x+token.length*5.2,y1:y+13}});
+ });
+});
+const leftEdgeRowY=140;
+const leftEdgeSample=[
+ {col:0,text:'2026-11-17'},
+ {col:1,text:'2026-11-23'},
+ {col:2,text:'2026-11-23'},
+ {col:3,text:'CONVERSION'},
+ {col:4,text:'ITAP'},
+ {col:5,text:'171126046899'},
+ {col:6,text:'2026-11-17'},
+ {col:7,text:'LINDA'},
+ {col:8,text:'MEHMET'},
+ {col:9,text:'MALE'},
+ {col:10,text:'1980-06-05'},
+ {col:11,text:'TURKI'},
+ {col:12,text:'U37234274'},
+ {col:13,text:'ITASITAP_SPOUSEIDN'},
+ {col:14,text:'FAMILY'},
+ {col:15,text:'Produk'},
+ {col:16,text:'TERBIT'}
+];
+leftEdgeSample.forEach(({col,text})=>{
+ const start=colX[col]-(col?8:0),nextX=colX[col+1]||1600,width=Math.min(text.length*5.5,nextX-colX[col]-6);
+ leftEdgeWords.push({text,confidence:94,bbox:{x0:start,y0:leftEdgeRowY,x1:start+width,y1:leftEdgeRowY+13}});
+});
+const leftEdgeResult=reconstructKanwilScreenshotTableV1(leftEdgeWords,{lineTolerance:8,maxHeaderLines:6});
+assert.strictEqual(leftEdgeResult.ok,true);
+assert.strictEqual(leftEdgeResult.rows.length,1);
+assert.strictEqual(leftEdgeResult.rows[0].values.layanan,'CONVERSION','service token should not shift into auto-issue date');
+assert.strictEqual(leftEdgeResult.rows[0].values.kategori_produk,'ITAP','category token should remain in its own cell');
+assert.strictEqual(leftEdgeResult.rows[0].values.nomor_permohonan,'171126046899','application number should remain in its own cell');
+assert.strictEqual(leftEdgeResult.rows[0].values.nama,'MEHMET','name token should remain in its own cell');
+assert.strictEqual(leftEdgeResult.rows[0].values.jenis_kelamin,'MALE');
+assert.strictEqual(leftEdgeResult.autoCommit,false);

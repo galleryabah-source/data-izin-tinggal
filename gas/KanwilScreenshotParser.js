@@ -175,16 +175,23 @@ function reconstructKanwilScreenshotTableV1(words,options){
  // The first data column is left-aligned at the screenshot edge. The OCR
  // word-origin adjustment below can move its x probe slightly left of the
  // first glyph, so provide explicit edge padding or payment-date anchors vanish.
+ // Header anchors are the left edges of the Kanwil columns (the OCR
+ // fragments are grouped by x0), not column centers. Midpoint boundaries
+ // shift early data tokens into the preceding column, especially where the
+ // table has narrow cells. Use consecutive left-edge anchors as cell bounds.
  const bounds=columns.map((col,i)=>({
-  key:col.key,left:i?(columns[i-1].anchor+col.anchor)/2:minX-edgePadding,
-  right:i<columns.length-1?(col.anchor+columns[i+1].anchor)/2:maxX+edgePadding
+  key:col.key,left:i?col.anchor-edgePadding:minX-edgePadding,
+  right:i<columns.length-1?columns[i+1].anchor-1:maxX+edgePadding
  }));
  const dataLines=lines.slice(best.end+1);
  const dateKeysForAnchors=new Set(['tanggal_pembayaran','tanggal_mulai_verifikasi','tanggal_auto_terbit','tanggal_permohonan','tanggal_lahir']);
  const lineBuckets=dataLines.map((line,index)=>{
   const buckets=Object.fromEntries(columns.map(col=>[col.key,[]]));
   line.words.forEach(w=>{
-   const x=w.bbox.x0-Math.max(3,(w.bbox.y1-w.bbox.y0)*0.4);
+   // Assign a token by its horizontal center. OCR glyphs can begin a
+   // few pixels before a header-derived left edge while still belonging to
+   // that cell; full bbox remains available for boundary-crossing review.
+   const x=(w.bbox.x0+w.bbox.x1)/2;
    const col=bounds.find(b=>x>=b.left&&x<=b.right);
    if(col)buckets[col.key].push(w);
   });
