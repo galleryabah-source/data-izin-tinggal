@@ -253,7 +253,7 @@ const leftEdgeSample=[
  {col:16,text:'TERBIT'}
 ];
 leftEdgeSample.forEach(({col,text})=>{
- const start=colX[col]-(col?12:0),nextX=colX[col+1]||1600,width=Math.min(text.length*5.5,nextX-colX[col]-6);
+ const start=colX[col]-(col?8:0),nextX=colX[col+1]||1600,width=Math.min(text.length*5.5,nextX-colX[col]-6);
  leftEdgeWords.push({text,confidence:94,bbox:{x0:start,y0:leftEdgeRowY,x1:start+width,y1:leftEdgeRowY+13}});
 });
 const leftEdgeResult=reconstructKanwilScreenshotTableV1(leftEdgeWords,{lineTolerance:8,maxHeaderLines:6});
