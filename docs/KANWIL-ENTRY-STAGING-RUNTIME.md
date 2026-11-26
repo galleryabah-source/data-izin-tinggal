@@ -26,13 +26,15 @@ Required Script Properties:
 | `KANWIL_SCOPE_ID` | Stable region/office scope key used in import idempotency and record identity |
 | `KANWIL_STAGING_ENABLED` | Explicit feature switch; must remain unset/false until runtime UAT is approved |
 
-The staging spreadsheet must contain six sheets with exact headers provisioned by `provisionKanwilStagingSchema_()`:
+The staging spreadsheet must contain eight sheets with exact headers provisioned by `provisionKanwilStagingSchema_()`:
 
 - `KANWIL_BATCHES`
 - `KANWIL_FILES`
 - `KANWIL_STAGING` (includes explicit `review_state`, `state`, and `revision` columns)
 - `KANWIL_RECORDS`
 - `KANWIL_EVENTS`
+- `KANWIL_REVISIONS`
+- `KANWIL_RECONCILIATIONS`
 - `KANWIL_AUDIT`
 
 Provisioning validates all six header rows before persisting the staging spreadsheet ID. It does not set the feature flag. Never point the Kanwil staging property at the canonical spreadsheet.
