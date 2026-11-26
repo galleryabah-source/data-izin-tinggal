@@ -137,13 +137,14 @@ function verifyKanwilStorageTargetsV1(){
     if(probe){try{probe.setTrashed(true);}catch(cleanupError){}}
     throw new Error('KANWIL_DRIVE_WRITE_PREFLIGHT_FAILED: '+String(error&&error.message||error));
   }
-  // Preflight never enables writes. Runtime UAT and owner sign-off are separate gates.
-  props.setProperty('KANWIL_STAGING_ENABLED','false');
+  // Read-only with respect to Script Properties: preflight must never enable or
+  // disable an already configured runtime. Runtime UAT and owner sign-off remain separate gates.
+  const enabled=kanwilEntryEnabled_();
   return {
-    ok:true,readyForUat:true,enabled:false,scopeId,
+    ok:true,readyForUat:true,enabled,scopeId,
     stagingSpreadsheetId:stagingId,driveFolderId,
     schemaReady:true,driveWriteVerified:true,
-    activationRequiresSeparateOwnerApproval:true,canonicalWrites:false
+    activationRequiresSeparateOwnerApproval:!enabled,canonicalWrites:false
   };
 }
 function provisionKanwilStagingFromConfiguredId(){
