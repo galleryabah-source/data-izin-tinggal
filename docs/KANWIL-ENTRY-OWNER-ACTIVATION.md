@@ -28,15 +28,17 @@ The account executing provisioning must be an authorized back-office administrat
 4. Complete any Google authorization prompt using the intended owner account.
 5. Confirm the execution returns `ready: true` and `enabled: false`.
 6. Run the protected `verifyKanwilStorageTargetsV1` preflight. It verifies the configured spreadsheet schema and actual Drive write permission using a temporary file that is immediately trashed. It deliberately keeps `KANWIL_STAGING_ENABLED=false`.
-7. Confirm these six tabs exist and their first-row headers exactly match the schema constants:
+7. Confirm all eight tabs exist and their first-row headers exactly match the schema constants:
    - `KANWIL_BATCHES`
    - `KANWIL_FILES`
    - `KANWIL_STAGING`
    - `KANWIL_RECORDS`
    - `KANWIL_EVENTS`
+   - `KANWIL_REVISIONS`
+   - `KANWIL_RECONCILIATIONS`
    - `KANWIL_AUDIT`
 
-The provisioning routine first preflights every existing non-empty tab, including exact header count and order, before creating or modifying any tab. If any existing tab is mismatched, provisioning stops before creating missing tabs. It then creates missing tabs and writes headers only into empty tabs; it never overwrites a non-empty tab. The staging spreadsheet ID is persisted only after all six tabs validate.
+The provisioning routine creates and validates eight tabs. It first preflights every existing non-empty tab, including exact header count and order, before creating or modifying any tab. If any existing tab is mismatched, provisioning stops before creating missing tabs. It then creates missing tabs and writes headers only into empty tabs; it never overwrites a non-empty tab. The staging spreadsheet ID is persisted only after all six tabs validate.
 
 ## Runtime UAT — feature flag remains OFF
 
