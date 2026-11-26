@@ -55,11 +55,12 @@ The owner provisioning entrypoint `provisionKanwilStagingFromConfiguredId` is pr
 1. Create a dedicated Kanwil staging spreadsheet with restricted access.
 2. Verify the spreadsheet is not the canonical `SPREADSHEET_ID`.
 3. Configure the staging spreadsheet ID in Script Properties, then run the guarded `provisionKanwilStagingFromConfiguredId` owner entrypoint from the authorized Apps Script project context. See [KANWIL-ENTRY-OWNER-ACTIVATION.md](./KANWIL-ENTRY-OWNER-ACTIVATION.md).
-4. Set a stable `KANWIL_SCOPE_ID`.
-5. Run the runtime matrix with at least two authorized back-office users: manual create, file import, retry/idempotency, duplicate application number, invalid dates, validation-required rows, independent review, rejection, approval, finalization, and audit reconciliation.
-6. Confirm no write or row-count delta occurs in canonical monthly datasets, registry, importer, or Daily Input.
-7. Only after the runtime UAT and least-privilege review are signed off, set `KANWIL_STAGING_ENABLED=true`.
-8. Run production smoke and retain evidence before declaring the feature deployed or production-certified.
+4. Run `verifyKanwilStorageTargetsV1` to prove schema readiness and Drive write access. This preflight does not enable writes.
+5. Set a stable `KANWIL_SCOPE_ID`.
+6. Run the runtime matrix with at least two authorized back-office users: manual create, file import, retry/idempotency, duplicate application number, invalid dates, validation-required rows, independent review, rejection, approval, finalization, and audit reconciliation.
+7. Confirm no write or row-count delta occurs in canonical monthly datasets, registry, importer, or Daily Input.
+8. Only after the runtime UAT and least-privilege review are signed off, set `KANWIL_STAGING_ENABLED=true`.
+9. Run production smoke and retain evidence before declaring the feature deployed or production-certified.
 
 ## Important limitations
 
