@@ -16,7 +16,7 @@ const RPC_MANIFEST_V1=Object.freeze({
   getBootstrap:{access:'protected',permission:'backoffice.access'},
   getDailyBootstrap:{access:'protected',permission:'daily.read'},
   provisionKanwilStagingFromConfiguredId:{access:'protected',permission:'admin.config'},
-  activateKanwilStorageFromOwnerTargetsV1:{access:'protected',permission:'admin.config'},
+  verifyKanwilStorageTargetsV1:{access:'protected',permission:'admin.config'},
   getKanwilEntryStatus:{access:'protected',permission:'backoffice.access'},
   listKanwilApplications:{access:'protected',permission:'backoffice.access'},
   saveKanwilApplication:{access:'protected',permission:'backoffice.access'},
