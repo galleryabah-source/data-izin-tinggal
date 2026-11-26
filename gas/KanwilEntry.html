@@ -281,7 +281,7 @@ $('kpeClearPaste').addEventListener('click',()=>{
 $('kpeParsePasteText').addEventListener('click',async()=>{
  const text=$('kpePasteText').value.trim();if(!text){say('Tempel tabel terlebih dahulu.');return;}
  try{
-  const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@1a1a9036af86dc28ebd103de7172abe55e0e7b45/gas/';
+  const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@d51c810d28498bfd8484f6b3fdf57fc52c325b18/gas/';
   const response=await fetch(base+'KanwilPermitContract.js');if(!response.ok)throw Error('Kontrak parser tidak dapat dimuat.');
   const module={exports:{}};new Function('module','exports',await response.text())(module,module.exports);
   const delimiter=(text.split(/\r?\n/,1)[0].match(/\t/g)||[]).length?'\t':',';
@@ -299,7 +299,7 @@ $('kpeRun').addEventListener('click',async()=>{
  if(files.length>50){say('Batas prototipe 50 file per batch.');return;}
  state.busy=true;$('kpeRun').disabled=true;state.rows=[];state.log=[];state.imports=[];$('kpePersistFiles').disabled=true;render();
  try{
-  const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@1a1a9036af86dc28ebd103de7172abe55e0e7b45/gas/';
+  const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@d51c810d28498bfd8484f6b3fdf57fc52c325b18/gas/';
   const [contractSrc,xlsxSrc,shotSrc,ocrSrc,policySrc]=await Promise.all(['KanwilPermitContract.js','KanwilXlsxAdapter.js','KanwilScreenshotParser.js','KanwilOcrAdapter.js','KanwilIntakePolicy.js'].map(async name=>{const response=await fetch(base+name);if(!response.ok)throw Error('Gagal memuat modul '+name);return response.text();}));
   const loadModule=source=>{const module={exports:{}};new Function('module','exports',source)(module,module.exports);return module.exports;};
   const contract=loadModule(contractSrc),xlsx=loadModule(xlsxSrc),shot=loadModule(shotSrc),ocr=loadModule(ocrSrc),policy=loadModule(policySrc);
