@@ -358,6 +358,27 @@ function loadKanwilQueue(){
     line.append(field,value);detailBody.append(line);
    });
    detailTable.append(detailBody);detail.append(detailTable);
+   if(row.sourceFileUrl&&/^https:\/\/drive\.google\.com\//.test(row.sourceFileUrl)){
+    const sourceLink=document.createElement('a');sourceLink.href=row.sourceFileUrl;sourceLink.target='_blank';sourceLink.rel='noopener noreferrer';
+    sourceLink.textContent='Buka file sumber: '+(row.sourceFileName||'arsip Drive');detail.append(sourceLink);
+   }
+   if(row.sourceFileSha256){const hash=document.createElement('p');hash.textContent='SHA-256 server: '+row.sourceFileSha256;detail.append(hash);}
+   if(row.fieldEvidence&&Object.keys(row.fieldEvidence).length){
+    const evidenceTable=document.createElement('table'),evidenceBody=document.createElement('tbody');
+    const evidenceHead=document.createElement('tr');
+    ['Bukti OCR','Status','Confidence','Bounding box','Catatan'].forEach(label=>{const th=document.createElement('th');th.textContent=label;evidenceHead.append(th);});
+    evidenceBody.append(evidenceHead);
+    manualFields.forEach(([key,label])=>{
+     const ev=row.fieldEvidence[key]||{},line=document.createElement('tr');
+     const field=document.createElement('th');field.textContent=label;line.append(field);
+     const status=document.createElement('td');status.textContent=ev.cellStatus||'NO_EVIDENCE';line.append(status);
+     const confidence=document.createElement('td');confidence.textContent=Number.isFinite(ev.meanConfidence)?ev.meanConfidence.toFixed(1)+'%':'—';line.append(confidence);
+     const bbox=document.createElement('td');bbox.textContent=ev.bbox?[ev.bbox.x0,ev.bbox.y0,ev.bbox.x1,ev.bbox.y1].map(n=>Math.round(n)).join(', '):'—';line.append(bbox);
+     const flags=document.createElement('td');flags.textContent=(ev.reviewFlags||[]).join(', ')||'—';line.append(flags);
+     evidenceBody.append(line);
+    });
+    evidenceTable.append(evidenceBody);detail.append(evidenceTable);
+   }
    if(row.validationErrors&&row.validationErrors.length){
     const errors=document.createElement('p');errors.textContent='Tidak dapat disetujui: '+row.validationErrors.join('; ');detail.append(errors);
    }
