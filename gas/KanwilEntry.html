@@ -48,7 +48,7 @@ rows plus file metadata/checksum are sent to the dedicated Kanwil staging store.
 <div class="toolbar"><input id="kpeFiles" type="file" multiple accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,image/jpeg,image/png"><button id="kpeRun" type="button">Proses file terpilih</button><button id="kpePersistFiles" type="button" disabled>Simpan hasil file ke staging</button><button id="kpeClear" type="button">Bersihkan</button></div>
 <div class="progress"><span id="kpeProgress"></span></div><div class="status" id="kpeStatus" role="status" aria-live="polite">Belum ada file diproses.</div>
 <div class="tablewrap"><table><thead><tr><th>File</th><th>Baris sumber</th><th>Nomor permohonan</th><th>Nama</th><th>Nomor paspor</th><th>Status</th><th>Catatan review</th></tr></thead><tbody id="kpeRows"><tr><td colspan="7">Belum ada hasil.</td></tr></tbody></table></div>
-<h3>Daftar Permohonan Tersimpan</h3><div class="tablewrap"><table><thead><tr><th>Nomor Permohonan</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="kpeQueue"><tr><td colspan="4">Memuat status penyimpanan…</td></tr></tbody></table></div><h3>Raw OCR / error log (lokal)</h3><pre id="kpeLog">—</pre>
+<h3>Daftar Permohonan Tersimpan</h3><div class="tablewrap"><table><thead><tr><th>Nomor Permohonan</th><th>Nama</th><th>Status</th><th>Aksi</th><th>Detail &amp; bukti review</th></tr></thead><tbody id="kpeQueue"><tr><td colspan="5">Memuat status penyimpanan…</td></tr></tbody></table></div><h3>Raw OCR / error log (lokal)</h3><pre id="kpeLog">—</pre>
 </section>
 <script>
 (function(){
@@ -334,7 +334,7 @@ function loadKanwilQueue(){
  if(!state.enabled)return;
  google.script.run.withSuccessHandler(result=>{
   const body=$('kpeQueue');body.replaceChildren();const rows=result&&result.rows||[];
-  if(!rows.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.textContent='Belum ada permohonan tersimpan.';tr.append(td);body.append(tr);return;}
+  if(!rows.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=5;td.textContent='Belum ada permohonan tersimpan.';tr.append(td);body.append(tr);return;}
   rows.forEach(row=>{
    const tr=document.createElement('tr'),number=document.createElement('td'),name=document.createElement('td'),status=document.createElement('td'),actions=document.createElement('td');
    number.textContent=row.values.nomor_permohonan||'—';name.textContent=row.values.nama||'—';status.textContent=row.state+(row.validationErrors&&row.validationErrors.length?' — '+row.validationErrors.join('; '):'');
