@@ -48,7 +48,7 @@ rows plus file metadata/checksum are sent to the dedicated Kanwil staging store.
 <div class="toolbar"><input id="kpeFiles" type="file" multiple accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,image/jpeg,image/png"><button id="kpeRun" type="button">Proses file terpilih</button><button id="kpePersistFiles" type="button" disabled>Simpan hasil file ke staging</button><button id="kpeClear" type="button">Bersihkan</button></div>
 <div class="progress"><span id="kpeProgress"></span></div><div class="status" id="kpeStatus" role="status" aria-live="polite">Belum ada file diproses.</div>
 <div class="tablewrap"><table><thead><tr><th>File</th><th>Baris sumber</th><th>Nomor permohonan</th><th>Nama</th><th>Nomor paspor</th><th>Status</th><th>Catatan review</th></tr></thead><tbody id="kpeRows"><tr><td colspan="7">Belum ada hasil.</td></tr></tbody></table></div>
-<h3>Daftar Permohonan Tersimpan</h3><div class="tablewrap"><table><thead><tr><th>Nomor Permohonan</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="kpeQueue"><tr><td colspan="4">Memuat status penyimpanan…</td></tr></tbody></table></div><h3>Raw OCR / error log (lokal)</h3><pre id="kpeLog">—</pre>
+<h3>Daftar Permohonan Tersimpan</h3><div class="tablewrap"><table><thead><tr><th>Nomor Permohonan</th><th>Nama</th><th>Status</th><th>Aksi</th><th>Detail &amp; bukti review</th></tr></thead><tbody id="kpeQueue"><tr><td colspan="5">Memuat status penyimpanan…</td></tr></tbody></table></div><h3>Raw OCR / error log (lokal)</h3><pre id="kpeLog">—</pre>
 </section>
 <script>
 (function(){
@@ -281,7 +281,7 @@ $('kpeClearPaste').addEventListener('click',()=>{
 $('kpeParsePasteText').addEventListener('click',async()=>{
  const text=$('kpePasteText').value.trim();if(!text){say('Tempel tabel terlebih dahulu.');return;}
  try{
-  const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@9882ae3202f56f8f3bdcf270da629545e0953950/gas/';
+  const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@1a1a9036af86dc28ebd103de7172abe55e0e7b45/gas/';
   const response=await fetch(base+'KanwilPermitContract.js');if(!response.ok)throw Error('Kontrak parser tidak dapat dimuat.');
   const module={exports:{}};new Function('module','exports',await response.text())(module,module.exports);
   const delimiter=(text.split(/\r?\n/,1)[0].match(/\t/g)||[]).length?'\t':',';
@@ -299,7 +299,7 @@ $('kpeRun').addEventListener('click',async()=>{
  if(files.length>50){say('Batas prototipe 50 file per batch.');return;}
  state.busy=true;$('kpeRun').disabled=true;state.rows=[];state.log=[];state.imports=[];$('kpePersistFiles').disabled=true;render();
  try{
-  const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@9882ae3202f56f8f3bdcf270da629545e0953950/gas/';
+  const base='https://cdn.jsdelivr.net/gh/galleryabah-source/data-izin-tinggal@1a1a9036af86dc28ebd103de7172abe55e0e7b45/gas/';
   const [contractSrc,xlsxSrc,shotSrc,ocrSrc,policySrc]=await Promise.all(['KanwilPermitContract.js','KanwilXlsxAdapter.js','KanwilScreenshotParser.js','KanwilOcrAdapter.js','KanwilIntakePolicy.js'].map(async name=>{const response=await fetch(base+name);if(!response.ok)throw Error('Gagal memuat modul '+name);return response.text();}));
   const loadModule=source=>{const module={exports:{}};new Function('module','exports',source)(module,module.exports);return module.exports;};
   const contract=loadModule(contractSrc),xlsx=loadModule(xlsxSrc),shot=loadModule(shotSrc),ocr=loadModule(ocrSrc),policy=loadModule(policySrc);
@@ -334,7 +334,7 @@ function loadKanwilQueue(){
  if(!state.enabled)return;
  google.script.run.withSuccessHandler(result=>{
   const body=$('kpeQueue');body.replaceChildren();const rows=result&&result.rows||[];
-  if(!rows.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.textContent='Belum ada permohonan tersimpan.';tr.append(td);body.append(tr);return;}
+  if(!rows.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=5;td.textContent='Belum ada permohonan tersimpan.';tr.append(td);body.append(tr);return;}
   rows.forEach(row=>{
    const tr=document.createElement('tr'),number=document.createElement('td'),name=document.createElement('td'),status=document.createElement('td'),actions=document.createElement('td');
    number.textContent=row.values.nomor_permohonan||'—';name.textContent=row.values.nama||'—';status.textContent=row.state+(row.validationErrors&&row.validationErrors.length?' — '+row.validationErrors.join('; '):'');
@@ -348,7 +348,44 @@ function loadKanwilQueue(){
    }else if(row.state==='APPROVED'){
     const b=document.createElement('button');b.type='button';b.textContent='Finalisasi';b.addEventListener('click',()=>actKanwil(row.stagingId,'COMMIT'));actions.append(b);
    }
-   tr.append(number,name,status,actions);body.append(tr);
+   const detailCell=document.createElement('td');
+   const detail=document.createElement('details'),detailSummary=document.createElement('summary');
+   detailSummary.textContent='Lihat 17 kolom dan bukti';detail.append(detailSummary);
+   const detailTable=document.createElement('table'),detailBody=document.createElement('tbody');
+   manualFields.forEach(([key,label])=>{
+    const line=document.createElement('tr'),field=document.createElement('th'),value=document.createElement('td');
+    field.textContent=label;value.textContent=row.values&&row.values[key]!==null&&row.values[key]!==undefined?String(row.values[key]):'—';
+    line.append(field,value);detailBody.append(line);
+   });
+   detailTable.append(detailBody);detail.append(detailTable);
+   if(row.sourceFileUrl&&/^https:\/\/drive\.google\.com\//.test(row.sourceFileUrl)){
+    const sourceLink=document.createElement('a');sourceLink.href=row.sourceFileUrl;sourceLink.target='_blank';sourceLink.rel='noopener noreferrer';
+    sourceLink.textContent='Buka file sumber: '+(row.sourceFileName||'arsip Drive');detail.append(sourceLink);
+   }
+   if(row.sourceFileSha256){const hash=document.createElement('p');hash.textContent='SHA-256 server: '+row.sourceFileSha256;detail.append(hash);}
+   if(row.fieldEvidence&&Object.keys(row.fieldEvidence).length){
+    const evidenceTable=document.createElement('table'),evidenceBody=document.createElement('tbody');
+    const evidenceHead=document.createElement('tr');
+    ['Bukti OCR','Status','Confidence','Bounding box','Catatan'].forEach(label=>{const th=document.createElement('th');th.textContent=label;evidenceHead.append(th);});
+    evidenceBody.append(evidenceHead);
+    manualFields.forEach(([key,label])=>{
+     const ev=row.fieldEvidence[key]||{},line=document.createElement('tr');
+     const field=document.createElement('th');field.textContent=label;line.append(field);
+     const status=document.createElement('td');status.textContent=ev.cellStatus||'NO_EVIDENCE';line.append(status);
+     const confidence=document.createElement('td');confidence.textContent=Number.isFinite(ev.meanConfidence)?ev.meanConfidence.toFixed(1)+'%':'—';line.append(confidence);
+     const bbox=document.createElement('td');bbox.textContent=ev.bbox?[ev.bbox.x0,ev.bbox.y0,ev.bbox.x1,ev.bbox.y1].map(n=>Math.round(n)).join(', '):'—';line.append(bbox);
+     const flags=document.createElement('td');flags.textContent=(ev.reviewFlags||[]).join(', ')||'—';line.append(flags);
+     evidenceBody.append(line);
+    });
+    evidenceTable.append(evidenceBody);detail.append(evidenceTable);
+   }
+   if(row.validationErrors&&row.validationErrors.length){
+    const errors=document.createElement('p');errors.textContent='Tidak dapat disetujui: '+row.validationErrors.join('; ');detail.append(errors);
+   }
+   if(row.validationWarnings&&row.validationWarnings.length){
+    const warnings=document.createElement('p');warnings.textContent='Peringatan: '+row.validationWarnings.join('; ');detail.append(warnings);
+   }
+   detailCell.append(detail);tr.append(number,name,status,actions,detailCell);body.append(tr);
   });
  }).withFailureHandler(error=>say('Gagal memuat antrean Kanwil: '+(error&&error.message||String(error)))).listKanwilApplications({limit:100});
 }
@@ -361,6 +398,7 @@ function startKanwilRevision(row){
  form.scrollIntoView({behavior:'smooth',block:'center'});
 }
 function actKanwil(id,action){
+ if(action==='APPROVE'&&!window.confirm('Pastikan Anda telah membuka dan memeriksa seluruh 17 kolom serta bukti sumber. Setujui data ini?'))return;
  const reason=window.prompt('Masukkan alasan tindakan '+action+':');if(!reason||!reason.trim())return;
  const runner=google.script.run.withSuccessHandler(()=>{say('Tindakan '+action+' berhasil.');loadKanwilQueue();})
   .withFailureHandler(error=>say('Tindakan gagal: '+(error&&error.message||String(error))));

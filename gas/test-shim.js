@@ -1863,7 +1863,7 @@ const kanwilNavSource=read('index.html');
 assert(kanwilNavSource.includes('href="<?= WEB_APP_URL ?>?view=kanwil" target="_top"')&&kanwilNavSource.includes('Input Layanan Kanwil'),'Back-office navigation exposes the Kanwil entry workspace through the canonical same-tab route');
 const kanwilPageSource=read('KanwilEntry.html');
 assert(kanwilPageSource.includes('Kanwil staging')&&kanwilPageSource.includes('google.script.run'),'Kanwil manual entry is connected to isolated server-side staging');
-assert(kanwilPageSource.includes('@9882ae3202f56f8f3bdcf270da629545e0953950/gas/'),'Kanwil browser parser modules are pinned to an immutable reviewed commit');
+assert(kanwilPageSource.includes('@1a1a9036af86dc28ebd103de7172abe55e0e7b45/gas/'),'Kanwil browser parser modules are pinned to the latest reviewed immutable commit');
 assert(!kanwilPageSource.includes('data-izin-tinggal@main/gas/'),'Kanwil browser parser never executes mutable main-branch code');
 assert(kanwilPageSource.includes('id="kpePasteImage"')&&kanwilPageSource.includes("clipboardData.items")&&kanwilPageSource.includes("kpeProcessPastedImage"),'Kanwil screenshot intake accepts a directly pasted clipboard image');
 assert(kanwilPageSource.includes('id="kpePasteText"')&&kanwilPageSource.includes('kpeParsePasteText')&&kanwilPageSource.includes("delimiter:'\\t'"),'Kanwil intake exposes a dedicated tabular-text paste field and parser action');
@@ -1931,6 +1931,9 @@ assert(kanwilPersistenceSource.includes("if(!['REJECTED','VALIDATION_REQUIRED'].
 assert(kanwilPersistenceSource.includes("throw new Error('KANWIL_REVISION_CONFLICT')"),'Kanwil revision endpoint rejects stale concurrent edits');
 assert(kanwilPersistenceSource.includes("kanwilAppendEventV1_(sheets,'',id,'REVISION_SUBMITTED'")&&kanwilPersistenceSource.includes("user.email,'REVISION_SUBMITTED',why"),'Every Kanwil revision records a lifecycle event and audit entry');
 assert(kanwilPersistenceSource.includes("throw new Error('KANWIL_APPROVAL_EVIDENCE_MISSING')")&&kanwilPersistenceSource.includes("latestReview[eventHeader.actor_id]"),'Kanwil finalization requires persisted approval evidence and a distinct reviewer');
+assert(kanwilPersistenceSource.includes('KANWIL_VALIDATION_ERRORS_BLOCK_APPROVAL')&&kanwilPersistenceSource.includes('KANWIL_STAGED_PAYLOAD_HASH_MISMATCH'),'Kanwil approval revalidates server-side payload and blocks validation errors or altered payloads');
+assert(kanwilPersistenceSource.includes('KANWIL_VALIDATION_ERRORS_BLOCK_COMMIT')&&kanwilPersistenceSource.includes('KANWIL_COMMIT_PAYLOAD_HASH_MISMATCH')&&kanwilPersistenceSource.includes('KANWIL_APPROVAL_EVIDENCE_STALE'),'Kanwil finalization revalidates payload integrity, validation state, and approval revision evidence');
+assert(kanwilPageSource.includes('Lihat 17 kolom dan bukti')&&kanwilPageSource.includes('Pastikan Anda telah membuka dan memeriksa seluruh 17 kolom'),'Kanwil reviewer can inspect all 17 stored fields and must confirm before approval');
 const kanwilRevisionHelpers=new Function(kanwilPersistenceSource+'\nreturn {kanwilLatestReviewEventV1_};')();
 const kanwilEventHeaders=['event_id','record_id','staging_id','event_sequence','event_type','from_state','to_state','revision','payload_sha256','actor_id','reason','correlation_id','occurred_at'];
 const kanwilEventRows=[kanwilEventHeaders,['E1','','S1',1,'REVIEW_REJECT','REVIEW_REQUIRED','REJECTED',1,'H1','reviewer@example.gov.id','','C1','T1'],['E2','','S1',2,'REVISION_SUBMITTED','REJECTED','REVIEW_REQUIRED',2,'H2','operator@example.gov.id','','C2','T2'],['E3','','S1',3,'REVIEW_APPROVE','REVIEW_REQUIRED','APPROVED',2,'H2','reviewer2@example.gov.id','','C3','T3']];
@@ -2015,9 +2018,10 @@ assert(!kanwilEntryHtml.includes('Prototipe terisolasi.'),'Kanwil UI no longer l
 const kanwilRpcManifestSource=read('RpcManifest.js');
 assert(kanwilStagingServiceSource.includes('function provisionKanwilStagingFromConfiguredId()')&&kanwilStagingServiceSource.includes('requireBackOfficeAccess_()')&&kanwilStagingServiceSource.includes("requirePermission_('admin.config')"),'Owner provisioning entrypoint is argument-free and guarded by back-office and admin.config authorization');
 assert(kanwilStagingServiceSource.includes("getProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty)"),'Owner provisioning reads the dedicated staging target from Script Properties');
-assert(kanwilStagingServiceSource.includes('function activateKanwilStorageFromOwnerTargetsV1()')&&kanwilStagingServiceSource.includes("KANWIL_DRIVE_FOLDER_ID:driveFolderId")&&kanwilStagingServiceSource.includes("props.setProperty('KANWIL_STAGING_ENABLED','true')"),'Owner activation configures supplied storage targets and enables writes only after schema and Drive permission checks');
+assert(kanwilStagingServiceSource.includes('function verifyKanwilStorageTargetsV1()')&&kanwilStagingServiceSource.includes("getProperty('KANWIL_DRIVE_FOLDER_ID')")&&kanwilStagingServiceSource.includes("props.setProperty('KANWIL_STAGING_ENABLED','false')")&&!kanwilStagingServiceSource.includes("props.setProperty('KANWIL_STAGING_ENABLED','true')"),'Storage preflight verifies configured targets but never enables writes automatically');
 assert(kanwilStagingServiceSource.includes('probe.setTrashed(true)')&&kanwilStagingServiceSource.includes('KANWIL_DRIVE_WRITE_PREFLIGHT_FAILED'),'Owner activation verifies actual Drive write permission and trashes its preflight file');
 assert(kanwilRpcManifestSource.includes("provisionKanwilStagingFromConfiguredId:{access:'protected',permission:'admin.config'}"),'Owner provisioning RPC is explicitly classified as admin.config protected');
+assert(kanwilRpcManifestSource.includes("verifyKanwilStorageTargetsV1:{access:'protected',permission:'admin.config'}"),'Kanwil storage preflight RPC is explicitly classified as admin.config protected');
 
 const kanwilBatchScopeResolver=new Function(kanwilPersistenceSource+'\nreturn kanwilResolveBatchScopeV1_;')();
 const kanwilBatchHeader={batch_id:0,kanwil_scope_id:1};

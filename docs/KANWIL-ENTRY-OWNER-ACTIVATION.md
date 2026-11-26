@@ -27,7 +27,8 @@ The account executing provisioning must be an authorized back-office administrat
 3. In the Apps Script editor, select and run `provisionKanwilStagingFromConfiguredId` as the authorized owner.
 4. Complete any Google authorization prompt using the intended owner account.
 5. Confirm the execution returns `ready: true` and `enabled: false`.
-6. Confirm these six tabs exist and their first-row headers exactly match the schema constants:
+6. Run the protected `verifyKanwilStorageTargetsV1` preflight. It verifies the configured spreadsheet schema and actual Drive write permission using a temporary file that is immediately trashed. It deliberately keeps `KANWIL_STAGING_ENABLED=false`.
+7. Confirm these six tabs exist and their first-row headers exactly match the schema constants:
    - `KANWIL_BATCHES`
    - `KANWIL_FILES`
    - `KANWIL_STAGING`
