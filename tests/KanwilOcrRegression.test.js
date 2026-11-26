@@ -1,5 +1,6 @@
 const assert=require('assert');
 const {KANWIL_SCREENSHOT_COLUMNS_V1,reconstructKanwilScreenshotTableV1}=require('../gas/KanwilScreenshotParser');
+const {validateKanwilScreenshotEvidenceV1,adaptTesseractResultToKanwilV1}=require('../gas/KanwilOcrAdapter');
 const words=[];
 const y0=12, lineH=17, colX=[8,112,207,289,380,463,568,675,762,868,944,1024,1120,1200,1338,1428,1520];
 // Realistic wrapped headers: words within one header cell have normal word gaps,
@@ -265,3 +266,29 @@ assert.strictEqual(leftEdgeResult.rows[0].values.nomor_permohonan,'171126046899'
 assert.strictEqual(leftEdgeResult.rows[0].values.nama,'MEHMET','name token should remain in its own cell');
 assert.strictEqual(leftEdgeResult.rows[0].values.jenis_kelamin,'MALE');
 assert.strictEqual(leftEdgeResult.autoCommit,false);
+
+
+// OCR evidence contract regression: parser success is not sufficient unless all
+// 17 headers, anchors, diagnostics, row geometry and cell token evidence exist.
+const evidenceCheck=validateKanwilScreenshotEvidenceV1(result);
+assert.strictEqual(evidenceCheck.ok,true,'current geometry parser output must satisfy the OCR evidence contract: '+JSON.stringify(evidenceCheck.failures));
+assert.strictEqual(result.sourceRowCountVerified,false,'OCR must not claim the source row count is known');
+const legacyShape={
+ ...result,matchedHeaderCount:undefined,anchorGroupCount:undefined,candidateLineCount:undefined,
+ headerDiagnostics:[],sourceRowCountVerified:undefined,
+ rows:result.rows.map(row=>({...row,rowGeometry:null,fieldEvidence:null}))
+};
+const legacyCheck=validateKanwilScreenshotEvidenceV1(legacyShape);
+assert.strictEqual(legacyCheck.ok,false,'legacy parser output without structural evidence must fail closed');
+assert.ok(legacyCheck.failures.includes('MATCHED_HEADER_COUNT_NOT_17'));
+assert.ok(legacyCheck.failures.includes('ANCHOR_GROUP_COUNT_NOT_17'));
+assert.ok(legacyCheck.failures.includes('HEADER_DIAGNOSTICS_INCOMPLETE'));
+const adaptedLegacy=adaptTesseractResultToKanwilV1({data:{words,text:'legacy OCR'}},()=>legacyShape);
+assert.strictEqual(adaptedLegacy.ok,false,'adapter must not expose legacy parser rows as successful OCR');
+assert.strictEqual(adaptedLegacy.reason,'OCR_EVIDENCE_CONTRACT_INCOMPLETE');
+assert.strictEqual(adaptedLegacy.rows.length,0,'incomplete OCR rows must never be passed to staging');
+assert.strictEqual(adaptedLegacy.autoCommit,false);
+const adaptedCurrent=adaptTesseractResultToKanwilV1({data:{words,text:'current OCR'}},()=>result);
+assert.strictEqual(adaptedCurrent.ok,true,'current parser output with full evidence remains reviewable');
+assert.strictEqual(adaptedCurrent.evidenceValidated,true);
+assert.strictEqual(adaptedCurrent.autoCommit,false);
