@@ -112,28 +112,21 @@ function provisionKanwilStagingSchema_(stagingSpreadsheetId){
  * It provisions the isolated spreadsheet, proves Drive write access with a
  * temporary file that is immediately trashed, and enables the feature flag last.
  */
-function activateKanwilStorageFromOwnerTargetsV1(){
+function verifyKanwilStorageTargetsV1(){
   requireBackOfficeAccess_();
   requirePermission_('admin.config');
-  const stagingId='1hK0ClWkKcUhvne7yXYXYqvMQW7L-R2tuGOTVyzSVBWE';
-  const driveFolderId='13cIXTqgXUaxpYLlCXaE9hiNLHu2xZYTN';
-  const scopeId='KANWIL_JABAR';
   const props=PropertiesService.getScriptProperties();
   const canonicalId=String(props.getProperty('SPREADSHEET_ID')||'').trim();
-  if(!canonicalId||canonicalId===stagingId)throw new Error('KANWIL_STAGING_MUST_BE_SEPARATE_FROM_CANONICAL');
-  const staging=SpreadsheetApp.openById(stagingId);
-  if(!staging||String(staging.getId())!==stagingId)throw new Error('KANWIL_STAGING_IDENTITY_MISMATCH');
+  const stagingId=String(props.getProperty(KANWIL_STAGING_GUARD_V1.spreadsheetProperty)||'').trim();
+  const driveFolderId=String(props.getProperty('KANWIL_DRIVE_FOLDER_ID')||'').trim();
+  const scopeId=String(props.getProperty('KANWIL_SCOPE_ID')||'').trim();
+  if(!canonicalId||!stagingId||stagingId===canonicalId)throw new Error('KANWIL_STAGING_MUST_BE_SEPARATE_FROM_CANONICAL');
+  if(!driveFolderId)throw new Error('KANWIL_DRIVE_FOLDER_NOT_CONFIGURED');
+  if(!scopeId)throw new Error('KANWIL_SCOPE_ID_NOT_CONFIGURED');
+  const schema=kanwilStagingReadinessV1_();
+  if(!schema.ready)throw new Error('KANWIL_STAGING_PROVISIONING_FAILED: '+schema.reason);
   const folder=DriveApp.getFolderById(driveFolderId);
   if(!folder||String(folder.getId())!==driveFolderId)throw new Error('KANWIL_DRIVE_FOLDER_IDENTITY_MISMATCH');
-  // Keep all writes disabled until both resources pass real access checks.
-  props.setProperties({
-    KANWIL_STAGING_SPREADSHEET_ID:stagingId,
-    KANWIL_SCOPE_ID:scopeId,
-    KANWIL_DRIVE_FOLDER_ID:driveFolderId,
-    KANWIL_STAGING_ENABLED:'false'
-  },false);
-  const schema=provisionKanwilStagingSchema_(stagingId);
-  if(!schema.ready)throw new Error('KANWIL_STAGING_PROVISIONING_FAILED');
   let probe=null;
   try{
     probe=folder.createFile(Utilities.newBlob('INTAL Kanwil Drive permission preflight','text/plain','.kanwil-drive-preflight-'+Utilities.getUuid()+'.txt'));
@@ -141,17 +134,16 @@ function activateKanwilStorageFromOwnerTargetsV1(){
     probe.setTrashed(true);
     if(!probe.isTrashed())throw new Error('KANWIL_DRIVE_PREFLIGHT_CLEANUP_FAILED');
   }catch(error){
-    props.setProperty('KANWIL_STAGING_ENABLED','false');
+    if(probe){try{probe.setTrashed(true);}catch(cleanupError){}}
     throw new Error('KANWIL_DRIVE_WRITE_PREFLIGHT_FAILED: '+String(error&&error.message||error));
   }
-  // Enable only after schema and actual Drive write permission are proven.
-  props.setProperty('KANWIL_STAGING_ENABLED','true');
+  // Preflight never enables writes. Runtime UAT and owner sign-off are separate gates.
+  props.setProperty('KANWIL_STAGING_ENABLED','false');
   return {
-    ok:true,enabled:true,scopeId,
-    stagingSpreadsheetId:stagingId,
-    driveFolderId,
+    ok:true,readyForUat:true,enabled:false,scopeId,
+    stagingSpreadsheetId:stagingId,driveFolderId,
     schemaReady:true,driveWriteVerified:true,
-    canonicalWrites:false
+    activationRequiresSeparateOwnerApproval:true,canonicalWrites:false
   };
 }
 function provisionKanwilStagingFromConfiguredId(){
