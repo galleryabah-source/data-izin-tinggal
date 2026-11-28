@@ -20,14 +20,14 @@ function initializeSchema_(ss){
   Object.keys(schemas).forEach(n=>{let sh=ss.getSheetByName(n)||ss.insertSheet(n);if(sh.getLastRow()===0)sh.getRange(1,1,1,schemas[n].length).setValues([schemas[n]]);sh.setFrozenRows(1);});
 }
 function seedSecurity_(){
-  const ss=getDb_(), roles=ss.getSheetByName(SHEETS.ROLES), perms=ss.getSheetByName(SHEETS.PERMISSIONS);
+  const ss=getDb_(),roles=ss.getSheetByName(SHEETS.ROLES);
   if(roles.getLastRow()===1)roles.getRange(2,1,5,3).setValues([
     ['ADMIN','Full system administration','ACTIVE'],['SUPERVISOR','Operational supervision','ACTIVE'],['OPERATOR','Data operations','ACTIVE'],['VIEWER','Read-only access','ACTIVE'],['AUDITOR','Audit/read-only evidence','ACTIVE']
   ]);
-  const existingPermissions=new Set(perms.getDataRange().getValues().slice(1).map(r=>String(r[0]||'').toUpperCase()+'|'+String(r[1]||'')));
-  const missingPermissions=[];
-  Object.keys(DEFAULT_ROLES).forEach(r=>DEFAULT_ROLES[r].filter(p=>p.indexOf('daily.')===0).forEach(p=>{const key=r+'|'+p;if(!existingPermissions.has(key))missingPermissions.push([r,p]);}));
-  if(missingPermissions.length)perms.getRange(perms.getLastRow()+1,1,missingPermissions.length,2).setValues(missingPermissions);
+  // PERMISSIONS is an operational authorization source, not a recurring seed.
+  // Legacy daily permissions are migrated once by ensureDailyPermissionMigration_()
+  // under a script lock. Re-running setup must never restore a permission that
+  // an administrator deliberately revoked after that migration.
 }
 function seedDictionary_(){
   const sh=getDb_().getSheetByName(SHEETS.DATA_DICTIONARY),headers=sh.getRange(1,1,1,12).getValues()[0],idx=Object.fromEntries(headers.map((x,n)=>[x,n]));
