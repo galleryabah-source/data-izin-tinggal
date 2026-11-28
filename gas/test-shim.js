@@ -103,14 +103,14 @@ const adminAuth=new Function('Session','getDb_','SHEETS','DEFAULT_ROLES','LockSe
   ()=>{adminAuditCount++;}
 );
 const createdAdminUser=adminAuth.adminCreateUser('New.User@example.gov.id','New User','VIEWER');
-assert(createdAdminUser.ok&&adminUsers.length===2&&adminUsers[1][1]==='new.user@example.gov.id','User provisioning normalizes email and creates a valid account');
+assert(createdAdminUser.ok&&adminUsers.length===3&&adminUsers[2][1]==='new.user@example.gov.id','User provisioning normalizes email and creates a valid account');
 assert(adminLockAcquired===1&&adminLockReleased===1&&adminAuditCount===1,'User provisioning serializes writes and records audit evidence');
 let duplicateAdminEmailRejected=false;
 try{adminAuth.adminCreateUser('NEW.USER@example.gov.id','Duplicate','VIEWER');}catch(e){duplicateAdminEmailRejected=String(e.message)==='USER_EMAIL_ALREADY_EXISTS';}
-assert(duplicateAdminEmailRejected&&adminUsers.length===2,'User provisioning rejects duplicate email regardless of case without writing a row');
+assert(duplicateAdminEmailRejected&&adminUsers.length===3,'User provisioning rejects duplicate email regardless of case without writing a row');
 let malformedAdminEmailRejected=false;
 try{adminAuth.adminCreateUser('not-an-email','Bad','VIEWER');}catch(e){malformedAdminEmailRejected=/Email\/nama\/role tidak valid/.test(e.message);}
-assert(malformedAdminEmailRejected&&adminUsers.length===2,'User provisioning rejects malformed email before acquiring write lock');
+assert(malformedAdminEmailRejected&&adminUsers.length===3,'User provisioning rejects malformed email before acquiring write lock');
 
 const emptyMappedUsers=[['user_id','email','display_name','role','status'],['u0','','Empty principal','ADMIN','ACTIVE']];
 const authEmptyMapping=new Function('Session','getDb_','SHEETS',authCode+'\nreturn {getCurrentUser_};')(unauthSession,()=>makeDb(emptyMappedUsers,permissions),SHEETS);
