@@ -92,7 +92,7 @@ const adminPermissionRows=[['role','permission'],['ADMIN','admin.users']];
 const adminDb=()=>({getSheetByName:(name)=>name==='USERS'?adminUserSheet:makeSheet(adminPermissionRows)});
 let adminLockAcquired=0,adminLockReleased=0,adminAuditCount=0;
 const adminLock={waitLock:()=>{adminLockAcquired++;},releaseLock:()=>{adminLockReleased++;}};
-const adminAuth=new Function('Session','getDb_','SHEETS','DEFAULT_ROLES','LockService','Utilities','nowIso_','appendAudit_',authCode+'\\nreturn {adminCreateUser};')(
+const adminAuth=new Function('Session','getDb_','SHEETS','DEFAULT_ROLES','LockService','Utilities','nowIso_','appendAudit_',authCode+'\nreturn {adminCreateUser};')(
   {getActiveUser:()=>({getEmail:()=>'admin@example.gov.id'})},
   adminDb,
   {USERS:'USERS',PERMISSIONS:'PERMISSIONS'},
