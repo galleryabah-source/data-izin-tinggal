@@ -1792,7 +1792,7 @@ assert(read('Auth.gs').includes('PERMISSIONS') &&
   'Daily permissions migrate once, then PERMISSIONS remains authoritative for revocation');
 const seedSecuritySource=read('Code.gs');
 const seedSecurityStart=seedSecuritySource.indexOf('function seedSecurity_(){');
-const seedSecurityEnd=seedSecuritySource.indexOf('\\nfunction seedDictionary_',seedSecurityStart);
+const seedSecurityEnd=seedSecuritySource.indexOf('function seedDictionary_',seedSecurityStart);
 const seedSecurityBody=seedSecuritySource.slice(seedSecurityStart,seedSecurityEnd);
 assert(seedSecurityStart>=0&&seedSecurityEnd>seedSecurityStart,'Security seed function is present and bounded');
 assert(!seedSecurityBody.includes('DEFAULT_ROLES')&&!seedSecurityBody.includes('getSheetByName(SHEETS.PERMISSIONS)')&&!seedSecurityBody.includes('missingPermissions'),
