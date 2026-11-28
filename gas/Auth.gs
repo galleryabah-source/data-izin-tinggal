@@ -6,7 +6,7 @@ function getWorkspaceIdentityV1_(){
   const email=String(Session.getActiveUser().getEmail()||'').trim().toLowerCase();
   if(!email)throw new Error('UNAUTHENTICATED');
   const rawDomains=String(PropertiesService.getScriptProperties().getProperty('INTAL_WORKSPACE_ALLOWED_DOMAINS')||'').trim();
-  const domains=rawDomains.split(/[;,\\s]+/).map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
+  const domains=rawDomains.split(/[;,\s]+/).map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
   if(!domains.length)throw new Error('WORKSPACE_DOMAIN_POLICY_MISSING');
   const at=email.lastIndexOf('@');
   const domain=at>0?email.slice(at+1):'';
@@ -61,7 +61,46 @@ function getCurrentUser_(){
 const BACKOFFICE_ROLES_ = Object.freeze(['ADMIN','SUPERVISOR']);
 function requirePermission_(permission){const u=getCurrentUser_();if(!u.authenticated)throw new Error('UNAUTHENTICATED');if(!u.permissions.includes(permission))throw new Error('FORBIDDEN: '+permission);return u;}
 function requireBackOfficeAccess_(){const u=getCurrentUser_();if(!u.authenticated)throw new Error('BACKOFFICE_AUTH_REQUIRED');if(!BACKOFFICE_ROLES_.includes(u.role))throw new Error('BACKOFFICE_ACCESS_DENIED');return u;}
-function adminCreateUser(email,displayName,role){requirePermission_('admin.users');email=String(email||'').trim().toLowerCase();role=String(role||'').trim().toUpperCase();if(!email||!DEFAULT_ROLES[role])throw new Error('Email/role tidak valid.');const id=Utilities.getUuid();getDb_().getSheetByName(SHEETS.USERS).appendRow([id,email,String(displayName||email),role,'ACTIVE','','',nowIso_(),nowIso_()]);appendAudit_('USER_CREATE','', '',1,'SUCCESS',JSON.stringify({email,role}));return {ok:true,userId:id};}
+function adminCreateUser(email,displayName,role){
+  requirePermission_('admin.users');
+  const normalized=String(email||'').trim().toLowerCase();
+  const normalizedRole=String(role||'').trim().toUpperCase();
+  const name=String(displayName||normalized).trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)||!Object.prototype.hasOwnProperty.call(DEFAULT_ROLES,normalizedRole)||!name){
+    throw new Error('Email/nama/role tidak valid.');
+  }
+  if(name.length>120)throw new Error('Nama pengguna maksimal 120 karakter.');
+
+  const lock=LockService.getScriptLock();
+  lock.waitLock(30000);
+  try{
+    // Re-authorize after acquiring the lock so a permission revocation while
+    // waiting cannot be bypassed by an already-started request.
+    requirePermission_('admin.users');
+    if(workspaceIdentityEnforcementEnabledV1_()){
+      const identity=getWorkspaceIdentityV1_();
+      const rawDomains=String(PropertiesService.getScriptProperties().getProperty('INTAL_WORKSPACE_ALLOWED_DOMAINS')||'').trim();
+      const domains=rawDomains.split(/[;,\s]+/).map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
+      const targetDomain=normalized.slice(normalized.lastIndexOf('@')+1);
+      if(!identity.domain||!domains.includes(targetDomain))throw new Error('WORKSPACE_DOMAIN_NOT_ALLOWED');
+    }
+
+    const sh=getDb_().getSheetByName(SHEETS.USERS);
+    const values=sh.getDataRange().getValues();
+    const headers=values[0]||[];
+    const emailIndex=headers.indexOf('email');
+    if(emailIndex<0)throw new Error('USERS_SCHEMA_INVALID: email column missing');
+    const duplicate=values.slice(1).some(row=>String(row[emailIndex]||'').trim().toLowerCase()===normalized);
+    if(duplicate)throw new Error('USER_EMAIL_ALREADY_EXISTS');
+
+    const id=Utilities.getUuid(),now=nowIso_();
+    sh.appendRow([id,normalized,name,normalizedRole,'ACTIVE','','',now,now]);
+    appendAudit_('USER_CREATE','', '',1,'SUCCESS',JSON.stringify({email:normalized,role:normalizedRole}));
+    return {ok:true,userId:id};
+  }finally{
+    lock.releaseLock();
+  }
+}
 
 function bootstrapAdmin_(email,displayName){
   const ss=getDb_(),sh=ss.getSheetByName(SHEETS.USERS),normalized=String(email||'').trim().toLowerCase();
