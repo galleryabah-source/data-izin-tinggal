@@ -6,7 +6,7 @@ function getWorkspaceIdentityV1_(){
   const email=String(Session.getActiveUser().getEmail()||'').trim().toLowerCase();
   if(!email)throw new Error('UNAUTHENTICATED');
   const rawDomains=String(PropertiesService.getScriptProperties().getProperty('INTAL_WORKSPACE_ALLOWED_DOMAINS')||'').trim();
-  const domains=rawDomains.split(/[;,\\s]+/).map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
+  const domains=rawDomains.split(/[;,\s]+/).map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
   if(!domains.length)throw new Error('WORKSPACE_DOMAIN_POLICY_MISSING');
   const at=email.lastIndexOf('@');
   const domain=at>0?email.slice(at+1):'';
@@ -66,7 +66,7 @@ function adminCreateUser(email,displayName,role){
   const normalized=String(email||'').trim().toLowerCase();
   const normalizedRole=String(role||'').trim().toUpperCase();
   const name=String(displayName||normalized).trim();
-  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalized)||!Object.prototype.hasOwnProperty.call(DEFAULT_ROLES,normalizedRole)||!name){
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)||!Object.prototype.hasOwnProperty.call(DEFAULT_ROLES,normalizedRole)||!name){
     throw new Error('Email/nama/role tidak valid.');
   }
   if(name.length>120)throw new Error('Nama pengguna maksimal 120 karakter.');
@@ -80,7 +80,7 @@ function adminCreateUser(email,displayName,role){
     if(workspaceIdentityEnforcementEnabledV1_()){
       const identity=getWorkspaceIdentityV1_();
       const rawDomains=String(PropertiesService.getScriptProperties().getProperty('INTAL_WORKSPACE_ALLOWED_DOMAINS')||'').trim();
-      const domains=rawDomains.split(/[;,\\s]+/).map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
+      const domains=rawDomains.split(/[;,\s]+/).map(x=>x.trim().toLowerCase().replace(/^@/,'')).filter(Boolean);
       const targetDomain=normalized.slice(normalized.lastIndexOf('@')+1);
       if(!identity.domain||!domains.includes(targetDomain))throw new Error('WORKSPACE_DOMAIN_NOT_ALLOWED');
     }
