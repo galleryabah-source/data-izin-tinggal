@@ -109,7 +109,7 @@ let duplicateAdminEmailRejected=false;
 try{adminAuth.adminCreateUser('NEW.USER@example.gov.id','Duplicate','VIEWER');}catch(e){duplicateAdminEmailRejected=String(e.message)==='USER_EMAIL_ALREADY_EXISTS';}
 assert(duplicateAdminEmailRejected&&adminUsers.length===2,'User provisioning rejects duplicate email regardless of case without writing a row');
 let malformedAdminEmailRejected=false;
-try{adminAuth.adminCreateUser('not-an-email','Bad','VIEWER');}catch(e){malformedAdminEmailRejected=/Email\\/nama\\/role tidak valid/.test(e.message);}
+try{adminAuth.adminCreateUser('not-an-email','Bad','VIEWER');}catch(e){malformedAdminEmailRejected=/Email\/nama\/role tidak valid/.test(e.message);}
 assert(malformedAdminEmailRejected&&adminUsers.length===2,'User provisioning rejects malformed email before acquiring write lock');
 
 const emptyMappedUsers=[['user_id','email','display_name','role','status'],['u0','','Empty principal','ADMIN','ACTIVE']];
