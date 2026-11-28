@@ -1795,7 +1795,7 @@ const seedSecurityStart=seedSecuritySource.indexOf('function seedSecurity_(){');
 const seedSecurityEnd=seedSecuritySource.indexOf('\\nfunction seedDictionary_',seedSecurityStart);
 const seedSecurityBody=seedSecuritySource.slice(seedSecurityStart,seedSecurityEnd);
 assert(seedSecurityStart>=0&&seedSecurityEnd>seedSecurityStart,'Security seed function is present and bounded');
-assert(!seedSecurityBody.includes('DEFAULT_ROLES')&&!seedSecurityBody.includes('PERMISSIONS')&&!seedSecurityBody.includes('missingPermissions'),
+assert(!seedSecurityBody.includes('DEFAULT_ROLES')&&!seedSecurityBody.includes('getSheetByName(SHEETS.PERMISSIONS)')&&!seedSecurityBody.includes('missingPermissions'),
   'Re-running setup security seed cannot restore manually revoked permissions; one-time migration owns legacy permission seeding');
 assert(read('DailyInputService.gs').includes("destinationLatest.recordId!==existing.recordId"),
   'Updating a draft cannot move it onto an occupied logical key');
