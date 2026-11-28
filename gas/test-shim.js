@@ -83,7 +83,7 @@ assert(duplicatePrincipalRejected,'RBAC rejects duplicate user mappings even whi
 
 
 // User provisioning is serialized and rejects duplicate email identities before mutation.
-const adminUsers=[['user_id','email','display_name','role','status','password_hash','salt','created_at','updated_at']];
+const adminUsers=[['user_id','email','display_name','role','status','password_hash','salt','created_at','updated_at'],['admin-1','admin@example.gov.id','Admin','ADMIN','ACTIVE','','','','']];
 const adminUserSheet={
   getDataRange:()=>({getValues:()=>adminUsers.map(row=>row.slice())}),
   appendRow:(row)=>adminUsers.push(row.slice())
